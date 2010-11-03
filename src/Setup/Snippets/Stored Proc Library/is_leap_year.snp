@@ -1,0 +1,15 @@
+alter procedure prc$dat_is_leap_year (INDATE date)
+returns (RESULT integer)
+as
+DECLARE VARIABLE workdate    DATE;
+DECLARE VARIABLE Year        INTEGER;
+DECLARE VARIABLE Month       INTEGER;
+DECLARE VARIABLE Day         INTEGER;
+begin
+  RESULT=1;
+  EXECUTE PROCEDURE PRC$DAT_DECODE_DATE(INDATE) RETURNING_VALUES(Year, 
+Month, Day);
+  execute procedure prc$dat_encode_date(year, 2, 29) returning_values 
+workdate;
+  WHEN ANY DO Result = 0;
+end

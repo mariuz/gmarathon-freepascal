@@ -1,0 +1,37 @@
+alter procedure prc$dat_dif_in_hours (INDATE1 date, INDATE2 date)
+returns (RESULT integer)
+as
+declare variable hour1   integer;
+declare variable minute1 integer;
+declare variable second1 integer;
+declare variable hour2   integer;
+declare variable minute2 integer;
+declare variable second2 integer;
+declare variable dif     integer;
+declare variable daydif  integer;
+begin
+
+if (indate1 < indate2) then
+begin
+   execute procedure prc$dat_decode_time(indate1) returning_values 
+(hour1, minute1, second1);
+   execute procedure prc$dat_decode_time(indate2) returning_values 
+(hour2, minute2, second2);
+   execute procedure prc$dat_dif_in_days(indate1,indate2) 
+returning_values daydif;
+   if (daydif > 0) then
+   begin
+    hour2 = hour2 + (daydif *24);
+    dif   =hour2 - hour1;
+   end
+   else
+   begin
+    dif = hour2 - hour1;
+   end
+   result = dif;
+end
+else
+begin
+   result = -1;
+end
+end

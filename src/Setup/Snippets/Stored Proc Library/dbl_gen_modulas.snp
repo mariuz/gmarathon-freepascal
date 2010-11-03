@@ -1,0 +1,10 @@
+alter procedure prc$dbl_gen_modulas (DIVIDEND double precision, 
+DIVISOR double precision)
+returns (RESULT double precision)
+as
+BEGIN
+  IF(Dividend = 0) THEN Result = 0;
+  ELSE
+    Result = Dividend-(CAST((Dividend / Divisor)-0.5 AS 
+INTEGER)*Divisor);
+END

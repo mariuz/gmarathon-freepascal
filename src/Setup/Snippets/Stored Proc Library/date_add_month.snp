@@ -1,0 +1,43 @@
+alter procedure prc$dat_add_month (ADATE date, AMONTH integer)
+returns (RESULT date)
+as
+DECLARE VARIABLE Year           INTEGER;
+DECLARE VARIABLE Month          INTEGER;
+DECLARE VARIABLE Day            INTEGER;
+DECLARE VARIABLE Mod            INTEGER;
+DECLARE VARIABLE DaysOfMOnth    INTEGER;
+DECLARE VARIABLE temp           DOUBLE PRECISION;
+BEGIN
+  EXECUTE PROCEDURE PRC$DAT_DECODE_DATE(ADate) RETURNING_VALUES(Year, 
+Month, Day);
+  IF(AMonth < 0) THEN
+  BEGIN
+    AMonth = AMonth * -1;
+    Year = Year - CAST(((AMonth-1)/12)-0.49 AS INTEGER) -1;
+    AMonth = AMonth -1;
+    EXECUTE PROCEDURE PRC$DBL_GEN_MODULAS(AMonth, 12) 
+RETURNING_VALUES(temp);
+    mod=cast(temp as integer);
+    AMonth = 12 - (Mod+1);
+    Month = Month + AMonth;
+  END
+  ELSE
+  BEGIN
+    Year = Year + CAST(((AMonth-1)/12)-0.49 AS INTEGER);
+    AMonth = AMonth -1;
+    EXECUTE PROCEDURE PRC$DBL_GEN_MODULAS(AMonth, 12) 
+RETURNING_VALUES(temp);
+    mod=cast(temp as integer);
+    Month = Month + Mod +1;
+  END
+  IF(Month > 12) THEN
+  BEGIN
+    Year = Year +1;
+    Month = Month -12;
+  END
+  EXECUTE PROCEDURE PRC$DAT_GET_DAYS_IN_MONTH(Year, Month) 
+RETURNING_VALUES (DaysOfMonth);
+  IF(Day > DaysOfMonth) THEN Day = DaysOfMonth;
+  EXECUTE PROCEDURE PRC$DAT_ENCODE_DATE(Year, Month, Day) 
+RETURNING_VALUES (Result);
+END

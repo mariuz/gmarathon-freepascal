@@ -1,0 +1,10 @@
+alter procedure prc$dat_get_year_number (ADATE date)
+returns (RESULT integer)
+as
+DECLARE VARIABLE ElapsedDays  INTEGER;
+DECLARE VARIABLE ElapsedYears INTEGER;
+BEGIN
+  WHILE(CAST(ADate AS VARCHAR(5)) <> "1-JAN") DO ADate = ADate -1;
+  ElapsedDays = ADate -"1.1.1901";
+  Result = (ElapsedDays *400 /146097)+1901;
+END

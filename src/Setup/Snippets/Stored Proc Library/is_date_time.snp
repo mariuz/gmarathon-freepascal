@@ -1,0 +1,9 @@
+alter procedure prc$dat_is_date_time (INSTRING varchar(30))
+returns (RESULT integer)
+as
+DECLARE VARIABLE workdate    DATE;
+begin
+  RESULT=1;
+  workdate=INSTRING;
+  WHEN ANY DO Result = 0;
+end

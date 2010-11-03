@@ -1,0 +1,3 @@
+SQL_ED_MOD              BITMAP       "SQLEditorStatusMod.bmp"
+SQL_ED_FAIL             BITMAP       "SQLEditorStatusFail.bmp"
+SQL_ED_OK               BITMAP       "SQLEditorStatusOK.bmp"

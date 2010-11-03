@@ -1,0 +1,33 @@
+alter procedure prc$dat_encode_date_time (INDAY integer, INMONTH 
+integer, INYEAR integer,
+INHOUR integer, INMINUTE integer, INSECONDS integer)
+returns (RESULT date)
+as
+declare variable temp   varchar(12);
+begin
+if (INHOUR <10) then
+begin
+  temp = "0"||INHOUR||":";
+end
+else
+begin
+  temp = INHOUR||":";
+end
+if (INMINUTE <10) then
+begin
+  temp = temp||"0"||INMINUTE||":";
+end
+else
+begin
+  temp = temp||INMINUTE||":";
+end
+if (INSECONDS <10) then
+begin
+  temp = temp||"0"||INSECONDS;
+end
+else
+begin
+  temp = temp||INSECONDS;
+end
+  Result = INDay || "/" || INMonth || "/" || INYear||" "||TEMP;
+end

@@ -1,0 +1,108 @@
+; This file is maintained by HCW. Do not modify this file directly.
+
+
+[OPTIONS]
+COMPRESS=12 Hall Zeck
+ERRORLOG=Marathon.err
+LCID=0x409 0x0 0x0 ; Englisch (USA)
+REPORT=Yes
+FTS=15
+CONTENTS=IDH_Contents
+TITLE=Marathon Help
+CNT=Marathon.cnt
+COPYRIGHT=Copyright © 2001-2003 GMarathon Open Source Project
+DEFFONT=Microsoft Sans Serif,8,0
+INDEX_SEPARATORS=","
+HLP=Marathon.hlp
+
+[FILES]
+Marathon.rtf
+
+[MAP]
+#define IDH_Working_with_Projects 5
+#define IDH_Window_Menu 46
+#define IDH_Window_List_Dialog	38
+#define IDH_View_Menu 44
+#define IDH_View_Editor_Speed_Menu	66
+#define IDH_View_Editor_Menu	67
+#define IDH_UDF_Input_Parameters_Dialog 76
+#define IDH_UDF_Editor_Main_Menu	75
+#define IDH_UDF_Editor	68
+#define IDH_Trigger_Editor_Speed_Menu 50
+#define IDH_Trigger_Editor_Main_Menu	51
+#define IDH_Trigger_Editor	37
+#define IDH_Tools_Menu	45
+#define IDH_Table_Editor_Menu 35
+#define IDH_Table_Editor	36
+#define IDH_Stored_Procedure_Parameters_Dialog	65
+#define IDH_Stored_Procedure_Main_Menu	41
+#define IDH_Stored_Procedure_Editor_SpeedMenu 15
+#define IDH_Stored_Procedure_Editor 11
+#define IDH_SQLSmarts_Options_Settings	53
+#define IDH_SQL_Trace 12
+#define IDH_SQL_Statement_History 34
+#define IDH_SQL_Smarts	55
+#define IDH_SQL_Script_Recording	72
+#define IDH_SQL_Insight_Settings	54
+#define IDH_SQL_Insight 56
+#define IDH_SQL_Editor_Speed_Menu 48
+#define IDH_SQL_Editor_Main_Menu	49
+#define IDH_SQL_Editor	14
+#define IDH_SQL_Code_Editors	7
+#define IDH_SpeedMenus	18
+#define IDH_Search_Metadata_Results 60
+#define IDH_New_Modify_Code_Snippet_Dialog	62
+#define IDH_Project_Properties	22
+#define IDH_Programming_Environment 2
+#define IDH_Print_Preview 31
+#define IDH_Other_Editors 8
+#define IDH_NewProject_Project_Page 25
+#define IDH_New_Trigger_Dialog	30
+#define IDH_New_Project_Server_Page 39
+#define IDH_New_Object_Dialog 29
+#define IDH_Metadata_Extract	58
+#define IDH_Menus 17
+#define IDH_Marathon_Tools	70
+#define IDH_Marathon_Options	10
+#define IDH_Help_Menu 47
+#define IDH_Generator_Editor_Main_Menu	73
+#define IDH_Generator_Editor	32
+#define IDH_General_Options 52
+#define IDH_Find_In_Metadata	59
+#define IDH_File_Menu 42
+#define IDH_File_Format_Dialog	33
+#define IDH_Exceptions_Editor_Main_Menu 69
+#define IDH_Exceptions_Editor 28
+#define IDH_Essentials	1
+#define IDH_Editor_Options	13
+#define IDH_Edit_Menu 43
+#define IDH_Domain_Editor 26
+#define IDH_Database_Manager_SpeedMenu	24
+#define IDH_Database_Manager	19
+#define IDH_Create_Database 4
+#define IDH_Contents	0
+#define IDH_Color_Options 40
+#define IDH_Code_Snippets_Catalog 57
+#define IDH_Code_Snippet_Catalog_Speed_Menu 27
+#define IDH_Basic_Project_Tasks 9
+#define IDH_Add_Index_Dialog	74
+#define IDH_Add_Constraint_Dialog 61
+#define IDH_Add_Column_Dialog 3
+#define IDH_Display_Options 6
+#define IDH_View_Editor 23
+#define IDH_Data_Options	20
+#define IDH_File_Locations	21
+#define IDH_Grant_Editor	63
+#define IDH_Query_Builder 64
+#define IDH_ReOrder_Columns 71
+#define IDH_Add_Grantee 77
+IDH_About_The_Editor 78
+IDH_Script_Menu 79
+IDH_The_Result_Set 80
+IDH_Transaction_Menu 81
+
+[WINDOWS]
+main="Marathon Help",(501,174,512,777),61700
+
+[CONFIG]
+BrowseButtons()

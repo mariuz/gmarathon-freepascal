@@ -1,0 +1,16 @@
+alter procedure prc$dat_get_month_number (ADATE date)
+returns (RESULT integer)
+as
+DECLARE VARIABLE WorkDate DATE;
+DECLARE VARIABLE WorkDay  INTEGER;
+BEGIN
+  WorkDate = ADate;
+  Result = 1;
+  WHILE(CAST(WorkDate AS VARCHAR(5)) <> "1-JAN") DO
+  BEGIN
+    EXECUTE PROCEDURE PRC$DAT_GET_DAY_OF_MONTH(WorkDate) 
+RETURNING_VALUES WorkDay;
+    IF(WorkDay = 1) THEN Result = Result+1;
+    WorkDate = WorkDate-1;
+  END
+END

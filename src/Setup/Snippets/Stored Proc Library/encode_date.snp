@@ -1,0 +1,7 @@
+alter procedure prc$dat_encode_date (YEAR integer, MONTH integer, DAY 
+integer)
+returns (RESULT date)
+as
+BEGIN
+  Result = Day || "/" || Month || "/" || Year;
+END

@@ -1,0 +1,16 @@
+alter procedure prc$dat_get_older (INDATE1 date, INDATE2 date)
+returns (RESULT date)
+as
+begin
+  if (INDATE1 > INDATE2) then
+    begin
+      RESULT=INDATE1;
+    end
+  else
+  if (INDATE1 < INDATE2) then
+    begin
+      RESULT=INDATE2;
+    end
+  else
+      RESULT=INDATE1;
+end

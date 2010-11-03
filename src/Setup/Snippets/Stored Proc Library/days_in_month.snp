@@ -1,0 +1,14 @@
+lter procedure prc$dat_get_days_in_month (AYEAR integer, AMONTH 
+integer)
+returns (RESULT integer)
+as
+DECLARE VARIABLE WorkDate DATE;
+BEGIN
+  Result = 31;
+  WHILE (Result > 28 AND WorkDate IS NULL) DO
+  BEGIN
+    EXECUTE PROCEDURE PRC$DAT_ENCODE_DATE(AYear, AMonth, Result) 
+RETURNING_VALUES(WorkDate);
+    WHEN ANY DO Result = Result -1;
+  END
+END

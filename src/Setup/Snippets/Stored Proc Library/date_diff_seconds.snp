@@ -1,0 +1,20 @@
+alter procedure prc$dat_dif_in_sec (INDATE1 date, INDATE2 date)
+returns (RESULT integer)
+as
+DECLARE VARIABLE mindif    INTEGER;
+DECLARE VARIABLE hour1     INTEGER;
+DECLARE VARIABLE minute1   INTEGER;
+DECLARE VARIABLE second1   INTEGER;
+DECLARE VARIABLE hour2     INTEGER;
+DECLARE VARIABLE minute2   INTEGER;
+DECLARE VARIABLE second2   INTEGER;
+begin
+   EXECUTE PROCEDURE prc$dat_dif_in_min (INDATE1, INDATE2) 
+RETURNING_VALUES mindif;
+   execute procedure prc$dat_decode_time(indate1) returning_values 
+(hour1, minute1, second1);
+   execute procedure prc$dat_decode_time(indate2) returning_values 
+(hour2, minute2, second2);
+   second2 = second2 + (mindif *60);
+   result   = minute2 - minute1;
+end

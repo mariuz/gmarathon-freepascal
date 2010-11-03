@@ -1,0 +1,910 @@
+object TrmBindingStorage
+  Items = <
+    item
+      ActionName = 'FileNewProject'
+      ActionCaption = '&New Project...'
+      Category = 'File'
+      Description = 'New Project'
+      ImageIndex = 0
+    end
+    item
+      ActionName = 'FileOpenProject'
+      ActionCaption = '&Open Project...'
+      Category = 'File'
+      Description = 'Open Project'
+      ImageIndex = 1
+    end
+    item
+      ActionName = 'FileCloseProject'
+      ActionCaption = 'C&lose Project'
+      Category = 'File'
+      Description = 'Close Project'
+      ImageIndex = 2
+    end
+    item
+      ActionName = 'FileConnect'
+      ActionCaption = '&Connect'
+      Category = 'File'
+      Description = 'Connect to Database'
+      ImageIndex = 3
+    end
+    item
+      ActionName = 'FileDisconnect'
+      ActionCaption = '&Disconnect'
+      Category = 'File'
+      Description = 'Disconnect from Database'
+      ImageIndex = 4
+    end
+    item
+      ActionName = 'FileNewObject'
+      ActionCaption = 'Ne&w...'
+      Category = 'File'
+      Description = 'New Object'
+      KeyBinding = 32836
+    end
+    item
+      ActionName = 'FileCreateDatabase'
+      ActionCaption = 'Cre&ate Database...'
+      Category = 'File'
+      Description = 'Create an Firebird or InterBase Database'
+    end
+    item
+      ActionName = 'FilePrintSetup'
+      ActionCaption = 'Prin&t Setup...'
+      Category = 'File'
+      Description = 'Modify Printer Settings'
+    end
+    item
+      ActionName = 'FileExitApplication'
+      ActionCaption = 'E&xit'
+      Category = 'File'
+      Description = 'Exit Marathon'
+    end
+    item
+      ActionName = 'ViewViewBrowser'
+      ActionCaption = '&View Browser...'
+      Category = 'View'
+      Description = 'View Browser'
+      ImageIndex = 5
+      KeyBinding = 122
+    end
+    item
+      ActionName = 'ToolsSQLEditor'
+      ActionCaption = '&SQL Editor...'
+      Category = 'Tools'
+      Description = 'SQL Editor'
+      ImageIndex = 6
+      KeyBinding = 49235
+    end
+    item
+      ActionName = 'ProjectProjectOptions'
+      ActionCaption = 'Project &Options...'
+      Category = 'Project'
+      Description = 'Modify Project Options'
+    end
+    item
+      ActionName = 'ViewNextWindow'
+      ActionCaption = '&Next Window'
+      Category = 'View'
+      Description = 'View Next Window'
+      KeyBinding = 123
+    end
+    item
+      ActionName = 'ScriptRecordScript'
+      ActionCaption = '&Script Recording...'
+      Category = 'Script'
+      Description = 'Record activity to a script'
+      ImageIndex = 10
+    end
+    item
+      ActionName = 'ScriptStartRecord'
+      ActionCaption = 'R&ecord'
+      Category = 'Script'
+      Description = 'Start Recording Script'
+    end
+    item
+      ActionName = 'ScriptStopRecord'
+      ActionCaption = 'S&top'
+      Category = 'Script'
+      Description = 'Stop Recording Script'
+    end
+    item
+      ActionName = 'ToolsMetaExtract'
+      ActionCaption = '&Metadata Extract...'
+      Category = 'Tools'
+      Description = 'Extract Metadata from Database'
+    end
+    item
+      ActionName = 'ToolsMetaSearch'
+      ActionCaption = 'Metadata S&earch...'
+      Category = 'Tools'
+      Description = 'Search in Database Metadata'
+      ImageIndex = 15
+    end
+    item
+      ActionName = 'ToolsSyntaxHelp'
+      ActionCaption = 'actSyntaxHelp'
+      Category = 'Tools'
+    end
+    item
+      ActionName = 'ToolsSQLCodeSnippets'
+      ActionCaption = 'SQL &Code Snippets...'
+      Category = 'Tools'
+      Description = 'Open Code Snippets Catalog'
+      ImageIndex = 8
+    end
+    item
+      ActionName = 'ToolsSQLTrace'
+      ActionCaption = 'SQL &Trace...'
+      Category = 'Tools'
+      Description = 'Trace SQL Sent to Server'
+      ImageIndex = 9
+    end
+    item
+      ActionName = 'ToolsMarathonOptions'
+      ActionCaption = '&Options...'
+      Category = 'Tools'
+      Description = 'Marathon Environment Options'
+    end
+    item
+      ActionName = 'WindowWindowList'
+      ActionCaption = '&Window List...'
+      Category = 'Window'
+    end
+    item
+      ActionName = 'HelpHelpTopics'
+      ActionCaption = '&Help Topics...'
+      Category = 'Help'
+      Description = 'Help Topics'
+    end
+    item
+      ActionName = 'HelpMarathonOnTheWeb'
+      ActionCaption = '&Marathon on the Web...'
+      Category = 'Help'
+      Description = 'Go to Marathon Web Page'
+    end
+    item
+      ActionName = 'HelpEmailSupport'
+      ActionCaption = '&Email Marathon Support...'
+      Category = 'Help'
+      Description = 'Email a Support Request'
+    end
+    item
+      ActionName = 'HelpAbout'
+      ActionCaption = '&About...'
+      Category = 'Help'
+      Description = 'About Marathon'
+    end
+    item
+      ActionName = 'FileSaveProject'
+      ActionCaption = '&Save Project'
+      Category = 'File'
+    end
+    item
+      ActionName = 'FileSaveProjectAs'
+      ActionCaption = 'Save Project &As...'
+      Category = 'File'
+    end
+    item
+      ActionName = 'FilePrint'
+      ActionCaption = '&Print'
+      Category = 'File'
+      Description = 'Print'
+      ImageIndex = 13
+    end
+    item
+      ActionName = 'FilePrintPreview'
+      ActionCaption = 'Print Pre&view...'
+      Category = 'File'
+      Description = 'Print Preview'
+      ImageIndex = 14
+    end
+    item
+      ActionName = 'EditUndo'
+      ActionCaption = '&Undo'
+      Category = 'Edit'
+      Description = 'Undo'
+      ImageIndex = 22
+      KeyBinding = 16474
+    end
+    item
+      ActionName = 'EditRedo'
+      ActionCaption = '&Redo'
+      Category = 'Edit'
+      Description = 'Redo'
+      ImageIndex = 23
+    end
+    item
+      ActionName = 'EditCaptureSnippet'
+      ActionCaption = 'Capture &Snippet...'
+      Category = 'Edit'
+      Description = 'Capture Snippet'
+      ImageIndex = 24
+    end
+    item
+      ActionName = 'EditCut'
+      ActionCaption = 'Cu&t'
+      Category = 'Edit'
+      Description = 'Cut'
+      ImageIndex = 19
+      KeyBinding = 16472
+    end
+    item
+      ActionName = 'EditCopy'
+      ActionCaption = '&Copy'
+      Category = 'Edit'
+      Description = 'Copy'
+      ImageIndex = 20
+      KeyBinding = 16451
+    end
+    item
+      ActionName = 'EditPaste'
+      ActionCaption = '&Paste'
+      Category = 'Edit'
+      Description = 'Paste'
+      ImageIndex = 21
+      KeyBinding = 16470
+    end
+    item
+      ActionName = 'EditFind'
+      ActionCaption = '&Find...'
+      Category = 'Edit'
+      Description = 'Find'
+      ImageIndex = 7
+      KeyBinding = 16454
+    end
+    item
+      ActionName = 'ObjectCompile'
+      ActionCaption = '&Compile'
+      Category = 'Object'
+      Description = 'Compile'
+      ImageIndex = 16
+      KeyBinding = 16504
+    end
+    item
+      ActionName = 'ObjectExecute'
+      ActionCaption = '&Execute'
+      Category = 'Object'
+      Description = 'Execute'
+      ImageIndex = 17
+      KeyBinding = 120
+    end
+    item
+      ActionName = 'TransactionCommit'
+      ActionCaption = '&Commit'
+      Category = 'Transaction'
+      Description = 'Commit'
+      KeyBinding = 49219
+    end
+    item
+      ActionName = 'TransactionRollback'
+      ActionCaption = '&Rollback'
+      Category = 'Transaction'
+      Description = 'Rollback'
+      KeyBinding = 49234
+    end
+    item
+      ActionName = 'ToolsEditorProperties'
+      ActionCaption = '&Properties...'
+      Category = 'Tools'
+      ImageIndex = 25
+    end
+    item
+      ActionName = 'EditSelectAll'
+      ActionCaption = 'Select &All'
+      Category = 'Edit'
+      Description = 'Select All'
+    end
+    item
+      ActionName = 'EditFindNext'
+      ActionCaption = 'Find &Next'
+      Category = 'Edit'
+      Description = 'Find Next'
+      KeyBinding = 114
+    end
+    item
+      ActionName = 'EditReplace'
+      ActionCaption = '&Replace...'
+      Category = 'Edit'
+      Description = 'Replace'
+      KeyBinding = 16466
+    end
+    item
+      ActionName = 'EditEncANSI'
+      ActionCaption = '&ANSI'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncDefault'
+      ActionCaption = '&Default'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncSymbol'
+      ActionCaption = 'S&ymbol'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EncMacintosh'
+      ActionCaption = '&Macintosh'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncSHIFTJIS'
+      ActionCaption = '&Japanese'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncHANGEUL'
+      ActionCaption = 'Korean (&Wansung)'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncJOHAB'
+      ActionCaption = 'K&orean (Johab)'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncGB2312'
+      ActionCaption = '&Chinese (Simplified)'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncCHINESEBIG5'
+      ActionCaption = 'Chinese (&Traditional)'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncGreek'
+      ActionCaption = '&Greek'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncTurkish'
+      ActionCaption = 'T&urkish'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncVietnamese'
+      ActionCaption = '&Vietnamese'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncHebrew'
+      ActionCaption = '&Hebrew'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncArabic'
+      ActionCaption = 'Ara&bic'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncBaltic'
+      ActionCaption = '&Baltic'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncRussian'
+      ActionCaption = 'Ru&ssian'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncThai'
+      ActionCaption = 'Tha&i'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncEasternEuropean'
+      ActionCaption = 'Easte&rn European'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditEncOEM'
+      ActionCaption = 'O&EM'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'ToolsUserEditor'
+      ActionCaption = '&User Editor...'
+      Category = 'Tools'
+    end
+    item
+      ActionName = 'WindowCloseAllWindows'
+      ActionCaption = '&Close All Windows'
+      Category = 'Window'
+    end
+    item
+      ActionName = 'ViewToolbarTools'
+      ActionCaption = '&Tools'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewToolbarScript'
+      ActionCaption = '&Script'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewToolbarStandard'
+      ActionCaption = 'S&tandard'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewToolbarSQLEditor'
+      ActionCaption = 'SQL &Editor'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ToolsQueryBuilder'
+      ActionCaption = '&Query Builder...'
+      Category = 'Tools'
+      Description = 'Query Builder'
+      ImageIndex = 26
+    end
+    item
+      ActionName = 'ViewPrevStatement'
+      ActionCaption = '&Previous Statement'
+      Category = 'View'
+      Description = 'Previous Statement'
+      ImageIndex = 27
+      KeyBinding = 49232
+    end
+    item
+      ActionName = 'ViewNextStatement'
+      ActionCaption = '&Next Statement'
+      Category = 'View'
+      Description = 'Next Statement'
+      ImageIndex = 28
+      KeyBinding = 49230
+    end
+    item
+      ActionName = 'ViewStatementHistory'
+      ActionCaption = 'Statement &History...'
+      Category = 'View'
+      Description = 'Statement History'
+      ImageIndex = 29
+      KeyBinding = 49224
+    end
+    item
+      ActionName = 'FileOpenFile'
+      ActionCaption = 'Open &File...'
+      Category = 'File'
+    end
+    item
+      ActionName = 'FileOpenDatabaseObject'
+      ActionCaption = 'Database &Object...'
+      Category = 'File'
+    end
+    item
+      ActionName = 'FileClose'
+      ActionCaption = 'C&lose'
+      Category = 'File'
+    end
+    item
+      ActionName = 'ProjectNewConnection'
+      ActionCaption = '&New Connection...'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ProjectOpenItem'
+      ActionCaption = '&Open'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ProjectItemProperties'
+      ActionCaption = '&Properties...'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ProjectItemDelete'
+      ActionCaption = '&Delete'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ProjectItemDrop'
+      ActionCaption = 'D&rop'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ViewRefresh'
+      ActionCaption = '&Refresh'
+      Category = 'View'
+      KeyBinding = 116
+    end
+    item
+      ActionName = 'ProjectExtractMetadata'
+      ActionCaption = 'E&xtract Metadata...'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ProjectCreateFolder'
+      ActionCaption = '&Create Folder...'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ProjectAddToProject'
+      ActionCaption = '&Add To Project...'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ViewNextPage'
+      ActionCaption = 'Next &Page'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewPrevPage'
+      ActionCaption = 'Pre&vious Page'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewMessages'
+      ActionCaption = '&Messages'
+      Category = 'View'
+      KeyBinding = 49229
+    end
+    item
+      ActionName = 'EditClearEditBuffer'
+      ActionCaption = 'Clear Edit &Buffer'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark1'
+      ActionCaption = 'Bookmark &1'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark2'
+      ActionCaption = 'Bookmark &2'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark0'
+      ActionCaption = 'Bookmark &0'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark3'
+      ActionCaption = 'Bookmark &3'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark4'
+      ActionCaption = 'Bookmark &4'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark5'
+      ActionCaption = 'Bookmark &5'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark6'
+      ActionCaption = 'Bookmark &6'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark7'
+      ActionCaption = 'Bookmark &7'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark8'
+      ActionCaption = 'Bookmark &8'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditToggleBookmark9'
+      ActionCaption = 'Bookmark &9'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark0'
+      ActionCaption = 'Bookmark &0'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark1'
+      ActionCaption = 'Bookmark &1'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark2'
+      ActionCaption = 'Bookmark &2'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark3'
+      ActionCaption = 'Bookmark &3'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark4'
+      ActionCaption = 'Bookmark &4'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark5'
+      ActionCaption = 'Bookmark &5'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark6'
+      ActionCaption = 'Bookmark &6'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark7'
+      ActionCaption = 'Bookmark &7'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark8'
+      ActionCaption = 'Bookmark &8'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'EditGotoBookmark9'
+      ActionCaption = 'Bookmark &9'
+      Category = 'Edit'
+    end
+    item
+      ActionName = 'FileSave'
+      ActionCaption = '&Save'
+      Category = 'File'
+    end
+    item
+      ActionName = 'FileSaveAs'
+      ActionCaption = 'Save &As'
+      Category = 'File'
+    end
+    item
+      ActionName = 'ObjectShowQueryPlan'
+      ActionCaption = '&Show Query Plan'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectShowPerformanceData'
+      ActionCaption = 'Show &Performance Query Data...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'FileExport'
+      ActionCaption = '&Export...'
+      Category = 'File'
+    end
+    item
+      ActionName = 'ObjectParameters'
+      ActionCaption = 'P&arameters...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectSaveDocumentation'
+      ActionCaption = 'Save &Documentation'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectSaveAsTemplate'
+      ActionCaption = 'Save As &Template...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectRevoke'
+      ActionCaption = 'Re&voke...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectGrant'
+      ActionCaption = '&Grant...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ProjectNewItem'
+      ActionCaption = '&New Object'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ObjectDrop'
+      ActionCaption = '&Drop Object'
+      Category = 'Object'
+      ImageIndex = 18
+    end
+    item
+      ActionName = 'ObjectAddToProject'
+      ActionCaption = '&Add To Project...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ToolsPlugins'
+      ActionCaption = '&Plugins...'
+      Category = 'Tools'
+    end
+    item
+      ActionName = 'ObjectExecuteAsScript'
+      ActionCaption = 'Script &Mode'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectProperties'
+      ActionCaption = '&Properties...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectDebuggerEnabled'
+      ActionCaption = '&Debugger Enabled'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectNewField'
+      ActionCaption = '&Field...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectNewConstraint'
+      ActionCaption = '&Constraint...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectNewIndex'
+      ActionCaption = '&Index...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectNewTrigger'
+      ActionCaption = '&Trigger...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectNewInputParam'
+      ActionCaption = 'New &Input Parameter...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectDropField'
+      ActionCaption = '&Field'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectDropTrigger'
+      ActionCaption = '&Trigger'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectDropIndex'
+      ActionCaption = '&Index'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectDropConstraint'
+      ActionCaption = '&Constraint'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectDropInputParam'
+      ActionCaption = 'Remove &Input Parameter'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectReorderColumns'
+      ActionCaption = '&Reorder Columns..'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectResetGeneratorValue'
+      ActionCaption = 'Reset Generator &Value'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectStepOver'
+      ActionCaption = 'Step &Over'
+      Category = 'Object'
+      KeyBinding = 119
+    end
+    item
+      ActionName = 'ObjectStepInto'
+      ActionCaption = '&Step Into'
+      Category = 'Object'
+      KeyBinding = 118
+    end
+    item
+      ActionName = 'ObjectShowExecutionPoint'
+      ActionCaption = 'S&how Execution Point'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectPause'
+      ActionCaption = '&Pause'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectReset'
+      ActionCaption = 'R&eset'
+      Category = 'Object'
+      KeyBinding = 16497
+    end
+    item
+      ActionName = 'ObjectEvalModify'
+      ActionCaption = 'Evaluate/&Modify...'
+      Category = 'Object'
+      KeyBinding = 16502
+    end
+    item
+      ActionName = 'ObjectAddWatch'
+      ActionCaption = '&Add Watch...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectAddWatchAtCursor'
+      ActionCaption = 'Add &Watch At Cursor'
+      Category = 'Object'
+      KeyBinding = 16500
+    end
+    item
+      ActionName = 'ObjectAddBreakPoint'
+      ActionCaption = 'Add &Break Point...'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ObjectToggleBreakPoint'
+      ActionCaption = 'To&ggle Break Point'
+      Category = 'Object'
+      KeyBinding = 116
+    end
+    item
+      ActionName = 'ViewBreakPoints'
+      ActionCaption = '&Break Points...'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewCallStack'
+      ActionCaption = '&Call Stack...'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewWatches'
+      ActionCaption = '&Watches...'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ViewLocalVariables'
+      ActionCaption = '&Local Variables...'
+      Category = 'View'
+    end
+    item
+      ActionName = 'ProjectNewServer'
+      ActionCaption = 'New Ser&ver...'
+      Category = 'Project'
+    end
+    item
+      ActionName = 'ScriptNewScript'
+      ActionCaption = '&New Script'
+      Category = 'Script'
+    end
+    item
+      ActionName = 'ScriptAppendExisting'
+      ActionCaption = '&Append to existing Script'
+      Category = 'Script'
+    end
+    item
+      ActionName = 'ViewFolders'
+      ActionCaption = '&Folders'
+      Category = 'View'
+      ImageIndex = 31
+    end
+    item
+      ActionName = 'ViewSearch'
+      ActionCaption = '&Search'
+      Category = 'View'
+      ImageIndex = 30
+    end
+    item
+      ActionName = 'ObjectOpenSubObject'
+      ActionCaption = 'Open'
+      Category = 'Object'
+    end
+    item
+      ActionName = 'ViewList'
+      ActionCaption = '&List'
+      Category = 'View'
+      ImageIndex = 32
+    end>
+end

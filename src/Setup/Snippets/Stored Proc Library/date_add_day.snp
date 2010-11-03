@@ -1,0 +1,6 @@
+alter procedure prc$dat_add_day (INDATE date, INDAYS integer)
+returns (RESULT date)
+as
+begin
+  result = indate + indays;
+end

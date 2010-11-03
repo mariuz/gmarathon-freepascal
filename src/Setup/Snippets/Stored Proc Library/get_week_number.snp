@@ -1,0 +1,20 @@
+alter procedure prc$dat_get_week_number (INDATE date)
+returns (RESULT integer)
+as
+DECLARE VARIABLE Elapseddays INTEGER;
+DECLARE VARIABLE yearstarson INTEGER;
+DECLARE VARIABLE workdate    DATE;
+DECLARE VARIABLE Year        INTEGER;
+DECLARE VARIABLE Month       INTEGER;
+DECLARE VARIABLE Day         INTEGER;
+begin
+  EXECUTE PROCEDURE prc$dat_get_day_number_rel(INDATE) 
+RETURNING_VALUES Elapseddays;
+  EXECUTE PROCEDURE PRC$DAT_DECODE_DATE(INDATE) RETURNING_VALUES(Year, 
+Month, Day);
+  execute procedure prc$dat_encode_date(year, 1, 1) returning_values 
+workdate;
+  EXECUTE PROCEDURE prc$dat_get_week_day(workdate) RETURNING_VALUES 
+yearstarson;
+  result=((Elapseddays -(7-yearstarson))/7)+1;
+end

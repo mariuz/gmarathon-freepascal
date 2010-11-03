@@ -1,0 +1,432 @@
+<?xml version="1.0"?>
+<!--
+{******************************************************************}
+{ The contents of this file are used with permission, subject to   }
+{ the Mozilla Public License Version 1.1 (the "License"); you may  }
+{ not use this file except in compliance with the License. You may }
+{ obtain a copy of the License at                                  }
+{ http://www.mozilla.org/MPL/MPL-1.1.html                          }
+{                                                                  }
+{ Software distributed under the License is distributed on an      }
+{ "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or   }
+{ implied. See the License for the specific language governing     }
+{ rights and limitations under the License.                        }
+{                                                                  }
+{******************************************************************}
+$Id: want.xml,v 1.42 2004/01/30 15:53:19 carlosmacao Exp $
+-->
+
+<!-- ======================================================================= -->
+<!-- Marathon build file -->
+<!-- ======================================================================= -->
+<project name="Marathon" default="compile" basedir=".">
+
+	<property name="need.PSCP" value="%{need_PSCP}" />
+
+	<property name="marathon.master" value="%{marathon_master}" />
+
+	<!-- read the build number from release.ini -->
+	<property name="old.version" value="?{release.ini:releases:current}" />
+	<regexp property="old.build" text="${old.version}" pattern="^.*\.([0-9]+)$" subst ="\1" />
+
+	<!-- read the programstate, e.g. Beta, RC, ... from release.ini -->
+	<property name="programstate" value="?{release.ini:releases:programstate}" />
+
+	<!-- increase the build number -->
+	<property name="build" value="={1 + ${old.build}}" if="marathon.master" />
+	<property name="build" value="${old.build}"    unless="marathon.master" />
+
+	<!-- comma.version is replaced in the sub-project template files -->
+	<regexp property="version" text="${old.version}" pattern="\.[0-9]*$" subst=".${build}" />
+	<regexp property="comma.version" pattern="\." subst="," text="${version}" />
+
+	<tstamp>
+		<format property="when"      pattern="yyyy,mm,dd,HH,nn,ss" />
+		<format property="date.tag"  pattern="yyyy-mm-dd" />
+	</tstamp>
+	
+	<!-- src dir, this is the directory where the sources are in -->
+	<property name="src" value="${basedir}/src"/>
+
+	<!-- this are the subdirs of Marathon and the subprojects -->
+	<property name="MarathonSource" value="${src}/Source"/>
+	<property name="CreateDBWizardSource" value="${src}/CreateDBWizard"/>
+	<property name="MetaExtractSource" value="${src}/MetaExtract"/>
+	<property name="AutoIncFieldWizardSource" value="${src}/Plugins/AutoIncFieldWizard"/>
+	<property name="FreeIBCompsSQLSource" value="${src}/Plugins/FreeIBCompsSQL"/>
+	<property name="ScriptExecSource" value="${src}/ScriptExec"/>
+	<property name="ShellExtensionSource" value="${src}/ShellExtension"/>
+
+	<property name="dist" value="dist" />
+	
+	<property name="build.dir" value="${basedir}/build"/>
+	<property name="dist.dir" value="${basedir}/${dist}"/>
+
+	<!-- adjust the path to your needs -->
+	<!-- this is the path where most of your components reside -->
+	<property name="lib" value="${basedir}/lib" unless="official"/>
+
+	<!-- adjust the paths to your needs -->
+	<!-- patternset for the library paths, you only need to do adjustments here if -->
+	<!-- you have a different folder structure, in most cases you should only change the -->
+	<!-- path to your IBO library directory -->
+	<patternset id="library">
+		<include name="?{build.ini:libs:ibObjects}"/>
+		<include name="?{build.ini:libs:rmControls}"/>
+		<include name="?{build.ini:libs:TBar2000}"/>
+		<include name="?{build.ini:libs:VirtualTreeView}"/>
+		<include name="?{build.ini:libs:ThemeManager}"/>
+		<include name="?{build.ini:libs:Synedit}"/>
+		<include name="?{build.ini:libs:SyntaxMemoWithStuff2}"/>
+		<include name="?{build.ini:libs:DataSetPrint}"/>
+		<include name="?{build.ini:libs:Pageprnt}"/>
+		<include name="?{build.ini:libs:Hexeditor}"/>
+		<include name="?{build.ini:libs:Other}"/>
+		<include name="${basedir}/src/Common"/>
+		<!-- This is the path to the english constants, so if you have a localized Delphi -->
+		<!-- version copy all english constsxxx.pas files from the Delphi/Source directory -->
+		<include name="${lib}/EnglConsts"/>
+	</patternset>
+
+	<!-- adjust the path to your needs -->
+	<!-- this is the path to your InnoSetup compiler -->
+	<property name="InnoSetup" value="?{build.ini:programs:InnoSetup}"/>
+
+	<!-- adjust the path to your needs -->
+	<!-- this is the path to your PSCP executable, from the PuTTY distribution -->
+	<property name="PSCP" value="?{build.ini:programs:PSCP}"/>
+
+	<!-- adjust the path to your needs -->
+	<!-- this is the path to your WinHelp compiler -->
+	<property name="HCW" value="?{build.ini:programs:HCW}"/>
+
+	<!-- get the date, year is used for the sub-project template files -->
+	<!-- date and when are currently unused -->
+	<tstamp>
+		<format property="when" pattern="dd-mm-yyyy,HH,nn,ss"/>
+		<format property="date" pattern="dd-mm-yyyy"/>
+		<format property="year" pattern="yyyy"/>
+	</tstamp>
+
+	<!-- these are the standard file names and paths for the snapshot files -->
+	<property name="zipfile_source" value="${dist.dir}/Marathon_${version}_Source.zip"/>
+	<property name="zipfile_binary" value="${dist.dir}/Marathon_${version}_Binary.zip"/>
+
+	<!-- =================================================================== -->
+	<!-- Help screen -->
+	<!-- =================================================================== -->
+	<target name="help">
+		<echo message="Available targets:"/>
+		<echo message="----------------------------------------------------------"/>
+		<echo message="compile		: Compile Marathon and all subprojects"/>
+		<echo message="online_help	: Compile Marathon online help"/>
+		<echo message="source_snapshot	: Create a sourcecode snapshot"/>
+		<echo message="binary_snapshot	: Create a binary snapshot with InnoSetup"/>
+		<echo message="----------------------------------------------------------"/>
+		<echo message="official_snapshots: Creates official snapshots (creates source and binary snapshots, uploads them to our SF web area and finally increase and commit the build number in release.ini)"/>
+		<echo message="----------------------------------------------------------"/>
+		<echo message="clean		: Cleans up the temp directories"/>
+		<echo message="----------------------------------------------------------"/>
+		<echo message="Usage: build [target]"/>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Prepare for the build -->
+	<!-- =================================================================== -->
+	<target name="init" depends="clean">
+		<mkdir dir="${dist.dir}"/>
+		<mkdir dir="${build.dir}"/>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Compile Marathon and all subprojects -->
+	<!-- =================================================================== -->
+	<target name="compile" depends="init">
+		<!-- compile all Bitmap .rc files -->
+		<brcc file="${src}/Resources/AVI/MarathonAVI.rc" output="${MarathonSource}/MarathonAVI.res"/>
+		<brcc file="${src}/Resources/Marathon/Toolmenus.rc" output="${MarathonSource}/Toolmenus.res"/>
+		<brcc file="${src}/Resources/Marathon/MarathonButtons.rc" output="${MarathonSource}/MarathonButtons.res"/>
+
+		<!-- compile Marathon -->
+		<echo input="${MarathonSource}/MarathonVersion.template.rc" file="${MarathonSource}/MarathonVersion.rc" />
+		<brcc file="${MarathonSource}/MarathonVersion.rc" output="${MarathonSource}/MarathonVersion.res"/>
+		<dcc basedir="${MarathonSource}" source="Marathon.dpr">
+			<exeoutput path="${MarathonSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+
+		<!-- compile CreateDBWizard -->
+		<echo input="${CreateDBWizardSource}/CDatabseVersion.template.rc" file="${CreateDBWizardSource}/CDatabseVersion.rc" />
+		<brcc file="${CreateDBWizardSource}/CDatabseVersion.rc" output="${CreateDBWizardSource}/CDatabseVersion.res"/>
+		<dcc basedir="${CreateDBWizardSource}" source="CDatabse.dpr">
+			<exeoutput path="${CreateDBWizardSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+
+		<!-- compile MetaExtract -->
+		<echo input="${MetaExtractSource}/GSSScriptVersion.template.rc" file="${MetaExtractSource}/GSSScriptVersion.rc"/>
+		<brcc file="${MetaExtractSource}/GSSScriptVersion.rc" output="${MetaExtractSource}/GSSScriptVersion.res"/>
+		<dcc basedir="${MetaExtractSource}" source="GSSScript.dpr">
+			<exeoutput path="${MetaExtractSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<iochecks value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+
+		<!-- compile Plugin AutoIncFieldWizard -->
+		<echo input="${AutoIncFieldWizardSource}/AutoincVersion.template.rc" file="${AutoIncFieldWizardSource}/AutoincVersion.rc"/>
+		<brcc file="${AutoIncFieldWizardSource}/AutoincVersion.rc" output="${AutoIncFieldWizardSource}/AutoincVersion.res"/>
+		<dcc basedir="${AutoIncFieldWizardSource}" source="Autoinc.dpr">
+			<exeoutput path="${AutoIncFieldWizardSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+
+		<!-- compile Plugin FreeIBCompsSQL -->
+		<echo input="${FreeIBCompsSQLSource}/UpdateSQLVersion.template.rc" file="${FreeIBCompsSQLSource}/UpdateSQLVersion.rc"/>
+		<brcc file="${FreeIBCompsSQLSource}/UpdateSQLVersion.rc" output="${FreeIBCompsSQLSource}/UpdateSQLVersion.res"/>
+		<dcc basedir="${FreeIBCompsSQLSource}" source="UpdateSQL.dpr">
+			<exeoutput path="${FreeIBCompsSQLSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+
+		<!-- compile ScriptExec -->
+		<echo input="${ScriptExecSource}/ScrExecVersion.template.rc" file="${ScriptExecSource}/ScrExecVersion.rc"/>
+		<brcc file="${ScriptExecSource}/ScrExecVersion.rc" output="${ScriptExecSource}/ScrExecVersion.res"/>
+		<dcc basedir="${ScriptExecSource}" source="ScrExec.dpr">
+			<exeoutput path="${ScriptExecSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+
+		<!-- compile ShellExtension -->
+		<echo input="${ShellExtensionSource}/MShellmenuVersion.template.rc" file="${ShellExtensionSource}/MShellmenuVersion.rc"/>
+		<brcc file="${ShellExtensionSource}/MShellmenuVersion.rc" output="${ShellExtensionSource}/MShellmenuVersion.res"/>
+		<dcc basedir="${ShellExtensionSource}" source="MShellmenu.dpr">
+			<exeoutput path="${ShellExtensionSource}"/>
+			<dcuoutput path="${build.dir}"/>
+			<iochecks value="false"/>
+			<debug value="false"/>
+			<optimize value="true"/>
+			<warnings value="false"/>
+			<unitpath refid="library"/>
+		</dcc>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Create the online help -->
+	<!-- =================================================================== -->
+	<target name="online_help">
+		<!-- compile the online help with the command line compiler -->
+		<exec executable="${HCW}">
+			<!-- /C = Start compiling, /E = Quits the compiler after compiling -->
+			<!-- /M = Minimize the help compiler during compile -->
+			<arg value="/C /E /M"/>
+			<arg value="@{${src}}/Help/Marathon.hpj"/>
+		</exec>
+
+		<!-- move the result of the help compile to the help dir because the -->
+		<!-- help compiler puts them into the basedir -->
+		<move todir="${src}/Help">
+			<fileset dir="${basedir}">
+				<include name="Marathon.hlp"/>
+				<include name="Marathon.fts"/>
+				<include name="Marathon.err"/>
+			</fileset>
+		</move>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Create a sourcecode snapshot -->
+	<!-- =================================================================== -->
+	<target name="source_snapshot" depends="init">
+		<!-- create a zipped sourcecode snapshot -->
+		<zip zipfile="${zipfile_source}" >
+			<include name="${basedir}/src/**"/>
+			<!-- exlude some file types -->
+			<exclude name="${basedir}/src/**/*.zip"/>
+			<exclude name="${basedir}/src/**/*.exe"/>
+			<exclude name="${basedir}/src/**/*.dll"/>
+			<exclude name="${basedir}/src/**/*.dcu"/>
+			<exclude name="${basedir}/src/**/*.bpl"/>
+			<exclude name="${basedir}/src/**/*.dsk"/>
+			<exclude name="${basedir}/src/**/*.cfg"/>
+			<exclude name="${basedir}/src/**/*.dof"/>
+			<exclude name="${basedir}/src/**/*.ddp"/>
+			<exclude name="${basedir}/src/**/*.~*"/>
+			<exclude name="${basedir}/src/**/*.rsm"/>
+		</zip>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Create a binary snapshot with InnoSetup -->
+	<!-- =================================================================== -->
+	<target name="binary_snapshot" depends="compile, online_help">
+		<!-- create the setup with the InnoSetup command line compiler -->
+		<exec executable="${InnoSetup}">
+			<arg value="@{${src}}/Setup/Marathon.iss"/>
+		</exec>
+
+		<!-- zip and name the file -->
+		<zip preservePath="false" zipfile="${zipfile_binary}">
+			<include name="${src}/Setup/Setup.exe"/>
+		</zip>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Creates official snapshots -->
+	<!-- =================================================================== -->
+	<target name="official_snapshots" depends="changelog, source_snapshot, binary_snapshot">
+		<!-- upload the snapshots using secure copy from the PuTTY distribution -->
+		<exec executable="${PSCP}" if="need.PSCP">
+			<!-- -q = Quiet operation -->
+			<arg value="-q"/>
+			<!-- Here we use a wildcard because command line cvs did not handle -->
+			<!-- full paths correctly -->
+			<arg value="./${dist}/*.zip"/>
+			<!-- SFShell is a saved PuTTY session with auto-login username and the path -->
+			<!-- to the SSH private key file, the path is our webspace at SF -->
+			<arg value="SFShell:/home/groups/g/gm/gmarathon/htdocs/snapshots"/>
+		</exec>
+
+		<!-- checks the latest release.ini out of CVS into dist dir -->
+		<cvs command='checkout -d ./${dist} gmarathon/release.ini'/>
+
+		<!-- increase the build number -->
+		<ini file="${dist.dir}/release.ini" >
+			<write section="releases" key="current" value="${version}" />
+			<write section="releases" key="last_date" value="${date.tag}" />
+		</ini>
+
+		<!-- commit release.ini with the increased build number -->
+		<cvs command='commit -m"Buildnumber updated" ./${dist}/release.ini'/>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- Cleans up the temp directories -->
+	<!-- =================================================================== -->
+	<target name="clean">
+		<delete dir="${dist.dir}"/>
+		<delete dir="${build.dir}"/>
+	</target>
+	<!-- =================================================================== -->
+	<!-- Builds a Ant Style Changelog -->
+	<!-- =================================================================== -->
+
+	<target name="changelog">
+		<cvschangelog
+			destfile="changelog.xml"
+			start="?{release.ini:releases:last_date}"/>       
+		<style in="changelog.xml" out="ChangeLog.html" style="changelog.xsl">
+			<param name="title" expression="Marathon ChangeLog"/>
+			<param name="module" expression="gmarathon"/>
+			<param name="cvsweb" expression="http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/"/>
+		</style>
+		<delete file="changelog.xml"/>    
+	</target>
+
+</project>
+
+<!--
+$Log: want.xml,v $
+Revision 1.42  2004/01/30 15:53:19  carlosmacao
+Allow compilation with Delphi 7
+
+Revision 1.41  2003/12/20 13:43:24  hippoman
+* build dir var was nameclashing with build number var and was useless , reverting
+* want 0.2.11, just released, we could get ruid of our want.exe copy if needed..
+* Changed VirtualTree to most accuaret VirtualTreeView
+
+Revision 1.40  2003/12/20 11:53:59  hippoman
+* ANother small fix, is not Want is Marathon :)
+
+Revision 1.39  2003/12/20 11:52:13  hippoman
+* Corrected indentation a bit
+
+Revision 1.38  2003/12/20 11:48:37  hippoman
+* Added ChangeLog generation
+
+Revision 1.37  2003/12/20 11:26:38  hippoman
+* Changed properties order a bit, to group path properties..
+* Added date.tag, it's used for the release.ini management
+
+Revision 1.36  2003/12/20 11:08:31  hippoman
+Tried to get rid of any hardcoded path in command, created 2 new properties dist and build for the cvs and pscp commands args.
+
+Revision 1.35  2003/12/19 11:49:39  tmuetze
+Some minor enhancements
+
+Revision 1.34  2003/12/18 09:49:00  hippoman
+* Changed program to use new style path definitions ( from build.ini ), no more patrhs inside want.xml
+
+Revision 1.33  2003/12/18 09:41:23  hippoman
+Updated buld system:
+
+* used ${dist.dir} everywhere
+* added update of release.ini for offical snapshots
+* Added a new ini (build.ini) for every path needed, to search for tools and libraries, added a sample of this file to cvs, sorry it has my config now :)
+
+Revision 1.32  2003/12/02 20:51:13  tmuetze
+Added year and programstate to the template file, making the build process more flexible
+
+Revision 1.31  2003/12/02 15:54:03  tmuetze
+The resulting snapshot filenames now contain the build number
+
+Revision 1.30  2003/11/30 23:26:39  tmuetze
+Some stuff to make the official_snapshots work again; Note: build number handling is not ok until now...
+
+Revision 1.29  2003/11/25 11:15:13  hippoman
+* Added version 0.2.3 ( unreleased ) of want to be able to build marathon wirth the lates script.
+* Some corrections to the marathon build script,
+- Clean only when duing a full build
+- Use macros for the dist dir, previously was hardcoded
+
+Revision 1.28  2003/05/17 20:08:40  hippoman
+Many changes to the script, using new 0.2.3 ( not released ) want features:
+
+* got rid of dcc32.cfg
+* got rid of touchbuild.dpr
+* simplified build procedure
+* compiling dcus to the build dir, it was a mess to get a bungch of dcu overthere
+* added new config strings and sections to relase.ini,  to cope with different installation labnguajes and alike
+
+Revision 1.27  2003/03/12 18:56:00  tmuetze
+rmControls instead of rmCtl Dir
+
+Revision 1.26  2002/12/19 19:30:46  tmuetze
+Build file updates
+
+Revision 1.25  2002/04/30 15:25:32  tmuetze
+Added the lib dir of the TDataSetPrint
+
+Revision 1.24  2002/04/24 13:36:36  tmuetze
+New cvs powered comment block
+
+-->

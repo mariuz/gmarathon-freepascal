@@ -1,0 +1,6 @@
+TOOL_BAR_STRIP          BITMAP       "ToolBarStrip.bmp"
+NEW_OBJECT_STRIP        BITMAP       "NewObjectStrip.bmp"
+UDF_SMALL_STRIP         BITMAP       "UDFSmallStrip.bmp"
+WINDOW_LIST_STRIP       BITMAP       "WindowListStrip.bmp"
+TREE_IMAGES_STRIP       BITMAP       "TreeImagesStrip.bmp"
+ERROR_INFO_STRIP        BITMAP       "ErrorInfoStrip.bmp"

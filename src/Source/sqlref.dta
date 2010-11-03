@@ -1,0 +1,504 @@
+===ALTER DATABASE
+ALTER {DATABASE | SCHEMA}
+ADD <add_clause>;
+
+<add_clause> = 
+FILE "<filespec>" [<fileinfo>] [<add_clause>]
+
+<fileinfo> = LENGTH [=] int [PAGE[S]] | STARTING [AT [PAGE]] int 
+ALTER DOMAIN name {
+[SET DEFAULT {literal | NULL | USER}] 
+	| [DROP DEFAULT] 
+	| [ADD [CONSTRAINT] CHECK (<dom_search_condition>)] 
+	| [DROP CONSTRAINT]
+	};
+	
+<dom_search_condition> = {
+VALUE <operator> <val> 
+	| VALUE [NOT] BETWEEN <val> AND <val> 
+	| VALUE [NOT] LIKE <val> [ESCAPE <val>] 
+	| VALUE [NOT] IN (<val> [, <val> ...]) 
+	| VALUE IS [NOT] NULL 
+	| VALUE [NOT] CONTAINING <val> 
+	| VALUE [NOT] STARTING [WITH] <val>
+	| (<dom_search_condition>)
+	| NOT <dom_search_condition>
+	| <dom_search_condition> OR <dom_search_condition>
+	| <dom_search_condition> AND <dom_search_condition>
+	}
+	
+<operator> = {= | < | > | <= | >= | !< | !> | <> | !=}
+---
+===ALTER EXCEPTION
+ALTER EXCEPTION name "<message>";
+---
+===ALTER INDEX
+ALTER INDEX name {ACTIVE | INACTIVE};
+---
+===ALTER PROCEDURE
+ALTER PROCEDURE name
+[(param <datatype> [, param <datatype> ...])] 
+	[RETURNS (param <datatype> [, param <datatype> ...])]
+	AS <procedure_body> [terminator]
+---
+===ALTER TABLE
+ALTER TABLE table <operation> [, <operation> ...];
+
+<operation> = {ADD <col_def> | ADD <table_constraint> | DROP col 
+| DROP CONSTRAINT constraint}
+
+<col_def> = col {<datatype> | [COMPUTED [BY] (<expr>) | domain}
+[DEFAULT {literal | NULL | USER}] 
+	[NOT NULL] [<col_constraint>] 
+	[COLLATE collation]
+
+Note:	The COLLATE clause cannot be specified for BLOB columns.
+
+<col_constraint> = [CONSTRAINT constraint] <constraint_def> 
+[<col_constraint>]
+	
+<constraint_def> = {PRIMARY KEY | UNIQUE
+| CHECK (<search_condition>) 
+	| REFERENCES other_table [(other_col [, other_col ...])]}
+	
+<datatype> = {
+{SMALLINT | INTEGER | FLOAT | DOUBLE PRECISION} [<array_dim>]
+	| {DECIMAL | NUMERIC} [(precision [, scale])] [<array_dim>] 
+	| DATE [<array_dim>] 
+	| {CHAR | CHARACTER | CHARACTER VARYING | VARCHAR} 
+		[(1...32767)] [<array_dim>] [CHARACTER SET charname] 
+	| {NCHAR | NATIONAL CHARACTER | NATIONAL CHAR} 
+		[VARYING] [(1...32767)] [<array_dim>] 
+	| BLOB [SUB_TYPE {int | subtype_name}] [SEGMENT SIZE int]
+		[CHARACTER SET charname]
+	| BLOB [(seglen [, subtype])]
+	}
+	
+<array_dim> = [x:y [, x:y ...]]
+
+Note:	Outermost brackets (boldface) must be included when declaring arrays.
+
+<table_constraint> = CONSTRAINT constraint <tconstraint_opt> 
+[<table_constraint>]
+<tconstraint_opt> = {
+{PRIMARY KEY | UNIQUE} (col [, col ...]) 
+| FOREIGN KEY (col [, col ...]) REFERENCES other_table 
+| CHECK (<search_condition>)
+}
+Note:	For the full syntax of <search_condition>, see CREATE TABLE1_6LV08.
+---
+===ALTER TRIGGER
+ALTER TRIGGER name
+[ACTIVE | INACTIVE]
+	[{BEFORE | AFTER} {DELETE | INSERT | UPDATE}]
+	[POSITION number]
+	[AS <trigger_body>] [terminator] 
+---
+===CREATE DOMAIN
+CREATE DOMAIN domain [AS] <datatype>
+[DEFAULT {literal | NULL | USER}] 
+	[NOT NULL] [CHECK (<dom_search_condition>)]
+	[COLLATE collation];
+Note:	The COLLATE clause cannot be specified for BLOB columns.
+<datatype> = {
+{SMALLINT | INTEGER | FLOAT | DOUBLE PRECISION} [<array_dim>]
+	| {DECIMAL | NUMERIC} [(precision [, scale])] [<array_dim>] 
+	| DATE [<array_dim>] 
+	| {CHAR | CHARACTER | CHARACTER VARYING | VARCHAR} 
+		[(1...32767)] [<array_dim>] [CHARACTER SET charname] 
+	| {NCHAR | NATIONAL CHARACTER | NATIONAL CHAR} 
+		[VARYING] [(1...32767)] [<array_dim>] 
+	| BLOB [SUB_TYPE {int | subtype_name}] [SEGMENT SIZE n]
+		[CHARACTER SET charname]
+	| BLOB [(seglen [, subtype])]
+	}
+	
+<array_dim> = [x:y [, x:y ...]]
+Note:	Outermost brackets (boldface) must be included when declaring arrays.
+<dom_search_condition> = {
+VALUE <operator> <val> 
+	| VALUE [NOT] BETWEEN <val> AND <val> 
+	| VALUE [NOT] LIKE <val> [ESCAPE <val>] 
+	| VALUE [NOT] IN (<val> [, <val> ...]) 
+	| VALUE IS [NOT] NULL 
+	| VALUE [NOT] CONTAINING <val> 
+	| VALUE [NOT] STARTING [WITH] <val>
+	| (<dom_search_condition>)
+	| NOT <dom_search_condition>
+	| <dom_search_condition> OR <dom_search_condition>
+	| <dom_search_condition> AND <dom_search_condition>
+	}
+<operator> = {= | < | > | <= | >= | !< | !> | <> | !=}
+---
+===CREATE EXCEPTION
+CREATE EXCEPTION name "<message>";
+---
+===CREATE GENERATOR
+CREATE GENERATOR name;
+---
+===CREATE INDEX
+CREATE [UNIQUE] [ASC[ENDING] | DESC[ENDING]]
+INDEX index ON table (col [, col ...]);
+---
+===CREATE PROCEDURE
+CREATE PROCEDURE name
+[(param <datatype> [, param <datatype> ...])] 
+	[RETURNS <datatype> [, param <datatype> ...])]
+	AS <procedure_body> [terminator]
+	
+<procedure_body> =
+[<variable_declaration_list>] 
+	<block>
+	
+<variable_declaration_list> = 
+DECLARE VARIABLE var <datatype>;
+[DECLARE VARIABLE var <datatype>; ...]
+
+<block> =
+BEGIN
+<compound_statement>
+	[<compound_statement> ...]
+END
+
+<compound_statement> = {<block> | statement;}
+
+<datatype> = {
+{SMALLINT | INTEGER | FLOAT | DOUBLE PRECISION} 
+	| {DECIMAL | NUMERIC} [(precision [, scale])] 
+	| DATE 
+	| {CHAR | CHARACTER | CHARACTER VARYING | VARCHAR} [(int)]
+		[CHARACTER SET charname] 
+	| {NCHAR | NATIONAL CHARACTER | NATIONAL CHAR} 
+		[VARYING] [(int)]}
+---
+===CREATE SHADOW
+CREATE SHADOW set_num [AUTO | MANUAL] [CONDITIONAL]
+"<filespec>" [LENGTH [=] int [PAGE[S]]] 
+	[<secondary_file>];
+	
+<secondary_file> = FILE "<filespec>" [<fileinfo>] [<secondary_file>]
+
+<fileinfo> = LENGTH [=] int [PAGE[S]] | STARTING [AT [PAGE]] int 
+[<fileinfo>]
+---
+===CREATE TABLE
+CREATE TABLE table [EXTERNAL [FILE] "<filespec>"]
+(<col_def> [, <col_def> | <tconstraint> ...]);
+	
+<col_def> = col {datatype | COMPUTED [BY] (<expr>) | domain}
+[DEFAULT {literal | NULL | USER}]
+	[NOT NULL] [<col_constraint>]
+	[COLLATE collation]
+Note:	The COLLATE clause cannot be specified for BLOB columns.
+<datatype> = {
+{SMALLINT | INTEGER | FLOAT | DOUBLE PRECISION} [<array_dim>]
+	| {DECIMAL | NUMERIC} [(precision [, scale])] [<array_dim>] 
+	| DATE [<array_dim>] 
+	| {CHAR | CHARACTER | CHARACTER VARYING | VARCHAR} 
+		[(int)] [<array_dim>] [CHARACTER SET charname] 
+	| {NCHAR | NATIONAL CHARACTER | NATIONAL CHAR} 
+		[VARYING] [(int)] [<array_dim>] 
+	| BLOB [SUB_TYPE {int | subtype_name}] [SEGMENT SIZE int]
+		[CHARACTER SET charname]
+	| BLOB [(seglen [, subtype])]
+	}
+	
+<array_dim> = [x:y [, x:y ...]]
+Note:	Outermost brackets (boldface) must be included when declaring arrays.
+<expr> = A valid SQL expression that results in a single value.
+
+<col_constraint> = [CONSTRAINT constraint] <constraint_def> 
+[<col_constraint>]
+	
+<constraint_def> = {UNIQUE | PRIMARY KEY 
+| CHECK (<search_condition>) 
+	| REFERENCES other_table [(other_col [, other_col ...])]}
+	
+<tconstraint> = CONSTRAINT constraint <tconstraint_def> 
+[<tconstraint>]
+	
+<tconstraint_def> = {{PRIMARY KEY | UNIQUE} (col [, col ...]) 
+| FOREIGN KEY (col [, col ...]) REFERENCES other_table 
+	| CHECK (<search_condition>)}
+	
+<search_condition> = 
+{<val> <operator> {<val> | (<select_one>)} 
+	| <val> [NOT] BETWEEN <val> AND <val> 
+	| <val> [NOT] LIKE <val> [ESCAPE <val>] 
+	| <val> [NOT] IN (<val> [, <val> ...] | <select_list>) 
+	| <val> IS [NOT] NULL 
+	| <val> {[NOT] {= | < | >} | >= | <=} 
+		{ALL | SOME | ANY} (<select_list>) 
+	| EXISTS (<select_expr>) 
+	| SINGULAR (<select_expr>) 
+	| <val> [NOT] CONTAINING <val> 
+	| <val> [NOT] STARTING [WITH] <val> 
+	| (<search_condition>) 
+	| NOT <search_condition> 
+	| <search_condition> OR <search_condition> 
+	| <search_condition> AND <search_condition>}
+	
+<val> = {
+col [<array_dim>] | <constant> | <expr> | <function>
+	 | NULL | USER | RDB$DB_KEY
+	} [COLLATE collation]
+
+<constant> = num | "string" | charsetname "string"
+
+<function> = {
+COUNT (* | [ALL] <val> | DISTINCT <val>)
+	| SUM ([ALL] <val> | DISTINCT <val>)
+	| AVG ([ALL] <val> | DISTINCT <val>)
+	| MAX ([ALL] <val> | DISTINCT <val>)
+	| MIN ([ALL] <val> | DISTINCT <val>)
+	| CAST (<val> AS <datatype>)
+	| UPPER (<val>)
+	| GEN_ID (generator, <val>)
+	}
+<operator> = {= | < | > | <= | >= | !< | !> | <> | !=}
+
+<select_one> = SELECT on a single column that returns exactly one 
+value.
+	
+<select_list> = SELECT on a single column that returns zero or more 
+values.
+	
+<select_expr> = SELECT on a list of values that returns zero or more 
+values.
+---
+===CREATE TRIGGER
+CREATE TRIGGER name FOR table
+	[ACTIVE | INACTIVE]
+	{BEFORE | AFTER}
+	{DELETE | INSERT | UPDATE}
+	[POSITION number]
+	AS <trigger_body> terminator
+	
+<trigger_body> = 
+	[<variable_declaration_list>] <block>
+	
+<variable_declaration_list> = 
+	DECLARE VARIABLE variable <datatype>;
+	[DECLARE VARIABLE variable <datatype>; ...]
+	
+<block> =
+BEGIN
+	<compound_statement>	
+	[<compound_statement> ...]
+END
+
+<compound_statement> = {<block> | statement;}
+
+<datatype> = {
+{SMALLINT | INTEGER | FLOAT | DOUBLE PRECISION} 
+	| {DECIMAL | NUMERIC} [(precision [, scale])] 
+	| DATE 
+	| {CHAR | CHARACTER | CHARACTER VARYING | VARCHAR} 
+		[(1...32767)] [CHARACTER SET charname] 
+	| {NCHAR | NATIONAL CHARACTER | NATIONAL CHAR} 
+		[VARYING] [(1...32767)]}
+---
+===CREATE VIEW
+CREATE VIEW name [(view_col [, view_col ...])]
+	AS <select> [WITH CHECK OPTION];
+---
+===DECLARE EXTERNAL FUNCTION
+DECLARE EXTERNAL FUNCTION name [<datatype> | CSTRING (int)
+	[, <datatype> | CSTRING (int) ...]]
+	RETURNS {<datatype> [BY VALUE] | CSTRING (int)}
+	ENTRY_POINT "<entryname>"
+	MODULE_NAME "<modulename>";
+---
+===DELETE
+DELETE FROM TABLE [WHERE <search_condition>];
+---
+===DROP DOMAIN
+DROP DOMAIN name;
+---
+===DROP EXCEPTION
+DROP EXCEPTION name;
+---
+===DROP EXTERNAL FUNCTION
+DROP EXTERNAL FUNCTION name;
+---
+===DROP INDEX
+DROP INDEX name;
+---
+===DROP PROCEDURE
+DROP PROCEDURE name;
+---
+===DROP SHADOW
+DROP SHADOW set_num;
+---
+===DROP TABLE
+DROP TABLE name;
+---
+===DROP TRIGGER
+DROP TRIGGER name;
+---
+===DROP VIEW
+DROP VIEW name;
+---
+===EXECUTE PROCEDURE
+EXECUTE PROCEDURE name [param [, param ...]];
+---
+===GRANT
+GRANT{
+{ALL [PRIVILEGES] | SELECT | DELETE | INSERT
+	| UPDATE [(col [, col ...])]}
+		ON [TABLE] {tablename | viewname}
+	 	TO {<object> | <userlist>}
+	| EXECUTE ON PROCEDURE procname 
+		TO {<object> | <userlist>}
+	}; 
+	
+<object> = PROCEDURE procname | TRIGGER trigname | VIEW viewname
+| [USER] username | PUBLIC [, <object>]
+	
+<userlist> = [USER] username [, [USER] username ...]
+[WITH GRANT OPTION]
+---
+===INSERT
+INSERT INTO <object> [(col [, col ...])]
+{VALUES (<val> [, <val> ...]) | <select_expr>};
+	
+<object> = tablename | viewname 
+
+<val> = {
+<constant> | <expr>| <function> | NULL | USER
+	} [COLLATE collation]
+Note:	The COLLATE clause cannot be used with BLOB values.
+<constant> = num | "string" | charsetname "string"
+
+<expr> = A valid SQL expression that results in a single column value.
+
+<function> = {
+CAST (<val> AS <datatype>)
+	| UPPER (<val>)
+	| GEN_ID (generator, <val>)
+	}
+
+<select_expr> = A SELECT returning zero or more rows and where the 
+number of columns in each row is the same as the number of items to be 
+inserted.
+---
+===REVOKE
+REVOKE [GRANT OPTION FOR]{
+{ALL [PRIVILEGES] | SELECT | DELETE | INSERT
+		| UPDATE [(col [, col ...])]}
+		ON [TABLE] {tablename | viewname}
+		FROM {<object> | <userlist>}
+	| EXECUTE ON PROCEDURE procname 
+		FROM {<object> | <userlist>}
+	}; 
+	
+<object> = PROCEDURE procname | TRIGGER trigname | VIEW viewname
+	| [USER] username | PUBLIC [, <object>]
+	
+<userlist> = [USER] username [, [USER] username ...]
+---
+===SELECT
+SELECT [DISTINCT | ALL] {* | <val> [, <val> ...]}
+	FROM <tableref> [, <tableref> ...]
+	[WHERE <search_condition>]
+	[GROUP BY col [COLLATE collation] [, col [COLLATE collation] ...] 
+	[HAVING <search_condition>] 
+	[UNION <select_expr>]
+	[PLAN <plan_expr>]
+	[ORDER BY <order_list>]
+	
+<val> = {
+col [<array_dim>] | <constant> | <expr> | <function>
+	| NULL | USER | RDB$DB_KEY
+	}
+
+<array_dim> = [x:y [, x:y ...]]
+Note:	Outermost brackets (boldface) must be included when referencing arrays.
+<constant> = num | "string" | charsetname "string"
+
+<expr> = A valid SQL expression that results in a single value.
+
+<function> = {
+COUNT (* | [ALL] <val> | DISTINCT <val>)
+	| SUM ([ALL] <val> | DISTINCT <val>)
+	| AVG ([ALL] <val> | DISTINCT <val>)
+	| MAX ([ALL] <val> | DISTINCT <val>)
+	| MIN ([ALL] <val> | DISTINCT <val>)
+	| CAST (<val> AS <datatype>)
+	| UPPER (<val>)
+	| GEN_ID (generator, <val>)
+	}
+
+<tableref> = <joined_table> | table | view | procedure
+[(<val> [, <val> ...])] [alias]
+
+<joined_table> = <tableref> <join_type> JOIN <tableref>
+ON <search_condition> | (<joined_table>)
+
+<join-type> = {[INNER] | {LEFT | RIGHT | FULL } [OUTER]} JOIN
+
+<search_condition> = {<val> <operator>
+{<val> | (<select_one>)} 
+	| <val> [NOT] BETWEEN <val> AND <val> 
+	| <val> [NOT] LIKE <val> [ESCAPE <val>] 
+	| <val> [NOT] IN (<val> [, <val> ...] | <select_list>) 
+	| <val> IS [NOT] NULL 
+	| <val> {[NOT] {= | < | >} | >= | <=} 
+		{ALL | SOME | ANY} (<select_list>) 
+	| EXISTS (<select_expr>) 
+	| SINGULAR (<select_expr>) 
+	| <val> [NOT] CONTAINING <val> 
+	| <val> [NOT] STARTING [WITH] <val> 
+	| (<search_condition>) 
+	| NOT <search_condition> 
+	| <search_condition> OR <search_condition> 
+	| <search_condition> AND <search_condition>}
+	
+<operator> = {= | < | > | <= | >= | !< | !> | <> | !=}
+
+<select_one> = SELECT on a single column that returns exactly one row.
+
+<select_list> = SELECT on a single column that returns zero or more 
+rows.
+	
+<select_expr> = SELECT on a list of values that returns zero or more 
+rows.
+
+<plan_expr> = 
+[JOIN | [SORT] MERGE] (<plan_item> | <plan_expr>
+	 	[, <plan_item> | <plan_expr> ...])
+	
+<plan_item> = {table | alias}
+	NATURAL | INDEX (<index> [, <index> ...]) | ORDER <index>
+
+<order_list> = 
+{col | int} [COLLATE collation] [ASC[ENDING] | DESC[ENDING]]
+	[, <order_list>]
+---
+===SET GENERATOR
+SET GENERATOR name TO int;
+---
+===UPDATE
+UPDATE {table | view}
+SET col = <val> [, col = <val> ...]
+	[WHERE <search_condition>;
+
+<val> = {
+col [<array_dim>] | <constant> | <expr> | <function>
+	| NULL | USER
+	}
+
+<array_dim> = [x:y [, x:y ...]]
+Note:	Outermost brackets (boldface) must be included when referencing arrays.
+<constant> = num | "string" | charsetname "string"
+
+<expr> = A valid SQL expression that results in a single value.
+
+<function> = {
+CAST (<val> AS <datatype>)
+	| UPPER (<val>)
+	| GEN_ID (generator, <val>)
+	}
+
+<search_condition> = See CREATE TABLE2LI09R5 for a full description.
+---

@@ -1,0 +1,13 @@
+alter procedure prc$dat_add_year (INDATE date, INYEARS integer)
+returns (RESULT date)
+as
+declare variable year   integer;
+declare variable month  integer;
+declare variable day    integer;
+begin
+execute procedure prc$dat_decode_date(indate) returning_values (year, 
+month, day);
+year = year + inyears;
+execute procedure prc$dat_encode_date(year, month, day) 
+returning_values result;
+end

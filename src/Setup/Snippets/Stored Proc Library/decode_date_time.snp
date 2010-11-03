@@ -1,0 +1,10 @@
+alter procedure prc$dat_decode_date_time (ADATE date)
+returns (YEAR integer, MONTH integer,
+DAY integer, HOUR integer, MINUTE integer, SECONDS integer)
+as
+begin
+  EXECUTE PROCEDURE PRC$DAT_DECODE_DATE(ADate) RETURNING_VALUES(Year, 
+Month, Day);
+  EXECUTE PROCEDURE prc$dat_decode_time (ADATE) RETURNING_VALUES 
+(HOUR, MINUTE, SECONDS);
+end

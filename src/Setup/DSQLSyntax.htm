@@ -1,0 +1,7578 @@
+<HTML>
+
+<HEAD>
+
+    <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+
+    <META NAME="Author" CONTENT="Bill Karwin">
+
+    <META NAME="GENERATOR" CONTENT="/usr/local/bin/perl">
+
+    <TITLE>InterBase DSQL Syntax</TITLE>
+
+</HEAD>
+
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#006600" VLINK="#002200" ALINK="#000000">
+
+<CENTER>
+
+<TABLE BORDER=1 CELLSPACING=0 CELLPADDING=5>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    List Of Possible Statements
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="top">top</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#statement">statement</A> 
+
+   <BR> | <A HREF="#statement">statement</A>  ';'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="statement">statement</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#alter">alter</A> 
+
+   <BR> | <A HREF="#blob">blob</A> 
+
+   <BR> | <A HREF="#commit">commit</A> 
+
+   <BR> | <A HREF="#create">create</A> 
+
+   <BR> | <A HREF="#declare">declare</A> 
+
+   <BR> | <A HREF="#delete">delete</A> 
+
+   <BR> | <A HREF="#drop">drop</A> 
+
+   <BR> | <A HREF="#grant">grant</A> 
+
+   <BR> | <A HREF="#insert">insert</A> 
+
+   <BR> | <A HREF="#invoke_procedure">invoke_procedure</A> 
+
+   <BR> | <A HREF="#revoke">revoke</A> 
+
+   <BR> | <A HREF="#rollback">rollback</A> 
+
+   <BR> | <A HREF="#select">select</A> 
+
+   <BR> | <A HREF="#set">set</A> 
+
+   <BR> | <A HREF="#update">update</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    GRANT Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="grant">grant</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : GRANT <A HREF="#privileges">privileges</A>  ON <A HREF="#prot_table_name">prot_table_name</A> 
+
+			TO <A HREF="#user_grantee_list">user_grantee_list</A>  <A HREF="#grant_option">grant_option</A> 
+
+   <BR> | GRANT <A HREF="#proc_privileges">proc_privileges</A>  ON PROCEDURE <A HREF="#simple_proc_name">simple_proc_name</A> 
+
+			TO <A HREF="#user_grantee_list">user_grantee_list</A>  <A HREF="#grant_option">grant_option</A> 
+
+   <BR> | GRANT <A HREF="#privileges">privileges</A>  ON <A HREF="#prot_table_name">prot_table_name</A> 
+
+			TO <A HREF="#grantee_list">grantee_list</A> 
+
+   <BR> | GRANT <A HREF="#proc_privileges">proc_privileges</A>  ON PROCEDURE <A HREF="#simple_proc_name">simple_proc_name</A> 
+
+			TO <A HREF="#grantee_list">grantee_list</A> 
+
+   <BR> | GRANT <A HREF="#role_name_list">role_name_list</A>  TO <A HREF="#role_grantee_list">role_grantee_list</A>  <A HREF="#role_admin_option">role_admin_option</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="prot_table_name">prot_table_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_table_name">simple_table_name</A> 
+
+   <BR> | TABLE <A HREF="#simple_table_name">simple_table_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="privileges">privileges</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ALL
+
+   <BR> | ALL PRIVILEGES
+
+   <BR> | <A HREF="#privilege_list">privilege_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="privilege_list">privilege_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#privilege">privilege</A> 
+
+   <BR> | <A HREF="#privilege_list">privilege_list</A>  ',' <A HREF="#privilege">privilege</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_privileges">proc_privileges</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXECUTE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="privilege">privilege</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SELECT
+
+   <BR> | INSERT
+
+   <BR> | DELETE
+
+   <BR> | UPDATE <A HREF="#column_parens_opt">column_parens_opt</A> 
+
+   <BR> | REFERENCES <A HREF="#column_parens_opt">column_parens_opt</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="grant_option">grant_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WITH GRANT OPTION
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="role_admin_option">role_admin_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WITH ADMIN OPTION
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="simple_proc_name">simple_proc_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    REVOKE Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="revoke">revoke</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : REVOKE <A HREF="#rev_grant_option">rev_grant_option</A>  <A HREF="#privileges">privileges</A>  ON <A HREF="#prot_table_name">prot_table_name</A> 
+
+			FROM <A HREF="#user_grantee_list">user_grantee_list</A> 
+
+   <BR> | REVOKE <A HREF="#rev_grant_option">rev_grant_option</A>  <A HREF="#proc_privileges">proc_privileges</A>  ON
+
+			PROCEDURE <A HREF="#simple_proc_name">simple_proc_name</A>  FROM <A HREF="#user_grantee_list">user_grantee_list</A> 
+
+   <BR> | REVOKE <A HREF="#privileges">privileges</A>  ON <A HREF="#prot_table_name">prot_table_name</A> 
+
+			FROM <A HREF="#user_grantee_list">user_grantee_list</A> 
+
+   <BR> | REVOKE <A HREF="#proc_privileges">proc_privileges</A>  ON
+
+			PROCEDURE <A HREF="#simple_proc_name">simple_proc_name</A>  FROM <A HREF="#user_grantee_list">user_grantee_list</A> 
+
+   <BR> | REVOKE <A HREF="#privileges">privileges</A>  ON <A HREF="#prot_table_name">prot_table_name</A> 
+
+			FROM <A HREF="#grantee_list">grantee_list</A> 
+
+   <BR> | REVOKE <A HREF="#proc_privileges">proc_privileges</A>  ON
+
+			PROCEDURE <A HREF="#simple_proc_name">simple_proc_name</A>  FROM <A HREF="#grantee_list">grantee_list</A> 
+
+   <BR> | REVOKE <A HREF="#role_name_list">role_name_list</A>  FROM <A HREF="#role_grantee_list">role_grantee_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="rev_grant_option">rev_grant_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : GRANT OPTION FOR
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="grantee_list">grantee_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#grantee">grantee</A> 
+
+   <BR> | <A HREF="#grantee_list">grantee_list</A>  ',' <A HREF="#grantee">grantee</A> 
+
+   <BR> | <A HREF="#grantee_list">grantee_list</A>  ',' <A HREF="#user_grantee">user_grantee</A> 
+
+   <BR> | <A HREF="#user_grantee_list">user_grantee_list</A>  ',' <A HREF="#grantee">grantee</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="grantee">grantee</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : PROCEDURE SYMBOL
+
+   <BR> | TRIGGER SYMBOL
+
+   <BR> | VIEW SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="user_grantee_list">user_grantee_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#user_grantee">user_grantee</A> 
+
+   <BR> | <A HREF="#user_grantee_list">user_grantee_list</A>  ',' <A HREF="#user_grantee">user_grantee</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="user_grantee">user_grantee</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR> | USER SYMBOL
+
+   <BR> | GROUP SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="role_name_list">role_name_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#role_name">role_name</A> 
+
+   <BR> | <A HREF="#role_name_list">role_name_list</A>  ',' <A HREF="#role_name">role_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="role_name">role_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="role_grantee_list">role_grantee_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#role_grantee">role_grantee</A> 
+
+   <BR> | <A HREF="#role_grantee_list">role_grantee_list</A>  ',' <A HREF="#role_grantee">role_grantee</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="role_grantee">role_grantee</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR> | USER SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    DECLARE Operations
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="declare">declare</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DECLARE <A HREF="#declare_clause">declare_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="declare_clause">declare_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FILTER <A HREF="#filter_decl_clause">filter_decl_clause</A> 
+
+   <BR> | EXTERNAL FUNCTION <A HREF="#udf_decl_clause">udf_decl_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="udf_decl_clause">udf_decl_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL <A HREF="#arg_desc_list1">arg_desc_list1</A>  RETURNS <A HREF="#return_value1">return_value1</A> 
+
+			ENTRY_POINT <A HREF="#sql_string">sql_string</A>  MODULE_NAME <A HREF="#sql_string">sql_string</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="udf_data_type">udf_data_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_type">simple_type</A> 
+
+   <BR> | BLOB
+
+   <BR> | CSTRING '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ')' <A HREF="#charset_clause">charset_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="arg_desc_list1">arg_desc_list1</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#arg_desc_list">arg_desc_list</A> 	
+
+   <BR> | '(' <A HREF="#arg_desc_list">arg_desc_list</A>  ')'	
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="arg_desc_list">arg_desc_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#arg_desc">arg_desc</A> 
+
+   <BR> | <A HREF="#arg_desc_list">arg_desc_list</A>  ',' <A HREF="#arg_desc">arg_desc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="arg_desc">arg_desc</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#init_data_type">init_data_type</A>  <A HREF="#udf_data_type">udf_data_type</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="return_value1">return_value1</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#return_value">return_value</A> 
+
+   <BR> | '(' <A HREF="#return_value">return_value</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="return_value">return_value</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#init_data_type">init_data_type</A>  <A HREF="#udf_data_type">udf_data_type</A> 
+
+   <BR> | <A HREF="#init_data_type">init_data_type</A>  <A HREF="#udf_data_type">udf_data_type</A>  FREE_IT
+
+                                         
+
+   <BR> | <A HREF="#init_data_type">init_data_type</A>  <A HREF="#udf_data_type">udf_data_type</A>  BY VALUE
+
+   <BR> | PARAMETER <A HREF="#pos_short_integer">pos_short_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="filter_decl_clause">filter_decl_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL INPUT_TYPE <A HREF="#blob_subtype">blob_subtype</A>  OUTPUT_TYPE <A HREF="#blob_subtype">blob_subtype</A>  
+
+			ENTRY_POINT <A HREF="#sql_string">sql_string</A>  MODULE_NAME <A HREF="#sql_string">sql_string</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE Metadata Operations
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="create">create</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : CREATE <A HREF="#create_clause">create_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="create_clause">create_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXCEPTION SYMBOL <A HREF="#sql_string">sql_string</A> 
+
+   <BR> | <A HREF="#unique_opt">unique_opt</A>  <A HREF="#order_direction">order_direction</A>  INDEX SYMBOL ON <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#index_definition">index_definition</A> 
+
+   <BR> | PROCEDURE <A HREF="#procedure_clause">procedure_clause</A> 
+
+   <BR> | TABLE <A HREF="#table_clause">table_clause</A> 
+
+   <BR> | TRIGGER <A HREF="#def_trigger_clause">def_trigger_clause</A> 
+
+   <BR> | VIEW <A HREF="#view_clause">view_clause</A> 
+
+   <BR> | GENERATOR <A HREF="#generator_clause">generator_clause</A> 
+
+   <BR> | DATABASE <A HREF="#db_clause">db_clause</A> 
+
+   <BR> | DOMAIN   <A HREF="#domain_clause">domain_clause</A> 
+
+   <BR> | SHADOW <A HREF="#shadow_clause">shadow_clause</A> 
+
+   <BR> | ROLE <A HREF="#role_clause">role_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE INDEX
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="unique_opt">unique_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : UNIQUE
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="index_definition">index_definition</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_list">column_list</A>  
+
+   <BR> | <A HREF="#column_parens">column_parens</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE SHADOW
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="shadow_clause">shadow_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#pos_short_integer">pos_short_integer</A>  <A HREF="#manual_auto">manual_auto</A>  <A HREF="#conditional">conditional</A>  <A HREF="#sql_string">sql_string</A> 
+
+		 <A HREF="#first_file_length">first_file_length</A>  <A HREF="#sec_shadow_files">sec_shadow_files</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="manual_auto">manual_auto</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : MANUAL
+
+   <BR> | AUTO
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="conditional">conditional</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | CONDITIONAL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="first_file_length">first_file_length</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | LENGTH <A HREF="#equals">equals</A>  <A HREF="#long_integer">long_integer</A>  <A HREF="#page_noise">page_noise</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="sec_shadow_files">sec_shadow_files</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#db_file_list">db_file_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_file_list">db_file_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_file">db_file</A> 
+
+   <BR> | <A HREF="#db_file_list">db_file_list</A>  <A HREF="#db_file">db_file</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE DOMAIN
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_clause">domain_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_def_name">column_def_name</A> 
+
+		  <A HREF="#as_opt">as_opt</A> 
+
+		  <A HREF="#data_type">data_type</A> 
+
+		  <A HREF="#begin_trigger">begin_trigger</A> 
+
+		  <A HREF="#domain_default_opt">domain_default_opt</A> 
+
+		  <A HREF="#end_trigger">end_trigger</A> 
+
+		  <A HREF="#domain_constraint_clause">domain_constraint_clause</A> 
+
+		  <A HREF="#collate_clause">collate_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="as_opt">as_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : AS
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_default_opt">domain_default_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DEFAULT <A HREF="#begin_trigger">begin_trigger</A>  <A HREF="#default_value">default_value</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_constraint_clause">domain_constraint_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#domain_constraint_list">domain_constraint_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_constraint_list">domain_constraint_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#domain_constraint_def">domain_constraint_def</A> 
+
+   <BR> | <A HREF="#domain_constraint_list">domain_constraint_list</A>  <A HREF="#domain_constraint_def">domain_constraint_def</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_constraint_def">domain_constraint_def</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#domain_constraint">domain_constraint</A> 
+
+ 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_constraint">domain_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#null_constraint">null_constraint</A> 
+
+   <BR> | <A HREF="#domain_check_constraint">domain_check_constraint</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>                                
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="null_constraint">null_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NOT NULL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="domain_check_constraint">domain_check_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#begin_trigger">begin_trigger</A>  CHECK '(' <A HREF="#search_condition">search_condition</A>  ')' <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE GENERATOR
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="generator_clause">generator_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE ROLE
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="role_clause">role_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE DATABASE
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_clause">db_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   :  <A HREF="#db_name">db_name</A>  <A HREF="#db_initial_desc1">db_initial_desc1</A>  <A HREF="#db_rem_desc1">db_rem_desc1</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="equals">equals</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | '='
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_name">db_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#sql_string">sql_string</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_initial_desc1">db_initial_desc1</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#db_initial_desc">db_initial_desc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_initial_desc">db_initial_desc</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_initial_option">db_initial_option</A> 
+
+   <BR> | <A HREF="#db_initial_desc">db_initial_desc</A>  <A HREF="#db_initial_option">db_initial_option</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR> 
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_initial_option">db_initial_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : PAGE_SIZE <A HREF="#equals">equals</A>  <A HREF="#pos_short_integer">pos_short_integer</A>  
+
+   <BR> | LENGTH <A HREF="#equals">equals</A>  <A HREF="#long_integer">long_integer</A>  <A HREF="#page_noise">page_noise</A> 
+
+   <BR> | USER <A HREF="#sql_string">sql_string</A> 
+
+   <BR> | PASSWORD <A HREF="#sql_string">sql_string</A> 	
+
+   <BR> | SET NAMES <A HREF="#sql_string">sql_string</A> 	
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_rem_desc1">db_rem_desc1</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#db_rem_desc">db_rem_desc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_rem_desc">db_rem_desc</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_rem_option">db_rem_option</A> 
+
+   <BR> | <A HREF="#db_rem_desc">db_rem_desc</A>  <A HREF="#db_rem_option">db_rem_option</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_rem_option">db_rem_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_file">db_file</A>   
+
+
+
+   <BR> | <A HREF="#db_log">db_log</A> 
+
+   <BR> | <A HREF="#db_log_option">db_log_option</A> 
+
+   <BR> | DEFAULT CHARACTER SET <A HREF="#character_set_name">character_set_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_log_option">db_log_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : GROUP_COMMIT_WAIT <A HREF="#equals">equals</A>  <A HREF="#long_integer">long_integer</A> 
+
+   <BR> | CHECK_POINT_LEN <A HREF="#equals">equals</A>  <A HREF="#long_integer">long_integer</A> 
+
+   <BR> | NUM_LOG_BUFS <A HREF="#equals">equals</A>  <A HREF="#pos_short_integer">pos_short_integer</A> 
+
+   <BR> | LOG_BUF_SIZE <A HREF="#equals">equals</A>  <A HREF="#unsigned_short_integer">unsigned_short_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_log">db_log</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_default_log_spec">db_default_log_spec</A> 
+
+   <BR> | <A HREF="#db_rem_log_spec">db_rem_log_spec</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_rem_log_spec">db_rem_log_spec</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : LOGFILE '(' <A HREF="#logfiles">logfiles</A>  ')' OVERFLOW <A HREF="#logfile_desc">logfile_desc</A> 
+
+   <BR> | LOGFILE BASENAME <A HREF="#logfile_desc">logfile_desc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_default_log_spec">db_default_log_spec</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : LOGFILE 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_file">db_file</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#file1">file1</A>  <A HREF="#sql_string">sql_string</A>  <A HREF="#file_desc1">file_desc1</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="logfiles">logfiles</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#logfile_desc">logfile_desc</A>  
+
+   <BR> | <A HREF="#logfiles">logfiles</A>  ',' <A HREF="#logfile_desc">logfile_desc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="logfile_desc">logfile_desc</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#logfile_name">logfile_name</A>  <A HREF="#logfile_attrs">logfile_attrs</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="logfile_name">logfile_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#sql_string">sql_string</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="logfile_attrs">logfile_attrs</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#logfile_attrs">logfile_attrs</A>  <A HREF="#logfile_attr">logfile_attr</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="logfile_attr">logfile_attr</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SIZE <A HREF="#equals">equals</A>  <A HREF="#long_integer">long_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="file1">file1</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FILE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="file_desc1">file_desc1</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#file_desc">file_desc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="file_desc">file_desc</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#file_clause">file_clause</A> 
+
+   <BR> | <A HREF="#file_desc">file_desc</A>  <A HREF="#file_clause">file_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="file_clause">file_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : STARTING <A HREF="#file_clause_noise">file_clause_noise</A>  <A HREF="#long_integer">long_integer</A> 
+
+   <BR> | LENGTH <A HREF="#equals">equals</A>  <A HREF="#long_integer">long_integer</A>  <A HREF="#page_noise">page_noise</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="file_clause_noise">file_clause_noise</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | AT
+
+   <BR> | AT PAGE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="page_noise">page_noise</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | PAGE
+
+   <BR> | PAGES
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE TABLE
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_clause">table_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#external_file">external_file</A>  '(' <A HREF="#table_elements">table_elements</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="external_file">external_file</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXTERNAL FILE <A HREF="#sql_string">sql_string</A> 
+
+   <BR> | EXTERNAL <A HREF="#sql_string">sql_string</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_elements">table_elements</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#table_element">table_element</A> 
+
+   <BR> | <A HREF="#table_elements">table_elements</A>  ',' <A HREF="#table_element">table_element</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_element">table_element</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_def">column_def</A> 
+
+   <BR> | <A HREF="#table_constraint_definition">table_constraint_definition</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Column Definition
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_def">column_def</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_def_name">column_def_name</A>  <A HREF="#data_type_or_domain">data_type_or_domain</A>  <A HREF="#default_opt">default_opt</A>  
+
+		 <A HREF="#end_trigger">end_trigger</A>  <A HREF="#column_constraint_clause">column_constraint_clause</A>  <A HREF="#collate_clause">collate_clause</A> 
+
+   <BR> | <A HREF="#column_def_name">column_def_name</A>  <A HREF="#non_array_type">non_array_type</A>  <A HREF="#def_computed">def_computed</A> 
+
+
+
+   <BR> | <A HREF="#column_def_name">column_def_name</A>  <A HREF="#def_computed">def_computed</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>                                 
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="def_computed">def_computed</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#computed_by">computed_by</A>  '(' <A HREF="#begin_trigger">begin_trigger</A>  <A HREF="#value">value</A>  <A HREF="#end_trigger">end_trigger</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="computed_by">computed_by</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : COMPUTED BY
+
+   <BR> | COMPUTED
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="data_type_or_domain">data_type_or_domain</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#data_type">data_type</A>  <A HREF="#begin_trigger">begin_trigger</A> 
+
+   <BR> | <A HREF="#simple_column_name">simple_column_name</A>  <A HREF="#begin_string">begin_string</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="collate_clause">collate_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : COLLATE <A HREF="#collation_name">collation_name</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_def_name">column_def_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="simple_column_def_name">simple_column_def_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_column_name">simple_column_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="data_type_descriptor">data_type_descriptor</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#init_data_type">init_data_type</A>  <A HREF="#data_type">data_type</A> 
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="init_data_type">init_data_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="default_opt">default_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DEFAULT <A HREF="#default_value">default_value</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="default_value">default_value</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#constant">constant</A> 
+
+   <BR> | USER
+
+   <BR> | <A HREF="#null_value">null_value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>                   
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_constraint_clause">column_constraint_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | <A HREF="#column_constraint_list">column_constraint_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_constraint_list">column_constraint_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_constraint_def">column_constraint_def</A> 
+
+   <BR> | <A HREF="#column_constraint_list">column_constraint_list</A>  <A HREF="#column_constraint_def">column_constraint_def</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_constraint_def">column_constraint_def</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#constraint_name_opt">constraint_name_opt</A>  <A HREF="#column_constraint">column_constraint</A> 
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_constraint">column_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NOT NULL 
+
+   <BR> | REFERENCES <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#column_parens_opt">column_parens_opt</A> 
+
+		 <A HREF="#referential_trigger_action">referential_trigger_action</A> 
+
+
+
+   <BR> | <A HREF="#check_constraint">check_constraint</A> 
+
+
+
+   <BR> | UNIQUE
+
+   <BR> | PRIMARY KEY
+
+   <BR>;
+
+  </TD>
+
+ </TR>                    
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Table Constraints
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_constraint_definition">table_constraint_definition</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#constraint_name_opt">constraint_name_opt</A>  <A HREF="#table_constraint">table_constraint</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="constraint_name_opt">constraint_name_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : CONSTRAINT SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_constraint">table_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#unique_constraint">unique_constraint</A> 
+
+   <BR> | <A HREF="#primary_constraint">primary_constraint</A> 
+
+   <BR> | <A HREF="#referential_constraint">referential_constraint</A> 
+
+   <BR> | <A HREF="#check_constraint">check_constraint</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="unique_constraint">unique_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : UNIQUE <A HREF="#column_parens">column_parens</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="primary_constraint">primary_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : PRIMARY KEY <A HREF="#column_parens">column_parens</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="referential_constraint">referential_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FOREIGN KEY <A HREF="#column_parens">column_parens</A>  REFERENCES 
+
+			  <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#column_parens_opt">column_parens_opt</A>  
+
+			  <A HREF="#referential_trigger_action">referential_trigger_action</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="check_constraint">check_constraint</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#begin_trigger">begin_trigger</A>  CHECK '(' <A HREF="#search_condition">search_condition</A>  ')' <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="referential_trigger_action">referential_trigger_action</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+		  <A HREF="#update_rule">update_rule</A> 
+
+   <BR> | <A HREF="#delete_rule">delete_rule</A> 
+
+   <BR> | <A HREF="#delete_rule">delete_rule</A>  <A HREF="#update_rule">update_rule</A> 
+
+   <BR> | <A HREF="#update_rule">update_rule</A>  <A HREF="#delete_rule">delete_rule</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="update_rule">update_rule</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ON UPDATE <A HREF="#referential_action">referential_action</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="delete_rule">delete_rule</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ON DELETE <A HREF="#referential_action">referential_action</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="referential_action">referential_action</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : CASCADE
+
+   <BR> | SET DEFAULT
+
+   <BR> | SET NULL
+
+   <BR> | NO ACTION
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    PROCEDURE
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="procedure_clause">procedure_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL <A HREF="#input_parameters">input_parameters</A> 
+
+		     	  <A HREF="#output_parameters">output_parameters</A> 
+
+		    	  AS <A HREF="#begin_string">begin_string</A> 
+
+			  <A HREF="#var_declaration_list">var_declaration_list</A> 
+
+			  <A HREF="#full_proc_block">full_proc_block</A> 
+
+			  <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_procedure_clause">alter_procedure_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL <A HREF="#input_parameters">input_parameters</A> 
+
+		     	  <A HREF="#output_parameters">output_parameters</A> 
+
+		    	  AS <A HREF="#begin_string">begin_string</A> 
+
+			  <A HREF="#var_declaration_list">var_declaration_list</A> 
+
+			  <A HREF="#full_proc_block">full_proc_block</A> 
+
+			  <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="input_parameters">input_parameters</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   :	'(' <A HREF="#proc_parameters">proc_parameters</A>  ')'
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="output_parameters">output_parameters</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   :	RETURNS <A HREF="#input_parameters">input_parameters</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_parameters">proc_parameters</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#proc_parameter">proc_parameter</A> 
+
+   <BR> | <A HREF="#proc_parameters">proc_parameters</A>  ',' <A HREF="#proc_parameter">proc_parameter</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_parameter">proc_parameter</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_column_def_name">simple_column_def_name</A>  <A HREF="#non_array_type">non_array_type</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="var_declaration_list">var_declaration_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#var_declarations">var_declarations</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="var_declarations">var_declarations</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#var_declaration">var_declaration</A> 
+
+   <BR> | <A HREF="#var_declarations">var_declarations</A>  <A HREF="#var_declaration">var_declaration</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="var_declaration">var_declaration</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DECLARE VARIABLE <A HREF="#column_def_name">column_def_name</A>  <A HREF="#non_array_type">non_array_type</A>  ';'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_block">proc_block</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#proc_statement">proc_statement</A> 
+
+   <BR> | <A HREF="#full_proc_block">full_proc_block</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="full_proc_block">full_proc_block</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : BEGIN
+
+		  <A HREF="#proc_statements">proc_statements</A> 
+
+		  END
+
+   <BR> | BEGIN
+
+		  <A HREF="#proc_statements">proc_statements</A> 
+
+		  <A HREF="#excp_statements">excp_statements</A> 
+
+		  END
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_statements">proc_statements</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#proc_block">proc_block</A> 
+
+   <BR> | <A HREF="#proc_statements">proc_statements</A>  <A HREF="#proc_block">proc_block</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_statement">proc_statement</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#assignment">assignment</A>  ';'
+
+   <BR> | <A HREF="#delete">delete</A>  ';'
+
+   <BR> | EXCEPTION SYMBOL ';'
+
+   <BR> | <A HREF="#exec_procedure">exec_procedure</A> 
+
+   <BR> | <A HREF="#for_select">for_select</A> 
+
+   <BR> | <A HREF="#if_then_else">if_then_else</A> 
+
+   <BR> | <A HREF="#insert">insert</A>  ';'
+
+   <BR> | POST_EVENT <A HREF="#value">value</A>  ';'
+
+   <BR> | <A HREF="#singleton_select">singleton_select</A> 
+
+   <BR> | <A HREF="#update">update</A>  ';'
+
+   <BR> | <A HREF="#while">while</A> 
+
+   <BR> | SUSPEND ';'
+
+   <BR> | EXIT ';'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="exec_procedure">exec_procedure</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXECUTE PROCEDURE SYMBOL <A HREF="#proc_inputs">proc_inputs</A>  <A HREF="#proc_outputs">proc_outputs</A>  ';'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="for_select">for_select</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FOR <A HREF="#select">select</A>  INTO <A HREF="#variable_list">variable_list</A>  <A HREF="#cursor_def">cursor_def</A>  DO <A HREF="#proc_block">proc_block</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="if_then_else">if_then_else</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : IF '(' <A HREF="#search_condition">search_condition</A>  ')' THEN <A HREF="#proc_block">proc_block</A>  ELSE <A HREF="#proc_block">proc_block</A> 
+
+   <BR> | IF '(' <A HREF="#search_condition">search_condition</A>  ')' THEN <A HREF="#proc_block">proc_block</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="singleton_select">singleton_select</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#select">select</A>  INTO <A HREF="#variable_list">variable_list</A>  ';'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="variable">variable</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ':' SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_inputs">proc_inputs</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#var_const_list">var_const_list</A> 
+
+   <BR> | '(' <A HREF="#var_const_list">var_const_list</A>  ')'
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_outputs">proc_outputs</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : RETURNING_VALUES <A HREF="#variable_list">variable_list</A> 
+
+   <BR> | RETURNING_VALUES '(' <A HREF="#variable_list">variable_list</A>   ')'
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="var_const_list">var_const_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#variable">variable</A> 
+
+   <BR> | <A HREF="#constant">constant</A> 
+
+   <BR> | <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#null_value">null_value</A> 
+
+   <BR> | <A HREF="#var_const_list">var_const_list</A>  ',' <A HREF="#variable">variable</A> 
+
+   <BR> | <A HREF="#var_const_list">var_const_list</A>  ',' <A HREF="#constant">constant</A> 
+
+   <BR> | <A HREF="#var_const_list">var_const_list</A>  ',' <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#var_const_list">var_const_list</A>  ',' <A HREF="#null_value">null_value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="variable_list">variable_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#variable">variable</A> 
+
+   <BR> | <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#variable_list">variable_list</A>  ',' <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#variable_list">variable_list</A>  ',' <A HREF="#variable">variable</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="while">while</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WHILE '(' <A HREF="#search_condition">search_condition</A>  ')' DO <A HREF="#proc_block">proc_block</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="cursor_def">cursor_def</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : AS CURSOR SYMBOL
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="excp_statements">excp_statements</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#excp_statement">excp_statement</A> 
+
+   <BR> | <A HREF="#excp_statements">excp_statements</A>  <A HREF="#excp_statement">excp_statement</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="excp_statement">excp_statement</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WHEN <A HREF="#errors">errors</A>  DO <A HREF="#proc_block">proc_block</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="errors">errors</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#err">err</A> 
+
+   <BR> | <A HREF="#errors">errors</A>  ',' <A HREF="#err">err</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="err">err</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SQLCODE <A HREF="#signed_short_integer">signed_short_integer</A> 
+
+   <BR> | GDSCODE SYMBOL
+
+   <BR> | EXCEPTION SYMBOL
+
+   <BR> | ANY
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Direct EXECUTE PROCEDURE
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="invoke_procedure">invoke_procedure</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXECUTE PROCEDURE SYMBOL <A HREF="#prc_inputs">prc_inputs</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="prc_inputs">prc_inputs</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#prm_const_list">prm_const_list</A> 
+
+   <BR> | '(' <A HREF="#prm_const_list">prm_const_list</A>  ')'
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="prm_const_list">prm_const_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#parameter">parameter</A> 
+
+   <BR> | <A HREF="#constant">constant</A> 
+
+   <BR> | <A HREF="#null_value">null_value</A> 
+
+   <BR> | <A HREF="#prm_const_list">prm_const_list</A>  ',' <A HREF="#parameter">parameter</A> 
+
+   <BR> | <A HREF="#prm_const_list">prm_const_list</A>  ',' <A HREF="#constant">constant</A> 
+
+   <BR> | <A HREF="#prm_const_list">prm_const_list</A>  ',' <A HREF="#null_value">null_value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE VIEW
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="view_clause">view_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL <A HREF="#column_parens_opt">column_parens_opt</A>  AS <A HREF="#begin_string">begin_string</A>  <A HREF="#select_view">select_view</A>  
+
+                                                            <A HREF="#check_opt">check_opt</A>  <A HREF="#end_string">end_string</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select_view">select_view</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#select_view_expr">select_view_expr</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select_view_expr">select_view_expr</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SELECT <A HREF="#distinct_clause">distinct_clause</A> 
+
+			 <A HREF="#select_list">select_list</A>  
+
+			 <A HREF="#from_view_clause">from_view_clause</A>  
+
+			 <A HREF="#where_clause">where_clause</A>  
+
+			 <A HREF="#group_clause">group_clause</A>  
+
+			 <A HREF="#having_clause">having_clause</A> 
+
+			 <A HREF="#plan_clause">plan_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="from_view_clause">from_view_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FROM <A HREF="#from_view_list">from_view_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="from_view_list">from_view_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#view_table">view_table</A> 
+
+   <BR> | <A HREF="#from_view_list">from_view_list</A>  ',' <A HREF="#view_table">view_table</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="view_table">view_table</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#joined_view_table">joined_view_table</A> 
+
+   <BR> | <A HREF="#table_name">table_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="joined_view_table">joined_view_table</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#view_table">view_table</A>  <A HREF="#join_type">join_type</A>  JOIN <A HREF="#view_table">view_table</A>  ON <A HREF="#search_condition">search_condition</A> 
+
+   <BR> | '(' <A HREF="#joined_view_table">joined_view_table</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    These Rules Will Capture The Input String For Storage In Metadata
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="begin_string">begin_string</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="end_string">end_string</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="begin_trigger">begin_trigger</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="end_trigger">end_trigger</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="check_opt">check_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WITH CHECK OPTION
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    CREATE TRIGGER
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="def_trigger_clause">def_trigger_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL FOR <A HREF="#simple_table_name">simple_table_name</A> 
+
+	 <A HREF="#trigger_active">trigger_active</A> 
+
+	 <A HREF="#trigger_type">trigger_type</A> 
+
+	 <A HREF="#trigger_position">trigger_position</A> 
+
+	 <A HREF="#begin_trigger">begin_trigger</A> 
+
+	 <A HREF="#trigger_action">trigger_action</A> 
+
+	 <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="trigger_active">trigger_active</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ACTIVE 
+
+   <BR> | INACTIVE
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="trigger_type">trigger_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : BEFORE INSERT
+
+   <BR> | AFTER INSERT
+
+   <BR> | BEFORE UPDATE
+
+   <BR> | AFTER UPDATE
+
+   <BR> | BEFORE DELETE
+
+   <BR> | AFTER DELETE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="trigger_position">trigger_position</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : POSITION <A HREF="#nonneg_short_integer">nonneg_short_integer</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="trigger_action">trigger_action</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : AS <A HREF="#begin_trigger">begin_trigger</A>  <A HREF="#var_declaration_list">var_declaration_list</A>  <A HREF="#full_proc_block">full_proc_block</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    ALTER Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter">alter</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ALTER <A HREF="#alter_clause">alter_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_clause">alter_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXCEPTION SYMBOL <A HREF="#sql_string">sql_string</A> 
+
+   <BR> | TABLE <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#alter_ops">alter_ops</A> 
+
+   <BR> | TRIGGER <A HREF="#alter_trigger_clause">alter_trigger_clause</A> 
+
+   <BR> | PROCEDURE <A HREF="#alter_procedure_clause">alter_procedure_clause</A> 
+
+   <BR> | DATABASE <A HREF="#init_alter_db">init_alter_db</A>  <A HREF="#alter_db">alter_db</A> 
+
+   <BR> | DOMAIN <A HREF="#simple_column_name">simple_column_name</A>  <A HREF="#alter_domain_ops">alter_domain_ops</A> 
+
+   <BR> | INDEX <A HREF="#alter_index_clause">alter_index_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_domain_ops">alter_domain_ops</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#alter_domain_op">alter_domain_op</A> 
+
+   <BR> | <A HREF="#alter_domain_ops">alter_domain_ops</A>  <A HREF="#alter_domain_op">alter_domain_op</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_domain_op">alter_domain_op</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SET <A HREF="#begin_string">begin_string</A>  <A HREF="#default_opt">default_opt</A>  <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR> | ADD CONSTRAINT <A HREF="#domain_check_constraint">domain_check_constraint</A> 
+
+   <BR> | ADD <A HREF="#domain_check_constraint">domain_check_constraint</A> 
+
+   <BR> | DROP DEFAULT
+
+   <BR> | DROP CONSTRAINT
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_ops">alter_ops</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#alter_op">alter_op</A> 
+
+   <BR> | <A HREF="#alter_ops">alter_ops</A>  ',' <A HREF="#alter_op">alter_op</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_op">alter_op</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DROP <A HREF="#simple_column_name">simple_column_name</A>  <A HREF="#drop_behaviour">drop_behaviour</A> 
+
+   <BR> | DROP CONSTRAINT SYMBOL
+
+   <BR> | ADD <A HREF="#column_def">column_def</A> 
+
+   <BR> | ADD <A HREF="#table_constraint_definition">table_constraint_definition</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="drop_behaviour">drop_behaviour</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : RESTRICT
+
+   <BR> | CASCADE
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_index_clause">alter_index_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL ACTIVE
+
+   <BR> | SYMBOL INACTIVE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    ALTER DATABASE
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="init_alter_db">init_alter_db</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_db">alter_db</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_alter_clause">db_alter_clause</A> 
+
+   <BR> | <A HREF="#alter_db">alter_db</A>  <A HREF="#db_alter_clause">db_alter_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_alter_clause">db_alter_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ADD <A HREF="#db_file_list">db_file_list</A> 
+
+   <BR> | DROP LOGFILE
+
+   <BR> | SET  <A HREF="#db_log_option_list">db_log_option_list</A> 
+
+   <BR> | ADD <A HREF="#db_log">db_log</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="db_log_option_list">db_log_option_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#db_log_option">db_log_option</A> 
+
+   <BR> | <A HREF="#db_log_option_list">db_log_option_list</A>  ',' <A HREF="#db_log_option">db_log_option</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    ALTER TRIGGER
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="alter_trigger_clause">alter_trigger_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL <A HREF="#trigger_active">trigger_active</A> 
+
+	 <A HREF="#new_trigger_type">new_trigger_type</A> 
+
+	 <A HREF="#trigger_position">trigger_position</A> 
+
+	 <A HREF="#begin_trigger">begin_trigger</A> 
+
+	 <A HREF="#new_trigger_action">new_trigger_action</A> 
+
+	 <A HREF="#end_trigger">end_trigger</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="new_trigger_type">new_trigger_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#trigger_type">trigger_type</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="new_trigger_action">new_trigger_action</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#trigger_action">trigger_action</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    DROP Metadata Operations
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+                
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="drop">drop</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DROP <A HREF="#drop_clause">drop_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="drop_clause">drop_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXCEPTION SYMBOL
+
+   <BR> | INDEX SYMBOL
+
+   <BR> | PROCEDURE SYMBOL
+
+   <BR> | TABLE SYMBOL
+
+   <BR> | TRIGGER SYMBOL
+
+   <BR> | VIEW SYMBOL
+
+   <BR> | FILTER SYMBOL
+
+   <BR> | DOMAIN SYMBOL
+
+   <BR> | EXTERNAL FUNCTION SYMBOL
+
+   <BR> | SHADOW <A HREF="#pos_short_integer">pos_short_integer</A> 
+
+   <BR> | ROLE SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    These Are The Allowable Datatypes
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="data_type">data_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#non_array_type">non_array_type</A> 
+
+   <BR> | <A HREF="#array_type">array_type</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="non_array_type">non_array_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_type">simple_type</A> 
+
+   <BR> | <A HREF="#blob_type">blob_type</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="array_type">array_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#non_charset_simple_type">non_charset_simple_type</A>  '[' <A HREF="#array_spec">array_spec</A>  ']'
+
+   <BR> | <A HREF="#character_type">character_type</A>  '[' <A HREF="#array_spec">array_spec</A>  ']' <A HREF="#charset_clause">charset_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="array_spec">array_spec</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#array_range">array_range</A>  
+
+   <BR> | <A HREF="#array_spec">array_spec</A>  ',' <A HREF="#array_range">array_range</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="array_range">array_range</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#signed_long_integer">signed_long_integer</A> 
+
+   <BR> | <A HREF="#signed_long_integer">signed_long_integer</A>  ':' <A HREF="#signed_long_integer">signed_long_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="simple_type">simple_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#non_charset_simple_type">non_charset_simple_type</A> 
+
+   <BR> | <A HREF="#character_type">character_type</A>  <A HREF="#charset_clause">charset_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="non_charset_simple_type">non_charset_simple_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#national_character_type">national_character_type</A> 
+
+   <BR> | <A HREF="#numeric_type">numeric_type</A> 
+
+   <BR> | <A HREF="#float_type">float_type</A> 
+
+   <BR> | <A HREF="#integer_keyword">integer_keyword</A> 
+
+   <BR> | SMALLINT
+
+   <BR> | DATE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="integer_keyword">integer_keyword</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : INTEGER	
+
+   <BR> | INT
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="blob_type">blob_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : BLOB <A HREF="#blob_subtype">blob_subtype</A>  <A HREF="#blob_segsize">blob_segsize</A>  <A HREF="#charset_clause">charset_clause</A> 
+
+   <BR> | BLOB '(' <A HREF="#unsigned_short_integer">unsigned_short_integer</A>  ')'
+
+   <BR> | BLOB '(' <A HREF="#unsigned_short_integer">unsigned_short_integer</A>  ',' <A HREF="#signed_short_integer">signed_short_integer</A>  ')'
+
+   <BR> | BLOB '(' ',' <A HREF="#signed_short_integer">signed_short_integer</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="blob_segsize">blob_segsize</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SEGMENT SIZE <A HREF="#unsigned_short_integer">unsigned_short_integer</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="blob_subtype">blob_subtype</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SUB_TYPE <A HREF="#signed_short_integer">signed_short_integer</A> 
+
+   <BR> | SUB_TYPE <A HREF="#subtype_name">subtype_name</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="charset_clause">charset_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : CHARACTER SET <A HREF="#character_set_name">character_set_name</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Character Type
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="national_character_type">national_character_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#national_character_keyword">national_character_keyword</A>  '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ')'
+
+   <BR> | <A HREF="#national_character_keyword">national_character_keyword</A> 
+
+   <BR> | <A HREF="#national_character_keyword">national_character_keyword</A>  VARYING '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="character_type">character_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#character_keyword">character_keyword</A>  '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ')'
+
+   <BR> | <A HREF="#character_keyword">character_keyword</A> 
+
+   <BR> | <A HREF="#varying_keyword">varying_keyword</A>  '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="varying_keyword">varying_keyword</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : VARCHAR
+
+   <BR> | CHARACTER VARYING
+
+   <BR> | CHAR VARYING
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="character_keyword">character_keyword</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : CHARACTER
+
+   <BR> | CHAR
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="national_character_keyword">national_character_keyword</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NCHAR
+
+   <BR> | NATIONAL CHARACTER
+
+   <BR> | NATIONAL CHAR
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="character_set_name">character_set_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="collation_name">collation_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="subtype_name">subtype_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Numeric Type
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="numeric_type">numeric_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NUMERIC <A HREF="#prec_scale">prec_scale</A> 
+
+   <BR> | <A HREF="#decimal_keyword">decimal_keyword</A>  <A HREF="#prec_scale">prec_scale</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="ordinal">ordinal</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#pos_short_integer">pos_short_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="prec_scale">prec_scale</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : /* empty */
+
+   <BR> | '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ')'
+
+   <BR> | '(' <A HREF="#pos_short_integer">pos_short_integer</A>  ',' <A HREF="#nonneg_short_integer">nonneg_short_integer</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="decimal_keyword">decimal_keyword</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DECIMAL	
+
+   <BR> | DEC
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Floating Point Type
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="float_type">float_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FLOAT <A HREF="#precision_opt">precision_opt</A> 
+
+   <BR> | LONG FLOAT <A HREF="#precision_opt">precision_opt</A> 
+
+   <BR> | REAL
+
+   <BR> | DOUBLE PRECISION
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="precision_opt">precision_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : '(' <A HREF="#nonneg_short_integer">nonneg_short_integer</A>  ')'
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    SET Statements
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="set">set</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#set_transaction">set_transaction</A> 
+
+   <BR> | <A HREF="#set_generator">set_generator</A> 
+
+   <BR> | <A HREF="#set_statistics">set_statistics</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="set_generator">set_generator</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SET GENERATOR SYMBOL TO <A HREF="#signed_long_integer">signed_long_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Transaction Statements
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="commit">commit</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : COMMIT <A HREF="#optional_work">optional_work</A>  <A HREF="#optional_retain">optional_retain</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="rollback">rollback</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ROLLBACK <A HREF="#optional_work">optional_work</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="optional_work">optional_work</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WORK
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="optional_retain">optional_retain</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : RETAIN <A HREF="#opt_snapshot">opt_snapshot</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="opt_snapshot">opt_snapshot</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SNAPSHOT
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="set_transaction">set_transaction</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SET TRANSACTION <A HREF="#tran_opt_list_m">tran_opt_list_m</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="tran_opt_list_m">tran_opt_list_m</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#tran_opt_list">tran_opt_list</A> 	
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="tran_opt_list">tran_opt_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#tran_opt">tran_opt</A> 
+
+   <BR> | <A HREF="#tran_opt_list">tran_opt_list</A>  <A HREF="#tran_opt">tran_opt</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="tran_opt">tran_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#access_mode">access_mode</A>  
+
+   <BR> | <A HREF="#lock_wait">lock_wait</A>  
+
+   <BR> | <A HREF="#isolation_mode">isolation_mode</A>  
+
+   <BR> | <A HREF="#tbl_reserve_options">tbl_reserve_options</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="access_mode">access_mode</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : READ ONLY
+
+   <BR> | READ WRITE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="lock_wait">lock_wait</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WAIT
+
+   <BR> | NO WAIT
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="isolation_mode">isolation_mode</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ISOLATION LEVEL <A HREF="#iso_mode">iso_mode</A> 
+
+   <BR> | <A HREF="#iso_mode">iso_mode</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="iso_mode">iso_mode</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#snap_shot">snap_shot</A> 
+
+   <BR> | READ UNCOMMITTED <A HREF="#version_mode">version_mode</A>  
+
+   <BR> | READ COMMITTED <A HREF="#version_mode">version_mode</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="snap_shot">snap_shot</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SNAPSHOT
+
+   <BR> | SNAPSHOT TABLE 
+
+   <BR> | SNAPSHOT TABLE STABILITY
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="version_mode">version_mode</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : VERSION
+
+   <BR> | NO VERSION
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="tbl_reserve_options">tbl_reserve_options</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : RESERVING <A HREF="#restr_list">restr_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="lock_type">lock_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SHARED
+
+   <BR> | PROTECTED
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="lock_mode">lock_mode</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : READ
+
+   <BR> | WRITE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="restr_list">restr_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#restr_option">restr_option</A> 
+
+   <BR> | <A HREF="#restr_list">restr_list</A>  ',' <A HREF="#restr_option">restr_option</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="restr_option">restr_option</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#table_list">table_list</A>  <A HREF="#table_lock">table_lock</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_lock">table_lock</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FOR <A HREF="#lock_type">lock_type</A>  <A HREF="#lock_mode">lock_mode</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_list">table_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_table_name">simple_table_name</A> 
+
+   <BR> | <A HREF="#table_list">table_list</A>  ',' <A HREF="#simple_table_name">simple_table_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="set_statistics">set_statistics</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SET STATISTICS INDEX SYMBOL
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    SELECT Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select">select</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#union_expr">union_expr</A>  <A HREF="#order_clause">order_clause</A>  <A HREF="#for_update_clause">for_update_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="union_expr">union_expr</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#select_expr">select_expr</A> 
+
+   <BR> | <A HREF="#union_expr">union_expr</A>  UNION <A HREF="#select_expr">select_expr</A> 
+
+   <BR> | <A HREF="#union_expr">union_expr</A>  UNION ALL <A HREF="#select_expr">select_expr</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="order_clause">order_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ORDER BY <A HREF="#order_list">order_list</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="order_list">order_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#order_item">order_item</A> 
+
+   <BR> | <A HREF="#order_list">order_list</A>  ',' <A HREF="#order_item">order_item</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="order_item">order_item</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A>  <A HREF="#collate_clause">collate_clause</A>  <A HREF="#order_direction">order_direction</A> 
+
+   <BR> | <A HREF="#ordinal">ordinal</A>  <A HREF="#collate_clause">collate_clause</A>  <A HREF="#order_direction">order_direction</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="order_direction">order_direction</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ASC
+
+   <BR> | DESC
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR> <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="for_update_clause">for_update_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FOR UPDATE <A HREF="#for_update_list">for_update_list</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="for_update_list">for_update_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : OF <A HREF="#column_list">column_list</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    SELECT Expression
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select_expr">select_expr</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SELECT <A HREF="#distinct_clause">distinct_clause</A> 
+
+			 <A HREF="#select_list">select_list</A>  
+
+			 <A HREF="#from_clause">from_clause</A>  
+
+			 <A HREF="#where_clause">where_clause</A>  
+
+			 <A HREF="#group_clause">group_clause</A>  
+
+			 <A HREF="#having_clause">having_clause</A> 
+
+			 <A HREF="#plan_clause">plan_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="distinct_clause">distinct_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DISTINCT
+
+   <BR> | <A HREF="#all_noise">all_noise</A>  
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select_list">select_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#select_items">select_items</A> 
+
+   <BR> | '*'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select_items">select_items</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#select_item">select_item</A> 
+
+   <BR> | <A HREF="#select_items">select_items</A>  ',' <A HREF="#select_item">select_item</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="select_item">select_item</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#rhs">rhs</A> 
+
+   <BR> | <A HREF="#rhs">rhs</A>  SYMBOL
+
+   <BR> | <A HREF="#rhs">rhs</A>  AS SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    FROM Clause
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="from_clause">from_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FROM <A HREF="#from_list">from_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="from_list">from_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#table_reference">table_reference</A> 
+
+   <BR> | <A HREF="#from_list">from_list</A>  ',' <A HREF="#table_reference">table_reference</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_reference">table_reference</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#joined_table">joined_table</A> 
+
+   <BR> | <A HREF="#table_proc">table_proc</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="joined_table">joined_table</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#table_reference">table_reference</A>  <A HREF="#join_type">join_type</A>  JOIN <A HREF="#table_reference">table_reference</A>  ON <A HREF="#search_condition">search_condition</A> 
+
+   <BR> | '(' <A HREF="#joined_table">joined_table</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_proc">table_proc</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL <A HREF="#proc_table_inputs">proc_table_inputs</A>  SYMBOL
+
+   <BR> | SYMBOL <A HREF="#proc_table_inputs">proc_table_inputs</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="proc_table_inputs">proc_table_inputs</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : '(' <A HREF="#null_or_value_list">null_or_value_list</A>  ')'
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="null_or_value_list">null_or_value_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#null_or_value">null_or_value</A> 
+
+   <BR> | <A HREF="#null_or_value_list">null_or_value_list</A>  ',' <A HREF="#null_or_value">null_or_value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="null_or_value">null_or_value</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#null_value">null_value</A>  
+
+   <BR> | <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_name">table_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_table_name">simple_table_name</A> 
+
+   <BR> | SYMBOL SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="simple_table_name">simple_table_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="join_type">join_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : INNER
+
+   <BR> | LEFT
+
+   <BR> | LEFT OUTER
+
+   <BR> | RIGHT
+
+   <BR> | RIGHT OUTER
+
+   <BR> | FULL
+
+   <BR> | FULL OUTER
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Other Clauses In The Select Expression
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="group_clause">group_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : GROUP BY <A HREF="#grp_column_list">grp_column_list</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="grp_column_list">grp_column_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#grp_column_elem">grp_column_elem</A> 
+
+   <BR> | <A HREF="#grp_column_list">grp_column_list</A>  ',' <A HREF="#grp_column_elem">grp_column_elem</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="grp_column_elem">grp_column_elem</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#column_name">column_name</A>  COLLATE <A HREF="#collation_name">collation_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="having_clause">having_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : HAVING <A HREF="#search_condition">search_condition</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="where_clause">where_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WHERE <A HREF="#search_condition">search_condition</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    PLAN Clause To Specify An Access Plan For A Query
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="plan_clause">plan_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : PLAN <A HREF="#plan_expression">plan_expression</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="plan_expression">plan_expression</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#plan_type">plan_type</A>  '(' <A HREF="#plan_item_list">plan_item_list</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="plan_type">plan_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : JOIN
+
+   <BR> | SORT MERGE
+
+   <BR> | MERGE
+
+
+
+   <BR> | SORT
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="plan_item_list">plan_item_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#plan_item">plan_item</A> 
+
+   <BR> | <A HREF="#plan_item">plan_item</A>  ',' <A HREF="#plan_item_list">plan_item_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="plan_item">plan_item</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#table_or_alias_list">table_or_alias_list</A>  <A HREF="#access_type">access_type</A> 
+
+   <BR> | <A HREF="#plan_expression">plan_expression</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="table_or_alias_list">table_or_alias_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR> | SYMBOL <A HREF="#table_or_alias_list">table_or_alias_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="access_type">access_type</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NATURAL
+
+   <BR> | INDEX '(' <A HREF="#index_list">index_list</A>  ')'
+
+   <BR> | ORDER SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="index_list">index_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR> | SYMBOL ',' <A HREF="#index_list">index_list</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    INSERT Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="insert">insert</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : INSERT INTO <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#column_parens_opt">column_parens_opt</A>  VALUES '(' <A HREF="#insert_value_list">insert_value_list</A>  ')'
+
+   <BR> | INSERT INTO <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#column_parens_opt">column_parens_opt</A>  <A HREF="#select_expr">select_expr</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="insert_value_list">insert_value_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#rhs">rhs</A> 
+
+   <BR> | <A HREF="#insert_value_list">insert_value_list</A>  ',' <A HREF="#rhs">rhs</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    DELETE Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+   
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="delete">delete</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#delete_searched">delete_searched</A> 
+
+   <BR> | <A HREF="#delete_positioned">delete_positioned</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="delete_searched">delete_searched</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DELETE FROM <A HREF="#table_name">table_name</A>  <A HREF="#where_clause">where_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="delete_positioned">delete_positioned</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : DELETE FROM <A HREF="#table_name">table_name</A>  <A HREF="#cursor_clause">cursor_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="cursor_clause">cursor_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : WHERE CURRENT OF SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    UPDATE Statement
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="update">update</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#update_searched">update_searched</A> 
+
+   <BR> | <A HREF="#update_positioned">update_positioned</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="update_searched">update_searched</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : UPDATE <A HREF="#table_name">table_name</A>  SET <A HREF="#assignments">assignments</A>  <A HREF="#where_clause">where_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="update_positioned">update_positioned</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : UPDATE <A HREF="#table_name">table_name</A>  SET <A HREF="#assignments">assignments</A>  <A HREF="#cursor_clause">cursor_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="assignments">assignments</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#assignment">assignment</A> 
+
+   <BR> | <A HREF="#assignments">assignments</A>  ',' <A HREF="#assignment">assignment</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="assignment">assignment</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A>  '=' <A HREF="#rhs">rhs</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="rhs">rhs</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#null_value">null_value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    BLOB Get And Put
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="blob">blob</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : READ BLOB <A HREF="#simple_column_name">simple_column_name</A>  FROM <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#filter_clause">filter_clause</A>  <A HREF="#segment_clause">segment_clause</A> 
+
+   <BR> | INSERT BLOB <A HREF="#simple_column_name">simple_column_name</A>  INTO <A HREF="#simple_table_name">simple_table_name</A>  <A HREF="#filter_clause">filter_clause</A>  <A HREF="#segment_clause">segment_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="filter_clause">filter_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : FILTER FROM <A HREF="#blob_subtype_value">blob_subtype_value</A>  TO <A HREF="#blob_subtype_value">blob_subtype_value</A> 
+
+   <BR> | FILTER TO <A HREF="#blob_subtype_value">blob_subtype_value</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="blob_subtype_value">blob_subtype_value</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#blob_subtype">blob_subtype</A> 
+
+   <BR> | <A HREF="#parameter">parameter</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="blob_subtype">blob_subtype</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#signed_short_integer">signed_short_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="segment_clause">segment_clause</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : MAX_SEGMENT <A HREF="#segment_length">segment_length</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="segment_length">segment_length</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#unsigned_short_integer">unsigned_short_integer</A> 
+
+   <BR> | <A HREF="#parameter">parameter</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Column Specifications
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_parens_opt">column_parens_opt</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_parens">column_parens</A> 
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_parens">column_parens</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : '(' <A HREF="#column_list">column_list</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_list">column_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#column_list">column_list</A>  ',' <A HREF="#column_name">column_name</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_name">column_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#simple_column_name">simple_column_name</A> 
+
+   <BR> | SYMBOL '.' SYMBOL
+
+   <BR> | SYMBOL '.' '*'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="simple_column_name">simple_column_name</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Boolean Expressions
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="search_condition">search_condition</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#predicate">predicate</A> 
+
+   <BR> | <A HREF="#search_condition">search_condition</A>  OR <A HREF="#search_condition">search_condition</A> 
+
+   <BR> | <A HREF="#search_condition">search_condition</A>  AND <A HREF="#search_condition">search_condition</A> 
+
+   <BR> | NOT <A HREF="#search_condition">search_condition</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="predicate">predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#comparison_predicate">comparison_predicate</A> 
+
+   <BR> | <A HREF="#between_predicate">between_predicate</A> 
+
+   <BR> | <A HREF="#like_predicate">like_predicate</A> 
+
+   <BR> | <A HREF="#in_predicate">in_predicate</A> 
+
+   <BR> | <A HREF="#null_predicate">null_predicate</A> 
+
+   <BR> | <A HREF="#quantified_predicate">quantified_predicate</A> 
+
+   <BR> | <A HREF="#exists_predicate">exists_predicate</A> 
+
+   <BR> | <A HREF="#containing_predicate">containing_predicate</A> 
+
+   <BR> | <A HREF="#starting_predicate">starting_predicate</A> 
+
+   <BR> | <A HREF="#unique_predicate">unique_predicate</A> 
+
+   <BR> | '(' <A HREF="#search_condition">search_condition</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Comparisons
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="comparison_predicate">comparison_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  '=' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '&LT;' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '&GT;' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '&GT;=' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '&LT;=' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT_GTR <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT_LSS <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NEQ <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Quantified Comparisons
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="quantified_predicate">quantified_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  '=' ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&LT;' ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&GT;' ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&GT;=' ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&LT;=' ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  NOT_GTR ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  NOT_LSS ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  NEQ ALL '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '=' <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&LT;' <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&GT;' <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&GT;=' <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  '&LT;=' <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  NOT_GTR <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  NOT_LSS <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR> | <A HREF="#value">value</A>  NEQ <A HREF="#some">some</A>  '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="some">some</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SOME
+
+   <BR> | ANY
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Other Predicates
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="between_predicate">between_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  BETWEEN <A HREF="#value">value</A>  AND <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT BETWEEN <A HREF="#value">value</A>  AND <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="like_predicate">like_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  LIKE <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT LIKE <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  LIKE <A HREF="#value">value</A>  ESCAPE <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT LIKE <A HREF="#value">value</A>  ESCAPE <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="in_predicate">in_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  IN <A HREF="#scalar_set">scalar_set</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT IN <A HREF="#scalar_set">scalar_set</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="containing_predicate">containing_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  CONTAINING <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT CONTAINING <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="starting_predicate">starting_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  STARTING <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT STARTING <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  STARTING WITH <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  NOT STARTING WITH <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="exists_predicate">exists_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : EXISTS '(' <A HREF="#select_expr">select_expr</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="unique_predicate">unique_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SINGULAR '(' <A HREF="#select_expr">select_expr</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="null_predicate">null_predicate</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A>  IS NULL
+
+   <BR> | <A HREF="#value">value</A>  IS NOT NULL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Set Values
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="scalar_set">scalar_set</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : '(' <A HREF="#constant_list">constant_list</A>  ')'
+
+   <BR> | '(' <A HREF="#column_select">column_select</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_select">column_select</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SELECT <A HREF="#distinct_clause">distinct_clause</A> 
+
+		 <A HREF="#value">value</A>  
+
+		 <A HREF="#from_clause">from_clause</A>  
+
+		 <A HREF="#where_clause">where_clause</A>  
+
+		 <A HREF="#group_clause">group_clause</A> 
+
+		 <A HREF="#having_clause">having_clause</A> 
+
+		 <A HREF="#plan_clause">plan_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="column_singleton">column_singleton</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SELECT <A HREF="#distinct_clause">distinct_clause</A> 
+
+		 <A HREF="#value">value</A>  
+
+		 <A HREF="#from_clause">from_clause</A>  
+
+		 <A HREF="#where_clause">where_clause</A>  
+
+		 <A HREF="#group_clause">group_clause</A> 
+
+		 <A HREF="#having_clause">having_clause</A> 
+
+		 <A HREF="#plan_clause">plan_clause</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP BGCOLOR="#F5F5DC" COLSPAN=2>
+
+   <H2>
+
+    <IMG SRC="../../images/yellowdot.gif" ALT=" " HSPACE=4 BORDER=0 HEIGHT=13 WIDTH=13>
+
+    Value Types
+
+   </H2>
+
+  </TD>
+
+ </TR>
+
+
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="value">value</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A> 
+
+   <BR> | <A HREF="#array_element">array_element</A> 
+
+   <BR> | <A HREF="#function">function</A> 
+
+   <BR> | <A HREF="#u_constant">u_constant</A> 
+
+   <BR> | <A HREF="#parameter">parameter</A> 
+
+   <BR> | <A HREF="#variable">variable</A> 
+
+   <BR> | <A HREF="#udf">udf</A> 
+
+   <BR> | '-' <A HREF="#value">value</A> 
+
+   <BR> | '+' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '+' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '||' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  COLLATE <A HREF="#collation_name">collation_name</A> 
+
+   <BR> | <A HREF="#value">value</A>  '-' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '*' <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value">value</A>  '/' <A HREF="#value">value</A> 
+
+   <BR> | '(' <A HREF="#value">value</A>  ')'
+
+   <BR> | '(' <A HREF="#column_singleton">column_singleton</A>  ')'
+
+   <BR> | USER
+
+   <BR> | DB_KEY
+
+   <BR> | SYMBOL '.'DB_KEY
+
+   <BR> | VALUE
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="array_element">array_element</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#column_name">column_name</A>  '[' <A HREF="#value_list">value_list</A>  ']'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="value_list">value_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#value">value</A> 
+
+   <BR> | <A HREF="#value_list">value_list</A>  ',' <A HREF="#value">value</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="constant">constant</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#u_constant">u_constant</A> 
+
+   <BR> | '-' <A HREF="#u_numeric_constant">u_numeric_constant</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="u_numeric_constant">u_numeric_constant</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NUMERIC
+
+   <BR> | NUMBER
+
+   <BR> | FLOAT
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="u_constant">u_constant</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#u_numeric_constant">u_numeric_constant</A> 
+
+   <BR> | <A HREF="#sql_string">sql_string</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="constant_list">constant_list</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#constant">constant</A> 
+
+   <BR> | <A HREF="#parameter">parameter</A> 
+
+   <BR> | <A HREF="#current_user">current_user</A> 
+
+   <BR> | <A HREF="#constant_list">constant_list</A>  ',' <A HREF="#constant">constant</A> 
+
+   <BR> | <A HREF="#constant_list">constant_list</A>  ',' <A HREF="#parameter">parameter</A> 
+
+   <BR> | <A HREF="#constant_list">constant_list</A>  ',' <A HREF="#current_user">current_user</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="parameter">parameter</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : '?'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="current_user">current_user</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : USER
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="sql_string">sql_string</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : STRING			
+
+   <BR> | INTRODUCER STRING		
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="signed_short_integer">signed_short_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#nonneg_short_integer">nonneg_short_integer</A> 
+
+   <BR> | '-' <A HREF="#neg_short_integer">neg_short_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="nonneg_short_integer">nonneg_short_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NUMBER
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="neg_short_integer">neg_short_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NUMBER
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="pos_short_integer">pos_short_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#nonneg_short_integer">nonneg_short_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="unsigned_short_integer">unsigned_short_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NUMBER
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="signed_long_integer">signed_long_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : <A HREF="#long_integer">long_integer</A> 
+
+   <BR> | '-' <A HREF="#long_integer">long_integer</A> 
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="long_integer">long_integer</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NUMBER
+
+   <BR>;
+
+  </TD>
+
+ </TR>	
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="function">function</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : COUNT '(' '*' ')'
+
+   <BR> | COUNT '(' <A HREF="#all_noise">all_noise</A>  <A HREF="#value">value</A>  ')'
+
+   <BR> | COUNT '(' DISTINCT <A HREF="#value">value</A>  ')'
+
+   <BR> | SUM '(' <A HREF="#all_noise">all_noise</A>  <A HREF="#value">value</A>  ')'
+
+   <BR> | SUM '(' DISTINCT <A HREF="#value">value</A>  ')'
+
+   <BR> | AVG '(' <A HREF="#all_noise">all_noise</A>  <A HREF="#value">value</A>  ')'
+
+   <BR> | AVG '(' DISTINCT <A HREF="#value">value</A>  ')'
+
+   <BR> | MINIMUM '(' <A HREF="#all_noise">all_noise</A>  <A HREF="#value">value</A>  ')'
+
+   <BR> | MINIMUM '(' DISTINCT <A HREF="#value">value</A>  ')'
+
+   <BR> | MAXIMUM '(' <A HREF="#all_noise">all_noise</A>  <A HREF="#value">value</A>  ')'
+
+   <BR> | MAXIMUM '(' DISTINCT <A HREF="#value">value</A>  ')'
+
+   <BR> | CAST '(' <A HREF="#rhs">rhs</A>  AS <A HREF="#data_type_descriptor">data_type_descriptor</A>  ')'
+
+   <BR> | UPPER '(' <A HREF="#value">value</A>  ')'
+
+   <BR> | GEN_ID '(' SYMBOL ',' <A HREF="#value">value</A>  ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="udf">udf</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : SYMBOL '(' <A HREF="#value_list">value_list</A>  ')'
+
+   <BR> | SYMBOL '(' ')'
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="all_noise">all_noise</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : ALL
+
+   <BR> | /* empty */   <BR>;
+
+  </TD>
+
+ </TR>
+
+ <TR>
+
+  <TD VALIGN=TOP>
+
+   <A NAME="null_value">null_value</A>
+
+  </TD>
+
+  <TD VALIGN=TOP>
+
+   : NULL
+
+   <BR>;
+
+  </TD>
+
+ </TR>
+
+</TABLE>
+
+</CENTER>
+
+</BODY>
+
+</HTML>
+

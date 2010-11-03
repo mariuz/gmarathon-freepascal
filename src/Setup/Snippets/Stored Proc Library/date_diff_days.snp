@@ -1,0 +1,6 @@
+alter procedure prc$dat_dif_in_days (DATE1 date, DATE2 date)
+returns (RESULT integer)
+as
+BEGIN
+  Result = Date2-Date1;
+END

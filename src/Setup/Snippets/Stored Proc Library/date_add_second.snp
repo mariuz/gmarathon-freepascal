@@ -1,0 +1,49 @@
+alter procedure prc$dat_add_sec (INDATE date, INSECONDS integer)
+returns (RESULT date)
+as
+declare variable year   integer;
+declare variable month  integer;
+declare variable day    integer;
+declare variable hour   integer;
+declare variable minute integer;
+declare variable second integer;
+begin
+execute procedure prc$dat_decode_time(indate) returning_values (hour, 
+minute, second);
+second = second + inseconds;
+while (second > 59) do
+  begin
+  second = second -60;
+  minute = minute + 1;
+  if (minute > 59) then
+   begin
+    minute = minute -60;
+    hour = hour +1;
+    if (hour > 23) then
+     begin
+      hour = hour - 24;
+      indate = indate + 1;
+     end
+   end
+  end
+while (second < 0) do
+  begin
+  second = second +60;
+  minute = minute - 1;
+  if (minute < 0) then
+   begin
+    minute = minute + 60;
+    hour = hour -1;
+    if (hour < 0) then
+     begin
+      hour = hour + 24;
+      indate = indate - 1;
+     end
+   end
+  end
+execute procedure prc$dat_decode_date(indate) returning_values (year, 
+month, day);
+execute procedure 
+prc$dat_encode_date_time(day,month,year,hour,minute,second) 
+returning_values result;
+end

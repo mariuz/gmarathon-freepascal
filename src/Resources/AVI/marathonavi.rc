@@ -1,0 +1,5 @@
+/* The AVI's... */
+
+compile    AVI compile.avi
+drop       AVI drop.avi
+wait       AVI wait.avi

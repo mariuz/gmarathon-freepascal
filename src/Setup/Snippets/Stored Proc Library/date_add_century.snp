@@ -1,0 +1,11 @@
+create procedure prc$dat_add_century (INDATE date, INCENTURY integer)
+returns (RESULT date)
+as
+declare variable year   integer;
+declare variable month  integer;
+declare variable day    integer;
+begin
+  execute procedure prc$dat_decode_date(indate) returning_values (year, month, day);
+  year = year + (incentury * 100);
+  execute procedure prc$dat_encode_date (YEAR, MONTH, DAY) returning_values result;
+end

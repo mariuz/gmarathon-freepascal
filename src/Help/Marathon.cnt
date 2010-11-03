@@ -1,0 +1,27 @@
+:Base Marathon.hlp>main
+:Title Marathon - The SQL Tool for Firebird & InterBase
+1 Getting Started
+2 What Is Marathon?=IDH_Contents>main
+2 Creating a Database=IDH_Create_Database
+1 Projects
+2 Working with Projects=IDH_Working_with_Projects>main
+1 Editors
+2 SQL Code Editors=IDH_SQL_Code_Editors>main
+2 Other Editors=IDH_Other_Editors>main
+2 Stored Procedure Editor=IDH_Stored_Procedure_Editor>main
+2 View Editor=IDH_View_Editor>main
+2 Trigger Editor=IDH_Trigger_Editor>main
+2 SQL Editor=IDH_SQL_Editor>main
+2 Domain Editor=IDH_Domain_Editor>main
+2 Exceptions Editor=IDH_Exceptions_Editor>main
+2 Generator Editor=IDH_Generator_Editor>main
+2 Table Editor=IDH_Table_Editor>main
+2 UDF Editor=IDH_UDF_Editor>main
+1 Tools
+2 Marathon Tools=IDH_Marathon_Tools>main
+2 Code Snippets Catalog=IDH_Code_Snippets_Catalog>main
+2 SQL Smarts=IDH_SQL_Smarts>main
+2 SQL Insight=IDH_SQL_Insight>main
+2 SQL Script Recording=IDH_SQL_Script_Recording>main
+2 Metadata Extract=IDH_Metadata_Extract>main
+2 Find In Metadata=IDH_Find_In_Metadata>main

@@ -1,0 +1,26 @@
+[dirs]
+programfiles=C:/Archivos de Programa
+[libs]
+ibObjects=${lib}/IBO_4_2_H
+rmControls=${lib}/Rmctl192/rmControls        
+TBar2000=${lib}/tb2k-2.0.13/source         
+VirtualTreeView=${lib}/VirtualTreeView
+ThemeManager=${lib}/Theme Manager
+Synedit=${lib}/SynEdit-20011025-CVS/source
+SyntaxMemoWithStuff2=${lib}/SyntaxMemoWithStuff2       
+Pageprnt=${lib}/Pageprnt                   
+DataSetPrint=${lib}/Ndsp123
+Hexeditor=${lib}/Hexedit                               
+Other=${lib}/Other                                 
+[programs]
+HCW=C:/Archivos de Programa/Borland/Delphi6/Help/Tools/HCW.exe                                            
+InnoSetup=C:/Archivos de Programa/Inno Setup 4/ISCC.exe
+PSCP=PSCP.exe
+
+
+
+
+
+
+
+

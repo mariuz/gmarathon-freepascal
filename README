@@ -1,0 +1,29 @@
+This is the gmarathon http://gmarathon.sourceforge.net/ , ported to Lazarus freepascal 
+
+
+Required third-party components that will be replaced with lazarus freepascal units 
+
+What i have found for the moment :http://wiki.lazarus.freepascal.org/SynEdit
+http://wiki.lazarus.freepascal.org/VirtualTreeview
+
+
+Se bellow the rest of the components needed :
+
+Here you will find informations about the Delphi packages and components that you need to successfully compile Marathon.
+We start with the third party packages, which are not included in CVS. Please download and install them:
+The current CVS state of Marathon uses IB Objects 4.3A. If you don't have this version or you never had IB Objects before, just drop me an E-Mail asking for it. Please also CC this E-Mail to Jason Wharton, the author of IB Objects, because else I can't send you the files, due to IB Objects is without cost but not free for Marathon contributors. This means that there is no cost obligation, but you are required to register your usage of IB Objects and agree to the terms of the Trustware License which IB Objects uses.
+Synedit 2003-09-29-CVS, for installation instructions please consult the Synedit website or the included documentation.
+Toolbar 2000 2.1.2, for installation instructions please consult the Toolbar 2000 website or the included documentation.
+rmControls 1.92, for installation instructions please consult the included documentation or visit Ryans homepage at Ryan Mills Homepage.
+Virtual TreeView 3.8.3 and for Delphi versions prior to 7 you also need Theme Manager 1.9.15, for installation instructions please consult the Virtual TreeView website or the included documentation.
+TPagePrinter 2.0 (with Marathon specific bug fixes), install in Delphi as a component using "PgPrnReg.pas"
+TDataSetPrint 1.23 (with Marathon specific bug fixes), install in Delphi as a component using "DSprint.pas"
+THexEditor 1.16 (with Marathon specific bug fixes), install in Delphi as a component using "Hexeditor.pas"
+The following components and packages are included in CVS module "gmarathon", in the "lib" directory, so you don't need to download them here:
+Marathon own package, SyntaxMemoWithStuff2("SyntaxMemoWithStuff2\SyntaxMemoWithStuff2Package.dpk")
+Marathon own component, TDBPanelEdit("Other\adbpedit.pas")
+Marathon own component, TCloseUpCustomComboBox("Other\CloseUpCombo.pas")
+Marathon own component, TDiagramTree("Other\DiagramTree.pas")
+Marathon own component, TIBPerformanceMonitor("Other\IBPerformanceMonitor.pas")
+Marathon own component, TMarathonColorGrid("Other\NewColorGrd.pas")
+Modified FreePascal units("Other\xmlread.pas", "Other\xmlwrite.pas", "Other\dom.pas")

@@ -1,0 +1,38 @@
+#------------------------------------------------------------------------------
+VERSION = BWS.01
+#------------------------------------------------------------------------------
+!ifndef ROOT
+ROOT = $(MAKEDIR)\..
+!endif
+#------------------------------------------------------------------------------
+MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
+DCC = $(ROOT)\bin\dcc32.exe $**
+BRCC = $(ROOT)\bin\brcc32.exe $**
+#------------------------------------------------------------------------------
+PROJECTS = Marathon.exe ScrExec.exe CDatabse.dll GSSScript.dll MShellmenu.dll \
+  Autoinc.dll UpdateSQL.dll
+#------------------------------------------------------------------------------
+default: $(PROJECTS)
+#------------------------------------------------------------------------------
+
+Marathon.exe: Source\Marathon.dpr
+  $(DCC)
+
+CDatabse.dll: CreateDBWizard\CDatabse.dpr
+  $(DCC)
+
+GSSScript.dll: MetaExtract\GSSScript.dpr
+  $(DCC)
+
+Autoinc.dll: Plugins\AutoIncFieldWizard\Autoinc.dpr
+  $(DCC)
+
+UpdateSQL.dll: Plugins\FreeIBCompsSQL\UpdateSQL.dpr
+  $(DCC)
+
+ScrExec.exe: ScriptExec\ScrExec.dpr
+  $(DCC)
+
+MShellmenu.dll: ShellExtension\MShellmenu.dpr
+  $(DCC)
+

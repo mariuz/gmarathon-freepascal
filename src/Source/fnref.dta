@@ -1,0 +1,24 @@
+===AVG()
+AVG ([ALL] <val> | DISTINCT <val>);
+---
+===CAST()
+CAST (<val> AS <datatype>);
+---
+===COUNT()
+COUNT ( * | [ALL] <val> | DISTINCT <val>);
+---
+===GEN_ID()
+GEN_ID (generator, step); 
+---
+===MAX()
+MAX ([ALL] <val> | DISTINCT <val>);
+---
+===MIN()
+MIN ([ALL] <val> | DISTINCT <val>);
+---
+===SUM()
+SUM ([ALL] <val> | DISTINCT <val>);
+---
+===UPPER()
+UPPER (<val>);
+---

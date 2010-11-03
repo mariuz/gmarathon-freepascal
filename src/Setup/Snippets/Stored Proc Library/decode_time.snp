@@ -1,0 +1,23 @@
+alter procedure prc$dat_decode_time (ADATE date)
+returns (HOUR integer, MINUTE integer,
+SECONDS integer)
+as
+DECLARE VARIABLE Year     INTEGER;
+DECLARE VARIABLE Month    INTEGER;
+DECLARE VARIABLE Day      INTEGER;
+DECLARE VARIABLE WorkDate DATE;
+DECLARE VARIABLE Percent  DOUBLE PRECISION;
+DECLARE VARIABLE WorkHour DOUBLE PRECISION;
+DECLARE VARIABLE WorkMin  DOUBLE PRECISION;
+BEGIN
+  EXECUTE PROCEDURE PRC$DAT_DECODE_DATE(ADate) RETURNING_VALUES(Year, 
+Month, Day);
+  EXECUTE PROCEDURE PRC$DAT_ENCODE_DATE(Year, Month, Day) 
+RETURNING_VALUES(WorkDate);
+  Percent = ADate - WorkDate;
+  WorkHour = Percent *24;
+  Hour = WorkHour -0.5;
+  WorkMin = (WorkHour - Hour) *60;
+  Minute = (WorkHour - Hour) *60 -0.5;
+  Seconds = (WorkMin - Minute) *60 -0.5;
+END

@@ -1,0 +1,25 @@
+<====0
+item=crtab
+desc=create table statement
+create table ^ ( )
+====>
+<====1
+item=ifthen
+desc=if/then statement
+if (^) then
+begin
+
+end
+====>
+<====2
+item=ifthenelse
+desc=if/then/else statement
+if (^) then
+begin
+
+end
+else
+begin
+
+end
+====>

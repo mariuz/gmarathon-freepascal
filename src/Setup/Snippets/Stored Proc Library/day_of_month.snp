@@ -1,0 +1,7 @@
+alter procedure prc$dat_get_day_of_month (ADATE date)
+returns (RESULT integer)
+as
+BEGIN
+  Result = CAST(CAST(ADate AS VARCHAR(2)) AS INTEGER);
+  WHEN ANY DO Result = CAST(CAST(ADate AS VARCHAR(1)) AS INTEGER);
+END

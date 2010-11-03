@@ -1,0 +1,40 @@
+alter procedure prc$dat_get_day_number_abs (ADATE date)
+returns (RESULT integer)
+as
+DECLARE VARIABLE WorkYear   INTEGER;
+DECLARE VARIABLE WorkMonth  INTEGER;
+DECLARE VARIABLE I          INTEGER;
+begin
+  Result = 0;
+  EXECUTE PROCEDURE PRC$DAT_GET_YEAR_NUMBER(ADate) 
+RETURNING_VALUES(WorkYear);
+  EXECUTE PROCEDURE prc$dat_get_month_number(ADate) 
+RETURNING_VALUES(WorkMonth);
+  WorkMonth = WorkMonth-1;
+  WHILE (WorkMonth > 0) DO
+  BEGIN
+    EXECUTE PROCEDURE prc$dat_get_days_in_month(WorkYear, WorkMonth) 
+RETURNING_VALUES(I);
+    Result = Result+I;
+    WorkMonth = WorkMonth-1;
+  END
+  EXECUTE PROCEDURE prc$dat_get_day_of_month(ADate) 
+RETURNING_VALUES(I);
+  Result = Result +I;
+  EXECUTE PROCEDURE prc$dat_get_days_in_month(WorkYear, 4) 
+RETURNING_VALUES(I);
+  if (:I=29) then
+  begin
+   if (:RESULT=60) then
+   begin
+    RESULT=366;
+   end
+   else
+    begin
+     if (:RESULT>60) then
+     begin
+      RESULT=RESULT-1;
+     end
+    end
+  end
+end
