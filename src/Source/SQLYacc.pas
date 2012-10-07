@@ -1,33 +1,3 @@
-{******************************************************************}
-{ The contents of this file are used with permission, subject to   }
-{ the Mozilla Public License Version 1.1 (the "License"); you may  }
-{ not use this file except in compliance with the License. You may }
-{ obtain a copy of the License at                                  }
-{ http://www.mozilla.org/MPL/MPL-1.1.html                          }
-{                                                                  }
-{ Software distributed under the License is distributed on an      }
-{ "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or   }
-{ implied. See the License for the specific language governing     }
-{ rights and limitations under the License.                        }
-{                                                                  }
-{******************************************************************}
-// $Id: SQLYacc.pas,v 1.5 2005/06/29 22:29:52 hippoman Exp $
-
-//Comment block moved clear up a compiler warning. RJM
-
-{
-$Log: SQLYacc.pas,v $
-Revision 1.5  2005/06/29 22:29:52  hippoman
-* d6 related things, using D6_OR_HIGHER everywhere
-
-Revision 1.4  2005/04/13 16:04:31  rjmills
-*** empty log message ***
-
-Revision 1.2  2002/04/25 07:21:30  tmuetze
-New CVS powered comment block
-
-}
-
 unit SQLYacc;
 
 {$MODE Delphi}
