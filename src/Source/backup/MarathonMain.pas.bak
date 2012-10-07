@@ -86,7 +86,9 @@ New CVS powered comment block
 
 unit MarathonMain;
 
-{$I Compilerdefines.inc}
+{$MODE Delphi}
+
+{$I compilerdefines.inc}
 
 interface
 
@@ -836,7 +838,7 @@ uses
 	MarathonIDE,
 	GSSRegistry;
 
-{$R *.DFM}
+{$R *.lfm}
 {$R MarathonAVI.RES}
 {$R MarathonButtons.RES}
 {$R Toolmenus.RES}
@@ -882,10 +884,10 @@ begin
 
 	// KeyBindings Class Error with latest rmControls
 	// ToDo
-	if FileExists(ExtractFilePath(Application.ExeName) + 'keybind.dat') then
+	if FileExistsUTF8(ExtractFilePath(Application.ExeName) + 'keybind.dat') { *Converted from FileExists*  } then
      kbgKeys.LoadBindingsFromFile(ExtractFilePath(Application.ExeName) + 'keybind.dat', False);
 
-	ForceDirectories(ExtractFilePath(Application.ExeName) + 'Projects\');
+	ForceDirectoriesUTF8(ExtractFilePath(Application.ExeName) + 'Projects\'); { *Converted from ForceDirectories*  }
 
 	// Load the tree images from the resources
   B := TBitmap.Create;
@@ -1219,15 +1221,15 @@ begin
 
 			// File Locations
 			gDefProjectDir := I.ReadString('DefaultProjectDir');
-			ForceDirectories(gDefProjectDir);
+			ForceDirectoriesUTF8(gDefProjectDir); { *Converted from ForceDirectories*  }
 			gDefScriptDir := I.ReadString('DefaultScriptDir');
-			ForceDirectories(gDefScriptDir);
+			ForceDirectoriesUTF8(gDefScriptDir); { *Converted from ForceDirectories*  }
 			gExtractDDLDir := I.ReadString('ExtractDDLDir');
-			ForceDirectories(gExtractDDLDir);
+			ForceDirectoriesUTF8(gExtractDDLDir); { *Converted from ForceDirectories*  }
 			gSnippetsDir := I.ReadString('SnippetsDir');
 			if gSnippetsDir <> '' then
 				gSnippetsDir := Tools.AddBackslash(gSnippetsDir);
-			ForceDirectories(gSnippetsDir);
+			ForceDirectoriesUTF8(gSnippetsDir); { *Converted from ForceDirectories*  }
 
 			I.CloseKey;
 		end;

@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit FrameDescription;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -92,7 +94,7 @@ implementation
 uses
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 function TframeDesc.GetDoco: String;
 begin
