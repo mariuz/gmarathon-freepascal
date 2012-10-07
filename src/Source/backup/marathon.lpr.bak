@@ -2,14 +2,8 @@ program marathon;
 
 {$MODE Delphi}
 
-{%File 'compilerdefines.inc'}
-
 uses
-  FastMove,
-  FastCode,
   PatchLib,
-  FastObj,
-  FastSys,
   LCLIntf, LCLType, LMessages,
   Forms,
   SysUtils,
@@ -122,46 +116,11 @@ uses
 
 var
 	frmSplash : TfrmSplash;
-	MutexHandle : THandle;
-
-	function OneInstanceAndRunning: Boolean;
-	var
-		I : TRegistry;
-	begin
-		result := false;
-		I := TRegistry.Create;
-		try
-			I.RootKey := HKEY_CURRENT_USER;
-
-			// check to see if the registry options permits multiple instances
-			if not I.OpenKey(REG_SETTINGS_BASE, True) or
-				(I.ValueExists('MultiInstances') and not I.ReadBool('MultiInstances')) and
-				// check to see if the mutex object existed before this call
-				(MutexHandle <> 0) and (GetLastError = ERROR_ALREADY_EXISTS) then
-			begin
-				// show warning and close the mutex handle
-				MessageDlg('Marathon is already running', mtWarning, [mbOK], 0);
-				result := true;
-			end;
-			I.CloseKey;
-		finally
-			I.Free;
-		end;
-	end;
-
 begin
-	MutexHandle := CreateMutex(nil, True, 'Marathon');
-	// Allow just one instance of Marathon running, case desired
-	if OneInstanceAndRunning then
-	begin
-		FileClose(MutexHandle); { *Converted from CloseHandle*  }
-		Halt;
-	end;
-
 	MarathonScreen := TMarathonScreen.Create;
 	try
 		Application.Initialize;
-		Application.Title := 'Marathon - The SQL Tool for Firebird & InterBase';
+		Application.Title := 'Marathon - The SQL Tool for Firebird ';
 		frmSplash := TfrmSplash.Create(Application);
 		frmSplash.ShowModal;
 		Application.CreateForm(TfrmMarathonMain, frmMarathonMain);

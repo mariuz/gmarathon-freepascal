@@ -616,12 +616,12 @@
   <CompilerOptions>
     <Version Value="11"/>
     <SearchPaths>
-      <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastobj;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
+      <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastobj;../fastcode/061;../fastcode/fastmove;../FastMM4/474;$(ProjOutDir)"/>
       <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
-        <SyntaxMode Value="delphi"/>
+        <SyntaxMode Value="Delphi"/>
       </SyntaxOptions>
     </Parsing>
     <Linking>

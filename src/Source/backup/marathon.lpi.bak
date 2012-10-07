@@ -42,7 +42,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="103">
+    <Units Count="99">
       <Unit0>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -611,32 +611,13 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalQueriesText"/>
       </Unit98>
-      <Unit99>
-        <Filename Value="../fastobj/FastSys.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="FastSys"/>
-      </Unit99>
-      <Unit100>
-        <Filename Value="../fastobj/FastObj.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="FastObj"/>
-      </Unit100>
-      <Unit101>
-        <Filename Value="../fastobj/PatchLib.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="PatchLib"/>
-      </Unit101>
-      <Unit102>
-        <Filename Value="../fastcode/061/FastCode.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit102>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <SearchPaths>
       <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastobj;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
-      <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastobj;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
+      <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
