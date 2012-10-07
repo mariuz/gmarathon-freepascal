@@ -1,4 +1,7 @@
 unit PatchLib;
+
+{$MODE Delphi}
+
 (*
   Gabriel Corneanu (gabrielcorneanu(AT)gmail.com)
   Utilities for patching exe code

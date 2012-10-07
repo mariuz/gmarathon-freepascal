@@ -74,6 +74,8 @@ New CVS powered comment block
 
 unit SQLForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -362,7 +364,7 @@ uses
 	BlobViewer,
 	QBuilder;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSQLForm.edSQLStatementChange(Sender: TObject);
 begin

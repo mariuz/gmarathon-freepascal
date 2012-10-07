@@ -33,6 +33,8 @@ Revised the Code Snippets functionality, only SaveSnippetAs.* needs revising
 
 unit EditorSnippet;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -86,7 +88,7 @@ uses
 	Tools,
 	MenuModule;
 
-{$R *.DFM}
+{$R *.lfm}
 
 function TfrmEditorSnippet.GetNodePath(RemoveSnippetsRootFolder: Boolean): String;
 begin
@@ -107,7 +109,7 @@ var
 	N: TrmTreeNode;
 
 begin
-	Res := FindFirst(Path + '\*.*', faAnyFile, R);
+	Res := FindFirstUTF8(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
 	while Res = 0 do
 	begin
 		if R.Attr = faDirectory then
@@ -120,9 +122,9 @@ begin
 				N.SelectedIndex := 1;
 			end;
 		end;
-		Res := FindNext(R);
+		Res := FindNextUTF8(R); { *Converted from FindNext*  }
 	end;
-	FindClose(R);
+	FindCloseUTF8(R); { *Converted from FindClose*  }
 end;
 
 procedure TfrmEditorSnippet.SetSelectedFolder(Value: String);
@@ -243,7 +245,7 @@ begin
 	if FNewSnippet then
 	begin
 		FullFileName := gSnippetsDir + GetNodePath(True) + edSnippetName.Text + '.snp';
-		if FileExists(FullFileName) then
+		if FileExistsUTF8(FullFileName) { *Converted from FileExists*  } then
 		begin
 			MessageDlg('The snippet "' + edSnippetName.Text + '" already exists in this folder.', mtError, [mbOK], 0);
 			edSnippetName.SetFocus;

@@ -35,6 +35,8 @@ New CVS powered comment block
 
 unit MarathonInternalInterfaces;
 
+{$MODE Delphi}
+
 interface
 
 uses

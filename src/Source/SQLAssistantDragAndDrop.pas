@@ -27,6 +27,8 @@ New CVS powered comment block
 
 unit SQLAssistantDragAndDrop;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -53,7 +55,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 end.
 

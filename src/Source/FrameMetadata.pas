@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit FrameMetadata;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -95,7 +97,7 @@ const
 	ddlstProc         = 6;
 	ddlstGrants       = 7;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TframDisplayDDL.Init(Form : IMarathonBaseForm);
 begin

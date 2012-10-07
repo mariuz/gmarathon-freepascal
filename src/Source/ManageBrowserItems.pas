@@ -15,6 +15,8 @@
 
 unit ManageBrowserItems;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -47,7 +49,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmManageBrowserItems.actRemoveExecute(Sender: TObject);
 begin

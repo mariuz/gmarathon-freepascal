@@ -15,6 +15,8 @@
 
 unit EditorException;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -130,7 +132,7 @@ uses
 	CompileDBObject,
 	DropObject;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
 	PG_EXCEPT      = 0;

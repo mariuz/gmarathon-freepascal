@@ -34,6 +34,8 @@ New CVS powered comment block
 
 unit BaseDocumentDataAwareForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -78,7 +80,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmBaseDocumentDataAwareForm.DropClose;
 begin

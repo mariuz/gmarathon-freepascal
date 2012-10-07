@@ -15,6 +15,8 @@
 
 unit Tools;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -106,7 +108,7 @@ begin
 	begin
 		sPath := sPath + #0;
 		Zeiger := @sPath[1];
-		if (ShellExecute(Application.Handle, 'Open', Zeiger, nil, nil, SW_SHOW) <= 32) then
+		if ( OpenDocument(Zeiger) { *Converted from ShellExecute*  } <= 32) then
 			if (Pos(Http, sPath) <> 0) then
 				MessageDlg('Error while opening your Internet browser.', mtError, [mbOK], 0)
 			else

@@ -15,6 +15,8 @@
 
 unit DebugLocalVariables;
 
+{$MODE Delphi}
+
 interface
 
 {$I compilerdefines.inc}
@@ -47,7 +49,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 uses
 	MarathonIDE,

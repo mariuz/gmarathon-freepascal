@@ -33,6 +33,8 @@ New CVS powered comment block
 
 unit MenuModule;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -184,7 +186,7 @@ implementation
 {uses
   MarathonMain;}
 
-{$R *.DFM}
+{$R *.lfm}
 
 end.
 

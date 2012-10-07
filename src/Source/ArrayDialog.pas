@@ -15,6 +15,8 @@
 
 unit ArrayDialog;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -40,7 +42,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmArrayDialog.btnOKClick(Sender: TObject);
 begin

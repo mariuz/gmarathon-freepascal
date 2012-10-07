@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit SQLYacc;
 
+{$MODE Delphi}
+
 interface
 {$I compilerdefines.inc}
 

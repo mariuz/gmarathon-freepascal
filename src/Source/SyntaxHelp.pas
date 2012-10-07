@@ -31,6 +31,8 @@ New CVS powered comment block
 
 unit SyntaxHelp;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -72,7 +74,7 @@ uses
   MarathonIDE{,
 	MarathonMain};
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSyntaxHelp.Close1Click(Sender: TObject);
 begin

@@ -27,6 +27,8 @@ New CVS powered comment block
 
 unit PlanUnit;
 
+{$MODE Delphi}
+
 interface
 
 uses

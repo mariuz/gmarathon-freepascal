@@ -15,6 +15,8 @@
 
 unit EditorDomain;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -232,7 +234,7 @@ const
 	PG_DESC = 3;
 	PG_DDL = 4;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmDomains.cmbDataTypeChange(Sender: TObject);
 begin

@@ -15,6 +15,8 @@
 
 unit SQLInsightItem;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -38,7 +40,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSQLInsight.btnOKClick(Sender: TObject);
 begin

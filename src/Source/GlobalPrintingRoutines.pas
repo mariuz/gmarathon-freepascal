@@ -15,6 +15,8 @@
 
 unit GlobalPrintingRoutines;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -185,7 +187,7 @@ uses
   GlobalQueriesText,
   Math;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure ReadPrintSettings;
 var

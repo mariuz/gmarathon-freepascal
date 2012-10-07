@@ -40,6 +40,8 @@ New CVS powered comment block
 
 unit FrameDependencies;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -82,7 +84,7 @@ implementation
 uses
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TframeDepend.Init(Form : IMarathonBaseForm);
 begin

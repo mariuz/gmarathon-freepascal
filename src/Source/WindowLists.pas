@@ -33,6 +33,8 @@ New CVS powered comment block
 
 unit WindowLists;
 
+{$MODE Delphi}
+
 interface
 
 uses

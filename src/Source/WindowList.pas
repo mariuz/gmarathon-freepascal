@@ -15,6 +15,8 @@
 
 unit WindowList;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -48,7 +50,7 @@ uses
 	HelpMap,
 	MarathonMain;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmWindowList.FormCreate(Sender: TObject);
 var

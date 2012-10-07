@@ -27,6 +27,8 @@ New CVS powered comment block
 
 unit NewTrigger;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -65,7 +67,7 @@ uses
 	HelpMap,
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmNewTrigger.FormCreate(Sender: TObject);
 begin

@@ -15,6 +15,8 @@
 
 unit ParseCollection;
 
+{$MODE Delphi}
+
 interface
 {$I compilerdefines.inc}
 

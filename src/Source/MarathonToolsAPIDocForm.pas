@@ -15,6 +15,8 @@
 
 unit MarathonToolsAPIDocForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -43,7 +45,7 @@ var
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 uses
   MarathonIDE, 

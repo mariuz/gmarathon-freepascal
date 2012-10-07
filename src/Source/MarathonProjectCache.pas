@@ -57,6 +57,8 @@ New CVS powered comment block
 
 unit MarathonProjectCache;
 
+{$MODE Delphi}
+
 interface
 {$I compilerdefines.inc}
 

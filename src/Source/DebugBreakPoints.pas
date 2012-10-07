@@ -15,6 +15,8 @@
 
 unit DebugBreakPoints;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -33,7 +35,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmDebugBreakPoints.FormClose(Sender: TObject;  var Action: TCloseAction);
 begin

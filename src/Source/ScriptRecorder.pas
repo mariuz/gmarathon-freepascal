@@ -27,6 +27,8 @@ New CVS powered comment block
 
 unit ScriptRecorder;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -75,7 +77,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 uses
 	Globals,

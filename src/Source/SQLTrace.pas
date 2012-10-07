@@ -15,6 +15,8 @@
 
 unit SQLTrace;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -74,7 +76,7 @@ uses
 	HelpMap,
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 function TfrmSQLTrace.CanClearBuffer: Boolean;
 begin

@@ -15,6 +15,8 @@
 
 unit DropObject;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -57,7 +59,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 constructor TfrmDropObject.CreateDrop(AOwner : TComponent; DropObjects : TStringList);
 begin

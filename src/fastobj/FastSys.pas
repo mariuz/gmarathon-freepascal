@@ -1,4 +1,7 @@
 unit FastSys;
+
+{$MODE Delphi}
+
 (*
 Gabriel Corneanu (gabrielcorneanu(AT)gmail.com)
 

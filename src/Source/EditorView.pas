@@ -62,6 +62,8 @@ New CVS powered comment block
 
 unit EditorView;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -267,7 +269,7 @@ uses
 	QBuilder,
 	EditorGrant;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
 	 PG_SQL = 0;

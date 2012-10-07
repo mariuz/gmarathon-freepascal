@@ -15,6 +15,8 @@
 
 unit BaseDocumentForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -320,7 +322,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 uses
 	MarathonIDE, Types;

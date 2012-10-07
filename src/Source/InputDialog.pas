@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit InputDialog;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -51,7 +53,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmInputDialog.btnOKClick(Sender: TObject);
 begin

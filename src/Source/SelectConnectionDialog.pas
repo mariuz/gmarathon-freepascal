@@ -15,6 +15,8 @@
 
 unit SelectConnectionDialog;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -39,7 +41,7 @@ implementation
 uses
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSelectConnection.FormCreate(Sender: TObject);
 var

@@ -15,6 +15,8 @@
 
 unit GlobalPrintDialog;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -135,7 +137,7 @@ uses
 	MarathonIDE,
 	GlobalPrintingRoutines;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmGlobalPrintDialog.btnOKClick(Sender: TObject);
 begin

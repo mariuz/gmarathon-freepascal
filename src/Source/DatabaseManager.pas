@@ -42,6 +42,8 @@ New CVS powered comment block
 
 unit DatabaseManager;
 
+{$MODE Delphi}
+
 {$I compilerdefines.inc}
 
 interface
@@ -254,7 +256,7 @@ uses
 	MenuModule,
 	GSSRegistry;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmDatabaseExplorer.FormCreate(Sender: TObject);
 var
@@ -1190,7 +1192,7 @@ begin
 					for Idx := 0 to RList.Count -1 do
 					begin
 						//bit of a sanity check to see whether the file exists or not...
-						if FileExists(RList[Idx]) then
+						if FileExistsUTF8(RList[Idx]) { *Converted from FileExists*  } then
 						begin
 							with lvRecent.Items.Add do
 							begin

@@ -15,6 +15,8 @@
 
 unit AddWatch;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -37,7 +39,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmAddWatch.btnOKClick(Sender: TObject);
 begin

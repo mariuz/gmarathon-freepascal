@@ -48,6 +48,8 @@ New CVS powered comment block
 
 unit EditorIndex;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -127,7 +129,7 @@ uses
 	MarathonIDE,
 	CompileDBObject;
 
-{$R *.DFM}
+{$R *.lfm}
 
 constructor TfrmEditorIndex.CreateModifyIndex(const AOwner: TComponent; DatabaseName, TableName, IndexName: String);
 var

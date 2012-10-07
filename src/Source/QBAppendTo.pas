@@ -15,6 +15,8 @@
 
 unit QBAppendTo;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -30,7 +32,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 end.
 

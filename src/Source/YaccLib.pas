@@ -28,6 +28,8 @@ New CVS powered comment block
 
 unit YaccLib;
 
+{$MODE Delphi}
+
 (* Yacc Library Unit for TP Yacc Version 3.0, 6-17-91 AG *)
 (* adapted to Delphi 3, 20/9/97 *)
 

@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit MetaDataSearchObject;
 
+{$MODE Delphi}
+
 interface
 
 uses

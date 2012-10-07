@@ -55,6 +55,8 @@ New CVS powered comment block
 
 unit EditorTrigger;
 
+{$MODE Delphi}
+
 {$I compilerdefines.inc}
 
 interface
@@ -282,7 +284,7 @@ uses
 	InputDialog,
 	QBuilder;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
 	PG_EDIT = 0;
@@ -1598,7 +1600,7 @@ begin
 		frmInputDialog.lblPrompt.Caption := 'Template Name:';
 		if frmInputDialog.ShowModal = mrOK then
 		begin
-			ForceDirectories(ExtractFilePath(Application.ExeName) + 'Templates\');
+			ForceDirectoriesUTF8(ExtractFilePath(Application.ExeName) + 'Templates\'); { *Converted from ForceDirectories*  }
 			edEditor.Lines.SaveToFile(ExtractFilePath(Application.ExeName) + 'Templates\' + frmInputDialog.edItem.Text + '.spt');
 		end;
 	finally

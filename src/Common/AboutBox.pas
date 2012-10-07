@@ -15,6 +15,8 @@
 
 unit AboutBox;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -104,7 +106,7 @@ implementation
 uses
 	Tools;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmAboutBox.FormCreate(Sender: TObject);
 var

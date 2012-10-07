@@ -27,6 +27,8 @@ New CVS powered comment block
 
 unit Login;
 
+{$MODE Delphi}
+
 {$I compilerdefines.inc}
 
 interface
@@ -62,7 +64,7 @@ implementation
 uses
 	Globals;
 	
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmConnect.btnOKClick(Sender: TObject);
 begin

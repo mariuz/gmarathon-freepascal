@@ -15,6 +15,8 @@
 
 unit DescribeForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -46,7 +48,7 @@ implementation
 uses
 	Globals;
 
-{$R *.DFM}
+{$R *.lfm}
 
 {procedure TfrmDatabaseExplorer.lvRelationsClick(Sender: TObject);
 var

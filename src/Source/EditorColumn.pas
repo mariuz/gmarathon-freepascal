@@ -52,6 +52,8 @@ New CVS powered comment block
 
 unit EditorColumn;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -262,7 +264,7 @@ const
 	PG_DESC              = 3;
 	PG_DDL               = 4;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmColumns.cmbDataTypeChange(Sender: TObject);
 begin

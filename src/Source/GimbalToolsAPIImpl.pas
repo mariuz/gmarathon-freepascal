@@ -15,6 +15,8 @@
 
 unit GimbalToolsAPIImpl;
 
+{$MODE Delphi}
+
 interface
 
 uses

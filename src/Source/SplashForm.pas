@@ -15,6 +15,8 @@
 
 unit SplashForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -44,7 +46,7 @@ implementation
 uses
 	Tools;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSplash.Timer1Timer(Sender: TObject);
 begin

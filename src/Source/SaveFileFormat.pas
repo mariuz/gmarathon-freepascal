@@ -34,6 +34,8 @@ New CVS powered comment block
 
 unit SaveFileFormat;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -94,7 +96,7 @@ uses
 	Globals,
 	HelpMap;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSaveFileFormat.cmbFormatChange(Sender: TObject);
 begin

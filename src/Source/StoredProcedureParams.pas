@@ -15,6 +15,8 @@
 
 unit StoredProcedureParams;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -55,7 +57,7 @@ uses
 	HelpMap,
 	EditorStoredProcedure;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmStoredProcParameters.btnOKClick(Sender: TObject);
 var

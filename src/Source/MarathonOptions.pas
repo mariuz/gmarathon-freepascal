@@ -15,6 +15,8 @@
 
 unit MarathonOptions;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -190,7 +192,7 @@ uses
 	SQLInsightItem,
 	ChooseFolder;
 
-{$R *.DFM}
+{$R *.lfm}
 
 function EnumFontsProc(var LogFont: TLogFont; var TextMetric: TTextMetric;
 	FontType: Integer; Data: Pointer): Integer; stdcall;

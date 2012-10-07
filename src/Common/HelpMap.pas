@@ -15,6 +15,8 @@
 
 unit HelpMap;
 
+{$MODE Delphi}
+
 interface
 
 const IDH_Working_with_Projects = 5;

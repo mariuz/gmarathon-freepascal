@@ -15,6 +15,8 @@
 
 unit QBLnkFrm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -43,7 +45,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 end.
 

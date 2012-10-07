@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit BlobViewer;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -67,7 +69,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 uses
 	Globals;

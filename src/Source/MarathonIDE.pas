@@ -15,6 +15,8 @@
 
 unit MarathonIDE;
 
+{$MODE Delphi}
+
 interface
 
 {$I compilerdefines.inc}
@@ -422,7 +424,7 @@ begin
 		end
 		else
     try
-			if FileDateToDateTime(FileAge(FCurrentProject.FileName)) > FCurrentProject.TimeStamp then
+			if FileDateToDateTime(FileAgeUTF8(FCurrentProject.FileName) { *Converted from FileAge*  }) > FCurrentProject.TimeStamp then
       begin
 			  if MessageDlg('Project file may have changed. Do you wish to overwrite changes?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
 				begin
@@ -440,10 +442,10 @@ begin
 		try
 			FCurrentProject.SaveToFile(FCurrentProject.FileName);
 			FCurrentProject.Modified := False;
-      if FileAge(FCurrentProject.FileName) = -1 then
+      if FileAgeUTF8(FCurrentProject.FileName) { *Converted from FileAge*  } = -1 then
          FCurrentProject.TimeStamp := Now
       else
-			   FCurrentProject.TimeStamp := FileDateToDateTime(FileAge(FCurrentProject.FileName));
+			   FCurrentProject.TimeStamp := FileDateToDateTime(FileAgeUTF8(FCurrentProject.FileName) { *Converted from FileAge*  });
 			Result := True;
 
 			if Assigned(FMainForm) then
@@ -989,7 +991,7 @@ begin
 	try
 		FCurrentProject.LoadFromFile(ProjName);
 		FCurrentProject.FileName := ProjName;
-		FCurrentProject.TimeStamp := FileDateToDateTime(FileAge(ProjName));
+		FCurrentProject.TimeStamp := FileDateToDateTime(FileAgeUTF8(ProjName) { *Converted from FileAge*  });
 	except
 		on E: Exception do
 		begin

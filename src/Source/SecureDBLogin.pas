@@ -15,6 +15,8 @@
 
 unit SecureDBLogin;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -46,7 +48,7 @@ uses
 	MarathonIDE{,
 	MarathonMain};
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmSecureConnect.FormCreate(Sender: TObject);
 begin

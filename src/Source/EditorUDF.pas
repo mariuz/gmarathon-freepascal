@@ -15,6 +15,8 @@
 
 unit EditorUDF;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -159,7 +161,7 @@ uses
 	DropObject,
 	UDFInputParam;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
 	PG_UDF = 0;

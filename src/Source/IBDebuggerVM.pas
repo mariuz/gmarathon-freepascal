@@ -15,6 +15,8 @@
 
 unit IBDebuggerVM;
 
+{$MODE Delphi}
+
 interface
 
 {$I compilerdefines.inc}

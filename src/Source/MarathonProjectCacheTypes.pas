@@ -26,6 +26,8 @@ New CVS powered comment block
 
 unit MarathonProjectCacheTypes;
 
+{$MODE Delphi}
+
 interface
 
 uses

@@ -36,6 +36,8 @@ New CVS powered comment block
 
 unit CodeSnippets;
 
+{$MODE Delphi}
+
 interface
 
 {$I compilerdefines.inc}
@@ -141,7 +143,7 @@ uses
 	HelpMap,
 	GSSRegistry;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmCodeSnippets.RecurseAdd(FullPath, Snip: String; Node: TrmTreeNode);
 var
@@ -174,7 +176,7 @@ var
 	L: TStringList;
 
 begin
-	Res := FindFirst(Path + '\*.*', faAnyFile, R);
+	Res := FindFirstUTF8(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
 	while Res = 0 do
 	begin
 		if R.Attr = faDirectory then
@@ -207,9 +209,9 @@ begin
 				N.SelectedIndex := 10;
 			end;
 		end;
-		Res := FindNext(R);
+		Res := FindNextUTF8(R); { *Converted from FindNext*  }
 	end;
-	FindClose(R);
+	FindCloseUTF8(R); { *Converted from FindClose*  }
 
 	tvCodeSnippets.AlphaSort;
 end;
@@ -351,7 +353,7 @@ begin
 			Delete(NodePath, 1, 10);
 
 			Path := gSnippetsDir + NodePath + '\' + Imp.edItem.Text;
-			ForceDirectories(Path);
+			ForceDirectoriesUTF8(Path); { *Converted from ForceDirectories*  }
 			if tvCodeSnippets.FindPathNode(NodePath + '\' + Imp.edItem.Text) <> nil then
 			begin
 				MessageDlg('The folder "' + Imp.edItem.Text + '" already exists.', mtError, [mbOK], 0);
@@ -434,7 +436,7 @@ var
 			Res: Integer;
 
 		begin
-			Res := FindFirst(Path + '\*.*', faAnyFile, R);
+			Res := FindFirstUTF8(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
 			while Res = 0 do
 			begin
 				if R.Attr = faDirectory then
@@ -443,10 +445,10 @@ var
 						KillDirectory(Path + '\' + R.Name)
 				end
 				else
-					DeleteFile(Path + '\' + R.Name);
-				Res := FindNext(R);
+					DeleteFileUTF8(Path + '\' + R.Name); { *Converted from DeleteFile*  }
+				Res := FindNextUTF8(R); { *Converted from FindNext*  }
 			end;
-			FindClose(R);
+			FindCloseUTF8(R); { *Converted from FindClose*  }
 			if not RemoveDirectory(PChar(Path + '\')) then
 				ShowMessage(IntToStr(GetLastError));
 		end;
@@ -493,9 +495,9 @@ begin
 		Delete(NodePath, 1, 10);
 
 		Path := gSnippetsDir + NodePath;
-		if FileExists(Path) then
+		if FileExistsUTF8(Path) { *Converted from FileExists*  } then
 		begin
-			DeleteFile(Path);
+			DeleteFileUTF8(Path); { *Converted from DeleteFile*  }
 			N.Delete;
 		end
 	end;
@@ -537,7 +539,7 @@ begin
 			NodePath := gSnippetsDir + NodePath;
 			OldName := NodePath;
 			NewName := ExtractFilePath(OldName) + Imp.edItem.Text;
-			RenameFile(OldName, NewName);
+			RenameFileUTF8(OldName,NewName); { *Converted from RenameFile*  }
 			N.Text := Imp.edItem.Text;
 		end;
 	finally
@@ -571,7 +573,7 @@ begin
 
 	FullPathWithFileName := gSnippetsDir + NodePath;
 
-	if FileExists(FullPathWithFileName) then
+	if FileExistsUTF8(FullPathWithFileName) { *Converted from FileExists*  } then
 		with TfrmEditorSnippet.ModifySnippet(Self, ExtractFilePath(NodePath), FullPathWithFileName) do
 			try
 				if ShowModal = mrOK then
@@ -678,7 +680,7 @@ begin
 
 		ToPath := gSnippetsDir + NodePath;
 
-		Attrs := FileGetAttr(ToPath);
+		Attrs := FileGetAttrUTF8(ToPath); { *Converted from FileGetAttr*  }
 		// Make sure we are moving a snippet or directory to another directory
 		if (Attrs > 0) and ((Attrs and faDirectory) <> 0) then
 		begin
@@ -693,7 +695,7 @@ begin
 				begin
 					FromNode.MoveTo(Node, naAddChild);
 					ToPath := ToPath + '\' + ExtractFileName(FromPath);
-					RenameFile(FromPath, ToPath);
+					RenameFileUTF8(FromPath,ToPath); { *Converted from RenameFile*  }
 				end;
 			end;
 		end;
@@ -718,13 +720,13 @@ begin
 
 		ToFolder :=  gSnippetsDir + NodePath;
 
-		Attrs := FileGetAttr(ToFolder);
+		Attrs := FileGetAttrUTF8(ToFolder); { *Converted from FileGetAttr*  }
 		if Attrs = faDirectory then
 		begin
 			Accept := True;
 			FromFolder := (Source as TDragQueenCarla).DragData;
 			// Make sure that we are not moving a directory into one of its sub-directories
-			Attrs := FileGetAttr(FromFolder);
+			Attrs := FileGetAttrUTF8(FromFolder); { *Converted from FileGetAttr*  }
 			if Attrs = faDirectory then
 				if StrLComp(PChar(FromFolder), PChar(ToFolder), Length(FromFolder)) = 0 then
 					Accept := False;

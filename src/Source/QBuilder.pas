@@ -15,6 +15,8 @@
 
 unit QBuilder;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -268,7 +270,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 {$R QBBUTTON.RES}
 
 uses

@@ -15,6 +15,8 @@
 
 unit EditorGenerator;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -121,7 +123,7 @@ uses
 	DropObject,
 	CompileDBObject;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmGenerators.WindowListClick(Sender: TObject);
 begin

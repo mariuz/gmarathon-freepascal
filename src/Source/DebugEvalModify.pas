@@ -15,6 +15,8 @@
 
 unit DebugEvalModify;
 
+{$MODE Delphi}
+
 interface
 
 {$I compilerdefines.inc}
@@ -54,7 +56,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmGetSetVariable.DoGetValue;
 var

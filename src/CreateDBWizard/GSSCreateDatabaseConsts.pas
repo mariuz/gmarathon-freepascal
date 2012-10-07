@@ -15,6 +15,8 @@
 
 unit GSSCreateDatabaseConsts;
 
+{$MODE Delphi}
+
 interface
 
 const  //Calling Application...

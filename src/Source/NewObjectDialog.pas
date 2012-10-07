@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit NewObjectDialog;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -85,7 +87,7 @@ uses
 	HelpMap,
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
   ALL_OBJECTS = 0;
@@ -189,7 +191,7 @@ begin
   HelpContext := IDH_New_Object_Dialog;
 
 	//Load stored procedure templates
-	Res := FindFirst(ExtractFilePath(Application.ExeName) + 'Templates\*.spt', faAnyFile, R);
+	Res := FindFirstUTF8(ExtractFilePath(Application.ExeName) + 'Templates\*.spt',faAnyFile,R); { *Converted from FindFirst*  }
 	While Res = 0 do
 	begin
 		with lvSPTempls.Items.Add do
@@ -197,9 +199,9 @@ begin
 			Caption := Copy(R.Name, 1, Length(R.Name) - 4);;
 			ImageIndex := 3;
     end;
-    Res := FindNext(R);
+    Res := FindNextUTF8(R); { *Converted from FindNext*  }
   end;
-  FindClose(R);
+  FindCloseUTF8(R); { *Converted from FindClose*  }
 
   //load the connections...
   for Idx := 0 to MarathonIDEInstance.CurrentProject.Cache.ConnectionCount - 1 do

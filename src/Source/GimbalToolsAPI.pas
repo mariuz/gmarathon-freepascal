@@ -27,6 +27,8 @@ New CVS powered comment block
 
 unit GimbalToolsAPI;
 
+{$MODE Delphi}
+
 interface
 
 uses

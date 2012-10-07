@@ -15,6 +15,8 @@
 
 unit TipOfTheDay;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -54,7 +56,7 @@ uses
 	Globals,
 	GSSRegistry;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmTipOfTheDay.GetTip (Next : Boolean);
 var

@@ -15,6 +15,8 @@
 
 unit UserEditor;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -93,7 +95,7 @@ uses
   MarathonIDE,
 	SecureDBLogin;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmUsers.MinMaxInfo(var Message: TWMGetMinMaxInfo);
 var

@@ -65,6 +65,8 @@ New CVS powered comment block
 
 unit EditorTable;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -297,7 +299,7 @@ uses
 	ReOrderColumns,
 	EditorGrant, Math;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
 	 PG_STRUCT = 0;

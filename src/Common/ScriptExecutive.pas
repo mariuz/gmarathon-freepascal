@@ -15,6 +15,8 @@
 
 unit ScriptExecutive;
 
+{$MODE Delphi}
+
 interface
 
 uses

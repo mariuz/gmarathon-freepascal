@@ -15,6 +15,8 @@
 
 unit PluginsDialog;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -44,7 +46,7 @@ implementation
 uses
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmPlugins.btnLoadClick(Sender: TObject);
 begin

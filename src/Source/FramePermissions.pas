@@ -30,6 +30,8 @@ New CVS powered comment block
 
 unit FramePermissions;
 
+{$MODE Delphi}
+
 interface
 
 uses 
@@ -62,7 +64,7 @@ implementation
 uses
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 function TframePerms.CanPrint: Boolean;
 begin

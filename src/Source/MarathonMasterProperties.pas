@@ -15,6 +15,8 @@
 
 unit MarathonMasterProperties;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -138,7 +140,7 @@ uses
 	MarathonIDE,
 	MarathonProjectCacheTypes;
 
-{$R *.DFM}
+{$R *.lfm}
 
 constructor TfrmMasterProperties.CreateNewServer(const AOwner: TComponent);
 begin

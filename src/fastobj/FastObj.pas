@@ -1,4 +1,7 @@
 unit FastObj;
+
+{$MODE Delphi}
+
 (*
 //Gabriel Corneanu (gabrielcorneanu(AT)gmail.com)
 //General purpose object create/destroy optimization

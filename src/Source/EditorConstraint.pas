@@ -46,6 +46,8 @@ New CVS powered comment block
 
 unit EditorConstraint;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -180,7 +182,7 @@ uses
 	MarathonIDE,
 	CompileDBObject;
 
-{$R *.DFM}
+{$R *.lfm}
 
 const
 	 PG_PKEY = 0;

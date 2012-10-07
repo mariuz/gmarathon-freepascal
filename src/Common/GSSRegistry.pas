@@ -15,6 +15,8 @@
 
 unit GSSRegistry;
 
+{$MODE Delphi}
+
 interface
 
 uses

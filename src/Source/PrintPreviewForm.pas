@@ -15,6 +15,8 @@
 
 unit PrintPreviewForm;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -108,7 +110,7 @@ uses
 	//MarathonMain,
   MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmPrintPreview.MinMaxInfo(var Message : TWMGetMinMaxInfo);
 var

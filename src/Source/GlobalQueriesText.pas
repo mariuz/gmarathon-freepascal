@@ -15,6 +15,8 @@
 
 unit GlobalQueriesText;
 
+{$MODE Delphi}
+
 interface
 
 function GetQueryText(

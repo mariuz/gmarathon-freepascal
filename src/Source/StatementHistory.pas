@@ -15,6 +15,8 @@
 
 unit StatementHistory;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -49,7 +51,7 @@ uses
 	HelpMap,
 	Globals;
 
-{$R *.DFM}
+{$R *.lfm}
 
 procedure TfrmStatementHistory.btnOKClick(Sender: TObject);
 begin

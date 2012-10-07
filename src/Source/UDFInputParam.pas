@@ -15,6 +15,8 @@
 
 unit UDFInputParam;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -41,7 +43,7 @@ type
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 uses
 	HelpMap;

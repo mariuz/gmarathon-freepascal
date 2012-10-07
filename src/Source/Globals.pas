@@ -15,6 +15,8 @@
 
 unit Globals;
 
+{$MODE Delphi}
+
 interface
 
 uses

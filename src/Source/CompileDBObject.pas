@@ -15,6 +15,8 @@
 
 unit CompileDBObject;
 
+{$MODE Delphi}
+
 interface
 
 uses
@@ -70,7 +72,7 @@ implementation
 uses
 	MarathonIDE;
 
-{$R *.DFM}
+{$R *.lfm}
 
 constructor TfrmCompileDBObject.CreateAlter(AOwner: TComponent;	Form: IMarathonBaseForm;
 	Database: TIB_Connection; Transaction: TIB_Transaction; ObjectType: TGSSCacheType;

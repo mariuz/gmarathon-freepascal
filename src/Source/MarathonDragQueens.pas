@@ -15,6 +15,8 @@
 
 unit MarathonDragQueens;
 
+{$MODE Delphi}
+
 interface
 
 implementation
