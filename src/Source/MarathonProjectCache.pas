@@ -827,7 +827,7 @@ function GetImageIndexForCacheType(CT: TGSSCacheType): Integer;
 
 implementation
 
-uses Globals, MarathonIDE, Login, Crypt32, DB;
+uses Globals, MarathonIDE, Login, Crypt32;
 
 function GetImageIndexForCacheType(CT: TGSSCacheType): Integer;
 begin
@@ -1013,7 +1013,7 @@ begin
         TMarathonCacheBaseNode(CN.Data).FireEvent(opRefreshNoFocus);
       end
       else
-      CN := N.GetNextChild(CN);
+      CN := CN.GetNextSibling;
     end;
   end;
 end;
@@ -1046,7 +1046,7 @@ begin
 					Break;
 				end;
 			end;
-			CNV := NV.GetNextChild(CNV);
+			CNV := CNV.GetNextSibling;
 		end;
 
 		if not Found then
@@ -1059,7 +1059,7 @@ begin
 					wRecent := TMarathonCacheRecentItem(CNV.Data);
 					wRecent.UsageCount := wRecent.UsageCount + 1;
 				end;
-				CNV := NV.GetNextChild(CNV);
+				CNV := CNV.GetNextSibling;
 			end;
 
 			CNV := NV.GetFirstChild;
@@ -1071,7 +1071,7 @@ begin
 					if wRecent.UsageCount > 15 then
 						wRecent.DoOperation(opRemoveNode);
 				end;
-				CNV := NV.GetNextChild(CNV);
+				CNV := CNV.GetNextSibling;
 			end;
       wNode := FCache.AddPathNode(NV, ObjectName);
 			wRecent := TMarathonCacheRecentItem.Create;
@@ -1152,7 +1152,7 @@ begin
         Result := TMarathonCacheServer(CTNV.Data);
         Break;
       end;
-			CTNV := TNV.GetNextChild(CTNV);
+			CTNV := CTNV.GetNextSibling;
     end;
   end;
 end;
@@ -1249,23 +1249,23 @@ end;
 
 procedure TMarathonProjectDatabaseCache.Clear;
 begin
-  FCache.Items.Clear;
+  FCache.Clear;
 end;
 
 constructor TMarathonProjectDatabaseCache.Create(AOwner: TComponent);
 begin
   inherited;
-  FCache := TMarathonTree.Create(nil);
+  FCache := TMarathonTree.Create;
 //  FCache.FireEvents := True;
   FCache.SepChar := cSepChar;
-  FCache.OnDeletion := TreeDeletion;
+  { FCache.OnDeletion := TreeDeletion; } { not available in TMarathonTree }
   FMultiSelectItem := TMarathonCacheBaseNode.Create;
   FSearchList := TList.Create;
 end;
 
 destructor TMarathonProjectDatabaseCache.Destroy;
 begin
-  FCache.Items.Clear;
+  FCache.Clear;
   FCache.Free;
   FMultiSelectItem.Free;
 	ClearSearchList;
@@ -1308,7 +1308,7 @@ begin
 				Result := TMarathonCacheConnection(CTNV.Data);
 				Break;
 			end;
-			CTNV := TNV.GetNextChild(CTNV);
+			CTNV := CTNV.GetNextSibling;
 		end;
 	end;
 end;
@@ -1429,11 +1429,11 @@ begin
 						RemoveCacheItem(TMarathonCacheBaseNode(CN.Data));
 						Break;
 					end;
-					CN := N.GetNextChild(CN);
+					CN := CN.GetNextSibling;
 				end;
 				Break;
 			end;
-			CN := N.GetNextChild(CN);
+			CN := CN.GetNextSibling;
 		end;
 	end;
 end;
@@ -1455,21 +1455,21 @@ begin
 	NV := FCache.FindPathNode(cSepChar + 'Projects');
 	if Assigned(NV) then
 	begin
-		N := TV.AddPathNode(nil, FCache.NodePath(NV));
+		N := TV.Items.AddChild(nil, NV.Text);
 		N.Data := NV;
 		N.HasChildren := True;
 	end;
 	NV := FCache.FindPathNode(cSepChar + 'Recent');
 	if Assigned(NV) then
 	begin
-		N := TV.AddPathNode(nil, FCache.NodePath(NV));
+		N := TV.Items.AddChild(nil, NV.Text);
 		N.Data := NV;
 		N.HasChildren := True;
 	end;
 	NV := FCache.FindPathNode(cSepChar + 'Connections');
 	if Assigned(NV) then
 	begin
-		N := TV.AddPathNode(nil, FCache.NodePath(NV));
+		N := TV.Items.AddChild(nil, NV.Text);
 		N.Data := NV;
 		N.HasChildren := True;
 		N.Expand(False);
@@ -1477,7 +1477,7 @@ begin
 	NV := FCache.FindPathNode(cSepChar + 'Server Administration');
 	if Assigned(NV) then
 	begin
-		N := TV.AddPathNode(nil, FCache.NodePath(NV));
+		N := TV.Items.AddChild(nil, NV.Text);
 		N.Data := NV;
 		N.HasChildren := True;
 		N.Expand(False);
@@ -1689,15 +1689,15 @@ begin
 
 				FConnection.Username := FUserName;
 				FConnection.Password := FPassword;
-				FConnection.SQLRole := FSQLRole;
+				FConnection.Role := FSQLRole;
 				FConnection.Dialect := FSQLDialect;
 				try
-					FConnection.Connect;
+					FConnection.Connected := True;
 					if IsIB6 then
 					begin
-						FConnection.Disconnect;
+						FConnection.Connected := False;
 						FConnection.Dialect := FSQLDialect;
-						FCOnnection.Connect;
+						FConnection.Connected := True;
 					end;
 					Result := True;
 					FErrorOnConnection := False;
@@ -1748,7 +1748,7 @@ begin
 		+ #13 +  'to this connection will close. Are you sure you wish to do this?',
 		mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		FConnection.Disconnect;
+		FConnection.Connected := False;
 		FContainerNode.DeleteChildren;
 		FExpanded := False;
 		FRootItem.DatabaseDisconnecting(Caption);
@@ -1892,11 +1892,10 @@ begin
   Q := TSQLQuery.Create(nil);
   TmpTrans := TSQLTransaction.Create(nil);
   try
-    TmpTrans.IB_Connection := FConnection;
-    TmpTrans.Isolation := tiConCurrency;
+    TmpTrans.DataBase := FConnection;
 
-    Q.IB_Connection := FConnection;
-    Q.IB_Transaction := TmpTrans;
+    Q.DataBase := FConnection;
+    Q.Transaction := TmpTrans;
 
 		Q.SQL.Add('select distinct RDB$CHARACTER_SET_NAME from RDB$CHARACTER_SETS order by RDB$CHARACTER_SET_NAME asc');
 		Q.Open;
@@ -1924,11 +1923,10 @@ begin
   Q := TSQLQuery.Create(nil);
   TmpTrans := TSQLTransaction.Create(nil);
   try
-    TmpTrans.IB_Connection := FConnection;
-    TmpTrans.Isolation := tiConCurrency;
+    TmpTrans.DataBase := FConnection;
 
-    Q.IB_Connection := FConnection;
-    Q.IB_Transaction := TmpTrans;
+    Q.DataBase := FConnection;
+    Q.Transaction := TmpTrans;
 
 		Q.SQL.Add('select RDB$CHARACTER_SET_NAME from RDB$CHARACTER_SETS where RDB$CHARACTER_SET_ID = ' + IntToStr(CharSetID));
 		Q.Open;
@@ -1961,11 +1959,10 @@ begin
   Q := TSQLQuery.Create(nil);
   TmpTrans := TSQLTransaction.Create(nil);
   try
-    TmpTrans.IB_Connection := FConnection;
-    TmpTrans.Isolation := tiConCurrency;
+    TmpTrans.DataBase := FConnection;
 
-    Q.IB_Connection := FConnection;
-    Q.IB_Transaction := TmpTrans;
+    Q.DataBase := FConnection;
+    Q.Transaction := TmpTrans;
 
 		Q.SQL.Add('select distinct RDB$COLLATION_NAME from RDB$COLLATIONS order by RDB$COLLATION_NAME asc');
 		Q.Open;
@@ -1993,11 +1990,10 @@ begin
   Q := TSQLQuery.Create(nil);
   TmpTrans := TSQLTransaction.Create(nil);
   try
-    TmpTrans.IB_Connection := FConnection;
-    TmpTrans.Isolation := tiConCurrency;
+    TmpTrans.DataBase := FConnection;
 
-    Q.IB_Connection := FConnection;
-    Q.IB_Transaction := TmpTrans;
+    Q.DataBase := FConnection;
+    Q.Transaction := TmpTrans;
 
 		Q.SQL.Add('select RDB$COLLATION_NAME from RDB$COLLATIONS where RDB$CHARACTER_SET_ID = ' + IntToStr(CharSetID) + ' and RDB$COLLATION_ID = ' + IntToStr(CollationID));
 		Q.Open;
@@ -2043,12 +2039,11 @@ begin
 	FTableList.Clear;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-    Q.IB_Connection := Connection;
-    Q.IB_Transaction := Transaction;
-    if Q.IB_Transaction.Active then
-      Q.IB_Transaction.Commit;
-    Q.IB_Transaction.StartTransaction;
+    Q.DataBase := Connection;
+    Q.Transaction := Transaction;
+    if TSQLTransaction(Q.Transaction).Active then
+      TSQLTransaction(Q.Transaction).Commit;
+    TSQLTransaction(Q.Transaction).StartTransaction;
     try
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
 			Q.Open;
@@ -2063,10 +2058,9 @@ begin
 				Q.Next;
 			end;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
   end;
   Result := FTableList;
@@ -2080,12 +2074,11 @@ begin
   FViewList.Clear;
   Q := TSQLQuery.Create(nil);
   try
-		Q.BeginBusy(False);
-		Q.IB_Connection := Connection;
-		Q.IB_Transaction := Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+    Q.DataBase := Connection;
+    Q.Transaction := Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc');
 			Q.Open;
@@ -2100,10 +2093,9 @@ begin
 				Q.Next;
 			end;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 	Result := FViewList;
@@ -2117,12 +2109,11 @@ begin
 	FDomainList.Clear;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := Connection;
-		Q.IB_Transaction := Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+    Q.DataBase := Connection;
+    Q.Transaction := Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc');
 			Q.Open;
@@ -2132,67 +2123,22 @@ begin
 				Q.Next;
 			end;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 	Result := FDomainList;
 end;
 
 function TMarathonCacheConnection.IsIB5: Boolean;
-var
-	Idx, MajorVersionNum: Integer;
-	VersionString, Temp: String;
-
 begin
-	VersionString := FConnection.Characteristics.dbVersion;
-	Idx := Pos('V', VersionString);
-	if Idx > 0 then
-		VersionString := Copy(VersionString, Idx + 1, 100)
-	else
-	begin
-		Temp := '';
-		for Idx := 1 to Length(VersionString) do
-		begin
-			if VersionString[Idx] in ['0'..'9', '.'] then
-				Temp := Temp + VersionString[Idx];
-		end;
-		VersionString := Temp;
-	end;
-	MajorVersionNum := StrToInt(ParseSection(VersionString, 1, '.'));
-	if MajorVersionNum >= 5 then
-		Result := True
-	else
-		Result := False;
+  Result := True; // Assume Firebird/IB5+ compatible
 end;
 
 function TMarathonCacheConnection.IsIB6: Boolean;
-var
-	Idx, MajorVersionNum: Integer;
-	VersionString, Temp: String;
-
 begin
-	VersionString := FConnection.Characteristics.dbVersion;
-	Idx := Pos('V', VersionString);
-	if Idx > 0 then
-		VersionString := Copy(VersionString, Idx + 1, 100)
-	else
-	begin
-		Temp := '';
-		for Idx := 1 to Length(VersionString) do
-		begin
-			if VersionString[Idx] in ['0'..'9', '.'] then
-				Temp := Temp + VersionString[Idx];
-		end;
-		VersionString := Temp;
-	end;
-	MajorVersionNum := StrToInt(ParseSection(VersionString, 1, '.'));
-	if (MajorVersionNum >= 6) or (MajorVersionNum = 1) then
-		Result := True
-	else
-		Result := False;
+  Result := True; // Assume Firebird/IB6+ compatible
 end;
 
 procedure TMarathonCacheConnection.ResetCaption(Value: String);
@@ -2283,7 +2229,7 @@ begin
 	FCache.FProjectItem := Self;
 	FSQLHistory := TSQLHistoryList.Create(Self);
 	FWindowList := TWindowList.Create(Self);
-	FProjectView := TMarathonTree.Create(Self);
+	FProjectView := TMarathonTree.Create;
 	FProjectView.SepChar := cSepChar;
 	FMetaSearchStrings := TStringList.Create;
 	// Database Manager Columns
@@ -2574,12 +2520,12 @@ end;
 
 procedure TMarathonProject.ReadInternalTreeData(Stream: TStream);
 begin
-	Stream.ReadComponent(FProjectView);
+  // TMarathonTree is not a TComponent; tree is rebuilt via BuildTree
 end;
 
 procedure TMarathonProject.WriteInternalTreeData(Stream: TStream);
 begin
-	Stream.WriteComponent(FProjectView);
+  // TMarathonTree is not a TComponent; tree is rebuilt via BuildTree
 end;
 
 procedure TMarathonProject.SetEncoding(const Value: Integer);
@@ -2935,7 +2881,6 @@ var
 	NV: TMarathonTreeNode;
   wNode: TMarathonTreeNode;
   wRecent: TMarathonCacheRecentItem;
-  F: File;
 
   procedure ProcessFolders(NVNode: TMarathonTreeNode; Element: TDOMNode);
   var
@@ -2976,20 +2921,14 @@ var
 begin
 	FCache.BuildTree;
 	try
-		AssignFile(f, FileName);
 		try
-			Reset(f, 1);
-			try
-				ReadXMLFile(doc, f);
-			except
-				on E: EXMLReadError do
-				begin
-					MessageDlg('Marathon does not recognise this file as a project file.', mtError, [mbOK], 0);
-					raise;
-				end;
+			ReadXMLFile(doc, FileName);
+		except
+			on E: EXMLReadError do
+			begin
+				MessageDlg('Marathon does not recognise this file as a project file.', mtError, [mbOK], 0);
+				raise;
 			end;
-		finally
-			CloseFile(F);
 		end;
 
 		oProject := doc.DocumentElement;
@@ -3278,7 +3217,7 @@ var
           Element.AppendChild(oFolderItem);
         end;
       end;
-      Lnv := NonViewNode.GetNextChild(Lnv);
+      Lnv := Lnv.GetNextSibling;
     end;
   end;
 
@@ -3361,7 +3300,7 @@ begin
 					TDOMElement(oConnection).SetAttribute('password', Cache.Connections[Idx].EncPassword);
 				TDOMElement(oConnection).SetAttribute('charset', Cache.Connections[Idx].LangDriver);
 				TDOMElement(oConnection).SetAttribute('sqlrole', Cache.Connections[Idx].SQLRole);
-				TDOMElement(oConnection).SetAttribute('sqldialect', IntToStr(Cache.Connections[Idx].Dialect));
+				TDOMElement(oConnection).SetAttribute('sqldialect', IntToStr(Cache.Connections[Idx].SQLDialect));
 				oConnections.AppendChild(oConnection);
 			end;
 
@@ -3442,7 +3381,7 @@ begin
 						TDOMElement(oRecent).SetAttribute('usage', IntToStr(wRecent.UsageCount));
 						oRecents.AppendChild(oRecent);
 					end;
-					CNV := NV.GetNextChild(CNV);
+					CNV := CNV.GetNextSibling;
 				end;
 			end;
 
@@ -3772,12 +3711,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc;');
 			Q.Open;
@@ -3799,10 +3737,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -3824,9 +3761,8 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
 
 		Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc;');
 		Q.Open;
@@ -3848,7 +3784,6 @@ begin
 		end;
 		FExpanded := True;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -3870,12 +3805,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FUNCTION_NAME asc;');
@@ -3895,10 +3829,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -3920,12 +3853,11 @@ begin
   FContainerNode.DeleteChildren;
   Q := TSQLQuery.Create(nil);
   try
-    Q.BeginBusy(False);
-    Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-    Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if Q.IB_Transaction.Active then
-      Q.IB_Transaction.Commit;
-    Q.IB_Transaction.StartTransaction;
+    Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+    Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+    if TSQLTransaction(Q.Transaction).Active then
+      TSQLTransaction(Q.Transaction).Commit;
+    TSQLTransaction(Q.Transaction).StartTransaction;
     try
 
 			Q.SQL.Add('select RDB$EXCEPTION_NAME from RDB$EXCEPTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$EXCEPTION_NAME asc;');
@@ -3945,10 +3877,9 @@ begin
       end;
 			FExpanded := True;
 		finally
-      Q.IB_Transaction.Commit;
+      TSQLTransaction(Q.Transaction).Commit;
     end;
   finally
-    Q.EndBusy;
     Q.Free;
   end;
 end;
@@ -3970,12 +3901,11 @@ begin
   FContainerNode.DeleteChildren;
   Q := TSQLQuery.Create(nil);
   try
-    Q.BeginBusy(False);
-    Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-    Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if Q.IB_Transaction.Active then
-      Q.IB_Transaction.Commit;
-    Q.IB_Transaction.StartTransaction;
+    Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+    Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+    if TSQLTransaction(Q.Transaction).Active then
+      TSQLTransaction(Q.Transaction).Commit;
+    TSQLTransaction(Q.Transaction).StartTransaction;
     try
 
 			Q.SQL.Add('select RDB$GENERATOR_NAME from RDB$GENERATORS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$GENERATOR_NAME asc;');
@@ -3995,10 +3925,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -4020,12 +3949,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$TRIGGER_NAME, RDB$TRIGGER_INACTIVE from RDB$TRIGGERS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$TRIGGER_SOURCE is not null) order by RDB$TRIGGER_NAME asc;');
@@ -4049,10 +3977,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -4074,12 +4001,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$TRIGGER_NAME from RDB$TRIGGERS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$TRIGGER_SOURCE is not null) order by RDB$TRIGGER_NAME asc;');
@@ -4102,10 +4028,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -4127,12 +4052,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-    Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if Q.IB_Transaction.Active then
-      Q.IB_Transaction.Commit;
-    Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+    Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+    if TSQLTransaction(Q.Transaction).Active then
+      TSQLTransaction(Q.Transaction).Commit;
+    TSQLTransaction(Q.Transaction).StartTransaction;
     try
 
 			Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PROCEDURE_NAME asc;');
@@ -4152,10 +4076,9 @@ begin
       end;
       FExpanded := True;
     finally
-      Q.IB_Transaction.Commit;
+      TSQLTransaction(Q.Transaction).Commit;
     end;
   finally
-    Q.EndBusy;
     Q.Free;
   end;
 end;
@@ -4178,12 +4101,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc;');
@@ -4203,10 +4125,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -4228,12 +4149,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
@@ -4259,10 +4179,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;
@@ -4758,12 +4677,11 @@ begin
 	FContainerNode.DeleteChildren;
 	Q := TSQLQuery.Create(nil);
 	try
-		Q.BeginBusy(False);
-		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Active then
-			Q.IB_Transaction.Commit;
-		Q.IB_Transaction.StartTransaction;
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TSQLTransaction(Q.Transaction).Active then
+			TSQLTransaction(Q.Transaction).Commit;
+		TSQLTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where (RDB$SYSTEM_FLAG = 1) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
 			Q.Open;
@@ -4785,10 +4703,9 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			Q.IB_Transaction.Commit;
+			TSQLTransaction(Q.Transaction).Commit;
 		end;
 	finally
-		Q.EndBusy;
 		Q.Free;
 	end;
 end;

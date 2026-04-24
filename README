@@ -54,3 +54,55 @@ Modified FreePascal units("Other\xmlread.pas", "Other\xmlwrite.pas", "Other\dom.
 *   Surgical fixes for specific property or type mismatches introduced by the component replacements (e.g., `TTabControl` vs `TrmTabSet` API differences).
 *   Handling of tri-state checkboxes if needed (previously handled by VirtualTreeView).
 *   Verification of low-level database metadata extraction logic under SQLDB.
+
+## Build Success (2026-04-25)
+
+`lazbuild --build-mode=Debug src/Source/marathon.lpi` now compiles and links cleanly on Linux (FPC 3.2.2 / Lazarus 3.0, x86_64).
+
+### What was fixed in this session
+
+**IBO → SQLDB property migration (MarathonProjectCache.pas, editor units)**
+*   `Q.IB_Connection/IB_Transaction` → `Q.DataBase/Transaction`
+*   `T.IB_Connection/Isolation` → `T.DataBase` (isolation removed)
+*   `Q.IB_Transaction.Active/Commit/StartTransaction` → cast to `TSQLTransaction(Q.Transaction).*`
+*   `BeginBusy/EndBusy` removed (IBO-only)
+*   `TIBConnection.Connect/Disconnect/SQLRole` → `Connected := True/False`, `Role`
+*   `FConnection.Characteristics.dbVersion` → stubbed `IsIB5`/`IsIB6` returning `True`
+*   `ReadComponent/WriteComponent(TMarathonTree)` → stubbed (TMarathonTree is TObject, not TComponent)
+*   `ReadXMLFile(doc, File)` → `ReadXMLFile(doc, FileName)` (filename-string overload)
+
+**Linux / FPC compatibility**
+*   `ibase60` → `ibase60dyn` everywhere (`ibase60` statically links `-lgds` which doesn't exist on modern Firebird; `ibase60dyn` loads the client dynamically)
+*   `blr_*` Firebird type constants defined locally in Globals.pas (removed `ibase60` from that unit entirely)
+*   `FileAgeUTF8` / `ForceDirectoriesUTF8` → `FileAge` / `ForceDirectories`
+*   `jpeg` unit → `FPReadJPEG, FPWriteJPEG` (FPC equivalent)
+*   `ShlObj`, `gssscript_TLB`, `ShellAPI`, `UserEditor` → `{$IFDEF WINDOWS}`
+*   `MutexHandle`, `TBRegLoadPositions/SavePositions`, `HELP_FINDER`, `MessageBeep` → `{$IFDEF WINDOWS}`
+*   Windows date-format functions (`GetDateFormat`, `LANG_JAPANESE/CHINESE`, …) → stubbed as empty string
+*   `WM_GETMINMAXINFO / TWMGetMinMaxInfo` message handlers → `{$IFDEF WINDOWS}` in all editor forms
+*   `gssscript_TLB.pas` — wrapped entire COM file in `{$IFNDEF WINDOWS}…end.{$ENDIF}` stub
+*   `MarathonAVI.RES` / `Marathon.RES` → corrected lowercase filenames (case-sensitive Linux fs)
+
+**Globals.pas / SynEdit**
+*   Added `SynEditTypes`, `SynGutter` to uses for `eo*` option constants
+*   `Gutter.ShowLineNumbers` → `Gutter.LineNumberPart(0).Visible`
+*   `SearchEngine`, `KeywordCapitalise`, `NavigatorHyperLinkStyle`, `WordList`, `FindDialog*` → `{$IFNDEF FPC}`
+
+**MarathonMain.pas**
+*   `AppHelp` signature: `Data: Longint` → `Data: Int64` (matches Lazarus `THelp` callback)
+*   `Window1.Add(TToolButton)` → `Window1.Add(TMenuItem)` (correct LCL API)
+
+**UserEditor.pas / .lfm**
+*   `TrmTabSet` → `TTabControl` (in both .pas declaration and .lfm form file)
+
+### Roadmap
+
+- [ ] Runtime smoke-test: launch `./marathon` and verify UI appears
+- [ ] Firebird connection test: connect to a local Firebird 3.0 database
+- [ ] Fix any runtime errors surfaced by the first UI/connection test
+- [ ] Restore `SearchEngine` integration (SynEditSearch) for Find/Replace in editors
+- [ ] Restore `WordList` / SQL keyword autocompletion
+- [ ] Test metadata browsing (tables, views, SPs, triggers) via SQLDB IBConnection
+- [ ] Test DDL extraction (`MetaExtract/DDLExtractor.pas`)
+- [ ] Test script execution (`ScriptExecutive.pas`)
+- [ ] Package a release build

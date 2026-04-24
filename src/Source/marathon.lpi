@@ -677,6 +677,61 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalQueriesText"/>
       </Unit97>
+      <Unit98>
+        <Filename Value="rmCollectionListBox.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="rmCollectionListBox"/>
+      </Unit98>
+      <Unit99>
+        <Filename Value="rmCompatControls.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="rmCompatControls"/>
+      </Unit99>
+      <Unit100>
+        <Filename Value="PagePrnt.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="PagePrnt"/>
+      </Unit100>
+      <Unit101>
+        <Filename Value="DSprint.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DSprint"/>
+      </Unit101>
+      <Unit102>
+        <Filename Value="Chart.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Chart"/>
+      </Unit102>
+      <Unit103>
+        <Filename Value="rmSpin.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="rmSpin"/>
+      </Unit103>
+      <Unit104>
+        <Filename Value="Series.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Series"/>
+      </Unit104>
+      <Unit105>
+        <Filename Value="TeeProcs.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="TeeProcs"/>
+      </Unit105>
+      <Unit106>
+        <Filename Value="TeEngine.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="TeEngine"/>
+      </Unit106>
+      <Unit107>
+        <Filename Value="AboutBox.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="AboutBox"/>
+      </Unit107>
+      <Unit108>
+        <Filename Value="IBSQLMonitor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="IBSQLMonitor"/>
+      </Unit108>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

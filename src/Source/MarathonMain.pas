@@ -700,7 +700,8 @@ type
 		FForceClose: Boolean;
 		procedure MinMaxInfo(var Message: TLMessage); message WM_GETMINMAXINFO;
 		procedure QueryEndSession(var Message: TLMessage); message WM_QUERYENDSESSION;
-		procedure EndSession(var Message: TLMessage); message WM_ENDSESSION;		function AppHelp(Command: Word; Data: Longint; var CallHelp: Boolean): Boolean;
+		procedure EndSession(var Message: TLMessage); message WM_ENDSESSION;
+		function AppHelp(Command: Word; Data: Int64; var CallHelp: Boolean): Boolean;
 		procedure ExecuteMRU(Sender: TObject);
 		procedure IdleHandler(Sender: TObject; var Done: Boolean);
     function MenuItem(Index: Integer): TMenuItem;
@@ -731,11 +732,11 @@ implementation
 uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry;
 
 {$R *.lfm}
-{$R MarathonAVI.RES}
+{$R marathonavi.RES}
 {$R MarathonButtons.RES}
 {$R Toolmenus.RES}
 
-function TfrmMarathonMain.AppHelp(Command: Word; Data: Longint; var CallHelp: Boolean): Boolean;
+function TfrmMarathonMain.AppHelp(Command: Word; Data: Int64; var CallHelp: Boolean): Boolean;
 begin
 	CallHelp := True;
 	Result := True;
@@ -776,12 +777,13 @@ begin
 
   LoadFormPosition(self);
 
-	// KeyBindings Class Error with latest rmControls
-	// ToDo
-	if FileExistsUTF8(ExtractFilePath(Application.ExeName) + 'keybind.dat') { *Converted from FileExists*  } then
+	// KeyBindings: TrmKeyBindings removed, keybind.dat loading skipped
+	{$IFNDEF FPC}
+	if FileExistsUTF8(ExtractFilePath(Application.ExeName) + 'keybind.dat') then
      kbgKeys.LoadBindingsFromFile(ExtractFilePath(Application.ExeName) + 'keybind.dat', False);
+	{$ENDIF}
 
-	ForceDirectoriesUTF8(ExtractFilePath(Application.ExeName) + 'Projects\'); { *Converted from ForceDirectories*  }
+	ForceDirectories(ExtractFilePath(Application.ExeName) + 'Projects\'); { *Converted from ForceDirectories*  }
 
 	// Load the tree images from the resources
   B := TBitmap.Create;
@@ -803,7 +805,7 @@ begin
 		B.Free;
 	end;
 
-  TBRegLoadPositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);
+  {$IFDEF WINDOWS}TBRegLoadPositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);{$ENDIF}
 	dckTopResize(dckTop);
 
 	Caption := 'Marathon';
@@ -879,10 +881,12 @@ begin
 	if Assigned(Browser) then
 		Browser.SavePositions;
 
+  {$IFNDEF FPC}
 	for Idx := ReOpen1.Count - 1 downto 0 do
 		ReOpen1.Items[Idx].Free;
+  {$ENDIF}
 
-	TBRegSavePositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);
+	{$IFDEF WINDOWS}TBRegSavePositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);{$ENDIF}
   SaveFormPosition(self);
 	MarathonIDEInstance.MainForm := nil;
 	MarathonIDEInstance.UnloadPlugins;
@@ -1115,15 +1119,15 @@ begin
 
 			// File Locations
 			gDefProjectDir := I.ReadString('DefaultProjectDir');
-			ForceDirectoriesUTF8(gDefProjectDir); { *Converted from ForceDirectories*  }
+			ForceDirectories(gDefProjectDir); { *Converted from ForceDirectories*  }
 			gDefScriptDir := I.ReadString('DefaultScriptDir');
-			ForceDirectoriesUTF8(gDefScriptDir); { *Converted from ForceDirectories*  }
+			ForceDirectories(gDefScriptDir); { *Converted from ForceDirectories*  }
 			gExtractDDLDir := I.ReadString('ExtractDDLDir');
-			ForceDirectoriesUTF8(gExtractDDLDir); { *Converted from ForceDirectories*  }
+			ForceDirectories(gExtractDDLDir); { *Converted from ForceDirectories*  }
 			gSnippetsDir := I.ReadString('SnippetsDir');
 			if gSnippetsDir <> '' then
 				gSnippetsDir := Tools.AddBackslash(gSnippetsDir);
-			ForceDirectoriesUTF8(gSnippetsDir); { *Converted from ForceDirectories*  }
+			ForceDirectories(gSnippetsDir); { *Converted from ForceDirectories*  }
 
 			I.CloseKey;
 		end;
@@ -1327,7 +1331,7 @@ end;
 
 procedure TfrmMarathonMain.HelpHelpTopicsExecute(Sender: TObject);
 begin
-	Application.HelpCommand(HELP_FINDER, 0);
+	{$IFDEF WINDOWS}Application.HelpCommand(HELP_FINDER, 0);{$ENDIF}
 end;
 
 procedure TfrmMarathonMain.HelpMarathonOnTheWebExecute(Sender: TObject);
@@ -2536,13 +2540,12 @@ end;
 
 procedure TfrmMarathonMain.AddMenuItem(MenuAction: TBasicAction);
 var
-  wTBItem : TToolButton;
+  wMenuItem: TMenuItem;
 begin
-//	Window1_old.Add(TMenuItem(Menu));  //rjm - tbmenufix
-  wTBItem := TToolButton.Create(TBToolbar1);
-  wTBItem.Action := MenuAction;
-  Menuaction.FreeNotification(self);
-  Window1.Add(wTBItem);
+  wMenuItem := TMenuItem.Create(Window1);
+  wMenuItem.Action := MenuAction;
+  MenuAction.FreeNotification(self);
+  Window1.Add(wMenuItem);
 end;
 
 procedure TfrmMarathonMain.ObjectShowQueryPlanExecute(Sender: TObject);

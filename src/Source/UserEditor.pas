@@ -53,7 +53,7 @@ type
     qrySecurity: TSQLQuery;
 		Splitter1: TSplitter;
 		Panel1: TPanel;
-		tabGrants: TrmTabSet;
+		tabGrants: TTabControl;
 		ListView1: TListView;
 		actQueryBuilder: TAction;
 		actPrevStatement: TAction;
@@ -70,7 +70,7 @@ type
 		{ Private declarations }
 		FByPass: Boolean;
 		FModified: Boolean;
-		procedure MinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
+		{$IFDEF WINDOWS}procedure MinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;{$ENDIF}
 	public
 		It: TMenuItem;
 		procedure DropClose;
@@ -82,10 +82,11 @@ const
 
 implementation
 
-uses Globals, HelpMap, //MarathonMain, MarathonIDE, SecureDBLogin;
+uses Globals, HelpMap, MarathonIDE, SecureDBLogin;
 
 {$R *.lfm}
 
+{$IFDEF WINDOWS}
 procedure TfrmUsers.MinMaxInfo(var Message: TWMGetMinMaxInfo);
 var
   wRect : TRect;
@@ -94,7 +95,7 @@ var
 begin
   inherited;
   wMarathonMonitor := MarathonScreen.GetMonitor;
-  if self.Monitor.MonitorNum = wMarathonMonitor.MonitorNum then //same screen as the IDE main window
+  if self.Monitor.MonitorNum = wMarathonMonitor.MonitorNum then
   begin
      wMonitor := screen.monitors[self.Monitor.MonitorNum];
      Message.MinMaxInfo.ptMaxSize.X := wMonitor.Width + (GetSystemMetrics(SM_CXSIZEFRAME) * 2);
@@ -102,6 +103,7 @@ begin
      Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
   end;
 end;
+{$ENDIF}
 
 procedure TfrmUsers.WindowListClick(Sender: TObject);
 begin
@@ -153,7 +155,7 @@ begin
 		end;
 
 		try
-			dbSecurity.Connect;
+			dbSecurity.Connected := True;
 			Break;
 		except
 			on E: Exception do

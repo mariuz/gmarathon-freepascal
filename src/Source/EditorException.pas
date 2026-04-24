@@ -49,7 +49,7 @@ type
 		FErrors : Boolean;
 		It : TMenuItem;
 		procedure WindowListClick(Sender: TObject);
-		procedure WMMove(var Message : TMessage); message WM_MOVE;
+		{$IFDEF WINDOWS}procedure WMMove(var Message : TMessage); message WM_MOVE;{$ENDIF}
 	public
 		{ Public declarations }
 		procedure LoadException(ExceptionName : String);
@@ -117,7 +117,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject;
+uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject{$IFDEF FPC}, IBConnection{$ENDIF};
 
 {$R *.lfm}
 
@@ -237,11 +237,13 @@ begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmExceptions.WMMove(var Message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 procedure TfrmExceptions.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
@@ -324,7 +326,7 @@ begin
     framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryException.Database.Dialect;
+		SQLDialect := TIBConnection(qryException.Database).Dialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -346,14 +348,14 @@ end;
 procedure TfrmExceptions.LoadException(ExceptionName: String);
 begin
   try
-    qryException.BeginBusy(False);
+    {$IFNDEF FPC}qryException.BeginBusy(False);{$ENDIF}
     qryException.SQL.Clear;
     qryException.SQL.Add('select rdb$exception_name, rdb$message from rdb$exceptions where rdb$exception_name = ''' + ExceptionName + ''';');
     qryException.Open;
     edExceptionName.Text := qryException.FieldByName('rdb$exception_name').AsString;
     edExceptionText.Text := qryException.FieldByName('rdb$message').AsString;
     qryException.Close;
-    qryException.Transaction.Commit;
+    TSQLTransaction(qryException.Transaction).Commit;
 
     FObjectName := ExceptionName;
     InternalCaption := 'Exception - [' + FObjectName + ']';
@@ -363,7 +365,7 @@ begin
 
     framDoco.LoadDoco;
   finally
-		qryException.EndBusy;
+		{$IFNDEF FPC}qryException.EndBusy;{$ENDIF}
   end;
 end;
 
@@ -463,7 +465,7 @@ begin
 	CompileText := 'create exception ' + edExceptionName.Text + ' ''' + edExceptionText.Text + ''';';
 
 	TmpIntf := Self;
-	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryException.Database, qryException.Transaction, ctException, CompileText);
+	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryException.Database), TSQLTransaction(qryException.Transaction), ctException, CompileText);
 	FErrors := FCompile.CompileErrors;
 	FCompile.Free;
 

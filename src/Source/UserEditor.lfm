@@ -58,24 +58,17 @@ object frmUsers: TfrmUsers
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 0
-        object tabGrants: TrmTabSet
+        object tabGrants: TTabControl
           Left = 0
           Top = 209
           Width = 538
           Height = 21
           Align = alBottom
-          Font.Charset = DEFAULT_CHARSET
-          Font.Color = clWindowText
-          Font.Height = -11
-          Font.Name = 'MS Sans Serif'
-          Font.Style = []
           Tabs.Strings = (
             'Stored Procedures'
             'Tables'
             'Views')
           TabIndex = 0
-          TabLocation = tlBottom
-          TabType = ttWin2k
         end
         object ListView1: TListView
           Left = 0

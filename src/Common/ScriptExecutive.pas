@@ -19,7 +19,7 @@ unit ScriptExecutive;
 
 interface
 
-uses Classes, Windows, SysUtils, Registry, Dialogs, Forms, Messages, Controls, StdCtrls, IBConnection, SQLDB, DOM, XMLRead, XMLWrite;
+uses Classes, {$IFDEF FPC}LCLIntf, LCLType, ibase60dyn, {$ELSE}Windows, Messages, {$ENDIF}SysUtils, Registry, Dialogs, Forms, Controls, StdCtrls, IBConnection, SQLDB, DOM, XMLRead, XMLWrite;
 
 type
   TISQLExceptionCode = (eeInitialization, eeInvDialect, eeFOpen, eeParse,
@@ -118,7 +118,7 @@ type
 
 implementation
 
-uses ;
+// uses SysUtils; // already in interface
 
 function StripQuotes(I : String) : String;
 var
@@ -635,7 +635,7 @@ begin
             begin
               NewSource := nil;
               try
-                AssignFile(InputFile, IsqlValue);
+                AssignFile(InputFile, String(IsqlValue));
                 Reset (InputFile);
                 NewSource := TStringList.Create;
 								while not SeekEof(InputFile) do
@@ -731,7 +731,7 @@ begin
           actXMLExec :
             begin
               FTmpQuery.ParamCheck := True;
-              FTmpQuery.ParamChar := '?';
+              // FTmpQuery.ParamChar := '?'; // IBO-only, not in TSQLQuery
               try
                 Doc := TXmlDocument.Create;
                 try
@@ -789,11 +789,11 @@ begin
 
                           if AnsiUpperCase(XData) = 'NULL' then
                           begin
-                            FTmpQuery.Params[Position - 1].IsNull := True;
+                            FTmpQuery.Params[Position - 1].Clear; // set param to null
                           end
                           else
                           begin
-														FTmpQuery.Params[Position - 1].AsVariant := XData;
+														FTmpQuery.Params[Position - 1].Value := XData;
                           end;
                         end;
                         oNodeOne := oNodeOne.NextSibling;
@@ -820,7 +820,7 @@ begin
         // Does this line drop a database
         if (Pos ('DROP DATABASE', AnsiUpperCase(Data.Strings[lCnt])) = 1) then
         begin
-          FDatabase.DropDatabase;
+          {$IFDEF WINDOWS}FDatabase.DropDatabase;{$ENDIF} // DropDatabase not available on FPC/Linux
           continue;
         end;
 
@@ -863,8 +863,8 @@ begin
                   end;
                 end;
 
-                dbHandle := nil;
-                trHandle := nil;
+                dbHandle := 0;
+                trHandle := 0;
                 {
                 asm
                   fstcw [SaveCW]
@@ -1035,7 +1035,7 @@ begin
                 end;
               end;
 
-            stDDL, stSetGenerator:
+            stDDL:
               begin
                 // Use a different IBQuery since DDL can be set to autocommit
                 FDDLQuery.SQL.Clear;
@@ -1076,7 +1076,7 @@ begin
                 end;
               end;
 
-            stSelect, stSelectForUpdate, stExecProcedure:
+            stSelect, stSelectForUpd, stExecProcedure:
               begin
                 //ignore...
               end;

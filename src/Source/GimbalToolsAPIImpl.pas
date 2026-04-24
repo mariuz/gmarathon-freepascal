@@ -600,12 +600,12 @@ end;
 
 function TGimbalIDEConnection.IDEGetCurrentDBHandle: Integer;
 begin
-  Result := Integer(FConnection.Connection.dbHandle);
+  Result := Integer(PtrInt(FConnection.Connection.Handle));
 end;
 
 function TGimbalIDEConnection.IDEGetCurrentTransHandle: Integer;
 begin
-  Result := Integer(FConnection.Transaction.trHandle);
+  Result := 0; { FPC: TSQLTransaction does not expose trHandle }
 end;
 
 function TGimbalIDEConnection.IDEGetIsInterbaseSix: Boolean;
@@ -615,7 +615,7 @@ end;
 
 function TGimbalIDEConnection.IDEGetSQLDialect: Integer;
 begin
-	Result := FConnection.Dialect;
+	Result := FConnection.SQLDialect;
 end;
 
 { TGimbalIDEMarathonForm }

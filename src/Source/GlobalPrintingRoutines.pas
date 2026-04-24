@@ -103,7 +103,7 @@ type
 		procedure PrintLines(Lines : TStrings; Preview : Boolean; Title : String);
 		procedure PrintLinesWithTitle(Lines : TStrings; PageTitle : String; Preview : Boolean; Title : String);
 		procedure PrintPerformanceAnalysis(Preview : Boolean; Query : TStrings; Dataset : TDataSet; Chart : TChart);
-		procedure PrintQueryPlan(Preview : Boolean; Query : TStrings; Plan : String; GPlan : TMetafile);
+		{$IFDEF WINDOWS}procedure PrintQueryPlan(Preview : Boolean; Query : TStrings; Plan : String; GPlan : TMetafile);{$ENDIF}
 
 		//object
     procedure PrintGeneral(Preview: Boolean;	ReportTitle, ObjectType, ObjectName, ConnectionName: String);
@@ -556,6 +556,7 @@ begin
   end;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmGlobalPrintingRoutines.PrintQueryPlan(Preview: Boolean;	Query: TStrings; Plan: String; GPlan: TMetafile);
 var
 	PP : TfrmPrintPreview;
@@ -645,6 +646,7 @@ begin
     F.Free;
   end;
 end;
+{$ENDIF}
 
 procedure TfrmGlobalPrintingRoutines.PrintLinesWithTitle(Lines: TStrings;	PageTitle: String; Preview: Boolean; Title: String);
 var
@@ -739,8 +741,8 @@ begin
   qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Transaction;
 
   if qryUtil.Transaction.Active then
-    qryUtil.Transaction.Commit;
-  qryUtil.Transaction.StartTransaction;
+    TSQLTransaction(qryUtil.Transaction).Commit;
+  TSQLTransaction(qryUtil.Transaction).StartTransaction;
 end;
 
 procedure TfrmGlobalPrintingRoutines.qryUtilOpen(sql: string);
@@ -807,7 +809,7 @@ begin
   if qryUtil.Active then
   begin
     qryUtil.Close;
-    qryUtil.Transaction.Commit;
+    TSQLTransaction(qryUtil.Transaction).Commit;
   end;
 end;
 
@@ -1396,7 +1398,7 @@ end;
 
 function TfrmGlobalPrintingRoutines.getDataType: string;
 begin
-  if MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].IsIB6 and (MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Dialect = 3) then
+  if MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].IsIB6 and (MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].SQLDialect = 3) then
   begin
     Result := ConvertFieldType(
       qryUtil.FieldByName('rdb$field_type').AsInteger,
@@ -2276,7 +2278,7 @@ begin
           if not qryUtil.Eof then
             InternalPrintTableStructure;
           qryUtil.Close;
-          qryUtil.Transaction.Commit;
+          TSQLTransaction(qryUtil.Transaction).Commit;
 
           ppPrinter.EndDoc;
         finally

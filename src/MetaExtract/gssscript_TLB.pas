@@ -2,6 +2,13 @@ unit gssscript_TLB;
 
 {$MODE Delphi}
 
+{$IFNDEF WINDOWS}
+// Stub for non-Windows platforms
+interface
+implementation
+end.
+{$ENDIF}
+
 // ************************************************************************ //
 // WARNING                                                                    
 // -------                                                                    

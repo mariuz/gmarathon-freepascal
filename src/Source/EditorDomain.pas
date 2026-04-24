@@ -19,7 +19,7 @@ unit EditorDomain;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription, rmCollectionListBox, rmCompatControls;
 
 type
 	TfrmDomains = class(TfrmBaseDocumentDataAwareForm, IMarathonDomainEditor)
@@ -112,7 +112,7 @@ type
 		function GetCollate: String;
 
 		procedure WindowListClick(Sender: TObject);
-		procedure WMMove(var Message: TMessage); message WM_MOVE;
+		{$IFDEF WINDOWS}procedure WMMove(var Message: TMessage); message WM_MOVE;{$ENDIF}
 		procedure AddError(Info: String);
 	public
 		{ Public declarations }
@@ -192,7 +192,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, MarathonProjectCacheTypes, CompileDBObject, DropObject, ArrayDialog;
+uses Globals, HelpMap, MarathonIDE, MarathonProjectCacheTypes, CompileDBObject, DropObject, ArrayDialog, IBConnection;
 
 const
 	TY_NONE = -1;
@@ -517,7 +517,7 @@ begin
   begin
     qryDomain.Close;
     qryDomain.SQL.Clear;
-    qryDomain.// // // // // // // RequestLive := True;
+    // qryDomain.RequestLive := True; // IBO-only, not available in SQLDB
 		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
     qryDomain.Open;
     try
@@ -582,12 +582,12 @@ begin
 					end;
 				end;
 
-				qryDomain.Transaction.Commit;
+				TSQLTransaction(qryDomain.Transaction).Commit;
 				SetObjectName(edColumn.Text);
 			except
 				on E : Exception do
 				begin
-					qryDomain.Transaction.Rollback;
+					TSQLTransaction(qryDomain.Transaction).Rollback;
 					raise;
 				end;
 			end;
@@ -599,7 +599,7 @@ begin
 	begin
 		qryDomain.Close;
 		qryDomain.SQL.Clear;
-		qryDomain.// // // // // // // RequestLive := True;
+		// qryDomain.RequestLive := True; // IBO-only, not available in SQLDB
 		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
 		qryDomain.Open;
 		try
@@ -672,11 +672,11 @@ begin
 					end;
 				end;
 
-				qryDomain.Transaction.Commit;
+				TSQLTransaction(qryDomain.Transaction).Commit;
 			except
 				on E : Exception do
 				begin
-					qryDomain.Transaction.Rollback;
+					TSQLTransaction(qryDomain.Transaction).Rollback;
 					raise;
         end;
       end;
@@ -1074,7 +1074,7 @@ begin
 	if not IsInterbase6 then
 		edColumn.ReadOnly := True;
 	qryDomain.Close;
-	qryDomain.Transaction.Commit;
+	TSQLTransaction(qryDomain.Transaction).Commit;
 	FChangeDefault := False;
 	FChangeCheck := False;
 	FChangeName := False;
@@ -1102,7 +1102,7 @@ begin
 	qryDomain.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 	qryDomain.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-	SQLDialect := qryDomain.Database.Dialect;
+	SQLDialect := TIBConnection(qryDomain.Database).Dialect;
 	stsEditor.Panels[3].Text := Value;
 end;
 
@@ -1180,11 +1180,13 @@ begin
 		BringToFront;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmDomains.WMMove(var Message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 function TfrmDomains.CanCaptureSnippet: Boolean;
 begin
@@ -1492,7 +1494,7 @@ begin
 
 		FCompileText := 'create domain ' + edColumn.Text + ' as ' + GetDataType + GetDefault + GetNotNull + GetCheck + GetCollate;
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryDomain.Database, qryDomain.Transaction, ctDomain, FCompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryDomain.Database), TSQLTransaction(qryDomain.Transaction), ctDomain, FCompileText);
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 

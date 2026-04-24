@@ -56,7 +56,7 @@ unit EditorColumn;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, Buttons, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, rmPageControl;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, Buttons, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, rmCompatControls;
 
 type
 	TColumnEditState = (stNewTable, stNewColumn, stColumnProperties);
@@ -221,7 +221,7 @@ type
 
 implementation
 
-uses Globals, MarathonIDE, HelpMap, CompileDBObject, DropObject, PrintPreviewForm, ArrayDialog, EditorDomain;
+uses Globals, MarathonIDE, HelpMap, CompileDBObject, DropObject, PrintPreviewForm, ArrayDialog, EditorDomain, IBConnection;
 
 const
 	TY_NONE              = -1;
@@ -921,7 +921,7 @@ begin
 		if not FIsInterbase6 then
 			edColumnName.ReadOnly := True;
 		qryUtil.Close;
-		qryUtil.Transaction.Commit;
+		TSQLTransaction(qryUtil.Transaction).Commit;
 		FChangeDefault := False;
 		FChangeCheck := False;
 		FChangeName := False;
@@ -955,7 +955,7 @@ begin
 	qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 	qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-	FSQLDialect := qryUtil.Database.Dialect;
+	FSQLDialect := TIBConnection(qryUtil.Database).Dialect;
 	stsEditor.Panels[3].Text := Value;
 end;
 
@@ -1031,7 +1031,7 @@ begin
 				FCompileText := 'create table ' + edTableName.Text + '(' + edColumnName.Text + ' computed by ' + edComputed.Text + ')';
 			end;
 		end;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, qryUtil.Database, qryUtil.Transaction, ctSQL, FCompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctSQL, FCompileText);
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 
@@ -1121,7 +1121,7 @@ begin
 					FCompileText := 'alter table ' + MakeQuotedIdent(edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' computed by ' + edComputed.Text;
 				end;
 			end;
-			FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, qryUtil.Database, qryUtil.Transaction, ctSQL, FCompileText);
+			FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctSQL, FCompileText);
 			FErrors := FCompile.CompileErrors;
 			FCompile.Free;
 
@@ -1153,7 +1153,7 @@ begin
 					else
 						FCompileText := 'update RDB$RELATION_FIELDS set RDB$NULL_FLAG = null where RDB$RELATION_NAME = ' + QuotedStr(edTableName.Text) + ' and RDB$FIELD_NAME = ' + QuotedStr(FObjectName);
 
-					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, qryUtil.Database, qryUtil.Transaction, ctSQL, FCompileText);
+					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctSQL, FCompileText);
 					FErrors := FCompile.CompileErrors;
 					FCompile.Free;
 
@@ -1168,7 +1168,7 @@ begin
 				begin
 					FCompileText := 'update RDB$RELATION_FIELDS set RDB$DESCRIPTION = ' + QuotedStr(framColumnDoco.edDoco.Text) + ' where RDB$RELATION_NAME = ' + QuotedStr(edTableName.Text) + ' and RDB$FIELD_NAME = ' + QuotedStr(FObjectName);
 
-					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, qryUtil.Database, qryUtil.Transaction, ctSQL, FCompileText);
+					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctSQL, FCompileText);
 					FErrors := FCompile.CompileErrors;
 					FCompile.Free;
 
@@ -1183,7 +1183,7 @@ begin
 				begin
 					FCompileText := 'alter table ' + MakeQuotedIdent(edTableName.Text, FIsInterbase6, FSQLDialect) + ' alter column ' + MakeQuotedIdent(FObjectName, FIsInterbase6, FSQLDialect) + ' to ' + MakeQuotedIdent(edColumnName.Text, FIsInterbase6, FSQLDialect);
 
-					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, qryUtil.Database, qryUtil.Transaction, ctSQL, FCompileText);
+					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctSQL, FCompileText);
 					FErrors := FCompile.CompileErrors;
 					FCompile.Free;
 

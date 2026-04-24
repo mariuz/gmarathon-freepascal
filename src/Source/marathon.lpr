@@ -43,7 +43,7 @@ uses
   SQLTrace in 'SQLTrace.pas' {frmSQLTrace},
   SQLInsightItem in 'SQLInsightItem.pas' {frmSQLInsight},
   QBuilder in 'QBuilder.pas' {QBForm},
-  ShlObj,
+  {$IFDEF WINDOWS}ShlObj,{$ENDIF}
   ReorderColumns in 'ReorderColumns.pas' {frmReorderColumns},
   WindowLists in 'WindowLists.pas',
   EditorGenerator in 'EditorGenerator.pas' {frmGenerators},
@@ -112,7 +112,7 @@ uses
   GlobalQueriesText in 'GlobalQueriesText.pas';
 
 {$R MarathonVersion.RES}
-{$R Marathon.RES}
+{$R marathon.res}
 
 var
 	frmSplash : TfrmSplash;
@@ -133,6 +133,6 @@ begin
     Application.Run;
 	finally
 		MarathonScreen.Free;
-		if LongBool(MutexHandle) then FileClose(MutexHandle); { *Converted from CloseHandle*  }
+		{$IFDEF WINDOWS}if LongBool(MutexHandle) then FileClose(MutexHandle);{$ENDIF}
 	end;
 end.

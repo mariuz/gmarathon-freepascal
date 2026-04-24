@@ -59,7 +59,7 @@ type
 		FErrors: Boolean;
 		It : TMenuItem;
 		procedure WindowListClick(Sender: TObject);
-		procedure WMMove(var Message: TMessage); message WM_MOVE;
+		{$IFDEF WINDOWS}procedure WMMove(var Message: TMessage); message WM_MOVE;{$ENDIF}
 
 		//Implementing IMarathonUDFEditor
 		function IsInterbaseSix: Boolean;
@@ -144,7 +144,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam;
+uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam{$IFDEF FPC}, IBConnection{$ENDIF};
 
 {$R *.lfm}
 
@@ -247,11 +247,13 @@ begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmUDFEditor.WMMove(var Message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 procedure TfrmUDFEditor.FormKeyDown(Sender: TObject; var Key: Word;	Shift: TShiftState);
 begin
@@ -336,7 +338,7 @@ begin
     framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-    SQLDialect := qryUtil.Database.Dialect;
+    SQLDialect := TIBConnection(qryUtil.Database).Dialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -363,7 +365,7 @@ var
 begin
 	try
 		FObjectName := UDFName;
-		qryUtil.BeginBusy(False);
+		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select * from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
 		qryUtil.Open;
@@ -375,7 +377,7 @@ begin
 		RtnPosition := qryUtil.FieldByName('rdb$return_argument').AsInteger;
 
 		qryUtil.Close;
-		qryUtil.Transaction.Commit;
+		TSQLTransaction(qryUtil.Transaction).Commit;
 
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select * from rdb$function_arguments where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + ' order by rdb$argument_position asc;');
@@ -427,7 +429,7 @@ begin
       qryUtil.Next;
     end;
     qryUtil.Close;
-    qryUtil.Transaction.Commit;
+    TSQLTransaction(qryUtil.Transaction).Commit;
 
     InternalCaption := 'UDF - [' + FObjectName + ']';
     It.Caption := '&1 UDF - [' + FObjectName + ']';
@@ -437,7 +439,7 @@ begin
 
     framDoco.LoadDoco;
   finally
-    qryUtil.EndBusy;
+    {$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
   end;
 end;
 
@@ -527,7 +529,7 @@ begin
 	CompileText := '';
 
 	TmpIntf := Self;
-	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryUtil.Database, qryUtil.Transaction, ctUDF, CompileText);
+	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctUDF, CompileText);
 	FErrors := FCompile.CompileErrors;
 	FCompile.Free;
 

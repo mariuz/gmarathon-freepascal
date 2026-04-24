@@ -1599,7 +1599,7 @@ begin
   M := TProcModule.Create;
   M.DebuggerVM := Self;
   M.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].IsIB6;
-	M.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Dialect;
+	M.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].SQLDialect;
   FModules.Add(M);
   Result := M.Compile(ProcName, ProcSource);
 end;
@@ -1618,7 +1618,7 @@ var
 
 begin
   FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].IsIB6;
-  FSQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Dialect;
+  FSQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].SQLDialect;
   Q := TSQLQuery.Create(nil);
   try
     Q.Database := FDatabase;
@@ -1706,7 +1706,7 @@ begin
     end;
     Q.Close;
     if Q.Transaction.Active then
-      Q.Transaction.Commit;
+      TSQLTransaction(Q.Transaction).Commit;
     Q.SQL.Clear;
     if FIsInterbase6 then
     begin
@@ -1789,7 +1789,7 @@ begin
 
     Q.Close;
     if Q.Transaction.Active then
-      Q.Transaction.Commit;
+      TSQLTransaction(Q.Transaction).Commit;
 
     Tmp := WrapText(Tmp, #10#13, [' ', #9], 80);
 
@@ -1817,14 +1817,14 @@ begin
       end;
       Q.Close;
       if Q.Transaction.Active then
-        Q.Transaction.Commit;
+        TSQLTransaction(Q.Transaction).Commit;
       Q.SQL.Clear;
       Tmp := tmp + P.Text;
 
       M := TProcModule.Create;
       M.DebuggerVM := Self;
       M.IsInterbase6 := FIsInterbase6;
-      M.Dialect := FSQLDialect;
+      M.SQLDialect := FSQLDialect;
       FModules.Add(M);
       Result := M.Compile(ProcName, Tmp);
     finally

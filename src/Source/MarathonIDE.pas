@@ -24,7 +24,7 @@ interface
 uses Classes, {$IFDEF FPC}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs, {$IFNDEF FPC}
+  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, Chart, DB, PrintersDlgs, {$IFNDEF FPC}
   ComObj, {$ENDIF}
   {$IFDEF D6_or_higher}
 	Variants, {$ENDIF}
@@ -228,7 +228,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, ShellAPI, UserEditor, DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, gssscript_TLB;
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -378,7 +378,7 @@ begin
 		end
 		else
     try
-			if FileDateToDateTime(FileAgeUTF8(FCurrentProject.FileName) { *Converted from FileAge*  }) > FCurrentProject.TimeStamp then
+			if FileDateToDateTime(FileAge(FCurrentProject.FileName) { *Converted from FileAge*  }) > FCurrentProject.TimeStamp then
       begin
 			  if MessageDlg('Project file may have changed. Do you wish to overwrite changes?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
 				begin
@@ -396,10 +396,10 @@ begin
 		try
 			FCurrentProject.SaveToFile(FCurrentProject.FileName);
 			FCurrentProject.Modified := False;
-      if FileAgeUTF8(FCurrentProject.FileName) { *Converted from FileAge*  } = -1 then
+      if FileAge(FCurrentProject.FileName) { *Converted from FileAge*  } = -1 then
          FCurrentProject.TimeStamp := Now
       else
-			   FCurrentProject.TimeStamp := FileDateToDateTime(FileAgeUTF8(FCurrentProject.FileName) { *Converted from FileAge*  });
+			   FCurrentProject.TimeStamp := FileDateToDateTime(FileAge(FCurrentProject.FileName) { *Converted from FileAge*  });
 			Result := True;
 
 			if Assigned(FMainForm) then
@@ -951,7 +951,7 @@ begin
 	try
 		FCurrentProject.LoadFromFile(ProjName);
 		FCurrentProject.FileName := ProjName;
-		FCurrentProject.TimeStamp := FileDateToDateTime(FileAgeUTF8(ProjName) { *Converted from FileAge*  });
+		FCurrentProject.TimeStamp := FileDateToDateTime(FileAge(ProjName) { *Converted from FileAge*  });
 	except
 		on E: Exception do
 		begin
@@ -1174,93 +1174,11 @@ end;
 
 
 procedure TMarathonIDE.FileCreateDatabase;
-var
-	State: Integer;
-	D, DBInfo: Variant;
-	Connection: TMarathonCacheConnection;
-	Item: TMarathonCacheBaseNode;
-	F: IMarathonBrowser;
 begin
-	try
-		if FCurrentProject.Open then
-			State := APP_MARATHON_OPEN_PROJECT
-		else
-			State := APP_MARATHON_NO_OPEN_PROJECT;
-
-		D := CreateOLEObject('GimbalCreateDatabase.GSSCreateDatabase');
-		DBInfo := D.Execute(Application.Handle, APP_MARATHON, State);
-		{$IFDEF Ver150}
-		if not VarIsClear(DBInfo) then
-		{$ELSE}
-		if not VarIsEmpty(DBInfo) then
-		{$ENDIF}
-		begin
-			if DBInfo.CreateProject then
-			begin
-				if FileCloseProject then
-				begin
-					FCurrentProject.NewProject;
-					FCurrentProject.FriendlyName := DBInfo.ProjectName;
-
-          if Assigned(FMainForm) then
-            FMainForm.Caption := 'Marathon';
-
-					if Assigned(FMainForm) then
-            FMainForm.Caption := FMainForm.Caption + ' - ' + FCurrentProject.FriendlyName;
-          F := GetBrowser;
-          if Assigned(F) then
-            F.LoadTree;
-
-					Connection := FCurrentProject.Cache.AddConnectionInternal;
-          Connection.Caption := DBInfo.ConnectionName;
-          Connection.DBFileName := DBInfo.DatabaseName;
-          Connection.UserName := DBInfo.UserName;
-          Connection.Password := DBInfo.Password;
-          Connection.Dialect := DBInfo.Dialect;
-          Connection.LangDriver := DBInfo.CharSet;
-					Item := Connection.GetParentObject;
-          if Assigned(Item) then
-          begin
-            Item.FireEvent(opRefresh);
-            Item.FireEvent(opExpandNode);
-          end;
-          Connection.FireEvent(opRefresh);
-          Connection.FireEvent(opExpandNode);
-          Connection.Connect;
-        end;
-      end
-      else
-      begin
-        if DBInfo.CreateConnection then
-        begin
-					Connection := FCurrentProject.Cache.AddConnectionInternal;
-//          wPath := Connection.ContainerNode.NodePath;
-          Connection.Caption := DBInfo.ConnectionName;
-          Connection.DBFileName := DBInfo.DatabaseName;
-          Connection.UserName := DBInfo.UserName;
-          Connection.Password := DBInfo.Password;
-          Connection.Dialect := DBInfo.Dialect;
-          Connection.LangDriver := DBInfo.CharSet;
-          Item := Connection.GetParentObject;
-          if Assigned(Item) then
-          begin
-            Item.FireEvent(opRefresh);
-            Item.FireEvent(opExpandNode);
-          end;
-//          Connection.FireEvent(opRefresh);
-//          Connection.FireEvent(opExpandNode);
-//          Connection.Connect;
-        end;
-      end;
-    end;
-
-  except
-		on E: Exception do
-		begin
-			MessageDlg(E.Message, mtError, [mbOK], 0);
-			Exit;
-		end;
-	end;
+  {$IFDEF WINDOWS}
+  { Windows COM-based database creation wizard - not available on FPC/Linux }
+  MessageDlg('Create Database wizard not available on this platform.', mtInformation, [mbOK], 0);
+  {$ENDIF}
 end;
 
 procedure TMarathonIDE.FilePrintSetup;
@@ -1499,8 +1417,8 @@ begin
 			TfrmSyntaxHelp(Screen.Forms[i]).Close;
 		if Screen.Forms[I] is TfrmCodeSnippets Then
 			TfrmCodeSnippets(Screen.Forms[i]).Close;
-		if Screen.Forms[I] is TfrmUsers Then
-			TfrmUsers(Screen.Forms[i]).Close;
+		{$IFDEF WINDOWS}if Screen.Forms[I] is TfrmUsers Then
+			TfrmUsers(Screen.Forms[i]).Close;{$ENDIF}
 	end;
 end;
 
@@ -1734,12 +1652,15 @@ begin
 end;
 
 procedure TMarathonIDE.ToolsUserEditor;
+{$IFDEF WINDOWS}
 var
 	F: TfrmUsers;
-
+{$ENDIF}
 begin
+{$IFDEF WINDOWS}
 	F := TfrmUsers.Create(Application);
 	F.Show;
+{$ENDIF}
 end;
 
 //==============================================================================
@@ -1969,7 +1890,7 @@ begin
 	if not CheckConnected(Connection) then
 		Exit;
 
-	if FCurrentProject.Cache.ConnectionByName[Connection].IsIB6 and (FCurrentProject.Cache.ConnectionByName[Connection].Dialect = 3) then
+	if FCurrentProject.Cache.ConnectionByName[Connection].IsIB6 and (FCurrentProject.Cache.ConnectionByName[Connection].SQLDialect = 3) then
 	begin
 		if not ShouldBeQuoted(ProcedureName) then
 			ProcedureName := AnsiUpperCase(ProcedureName);
@@ -3046,7 +2967,7 @@ var
 begin
 	P := TfrmGlobalPrintingRoutines.Create(nil);
 	try
-		P.PrintQueryPlan(Preview, Query, Plan, GPlan);
+		{$IFDEF WINDOWS}P.PrintQueryPlan(Preview, Query, Plan, GPlan);{$ENDIF}
 	finally
 		if not Preview then
 			P.Free;

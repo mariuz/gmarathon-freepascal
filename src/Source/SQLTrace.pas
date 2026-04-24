@@ -28,7 +28,7 @@ type
 		tsEdit: TTabSheet;
 		edTrace: TSyntaxMemoWithStuff2;
 		dlgSave: TSaveDialog;
-		trcSQL: TIBSQLMonitor;
+		trcSQL: TIB_Monitor;
 		procedure FormCreate(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure edTraceChange(Sender: TObject);
@@ -37,7 +37,7 @@ type
 		{ Private declarations }
 		It: TMenuItem;
 		procedure WindowListClick(Sender: TObject);
-		procedure MinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
+		{$IFDEF WINDOWS}procedure MinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;{$ENDIF}
 	public
 		{ Public declarations }
 		FFileName: String;
@@ -131,6 +131,7 @@ begin
 	end;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmSQLTrace.MinMaxInfo(var Message: TWMGetMinMaxInfo);
 var
   wRect : TRect;
@@ -147,6 +148,7 @@ begin
      Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
   end;
 end;
+{$ENDIF}
 
 procedure TfrmSQLTrace.FormClose(Sender: TObject;	var Action: TCloseAction);
 begin
@@ -166,8 +168,10 @@ begin
 	Top := MarathonScreen.Top + Trunc((MarathonScreen.Height div 3) * 2);
 	Left := MarathonScreen.Left + (MarathonScreen.Width div 4) + 4;
 
+	{$IFDEF WINDOWS}
 	if SystemParametersInfo(SPI_GETWORKAREA, 0, @R, 0) then
 		Height := R.Bottom - Top;
+	{$ENDIF}
 	Width := MarathonScreen.Width - Left + MarathonScreen.Left;
 
 	SetupNonSyntaxEditor(edTrace);
@@ -248,7 +252,7 @@ begin
 		for Idx := 0 to Tmp.Count - 1 do
 			if not (Pos('----------', Tmp[Idx]) > 0) then
 				edTrace.Text := edTrace.Text + '    ' + Tmp[Idx];
-		edTrace.BlockBegin := BufferCoord(Length(edTrace.Lines[edTrace.Lines.Count - 1]), edTrace.Lines.Count - 1);
+		edTrace.BlockBegin := Point(Length(edTrace.Lines[edTrace.Lines.Count - 1]), edTrace.Lines.Count - 1);
 	finally
 		Tmp.Free;
 	end;

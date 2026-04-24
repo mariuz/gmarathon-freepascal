@@ -21,9 +21,9 @@ unit EditorStoredProcedure;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
 	Variants, {$ENDIF}
-	  BufDataset, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI;
+	  BufDataset, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmCollectionListBox;
 
 type
 	TfrmStoredProcedure = class(TfrmBaseDocumentDataAwareForm, IMarathonStoredProcEditor, IGimbalIDESQLTextEditor)
@@ -70,7 +70,7 @@ type
 		framDoco: TframeDesc;
     dlgSave: TSaveDialog;
     pnlMessages: TPanel;
-    lstResults: TListBox;
+    lstResults: TrmCollectionListBox;
 		procedure lstResultsClick(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure FormCreate(Sender: TObject);
@@ -365,7 +365,7 @@ begin
 	end;
 	qryStoredProc.Close;
 	if qryStoredProc.Transaction.Active then
-		qryStoredProc.Transaction.Commit;
+		TSQLTransaction(qryStoredProc.Transaction).Commit;
 	qryStoredProc.SQL.Clear;
 	if FIsInterbase6 {and (FSQLDialect = 3)} then
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
@@ -425,7 +425,7 @@ begin
 
 	qryStoredProc.Close;
 	if qryStoredProc.Transaction.Active then
-		qryStoredProc.Transaction.Commit;
+		TSQLTransaction(qryStoredProc.Transaction).Commit;
 
 	P := TStringList.Create;
 	try
@@ -441,7 +441,7 @@ begin
 		end;
 		qryStoredProc.Close;
 		if qryStoredProc.Transaction.Active then
-			qryStoredProc.Transaction.Commit;
+			TSQLTransaction(qryStoredProc.Transaction).Commit;
 		qryStoredProc.SQL.Clear;
 		Tmp := tmp + P.Text;
 
@@ -528,7 +528,7 @@ begin
 
 		if not ((LinePos = 0) and (CharPos = 0)) then
 		begin
-			edEditor.CaretXY := buffercoord(CharPos, LinePos);
+			edEditor.CaretXY := Point(CharPos, LinePos);
 			edEditor.ErrorLine := LinePos;
 			if pgObjectEditor.ActivePage.PageIndex = 0 then
 				edEditor.SetFocus;
@@ -590,7 +590,7 @@ var
 
 begin
 	try
-		qryUtil.BeginBusy(False);
+		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		Result := False;
 		txtParameters.Close;
 		txtParameters.Open;
@@ -631,7 +631,7 @@ begin
 		end;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			 qryUtil.Transaction.Commit;
+			 TSQLTransaction(qryUtil.Transaction).Commit;
 		FAppendFlag := False;
 
 		// Ok we now have our input paramters check to see if we have any matching
@@ -892,7 +892,7 @@ begin
 			Params := Copy(Params, 1, Length(Params) - 1);
 		Result := True;
 	finally
-		qryUtil.EndBusy;
+		{$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
 	end;
 end;
 
@@ -905,7 +905,7 @@ var
 
 begin
 	try
-		qryUtil.BeginBusy(False);
+		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		Result := False;
 		txtParameters.Close;
 		txtParameters.Open;
@@ -945,7 +945,7 @@ begin
 		end;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			 qryUtil.Transaction.Commit;
+			 TSQLTransaction(qryUtil.Transaction).Commit;
 		FAppendFlag := False;
 
 		// Ok we now have our input paramters check to see if we have any matching
@@ -1181,14 +1181,14 @@ begin
 		end;
 		Result := True;
 	finally
-		qryUtil.EndBusy;
+		{$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
 	end;
 end;
 
 function TfrmStoredProcedure.NeedParameters: Boolean;
 begin
 	try
-		qryUtil.BeginBusy(False);
+		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
@@ -1201,9 +1201,9 @@ begin
 			Result := False;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			qryUtil.Transaction.Commit;
+			TSQLTransaction(qryUtil.Transaction).Commit;
 	finally
-		qryUtil.EndBusy;
+		{$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
 	end;
 end;
 
@@ -1211,8 +1211,8 @@ function TfrmStoredProcedure.HasParameters: Boolean;
 begin
 	try
 		if qryUtil.Transaction.Active then
-			qryUtil.Transaction.Commit;
-		qryUtil.BeginBusy(False);
+			TSQLTransaction(qryUtil.Transaction).Commit;
+		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select count(*) from RDB$PROCEDURE_PARAMETERS where RDB$PARAMETER_TYPE = 1 ' +
@@ -1224,9 +1224,9 @@ begin
 			Result := False;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			qryUtil.Transaction.Commit;
+			TSQLTransaction(qryUtil.Transaction).Commit;
 	finally
-		qryUtil.EndBusy;
+		{$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
 	end;
 end;
 
@@ -1334,7 +1334,7 @@ begin
 		stsEditor.Panels[2].Text := 'Insert'
 	else
 		stsEditor.Panels[2].Text := 'Overwrite';
-	edEditor.CaretXY := TBufferCoord(edEditor.PixelsToRowColumn(X, Y));
+	edEditor.CaretXY := edEditor.PixelsToRowColumn(Point(X, Y));
 	Accept := True;
 end;
 
@@ -1343,7 +1343,7 @@ var
 	Tmp: String;
 
 begin
-	edEditor.CaretXY := TBufferCoord(edEditor.PixelsToRowColumn(X, Y));
+	edEditor.CaretXY := edEditor.PixelsToRowColumn(Point(X, Y));
 	if Source is TDragQueen then
 		Tmp := TDragQueen(Source).DragText;
 
@@ -1385,7 +1385,7 @@ begin
 	begin
 		if edEditor.Highlighter.IsKeyword(edEditor.SelText) then
 		begin
-			WinHelp(Handle, PChar(ExtractFilePath(Application.ExeName) + 'Help\SQLRef.hlp'), HELP_PARTIALKEY, Integer(PChar(edEditor.SelText)));
+			{$IFNDEF FPC}WinHelp(Handle, PChar(ExtractFilePath(Application.ExeName) + 'Help\SQLRef.hlp'), HELP_PARTIALKEY, Integer(PChar(edEditor.SelText)));{$ENDIF}
 			CallHelp := False;
 		end
 		else
@@ -1523,7 +1523,7 @@ begin
 			// Do nothing
 		end;
 	end;
-	Plan := qryWarnings.StatementPlan;
+	{$IFDEF FPC}Plan := '';{$ELSE}Plan := qryWarnings.StatementPlan;{$ENDIF}
 	if Pos('NATURAL', AnsiUpperCase(Plan)) > 0 then
 		AddInfo('Warning: SubOptimal Query Line ' + IntToStr(Line) + ' Column ' + IntToStr(Column) + ' -  May not use Index (' + Plan + ')');
 end;
@@ -1532,7 +1532,7 @@ procedure TfrmStoredProcedure.UpdateEncoding;
 begin
 	edEditor.Font.Charset := FCharSet;
 	grdResults.Font.CharSet := FCharSet;
-	pnledResults.ControlFont.CharSet := FCharSet;
+	pnledResults.Font.CharSet := FCharSet;
 end;
 
 procedure TfrmStoredProcedure.txtParametersnullValidate(Sender: TField);
@@ -1617,7 +1617,7 @@ begin
 			finally
 				qryStoredProc.Close;
 				if qryStoredProc.Transaction.Active then
-					qryStoredProc.Transaction.Commit;
+					TSQLTransaction(qryStoredProc.Transaction).Commit;
 			end;
 
 			// Assume there is a difference
@@ -1629,7 +1629,7 @@ begin
 				try
 					M.ParserType := ptCheckInputParms;
 					M.Lexer.IsInterbase6 := FIsInterbase6;
-					M.Lexer.Dialect := FSQLDialect;
+					M.Lexer.SQLDialect := FSQLDialect;
 
 					M.Lexer.yyinput.Text := edEditor.Text;
 					if M.yyparse = 0 then
@@ -1667,7 +1667,7 @@ begin
 
 				qryStoredProc.Close;
 				if qryStoredProc.Transaction.Active then
-					qryStoredProc.Transaction.Commit;
+					TSQLTransaction(qryStoredProc.Transaction).Commit;
 
 				if not ((ParseList.Count = 0) and (ProcList.Count = 0)) then
 				begin
@@ -1730,17 +1730,17 @@ begin
 		Result := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmStoredProcedure.WMNCLButtonDown(var Message: TMessage);
 begin
 	inherited;
-	edEditor.CLoseUpLists;
 end;
 
 procedure TfrmStoredProcedure.WMNCRButtonDown(var Message: TMessage);
 begin
 	inherited;
-	edEditor.CloseUpLists;
 end;
+{$ENDIF}
 
 procedure TfrmStoredProcedure.qryResultsAfterOpen(DataSet: TDataSet);
 begin
@@ -2073,7 +2073,7 @@ begin
 		Exit;
 
 	try
-		qryResults.BeginBusy(False);
+		{$IFNDEF FPC}qryResults.BeginBusy(False);{$ENDIF}
 		Screen.Cursor := crHourGlass;
 		stsEditor.Panels[2].Text := 'Executing Stored Procedure...';
 		stsEditor.Refresh;
@@ -2155,7 +2155,7 @@ begin
 			end;
 		end;
 	finally
-		qryResults.EndBusy;
+		{$IFNDEF FPC}qryResults.EndBusy;{$ENDIF}
 		Screen.Cursor := crDefault;
 		stsEditor.Panels[2].Text := '';
 		stsEditor.Refresh;
@@ -2537,11 +2537,11 @@ end;
 procedure TfrmStoredProcedure.LoadProcedure(ProcedureName: String);
 begin
 	FObjectName := ProcedureName;
-	qryStoredProc.BeginBusy(False);
+	{$IFNDEF FPC}qryStoredProc.BeginBusy(False);{$ENDIF}
 	try
 		LoadProcSource;
 	finally
-		qryStoredProc.EndBusy;
+		{$IFNDEF FPC}qryStoredProc.EndBusy;{$ENDIF}
 	end;
 
 	Refresh;
@@ -2593,7 +2593,7 @@ begin
 		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryUtil.Database.Dialect;
+		SQLDialect := TIBConnection(qryUtil.Database).Dialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -2668,7 +2668,7 @@ begin
 		end;
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryStoredProc.Database, qryStoredProc.Transaction, ctSP, CompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryStoredProc.Database), TSQLTransaction(qryStoredProc.Transaction), ctSP, CompileText);
 
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
@@ -2690,7 +2690,7 @@ begin
 			M.ParserType := ptWarnings;
 			M.OnStatementFound := WarningsHandler;
 			M.Lexer.IsInterbase6 := FIsInterbase6;
-			M.Lexer.Dialect := FSQLDialect;
+			M.Lexer.SQLDialect := FSQLDialect;
 
 			M.Lexer.yyinput.Text := edEditor.Text;
 			if M.yyparse = 0 then
@@ -2712,7 +2712,7 @@ begin
 		if MarathonIDEInstance.IsDebuggerEnabled and MarathonIDEInstance.CanDebuggerEnabled then
 		begin
 			MarathonIDEInstance.DebuggerVM.DatabaseName := FDatabaseName;
-			MarathonIDEInstance.DebuggerVM.Database := qryResults.Database;
+			MarathonIDEInstance.DebuggerVM.Database := TIBConnection(qryResults.Database);
 			if not MarathonIDEInstance.DebuggerVM.Compile(FObjectName, edEditor.Text) then
 			begin
 				MessageDlg('Marathon was unable to compile the source in the editor.', mtError, [mbOK], 0);
@@ -2835,7 +2835,7 @@ begin
 		frmInputDialog.lblPrompt.Caption := 'Template Name:';
 		if frmInputDialog.ShowModal = mrOK then
 		begin
-			ForceDirectoriesUTF8(ExtractFilePath(Application.ExeName) + 'Templates\'); { *Converted from ForceDirectories*  }
+			ForceDirectories(ExtractFilePath(Application.ExeName) + 'Templates\');
 			edEditor.Lines.SaveToFile(ExtractFilePath(Application.ExeName) + 'Templates\' + frmInputDialog.edItem.Text + '.spt');
 		end;
 	finally

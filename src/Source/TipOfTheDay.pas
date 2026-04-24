@@ -19,7 +19,7 @@ unit TipOfTheDay;
 
 interface
 
-uses SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons, Registry;
+uses SysUtils, {$IFNDEF FPC}WinTypes, WinProcs, Messages,{$ENDIF} Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons, Registry;
 
 type
   TfrmTipOfTheDay = class(TForm)

@@ -19,7 +19,7 @@ unit Globals;
 
 interface
 
-uses Classes, SysUtils, Messages, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls, SynEdit, StrUtils, IBConnection, SQLDB, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
+uses Classes, SysUtils, Messages, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBConnection, SQLDB, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
 
 const
   WM_USER = 1024;
@@ -298,6 +298,21 @@ implementation
 
 uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE;
 
+const
+  // Firebird BLR type constants (from ibase.h)
+  blr_short     = 7;
+  blr_long      = 8;
+  blr_float     = 10;
+  blr_sql_date  = 12;
+  blr_sql_time  = 13;
+  blr_text      = 14;
+  blr_int64     = 16;
+  blr_double    = 27;
+  blr_timestamp = 35;
+  blr_varying   = 37;
+  blr_cstring   = 40;
+  blr_blob      = 261;
+
 function TMarathonScreen.GetTop: Integer;
 var
 	R : TRect;
@@ -426,7 +441,7 @@ begin
 	if Control is TDBGrid then
 		TDBGrid(Control).Font.CharSet := MarathonIDEInstance.CurrentProject.Encoding;
   if Control is TDBPanelEdit then
-    TDBPanelEdit(Control).ControlFont.CharSet := MarathonIDEInstance.CurrentProject.Encoding;
+    TDBPanelEdit(Control).Font.CharSet := MarathonIDEInstance.CurrentProject.Encoding;
   if Control is TSyntaxMemoWithStuff2 then
     TSyntaxMemoWithStuff2(Control).Font.CharSet := MarathonIDEInstance.CurrentProject.Encoding;
   Result := MarathonIDEInstance.CurrentProject.Encoding;
@@ -442,9 +457,11 @@ begin
 	else
 		Editor.Highlighter := nil;
 
+	{$IFNDEF FPC}
 	Editor.FindSettingsRegistryKey := REG_SETTINGS_EDITOR_FIND;
 	Editor.FindDialogCaption := 'Find';
 	Editor.ReplaceDialogCaption := 'Replace';
+	{$ENDIF}
 
 	Editor.RightEdge := gRightMargin;
 	Editor.Font.Name := gEditorFontName;
@@ -464,19 +481,21 @@ begin
 	else
 		Editor.Options := Editor.Options - [eoAutoIndent];
 
-  Editor.Gutter.ShowLineNumbers := gLineNumbers;
+  if Assigned(Editor.Gutter.LineNumberPart(0)) then
+    Editor.Gutter.LineNumberPart(0).Visible := gLineNumbers;
   Editor.Gutter.AutoSize := true;
   Editor.Gutter.Visible := gVisibleGutter;
   Editor.TabWidth := gBlockIndent;
 
+  {$IFNDEF FPC}
   Editor.SearchEngine := dmMenus.SynEditSearch1;
+  {$ENDIF}
 
 	Editor.InsertMode := gInsertMode;
 	Editor.WantTabs := True;
 
+  {$IFNDEF FPC}
 	Editor.KeywordCapitalise := gCapitalise;
-
-
 	Editor.NavigatorHyperLinkStyle.Clear;
 	Editor.NavigatorHyperLinkStyle.Add('4');
 
@@ -493,6 +512,7 @@ begin
 			end;
 		end;
 	end;
+  {$ENDIF}
 
 {  if gTableNames then
 	begin
@@ -592,11 +612,12 @@ end;
 procedure SetupNonSyntaxEditor(Editor : TSyntaxMemoWithStuff2);
 begin
 	Editor.Highlighter := nil;
+	{$IFNDEF FPC}
 	Editor.FindSettingsRegistryKey := REG_SETTINGS_EDITOR_FIND;
 	Editor.FindDialogCaption := 'Find';
 	Editor.ReplaceDialogCaption := 'Replace';
-
-  Editor.SearchEngine := dmMenus.SynEditSearch1;
+	Editor.SearchEngine := dmMenus.SynEditSearch1;
+	{$ENDIF}
 
 	Editor.RightEdge := gRightMargin;
 	Editor.Font.Name := gEditorFontName;
@@ -612,7 +633,8 @@ begin
 	else
 		Editor.Options := Editor.Options - [eoAutoIndent];
 
-  Editor.Gutter.ShowLineNumbers := gLineNumbers;
+  if Assigned(Editor.Gutter.LineNumberPart(0)) then
+    Editor.Gutter.LineNumberPart(0).Visible := gLineNumbers;
 
 	Editor.InsertMode := gInsertMode;
   Editor.TabWidth := gBlockIndent;
@@ -1575,68 +1597,13 @@ const
 		end;
 
     function ConvertEraString(const Count: Integer) : string;
-    var
-      FormatStr: string;
-      SystemTime: TSystemTime;
-      Buffer: array[Byte] of Char;
-      P: PChar;
     begin
-      Result := '';
-      with SystemTime do
-      begin
-        wYear  := Year;
-        wMonth := Month;
-				wDay   := Day;
-			end;
-
-      FormatStr := 'gg';
-      if GetDateFormat(GetThreadLocale, DATE_USE_ALT_CALENDAR, @SystemTime,
-        PChar(FormatStr), Buffer, SizeOf(Buffer)) <> 0 then
-      begin
-        Result := Buffer;
-        if Count = 1 then
-        begin
-          case SysLocale.PriLangID of
-            LANG_JAPANESE:
-              Result := Copy(Result, 1, CharToBytelen(Result, 1));
-            LANG_CHINESE:
-              if (SysLocale.SubLangID = SUBLANG_CHINESE_TRADITIONAL)
-                and (ByteToCharLen(Result, Length(Result)) = 4) then
-              begin
-                P := Buffer + CharToByteIndex(Result, 3) - 1;
-                SetString(Result, P, CharToByteLen(P, 2));
-              end;
-          end;
-        end;
-      end;
+      Result := ''; // Windows-only Japanese/Chinese era formatting not supported on Linux
     end;
 
-		function ConvertYearString(const Count: Integer): string;
-    var
-      FormatStr: string;
-      SystemTime: TSystemTime;
-      Buffer: array[Byte] of Char;
+    function ConvertYearString(const Count: Integer): string;
     begin
-      Result := '';
-      with SystemTime do
-      begin
-        wYear  := Year;
-        wMonth := Month;
-        wDay   := Day;
-      end;
-
-			if Count <= 2 then
-				FormatStr := 'yy' // avoid Win95 bug.
-      else
-        FormatStr := 'yyyy';
-
-      if GetDateFormat(GetThreadLocale, DATE_USE_ALT_CALENDAR, @SystemTime,
-        PChar(FormatStr), Buffer, SizeOf(Buffer)) <> 0 then
-      begin
-        Result := Buffer;
-        if (Count = 1) and (Result[1] = '0') then
-          Result := Copy(Result, 2, Length(Result)-1);
-      end;
+      Result := ''; // Windows-only Japanese/Chinese year formatting not supported on Linux
     end;
 
   begin
@@ -2301,24 +2268,17 @@ function QueryProjectFile(FileName: String): String;
 var
   doc: TXMLDocument;
   oProject : TDOMNode;
-  F : File;
-  
+
 begin
   Result := '';
   try
-    AssignFile(f, FileName);
     try
-      Reset(f, 1);
-      try
-        ReadXMLFile(doc, f);
-      except
-        on E: EXMLReadError do
-        begin
-          //ignore
-        end;
+      ReadXMLFile(doc, FileName);
+    except
+      on E: EXMLReadError do
+      begin
+        //ignore
       end;
-    finally
-      CloseFile(F);
     end;
 
     oProject := doc.DocumentElement;
@@ -2907,12 +2867,12 @@ begin
     if S[1] = '"' then
     begin
       if Length(S) > 33 then
-        MessageBeep(MB_ICONEXCLAMATION);
+        {$IFDEF WINDOWS}MessageBeep(MB_ICONEXCLAMATION){$ENDIF};
     end
     else
     begin
-			if Length(S) > 31 then
-				MessageBeep(MB_ICONEXCLAMATION);
+      if Length(S) > 31 then
+        {$IFDEF WINDOWS}MessageBeep(MB_ICONEXCLAMATION){$ENDIF};
     end;
   end;
 end;

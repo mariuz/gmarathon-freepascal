@@ -21,7 +21,7 @@ interface
 {$I compilerdefines.inc}
 
 uses Classes, SysUtils, Dialogs, ComCtrls, DB, {$IFDEF D6_OR_HIGHER}
-	Variants, IBConnection, SQLDB;
+	Variants, {$ENDIF} IBConnection, SQLDB;
 	 
 const
   ty_blr_text                         = 14;
@@ -653,7 +653,7 @@ begin
     Q.Database := TProcModule(Module).DebuggerVM.Database;
     Q.SQL.Text := 'select gen_id(' + Generator + ', ' + Increment + ') as genid from rdb$database';
     Q.Prepare;
-    Q.Execute;
+    Q.Open;
     Q.First;
     if Not Q.EOF then
     begin
@@ -725,7 +725,7 @@ begin
               end;
             end
             else
-              Result := +Right;
+              Result := Right;
           end;
         end;
       opMINUS :
@@ -1217,27 +1217,26 @@ begin
       Q.Database := TProcModule(Module).DebuggerVM.Database;
       Q.SQL.Text := SQLStatement.SQLStatement;
       Q.Prepare;
-      for Idx := 0 to Q.ParamCount - 1 do
+      for Idx := 0 to Q.Params.Count - 1 do
       begin
-        VarName := Q.Params.Columns[Idx].FieldName;
+        VarName := Q.Params[Idx].Name;
         VarValue := TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymValue(VarName);
         if VarIsNull(VarValue) then
         begin
-          //Q.Params.Columns[Idx].IsNullable := True;
-          Q.Params.Columns[Idx].IsNull := True
+          Q.Params[Idx].Clear;
         end
         else
         begin
           case TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymType(VarName) of
             ty_blr_blob : ;
-            ty_blr_text, ty_blr_varying : Q.Params.Columns[Idx].AsString := String(VarValue);
-            ty_blr_float, ty_blr_d_float, ty_blr_double : Q.Params.Columns[Idx].AsDouble := Double(VarValue);
-            ty_blr_short, ty_blr_long : Q.Params.Columns[Idx].AsInteger  := Integer(VarValue);
-            ty_blr_timestamp : Q.Params.Columns[Idx].AsDateTime := TDateTime(VarValue);
+            ty_blr_text, ty_blr_varying : Q.Params[Idx].AsString := String(VarValue);
+            ty_blr_float, ty_blr_d_float, ty_blr_double : Q.Params[Idx].AsFloat := Double(VarValue);
+            ty_blr_short, ty_blr_long : Q.Params[Idx].AsInteger  := Integer(VarValue);
+            ty_blr_timestamp : Q.Params[Idx].AsDateTime := TDateTime(VarValue);
           end;
         end;
       end;
-      Q.Execute;
+      Q.Open;
 
       Q.First;
       if Not Q.EOF then
@@ -1247,10 +1246,10 @@ begin
           SymType := TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymType(S[Idx]);
           case SymType of
             ty_blr_blob : ;
-            ty_blr_text, ty_blr_varying : NewValue := Q.Fields.Columns[Idx].AsString;
-            ty_blr_float, ty_blr_d_float, ty_blr_double : NewValue := Q.Fields.Columns[Idx].AsDouble;
-            ty_blr_short, ty_blr_long : NewValue := Q.Fields.Columns[Idx].AsInteger;
-            ty_blr_timestamp : NewValue := Q.Fields.Columns[Idx].AsDateTime;
+            ty_blr_text, ty_blr_varying : NewValue := Q.Fields[Idx].AsString;
+            ty_blr_float, ty_blr_d_float, ty_blr_double : NewValue := Q.Fields[Idx].AsFloat;
+            ty_blr_short, ty_blr_long : NewValue := Q.Fields[Idx].AsInteger;
+            ty_blr_timestamp : NewValue := Q.Fields[Idx].AsDateTime;
           end;
           TProcModule(Module).DebuggerVM.GetTopSymbolTable.UpdateSym(S[Idx], NewValue);
         end;
@@ -1336,27 +1335,26 @@ begin
 
     Q.SQL.Text := SQLStatement.SQLStatement;
     Q.Prepare;
-    for Idx := 0 to Q.ParamCount - 1 do
+    for Idx := 0 to Q.Params.Count - 1 do
     begin
-      VarName := Q.Params.Columns[Idx].FieldName;
+      VarName := Q.Params[Idx].Name;
       VarValue := TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymValue(VarName);
       if VarIsNull(VarValue) then
       begin
-        //Q.Params.Columns[Idx].IsNullable := True;
-        Q.Params.Columns[Idx].IsNull := True
+        Q.Params[Idx].Clear;
       end
       else
       begin
         case TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymType(VarName) of
           ty_blr_blob : ;
-          ty_blr_text, ty_blr_varying : Q.Params.Columns[Idx].AsString := String(VarValue);
-          ty_blr_float, ty_blr_d_float, ty_blr_double : Q.Params.Columns[Idx].AsDouble := Double(VarValue);
-          ty_blr_short, ty_blr_long : Q.Params.Columns[Idx].AsInteger  := Integer(VarValue);
-          ty_blr_timestamp : Q.Params.Columns[Idx].AsDateTime := TDateTime(VarValue);
+          ty_blr_text, ty_blr_varying : Q.Params[Idx].AsString := String(VarValue);
+          ty_blr_float, ty_blr_d_float, ty_blr_double : Q.Params[Idx].AsFloat := Double(VarValue);
+          ty_blr_short, ty_blr_long : Q.Params[Idx].AsInteger  := Integer(VarValue);
+          ty_blr_timestamp : Q.Params[Idx].AsDateTime := TDateTime(VarValue);
         end;
       end;
     end;
-    Q.Execute;
+    Q.Open;
     Q.First;
   end
   else
@@ -1368,10 +1366,10 @@ begin
     begin
       case TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymType(S[Idx]) of
         ty_blr_blob : ;
-        ty_blr_text, ty_blr_varying : NewValue := Q.Fields.Columns[Idx].AsString;
-        ty_blr_float, ty_blr_d_float, ty_blr_double : NewValue := Q.Fields.Columns[Idx].AsDouble;
-        ty_blr_short, ty_blr_long : NewValue := Q.Fields.Columns[Idx].AsInteger;
-        ty_blr_timestamp : NewValue := Q.Fields.Columns[Idx].AsDateTime;
+        ty_blr_text, ty_blr_varying : NewValue := Q.Fields[Idx].AsString;
+        ty_blr_float, ty_blr_d_float, ty_blr_double : NewValue := Q.Fields[Idx].AsFloat;
+        ty_blr_short, ty_blr_long : NewValue := Q.Fields[Idx].AsInteger;
+        ty_blr_timestamp : NewValue := Q.Fields[Idx].AsDateTime;
       end;
       TProcModule(Module).DebuggerVM.GetTopSymbolTable.UpdateSym(S[Idx], NewValue);
     end;
@@ -1489,24 +1487,24 @@ begin
     Q.Database := TProcModule(Module).DebuggerVM.Database;
     Q.SQL.Text := SQLStatement;
     Q.Prepare;
-    for Idx := 0 to Q.ParamCount - 1 do
+    for Idx := 0 to Q.Params.Count - 1 do
     begin
-      VarName := Q.Params.Columns[Idx].FieldName;
+      VarName := Q.Params[Idx].Name;
       VarValue := TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymValue(VarName);
       if VarIsNull(VarValue) then
-        Q.Params.Columns[Idx].IsNull := True
+        Q.Params[Idx].Clear
       else
       begin
         case TProcModule(Module).DebuggerVM.GetTopSymbolTable.GetSymType(VarName) of
           ty_blr_blob : ;
-          ty_blr_text, ty_blr_varying : Q.Params.Columns[Idx].AsString := String(VarValue);
-          ty_blr_float, ty_blr_d_float, ty_blr_double : Q.Params.Columns[Idx].AsDouble := Double(VarValue);
-          ty_blr_short, ty_blr_long : Q.Params.Columns[Idx].AsInteger := Integer(VarValue);
-          ty_blr_timestamp : Q.Params.Columns[Idx].AsDateTime := TDateTime(VarValue);
+          ty_blr_text, ty_blr_varying : Q.Params[Idx].AsString := String(VarValue);
+          ty_blr_float, ty_blr_d_float, ty_blr_double : Q.Params[Idx].AsFloat := Double(VarValue);
+          ty_blr_short, ty_blr_long : Q.Params[Idx].AsInteger := Integer(VarValue);
+          ty_blr_timestamp : Q.Params[Idx].AsDateTime := TDateTime(VarValue);
         end;
       end;
     end;
-    Q.Execute;
+    Q.ExecSQL;
   finally
     Q.Free;
   end;

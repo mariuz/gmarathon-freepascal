@@ -160,6 +160,7 @@ type
     constructor Create(AParent: TMarathonTreeNode);
     destructor Destroy; override;
     function AddChild(AData: Pointer; AText: String): TMarathonTreeNode;
+    procedure Delete;
     procedure DeleteChildren;
     function GetNextSibling: TMarathonTreeNode;
     function GetFirstChild: TMarathonTreeNode;
@@ -213,6 +214,13 @@ begin
   Result.Data := AData;
   Result.Text := AText;
   FChildren.Add(Result);
+end;
+
+procedure TMarathonTreeNode.Delete;
+begin
+  if Assigned(FParent) then
+    FParent.FChildren.Remove(Self);
+  Free;
 end;
 
 procedure TMarathonTreeNode.DeleteChildren;
@@ -270,7 +278,7 @@ begin
   end;
 
   if Path[1] = SepChar then
-    Delete(Path, 1, 1);
+    System.Delete(Path, 1, 1);
 
   Idx := Pos(SepChar, Path);
   if Idx > 0 then
@@ -309,7 +317,7 @@ begin
   end;
 
   if Path[1] = SepChar then
-    Delete(Path, 1, 1);
+    System.Delete(Path, 1, 1);
 
   Idx := Pos(SepChar, Path);
   if Idx > 0 then

@@ -56,7 +56,7 @@ type
 		It : TMenuItem;
 		FErrors : Boolean;
 		procedure WindowListClick(Sender: TObject);
-		procedure WMMove(var Message : TMessage); message WM_MOVE;
+		{$IFDEF WINDOWS}procedure WMMove(var Message : TMessage); message WM_MOVE;{$ENDIF}
 	public
 		procedure LoadGenerator(GeneratorName : String);
 		procedure NewGenerator;
@@ -109,7 +109,7 @@ const
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, DropObject, CompileDBObject;
+uses Globals, HelpMap, MarathonIDE, DropObject, CompileDBObject{$IFDEF FPC}, IBConnection{$ENDIF};
 
 {$R *.lfm}
 
@@ -190,11 +190,13 @@ begin
   MarathonIDEInstance.CurrentProject.Modified := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmGenerators.WMMove(var Message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 procedure TfrmGenerators.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
@@ -242,14 +244,14 @@ end;
 
 procedure TfrmGenerators.LoadGenerator(GeneratorName: String);
 begin
-  qryGenerator.BeginBusy(False);
+  {$IFNDEF FPC}qryGenerator.BeginBusy(False);{$ENDIF}
   try
     qryGenerator.SQL.Clear;
     qryGenerator.SQL.Add('select rdb$generator_name from rdb$generators where rdb$generator_name = ''' + GeneratorName + ''';');
     qryGenerator.Open;
     edGeneratorName.Text := qryGenerator.FieldByName('rdb$generator_name').AsString;
     qryGenerator.Close;
-    qryGenerator.Transaction.Commit;
+    TSQLTransaction(qryGenerator.Transaction).Commit;
 
     //get current value....
     qryGenerator.SQL.Clear;
@@ -257,7 +259,7 @@ begin
     qryGenerator.Open;
     udGenerator.Value := qryGenerator.Fields[0].AsInteger;
     qryGenerator.Close;
-    qryGenerator.Transaction.Commit;
+    TSQLTransaction(qryGenerator.Transaction).Commit;
 
     FObjectName := GeneratorName;
     InternalCaption := 'Generator - [' + FObjectName + ']';
@@ -265,7 +267,7 @@ begin
     FObjectModified := False;
     edGeneratorName.ReadOnly := True;
   finally
-    qryGenerator.EndBusy;
+    {$IFNDEF FPC}qryGenerator.EndBusy;{$ENDIF}
   end;
 end;
 
@@ -295,7 +297,7 @@ begin
     qryGenerator.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-    SQLDialect := qryGenerator.Database.Dialect;
+    SQLDialect := TIBConnection(qryGenerator.Database).Dialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -347,7 +349,7 @@ begin
     Exit;
   end;
   TmpIntf := Self;
-  FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryGenerator.Database, qryGenerator.Transaction, ctGenerator, edGeneratorName.Text);
+  FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryGenerator.Database), TSQLTransaction(qryGenerator.Transaction), ctGenerator, edGeneratorName.Text);
   FCompile.Free;
 
   if FNewObject then
@@ -390,14 +392,14 @@ begin
     qryGenerator.SQL.Add('set generator ' + FObjectName + ' to ' + IntToStr(udGenerator.Value) + ';');
     try
       qryGenerator.ExecSQL;
-      qryGenerator.Transaction.Commit;
+      TSQLTransaction(qryGenerator.Transaction).Commit;
       //write to script system
       MarathonIDEInstance.RecordToScript(qryGenerator.SQL.Text, GetActiveConnectionName);
       FObjectModified := False;
     except
 			On E : Exception do
       begin
-        qryGenerator.Transaction.Rollback;
+        TSQLTransaction(qryGenerator.Transaction).Rollback;
         MessageDlg(E.Message, mtError, [mbOK], 0);
       end;
     end;

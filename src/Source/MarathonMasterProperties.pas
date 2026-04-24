@@ -19,7 +19,7 @@ unit MarathonMasterProperties;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Buttons, ComCtrls, ExtCtrls, MarathonProjectCache;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Buttons, ComCtrls, ExtCtrls, MarathonProjectCache, rmCompatControls;
 
 type
 	TPropDlgType = (
@@ -191,7 +191,7 @@ begin
 	edPassword.Text := Connection.Password;
 	chkRememberPassword.Checked := Connection.RememberPassword;
 	edRole.Text := Connection.SQLRole;
-	cmbDialect.ItemIndex := Connection.Dialect - 1;
+	cmbDialect.ItemIndex := Connection.SQLDialect - 1;
 end;
 
 constructor TfrmMasterProperties.CreateNewProject(const AOwner: TComponent);
@@ -413,7 +413,7 @@ begin
 					Connection.Password := edPassword.Text;
 					Connection.RememberPassword := chkRememberPassword.Checked;
 					Connection.SQLRole := edRole.Text;
-					Connection.Dialect := cmbDialect.ItemIndex + 1;
+					Connection.SQLDialect := cmbDialect.ItemIndex + 1;
 					Item := Connection.GetParentObject;
 					if Assigned(Item) then
 					begin
@@ -461,7 +461,7 @@ begin
 					FConnection.Password := edPassword.Text;
 					FConnection.RememberPassword := chkRememberPassword.Checked;
 					FConnection.SQLRole := edRole.Text;
-					FConnection.Dialect := cmbDialect.ItemIndex + 1;
+					FConnection.SQLDialect := cmbDialect.ItemIndex + 1;
 					FConnection.ErrorOnConnection := False;
 					Item := FConnection.GetParentObject;
 

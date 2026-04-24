@@ -33,7 +33,7 @@ type
     procedure WindowListClick(Sender: TObject);
   public
     { Public declarations }
-    procedure MinMaxInfo(var Message : TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
+    {$IFDEF WINDOWS}procedure MinMaxInfo(var Message : TWMGetMinMaxInfo); message WM_GETMINMAXINFO;{$ENDIF}
     destructor Destroy; override;
     property FormInterface : TGimbalIDEMarathonForm read FForm write FForm;
   end;
@@ -49,6 +49,7 @@ uses MarathonIDE, Globals;
 
 { TForm1 }
 
+{$IFDEF WINDOWS}
 procedure TfrmMarathonToolsDocForm.MinMaxInfo(var Message: TWMGetMinMaxInfo);
 var
   wRect : TRect;
@@ -65,6 +66,7 @@ begin
       Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
    end;
 end;
+{$ENDIF}
 
 procedure TfrmMarathonToolsDocForm.FormCreate(Sender: TObject);
 begin

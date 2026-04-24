@@ -19,7 +19,8 @@ unit SplashForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, jpeg;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls
+  {$IFDEF FPC}, FPReadJPEG, FPWriteJPEG{$ELSE}, jpeg{$ENDIF};
 
 type
 	TfrmSplash = class(TForm)

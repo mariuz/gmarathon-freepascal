@@ -41,7 +41,7 @@ type
     { Private declarations }
     It : TMenuItem;
     procedure WindowListClick(Sender: TObject);
-    procedure MinMaxInfo(var Message : TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
+    {$IFDEF WINDOWS}procedure MinMaxInfo(var Message : TWMGetMinMaxInfo); message WM_GETMINMAXINFO;{$ENDIF}
     function GetStatusBar : TObject;
   public
     { Public declarations }
@@ -76,6 +76,7 @@ implementation
 
 uses Globals, HelpMap, MarathonIDE, MarathonProjectCache;
 
+{$IFDEF WINDOWS}
 procedure TfrmScriptEditorHost.MinMaxInfo(var Message : TWMGetMinMaxInfo);
 var
   wRect : TRect;
@@ -92,6 +93,7 @@ begin
      Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
   end;
 end;
+{$ENDIF}
 
 
 procedure TfrmScriptEditorHost.WindowListClick(Sender: TObject);

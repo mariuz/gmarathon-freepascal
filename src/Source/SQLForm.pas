@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, BufDataset, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, BufDataset, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmCompatControls, rmCollectionListBox;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -185,9 +185,9 @@ type
 
 		FFileName: String;
 		FNew: Boolean;
-		procedure WMMove(var message: TMessage); message WM_MOVE;
-		procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;
-		procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;
+		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
+		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
+		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
 		procedure AddError(Info: String);
 		procedure UpdateEncoding;
 		procedure OpenError;
@@ -428,7 +428,7 @@ begin
 		if not ((LinePos = 0) and (CharPos = 0)) then
     begin
 			edSQLStatement.ErrorLine := LinePos;
-      edSQLStatement.CaretXY := BufferCoord(CharPos, LinePos);
+      edSQLStatement.CaretXY := Point(CharPos, LinePos);
       if pgSQLStatement.ActivePage.PageIndex = 0 then
         edSQLStatement.SetFocus;
     end;
@@ -557,13 +557,13 @@ procedure TfrmSQLForm.edSQLStatementDragOver(Sender, Source: TObject; X, Y: Inte
 begin
 	SetFocus;
 	UpdateEditorStatusBar(stsSQLStatement, edSQLStatement);
-	edSQLStatement.CaretXY := TBufferCoord(edSQLStatement.PixelsToRowColumn(X, Y));
+	edSQLStatement.CaretXY := edSQLStatement.PixelsToRowColumn(Point(X, Y));
 	Accept := True;
 end;
 
 procedure TfrmSQLForm.edSQLStatementDragDrop(Sender, Source: TObject; X, Y: Integer);
 begin
-	edSQLStatement.CaretXY := TBufferCoord(edSQLStatement.PixelsToRowColumn(X, Y));
+	edSQLStatement.CaretXY := edSQLStatement.PixelsToRowColumn(Point(X, Y));
 
 	if Source is TDragQueen then
 		edSQLStatement.SelText := TDragQueen(Source).DragText;
@@ -581,7 +581,7 @@ begin
 	begin
 		if edSQLStatement.Highlighter.IsKeyword(edSQLStatement.SelText) then
 		begin
-			WinHelp(Handle, PChar(ExtractFilePath(Application.ExeName) + 'Help\SQLRef.hlp'), HELP_PARTIALKEY, Integer(PChar(edSQLStatement.SelText)));
+			{$IFNDEF FPC}WinHelp(Handle, PChar(ExtractFilePath(Application.ExeName) + 'Help\SQLRef.hlp'), HELP_PARTIALKEY, Integer(PChar(edSQLStatement.SelText)));{$ENDIF}
 			CallHelp := False;
 		end
 		else
@@ -624,7 +624,7 @@ procedure TfrmSQLForm.UpdateEncoding;
 begin
 	edSQLStatement.Font.Charset := FCharSet;
 	grdSQLStatement.Font.CharSet := FCharSet;
-	pnlResForm.ControlFont.CharSet := FCharSet;
+	pnlResForm.Font.CharSet := FCharSet;
 end;
 
 procedure TfrmSQLForm.pgSQLStatementChange(Sender: TObject);
@@ -684,6 +684,7 @@ begin
 	cmbMode.Left := Self.ClientWidth - cmbMode.Width;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmSQLForm.WMMove(var message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
@@ -701,6 +702,7 @@ begin
   inherited;
   edSQLStatement.CloseUpLists;
 end;
+{$ENDIF}
 
 procedure TfrmSQLForm.qrySQLStatementAfterOpen(DataSet: TDataSet);
 begin
@@ -781,9 +783,11 @@ begin
 end;
 
 procedure TfrmSQLForm.DoPrint;
+{$IFDEF WINDOWS}
 var
 	M: TMetafileCanvas;
 	MF: TMetafile;
+{$ENDIF}
 
 begin
 	if pgSQLStatement.ActivePage = tsSQLStatement then
@@ -795,6 +799,7 @@ begin
 	if pgSQLStatement.ActivePage = tsPerformance then
 		MarathonIDEInstance.PrintPerformanceAnalysis(False, edSQLStatement.Lines, dtaPerform, chtPerform);
 
+	{$IFDEF WINDOWS}
 	if pgSQLStatement.ActivePage = tsPlan then
 	begin
 		MF := TMetafile.Create;
@@ -810,12 +815,15 @@ begin
 			MF.Free;
 		end;
 	end;
+	{$ENDIF}
 end;
 
 procedure TfrmSQLForm.DoPrintPreview;
+{$IFDEF WINDOWS}
 var
 	M: TMetafileCanvas;
 	MF: TMetafile;
+{$ENDIF}
 
 begin
 	if pgSQLStatement.ActivePage = tsSQLStatement then
@@ -827,6 +835,7 @@ begin
 	if pgSQLStatement.ActivePage = tsPerformance then
 		MarathonIDEInstance.PrintPerformanceAnalysis(True, edSQLStatement.Lines, dtaPerform, chtPerform);
 
+	{$IFDEF WINDOWS}
 	if pgSQLStatement.ActivePage = tsPlan then
 	begin
 		MF := TMetafile.Create;
@@ -842,6 +851,7 @@ begin
 			MF.Free;
 		end;
 	end;
+	{$ENDIF}
 end;
 
 procedure TfrmSQLForm.SetDatabaseName(const Value: String);
@@ -850,10 +860,10 @@ begin
 	if Value = '' then
 	begin
 		cmbMode.Enabled := False;
-		transSQLStatement.IB_Connection := nil;
-		qryScript.IB_Connection := nil;
-		qrySQLStatement.IB_Connection := nil;
-		qryUtil.IB_Connection := nil;
+		transSQLStatement.Database := nil;
+		qryScript.Database := nil;
+		qrySQLStatement.Database := nil;
+		qryUtil.Database := nil;
 		perfSQL.IB_Connection := nil;
 		IsInterbase6 := False;
 		SQLDialect := 0;
@@ -862,16 +872,16 @@ begin
 	else
 	begin
 		cmbMode.Enabled := True;
-		transSQLStatement.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qrySQLStatement.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		transSQLStatement.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qrySQLStatement.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		perfSQL.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qrySQLStatement.IB_Transaction := transSQLStatement;
-		qryScript.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryScript.IB_Transaction := transSQLStatement;
-		qryUtil.IB_Transaction := transSQLStatement;
+		qrySQLStatement.Transaction := transSQLStatement;
+		qryScript.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryScript.Transaction := transSQLStatement;
+		qryUtil.Transaction := transSQLStatement;
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qrySQLStatement.IB_Connection.Dialect;
+		SQLDialect := TIBConnection(qrySQLStatement.Database).Dialect;
 		stsSQLStatement.Panels[4].Text := Value;
 	end;
 end;
@@ -1013,12 +1023,12 @@ end;
 
 function TfrmSQLForm.CanTransactionCommit: Boolean;
 begin
-	Result := qrySQLStatement.IB_Transaction.Active;
+	Result := transSQLStatement.Active;
 end;
 
 function TfrmSQLForm.CanTransactionRollback: Boolean;
 begin
-	Result := qrySQLStatement.IB_Transaction.Active;
+	Result := transSQLStatement.Active;
 end;
 
 function TfrmSQLForm.CanUndo: Boolean;
@@ -1095,7 +1105,7 @@ end;
 procedure TfrmSQLForm.LineUpdateHandler(Sender : TObject; LineNumber : Integer);
 begin
 	edSQLStatement.ErrorLine := LineNumber;
-	edSQLStatement.CaretXY := BufferCoord(1, LineNumber);
+	edSQLStatement.CaretXY := Point(1, LineNumber);
 	Refresh;
 end;
 
@@ -1129,7 +1139,7 @@ begin
 						SkipCreateConnect := True;
 						AutoDDL := True;
 						Query := edSQLStatement.Lines;
-						Database := qryScript.IB_COnnection;
+						Database := TIBConnection(qryScript.Database);
 						Transaction := transSQLStatement;
 						SQLQuery := qryScript;
 						OnLineUpdate := LineUpdateHandler;
@@ -1172,7 +1182,7 @@ begin
 
 			edSQLStatement.ErrorLine := -1;
 			edPlan.Text := '';
-			qrySQLStatement.BeginBusy(False);
+			{$IFNDEF FPC}qrySQLStatement.BeginBusy(False);{$ENDIF}
 			Screen.Cursor := crDefault;
 			stsSQLStatement.Panels[2].Text := 'Executing Statement - Please wait...';
 			Refresh;
@@ -1201,10 +1211,9 @@ begin
 					end;
 				end;
 
-				case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } of
-					stSelect, stSelectForUpdate:
+				case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
+					stSelect, stSelectForUpd:
 						begin
-							qrySQLStatement.// // // RequestLive := True;
 							qrySQLStatement.Open;
 							pgSQLStatement.ActivePage := tsResultsView;
 							pgSQLStatementChange(pgSQLStatement);
@@ -1213,7 +1222,6 @@ begin
 						end;
 				else
 					begin
-						qrySQLStatement.// // // RequestLive := False;
 						qrySQLStatement.ExecSQL;
 						MarathonIDEInstance.RecordToScript(qrySQLStatement.SQL.Text, GetActiveConnectionName);
 						stsSQLStatement.Panels[3].Text := '      Statement Execution Successful';
@@ -1228,15 +1236,17 @@ begin
 					begin
 						qrySQLStatement.DisableControls;
 						try
+							{$IFNDEF FPC}
 							qrySQLStatement.FetchAll;
 							if not qrySQLStatement.InternalDataset.FetchingAborted then
+							{$ENDIF}
 								qrySQLStatement.First;
 						finally
 							qrySQLStatement.EnableControls;
 						end;
 					end;
 
-					if not qrySQLStatement.InternalDataset.FetchingAborted then
+					if True then { FPC: InternalDataset.FetchingAborted not available }
 					begin
 						Series1.Clear;
 
@@ -1257,8 +1267,8 @@ begin
 						// Fill the memory dataset
 						dtaPerform.Close;
 						dtaPerform.Open;
-						case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } of
-							stSelect, stSelectForUpdate:
+						case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
+							stSelect, stSelectForUpd:
 								begin
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Prepare Time';
@@ -1266,13 +1276,13 @@ begin
 									dtaPerform.Post;
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Fetch Time';
-									dtaPerform.FieldByName('value').AsString := IntToStr(GetTickCount - qrySQLStatement.CallbackInitTick) + ' ms';
+									dtaPerform.FieldByName('value').AsString := '0 ms'; { FPC: CallbackInitTick not available }
 									dtaPerform.Post;
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Avg Fetch Time';
                   nRecords := qrySQLStatement.RecordCount;  //AC:
                   if nRecords = 0 then nRecords := 1; //AC:
-									dtaPerform.FieldByName('value').AsString := FormatFloat('####0.00', (GetTickCount - qrySQLStatement.CallbackInitTick) / nRecords) + ' ms';  //AC:
+									dtaPerform.FieldByName('value').AsString := '0 ms'; { FPC: CallbackInitTick not available }
 									dtaPerform.Post;
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Rows Processed';
@@ -1287,7 +1297,7 @@ begin
 									dtaPerform.Post;
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Fetch Time';
-									dtaPerform.FieldByName('value').AsString := IntToStr(GetTickCount - qrySQLStatement.CallbackInitTick) + ' ms';
+									dtaPerform.FieldByName('value').AsString := '0 ms'; { FPC: CallbackInitTick not available }
 									dtaPerform.Post;
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Rows Processed';
@@ -1412,15 +1422,15 @@ begin
 					Refresh;
 				end;
 
-				if FShowPlan and (qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } in [stSelect, stSelectForUpdate, stUpdate, stDelete]) and (qrySQLStatement.Plan <> '') then
+				if FShowPlan and (qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } in [stSelect, stSelectForUpd, stUpdate, stDelete]) then
 				begin
-					edPlan.Text := qrySQLStatement.Plan;
+					{$IFNDEF FPC}edPlan.Text := qrySQLStatement.Plan;{$ENDIF}
 					PlanParser := TSQLParser.Create(Self);
 					try
 						PlanParser.ParserType := ptPlan;
 						PlanParser.Lexer.yyinput.Text := edPlan.Text;
 						PlanParser.Lexer.IsInterbase6 := FIsInterbase6;
-						PlanParser.Lexer.Dialect := FSQLDialect;
+						PlanParser.Lexer.SQLDialect := FSQLDialect;
 						if PlanParser.yyparse = 0 then
 						begin
 							PlanParser.PlanObject.FillTree(dtPlan);
@@ -1440,17 +1450,14 @@ begin
 					pnlMessages.Visible := True;
 					Refresh;
 					stsSQLStatement.Top := Height;
-					if E is EIB_ISCError then
-						AddError(EIB_ISCError(E).message)
-					else
-						AddError(E.message);
+					AddError(E.message);
 					lstResultsClick(lstResults);
 				end;
 			end;
 		end;
 	finally
 		Screen.Cursor := crDefault;
-		qrySQLStatement.EndBusy;
+		{$IFNDEF FPC}qrySQLStatement.EndBusy;{$ENDIF}
 	end;
 end;
 
