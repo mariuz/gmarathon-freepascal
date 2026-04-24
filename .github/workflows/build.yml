@@ -22,7 +22,6 @@ jobs:
         uses: gcarreno/setup-lazarus@v3.4.1
         with:
           lazarus-version: stable
-          include-props: true
 
       - name: Build Debug
         run: lazbuild --build-mode=Debug src/Source/marathon.lpi
