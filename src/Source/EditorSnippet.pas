@@ -37,12 +37,9 @@ unit EditorSnippet;
 
 interface
 
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
   SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, SynEdit, SyntaxMemoWithStuff2;
 
 type

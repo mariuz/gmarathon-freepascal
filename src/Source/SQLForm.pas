@@ -1201,10 +1201,10 @@ begin
 					end;
 				end;
 
-				case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
+				case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } of
 					stSelect, stSelectForUpdate:
 						begin
-							qrySQLStatement.// // RequestLive := True;
+							qrySQLStatement.// // // RequestLive := True;
 							qrySQLStatement.Open;
 							pgSQLStatement.ActivePage := tsResultsView;
 							pgSQLStatementChange(pgSQLStatement);
@@ -1213,7 +1213,7 @@ begin
 						end;
 				else
 					begin
-						qrySQLStatement.// // RequestLive := False;
+						qrySQLStatement.// // // RequestLive := False;
 						qrySQLStatement.ExecSQL;
 						MarathonIDEInstance.RecordToScript(qrySQLStatement.SQL.Text, GetActiveConnectionName);
 						stsSQLStatement.Panels[3].Text := '      Statement Execution Successful';
@@ -1257,7 +1257,7 @@ begin
 						// Fill the memory dataset
 						dtaPerform.Close;
 						dtaPerform.Open;
-						case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
+						case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } of
 							stSelect, stSelectForUpdate:
 								begin
 									dtaPerform.Append;
@@ -1412,7 +1412,7 @@ begin
 					Refresh;
 				end;
 
-				if FShowPlan and (qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } in [stSelect, stSelectForUpdate, stUpdate, stDelete]) and (qrySQLStatement.Plan <> '') then
+				if FShowPlan and (qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } in [stSelect, stSelectForUpdate, stUpdate, stDelete]) and (qrySQLStatement.Plan <> '') then
 				begin
 					edPlan.Text := qrySQLStatement.Plan;
 					PlanParser := TSQLParser.Create(Self);

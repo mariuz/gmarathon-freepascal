@@ -1002,7 +1002,7 @@ begin
           if FTmpTransaction.Active or FTmpTransaction.Active then
             FTmpTransaction.Commit;
 
-          case FTmpQuery.StatementType { TODO: StatementType not supported in TSQLQuery } of
+          case FTmpQuery.StatementType { TODO: StatementType not supported in TSQLQuery } { TODO: StatementType not supported in TSQLQuery } of
             stCommit:
               begin
                 try

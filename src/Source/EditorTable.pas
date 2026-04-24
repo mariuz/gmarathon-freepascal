@@ -2344,7 +2344,7 @@ begin
 								frmColumns.Free;
 								if qryFields.Transaction.Active then
 									qryFields.Transaction.Commit;
-								// qryFields.// // RequestLive := False;
+								// qryFields.// // // RequestLive := False;
 								qryFields.Free;
 							end;
 						end;

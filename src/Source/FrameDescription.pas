@@ -4,12 +4,9 @@ unit FrameDescription;
 
 interface
 
-uses 
-  {$IFDEF FPC} 
-  LCLIntf, LCLType, LMessages, 
-  {$ELSE} 
-  Windows, Messages, 
-  {$ENDIF} 
+uses {$IFDEF FPC} 
+  LCLIntf, LCLType, LMessages, {$ELSE} 
+  Windows, Messages, {$ENDIF} 
   SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, SQLDB, IBConnection, MarathonInternalInterfaces, LazUTF8, FileUtil;
 
 type
@@ -115,7 +112,7 @@ begin
 		qryDoco.Close;
 		if qryDoco.Transaction.Active then
 			TSQLTransaction(qryDoco.Transaction).Commit;
-		// qryDoco.// // // RequestLive := False;
+		// qryDoco.// // // // RequestLive := False;
 		edDoco.Modified := False;
 		FDocoModified := False;
 	finally
@@ -132,7 +129,7 @@ begin
 		qryDoco.Database := TIBConnection(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
 		qryDoco.Transaction := TSQLTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
 		qryDoco.Close;
-		// qryDoco.// // // RequestLive := True;
+		// qryDoco.// // // // RequestLive := True;
 		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
 			MarathonProjectCacheTypes.ctDomain:
@@ -160,7 +157,7 @@ begin
 		qryDoco.Close;
 		if qryDoco.Transaction.Active then
 			TSQLTransaction(qryDoco.Transaction).Commit;
-		// qryDoco.// // // RequestLive := False;
+		// qryDoco.// // // // RequestLive := False;
 		edDoco.Modified := False;
 		FDocoModified := False;
 	finally

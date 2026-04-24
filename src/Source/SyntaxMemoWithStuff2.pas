@@ -4,14 +4,10 @@ interface
 
 {$I CompilerDefines.inc}
 
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages, Types,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
-  SynEdit, Classes, dialogs, Graphics, SysUtils, Controls, ImgList, ExtCtrls, StdCtrls, Forms, SynEditTypes, SynEditMarks, SynEditMiscClasses,
-  SynEditDecorator;
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, Types, {$ELSE}
+  Windows, Messages, {$ENDIF}
+  SynEdit, Classes, dialogs, Graphics, SysUtils, Controls, ImgList, ExtCtrls, StdCtrls, Forms, SynEditTypes, SynEditMarks, SynEditMiscClasses, SynEditDecorator;
 
 const
   WM_KILLFOCUS = 8;
@@ -159,8 +155,7 @@ type
 
 implementation
 
-uses
-  FindDlg, ReplDlg;
+uses FindDlg, ReplDlg;
 
 { TWordList }
 constructor TWordList.Create;

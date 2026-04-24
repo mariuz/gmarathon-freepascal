@@ -21,18 +21,11 @@ interface
 
 {$I compilerdefines.inc}
 
-uses
-	Classes,
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
-  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst,
-	StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs,
-  {$IFNDEF FPC}
-  ComObj,
-  {$ENDIF}
+uses Classes, {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
+  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs, {$IFNDEF FPC}
+  ComObj, {$ENDIF}
   {$IFDEF D6_or_higher}
 	Variants, {$ENDIF}
 	IBConnection, SQLDB, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;

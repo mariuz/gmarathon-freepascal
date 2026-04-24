@@ -2,12 +2,9 @@ unit FindDlg;
 
 interface
 
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
   SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
 
 type

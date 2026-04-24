@@ -4,12 +4,9 @@ unit Tools;
 
 interface
 
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
   Controls, Classes, SQLDB;
 
 // String Operation
@@ -27,10 +24,8 @@ procedure EnumNetResources(List: TStrings);
 
 implementation
 
-uses
-  {$IFNDEF FPC}
-  ShellAPI, Windows,
-  {$ENDIF}
+uses {$IFNDEF FPC}
+  ShellAPI, Windows, {$ENDIF}
   Forms, Dialogs, SysUtils;
 
 // String Operation

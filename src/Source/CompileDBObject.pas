@@ -19,7 +19,7 @@ unit CompileDBObject;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, IBConnection, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, SQLYacc, Globals;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, IBConnection, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, SQLYacc, Globals;
 
 type
 	TCreateType = (crtCallback, crtInline, crtMultiStatement);

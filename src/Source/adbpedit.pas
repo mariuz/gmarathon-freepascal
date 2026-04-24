@@ -1,14 +1,10 @@
 unit adbpedit;
 
 interface
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-     DB, StdCtrls, DBCtrls, ExtCtrls;
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, StdCtrls, DBCtrls, ExtCtrls;
 
 type
 

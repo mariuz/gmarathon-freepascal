@@ -7,12 +7,9 @@ interface
 
 {$I compilerdefines.inc}
 
-uses Classes, SysUtils,
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows,
-  {$ENDIF}
+uses Classes, SysUtils, {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, {$ENDIF}
   ParseCollection, Controls, Forms, Dialogs, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
 	BufDataset, SQLDB, IBConnection, MarathonProjectCacheTypes, YaccLib;

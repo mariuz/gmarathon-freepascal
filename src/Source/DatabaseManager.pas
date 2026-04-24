@@ -48,12 +48,9 @@ unit DatabaseManager;
 
 interface
 
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
   SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetadataSearchObject, GimbalToolsAPI, GimbalToolsAPIImpl;
 
 type

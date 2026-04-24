@@ -104,7 +104,7 @@ begin
 	try
 		M.ParserType := ptDRUI;
 		M.Lexer.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-		M.Lexer.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+		M.Lexer.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
 
 		M.Lexer.yyinput.Text := Source;
 		if M.yyparse = 0 then

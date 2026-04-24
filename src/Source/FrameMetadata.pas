@@ -34,7 +34,7 @@ unit FrameMetadata;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, {$IFDEF WINDOWS}ComObj,{$ENDIF} Clipbrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, {$IFDEF WINDOWS}ComObj, {$ENDIF} Clipbrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
 
 type
 	TframDisplayDDL = class(TFrame)
