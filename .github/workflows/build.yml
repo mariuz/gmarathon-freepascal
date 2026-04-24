@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    name: Build (Lazarus x86_64 Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Lazarus / FPC
+        uses: gcarreno/setup-lazarus@v3.4.1
+        with:
+          lazarus-version: stable
+          include-props: true
+
+      - name: Build Debug
+        run: lazbuild --build-mode=Debug src/Source/marathon.lpi
+
+      - name: Build Release
+        run: lazbuild --build-mode=Release src/Source/marathon.lpi
