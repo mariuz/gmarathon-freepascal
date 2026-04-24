@@ -48,8 +48,8 @@ type
 	protected
 		procedure CreateParams(var Params : TCreateParams); override;
 		procedure CreateWnd; override;
-		procedure KeyPress(var Key: Char); override;
 		procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+		procedure KeyPress(var Key: Char); override;
 		procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
 	public
 		constructor Create(AOwner : TComponent); override;
@@ -105,8 +105,6 @@ type
     FReplaceDialogHelpContext: Integer;
     FFindDialogHelpContext: Integer;
 
-    function GetSelStart: integer;
-    procedure SetSelStart(const Value: integer);
     function GetSelLength: integer;
     procedure SetSelLength(const Value: integer);
 	protected
@@ -122,9 +120,9 @@ type
     procedure ClearExecutionHighlighting;
     function DoOnSpecialLineColors(Line: integer; var Foreground, Background: TColor): boolean;
 
-		property SelStart: integer read GetSelStart write SetSelStart;
-		property SelLength: integer read GetSelLength write SetSelLength;
+    property SelLength: integer read GetSelLength write SetSelLength;
 	published
+    property SelStart;
 		property ErrorLine: integer read FErrorLine write FErrorLine;
 		property ErrorForeColor: TColor read FErrorForeColor write FErrorForeColor;
 		property ErrorBackColor: TColor read FErrorBackColor write FErrorBackColor;
@@ -256,22 +254,12 @@ end;
 
 function TSyntaxMemoWithStuff2.GetSelLength: integer;
 begin
-  Result := SelLength;
+  Result := SelEnd - SelStart;
 end;
 
 procedure TSyntaxMemoWithStuff2.SetSelLength(const Value: integer);
 begin
-  SelLength := Value;
-end;
-
-function TSyntaxMemoWithStuff2.GetSelStart: integer;
-begin
-  Result := SelStart;
-end;
-
-procedure TSyntaxMemoWithStuff2.SetSelStart(const Value: integer);
-begin
-  SelStart := Value;
+  SelEnd := SelStart + Value;
 end;
 
 procedure TSyntaxMemoWithStuff2.SetExecutionHighlighting(const ExecutelineBegin: integer;

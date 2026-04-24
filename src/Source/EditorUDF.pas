@@ -19,7 +19,7 @@ unit EditorUDF;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, Printers, ExtCtrls, ActnList, ClipBrd, SQLDB, MarathonIDE, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameDescription, FrameMetadata;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, Printers, ExtCtrls, ActnList, ClipBrd, SQLDB, MarathonIDE, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameDescription, FrameMetadata;
 
 type
   TfrmUDFEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonUDFEditor)

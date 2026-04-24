@@ -165,6 +165,7 @@ type
     function GetFirstChild: TMarathonTreeNode;
     function FindPathNode(Path: String; SepChar: Char = #2): TMarathonTreeNode;
     function AddPathNode(Path: String; SepChar: Char = #2): TMarathonTreeNode;
+    function NodePath(SepChar: Char = #2): String;
     property Data: Pointer read FData write FData;
     property Parent: TMarathonTreeNode read FParent;
     property Text: String read FText write FText;
@@ -336,6 +337,20 @@ begin
     Node := AddChild(nil, Target);
 
   Result := Node.AddPathNode(S, SepChar);
+end;
+
+function TMarathonTreeNode.NodePath(SepChar: Char): String;
+begin
+  if Assigned(FParent) then
+  begin
+    Result := FParent.NodePath(SepChar);
+    if Result <> '' then
+      Result := Result + SepChar + FText
+    else
+      Result := FText;
+  end
+  else
+    Result := '';
 end;
 
 { TMarathonTree }

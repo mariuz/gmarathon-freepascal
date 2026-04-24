@@ -19,7 +19,7 @@ unit ScriptEditorHost;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, ActnList, BaseDocumentForm, MarathonInternalInterfaces;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, ActnList, BaseDocumentForm, MarathonInternalInterfaces;
 
 type
   TScriptHostTabSheet = class(TTabSheet)

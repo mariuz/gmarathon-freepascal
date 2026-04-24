@@ -19,7 +19,7 @@ unit SQLTrace;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBConnection, SQLDB, IBSQLMonitor, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBConnection, SQLDB, IBSQLMonitor, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
 
 type
 	TfrmSQLTrace = class(TfrmBaseDocumentForm)

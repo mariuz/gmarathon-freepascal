@@ -19,7 +19,7 @@ unit ManageBrowserItems;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ActnList;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ActnList;
 
 type
   TfrmManageBrowserItems = class(TForm)

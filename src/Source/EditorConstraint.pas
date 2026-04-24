@@ -50,7 +50,7 @@ unit EditorConstraint;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, Grids, DBGrids, math, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, ActnList;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, Grids, DBGrids, math, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, ActnList;
 
 type
 	TfrmEditorConstraint = class(TForm, IMarathonBaseForm)
@@ -1006,4 +1006,3 @@ begin
 end;
 
 end.
-

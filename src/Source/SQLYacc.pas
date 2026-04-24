@@ -7,7 +7,7 @@ interface
 
 uses SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection, Forms, IBDebuggerVM, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	BufDataset, PlanUnit;
+	BufDataset, PlanUnit, DB;
 
 
 const _ACTION_ = 257;
@@ -805,7 +805,7 @@ begin
          SymSize := yyv[yysp-0].yyTStatement.SymSize;
          SymbolType := stOutput;
          end;
-         with Module.ExecutionResults.FieldRoster.Add do
+         with TFieldDef(Module.ExecutionResults.FieldDefs.Add) do
          begin
          Name := yyv[yysp-1].yyTStatement.Value;
          case yyv[yysp-0].yyTStatement.Symtype of
@@ -814,29 +814,29 @@ begin
          ty_blr_varying,
          ty_blr_varying2:
          begin
-				 FieldType := fdtString;
+				 DataType := ftString;
 				 Size := yyv[yysp-0].yyTStatement.SymSize;
 				 end;
 
 				 ty_blr_short,
 				 ty_blr_long,
 				 ty_blr_int64:
-				 FieldType := fdtInteger;
+				 DataType := ftInteger;
 
 				 ty_blr_float,
 				 ty_blr_double,
 				 ty_blr_d_float:
-				 FieldType := fdtFloat;
+				 DataType := ftFloat;
 
 
 				 ty_blr_blob:
-				 FieldType := fdtMemo;
+				 DataType := ftMemo;
 
 
 				 ty_blr_sql_date,
 				 ty_blr_sql_time,
 				 ty_blr_timestamp:
-				 FieldType := fdtDateTime;
+				 DataType := ftDateTime;
 				 end;
 				 end;
 				 Module.GetSymbolTable.UpdateSym(yyv[yysp-1].yyTStatement.Value, Null);
@@ -3906,7 +3906,7 @@ begin
          if VarIsNull(yyv[yysp-0].yyTStatement.Value) then
          yyval.yyTStatement.Value := NULL
          else
-         yyval.yyTStatement.Value := +yyv[yysp-0].yyTStatement.Value;
+         yyval.yyTStatement.Value := yyv[yysp-0].yyTStatement.Value;
          end;
          end;
          

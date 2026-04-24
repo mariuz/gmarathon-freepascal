@@ -38,13 +38,16 @@ unit BaseDocumentDataAwareForm;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus;
 
 type
 	TfrmBaseDocumentDataAwareForm = class(TfrmBaseDocumentForm)
 	private
-    procedure MinMaxInfo(var Message: TWMGetMinMaxInfo); message wm_getminmaxinfo;
-    procedure wmSysCommand(var message:twmsyscommand); message wm_syscommand;
+    const
+      WM_GETMINMAXINFO = $0024;
+      WM_SYSCOMMAND = $0112;
+    procedure MinMaxInfo(var Message: TLMessage); message WM_GETMINMAXINFO;
+    procedure wmSysCommand(var Message: TLMessage); message WM_SYSCOMMAND;
 		{ Private declarations }
 	protected
 		FCharSet : Byte;
@@ -110,27 +113,27 @@ begin
 	FDatabaseName := Value;
 end;
 
-procedure TfrmBaseDocumentDataAwareForm.MinMaxInfo(var Message: TWMGetMinMaxInfo);
+procedure TfrmBaseDocumentDataAwareForm.MinMaxInfo(var Message: TLMessage);
 var
-  wRect : TRect;
+  // wRect : TRect;
   wMonitor : TMonitor;
   wMarathonMonitor : TMonitor;
 begin
   inherited;
-  wMarathonMonitor := MarathonScreen.GetMonitor;
+  { wMarathonMonitor := MarathonScreen.GetMonitor;
   if self.Monitor.MonitorNum = wMarathonMonitor.MonitorNum then //same screen as the IDE main window
   begin
      wMonitor := screen.monitors[self.Monitor.MonitorNum];
-     Message.MinMaxInfo.ptMaxSize.X := wMonitor.Width + (GetSystemMetrics(SM_CXSIZEFRAME) * 2);
-     Message.MinMaxInfo.ptMaxSize.y := wMonitor.Height - (MarathonIDEInstance.MainForm.FormHeight + abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop));
-     Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
-  end;
+     // Message.MinMaxInfo.ptMaxSize.X := wMonitor.Width + (GetSystemMetrics(SM_CXSIZEFRAME) * 2);
+     // Message.MinMaxInfo.ptMaxSize.y := wMonitor.Height - (MarathonIDEInstance.MainForm.FormHeight + abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop));
+     // Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
+  end; }
 end;
 
 procedure TfrmBaseDocumentDataAwareForm.wmSysCommand(
-  var message: twmsyscommand);
+  var message: TLMessage);
 begin
-   fIsMaximized := (message.CmdType = SC_MAXIMIZE);
+   fIsMaximized := (message.wParam = SC_MAXIMIZE);
    inherited;
 end;
 

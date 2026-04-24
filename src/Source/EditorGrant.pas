@@ -19,7 +19,7 @@ unit EditorGrant;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, CheckLst, CommCtrl, Menus, DB, IBConnection, SQLDB;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, CheckLst, Menus, DB, IBConnection, SQLDB;
 
 type
 	TGrantObjectType = (otTable, otView, otProcedure);

@@ -145,7 +145,7 @@ object frmEditorSnippet: TfrmEditorSnippet
         Caption = '&In Folder:'
         FocusControl = tvSnippetsFolders
       end
-      object tvSnippetsFolders: TrmPathTreeView
+      object tvSnippetsFolders: TTreeView
         Left = 5
         Top = 25
         Width = 330

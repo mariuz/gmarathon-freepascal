@@ -44,7 +44,7 @@ unit FrameDependencies;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, Db, SQLDB, MarathonProjectCacheTypes, MarathonProjectCache, MarathonInternalInterfaces;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, Db, SQLDB, MarathonProjectCacheTypes, MarathonProjectCache, MarathonInternalInterfaces;
 
 type
 	TframeDepend = class(TFrame)
@@ -198,7 +198,7 @@ begin
 				end;
 
 				if qryUtil.Transaction.Active then
-					qryUtil.Transaction.Commit;
+					TSQLTransaction(qryUtil.Transaction).Commit;
 				lvDependedOn.Columns[0].Width := MarathonIDEInstance.CurrentProject.SPEDependColumns.Items[0].Width;
 				lvDependedOn.Columns[1].Width := MarathonIDEInstance.CurrentProject.SPEDependColumns.Items[1].Width;
 				lvDependedOn.Items.EndUpDate;
@@ -310,7 +310,7 @@ begin
 				lvDependsOn.Items.EndUpDate;
 
 				if qryUtil.Transaction.Active then
-					qryUtil.Transaction.Commit;
+					TSQLTransaction(qryUtil.Transaction).Commit;
 			end;
 	end;
 end;
@@ -386,4 +386,3 @@ begin
 end;
 
 end.
-

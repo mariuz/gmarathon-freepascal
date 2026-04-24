@@ -19,7 +19,7 @@ unit GlobalPrintDialog;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, rmSpin, rmBaseEdit, ExtCtrls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, rmSpin, ExtCtrls;
 
 type
   TfrmGlobalPrintDialogOption = (

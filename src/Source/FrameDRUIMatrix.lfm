@@ -48,7 +48,7 @@ object frameDRUI: TframeDRUI
         'Operation')
     end
   end
-  object tvCrud: TrmPathTreeView
+  object tvCrud: TTreeView
     Left = 0
     Top = 33
     Width = 466

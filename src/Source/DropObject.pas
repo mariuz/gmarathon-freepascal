@@ -19,7 +19,7 @@ unit DropObject;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, Db, ImgList, IBConnection, SQLDB, rmCollectionListBox, Globals, MarathonProjectCacheTypes, MarathonProjectCache, MarathonIDE;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, Db, ImgList, IBConnection, SQLDB, Globals, MarathonProjectCacheTypes, MarathonProjectCache, MarathonIDE;
 
 type
 	TfrmDropObject = class(TForm)
@@ -38,7 +38,7 @@ type
 		FDropItem : String;
 		FDropCacheType : TGSSCacheType;
 		FDropConnection : String;
-		procedure WMBuggerOff(var Message : TMessage); message WM_BUGGER_OFF;
+		procedure WMBuggerOff(var Message : TMessage); message LM_USER + 101;
 		procedure AddStatusItem(Status, StatResult: String; Severity: Integer);
 		procedure DoDropObjects;
 		procedure DoDrop(Item : TMarathonCacheBaseNode; SQL: String);

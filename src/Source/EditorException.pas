@@ -19,7 +19,7 @@ unit EditorException;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, Printers, ExtCtrls, ClipBrd, ActnList, SQLDB, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, FrameMetadata;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, Printers, ExtCtrls, ClipBrd, ActnList, SQLDB, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, FrameMetadata;
 
 type
   TfrmExceptions = class(TfrmBaseDocumentDataAwareForm)

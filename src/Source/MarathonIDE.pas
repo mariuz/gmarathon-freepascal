@@ -98,6 +98,7 @@ type
 		procedure DoStatus(Status: String);
 		procedure CloseDroppedWindow(Connection: String; ObjectName: String);
 		procedure RecordToScript(Script: String; ConnectionName: String);
+    procedure CaptureSnippet(Snip: String);
 		procedure AddMenuToMainForm(MenuItem: TMenuItem);
 		function GetHintTextForToken(Token: String; Connection: String): String;
 		procedure NavigateToLink(Token: String; Connection: String);
@@ -502,7 +503,9 @@ var
 	SubItem: TMarathonCacheBaseNode;
 	DropObject: TfrmDropObject;
 	L: TStringList;
+	{$IFNDEF FPC}
 	Extractor: IGSSDDLExtractor;
+	{$ENDIF}
 	ConnectName: String;
 	N: TMarathonTreeNode;
 
@@ -876,6 +879,7 @@ begin
 					end;
 					if L.Count > 0 then
 					begin
+						{$IFNDEF FPC}
 						Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
 						Extractor.AppHandle := Application.Handle;
 						ConnectName := TMarathonCacheObject(Item).ConnectionName;
@@ -911,6 +915,9 @@ begin
             CurrentProject.MetaDecimalPlaces := Extractor.MetaDecimalPlaces;
             CurrentProject.MetaDecimalSeparator := Extractor.MetaDecimalSeperator;
             CurrentProject.MetaWrapAt := Extractor.MetaWrapOutputAt;
+						{$ELSE}
+						MessageDlg('Not implemented for FPC', mtInformation, [mbOK], 0);
+						{$ENDIF}
 					end;
 				finally
 					L.Free;
@@ -1568,7 +1575,9 @@ end;
 procedure TMarathonIDE.ToolsMetadataExtract;
 var
 	ConnectName: String;
+	{$IFNDEF FPC}
 	Extractor: IGSSDDLExtractor;
+	{$ENDIF}
 	SC: TfrmSelectConnection;
 
 begin
@@ -1590,6 +1599,7 @@ begin
 				end;
 			end;
 
+			{$IFNDEF FPC}
 			Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
 			Extractor.AppHandle := Application.Handle;
 			Extractor.Dialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.Dialect;
@@ -1624,6 +1634,9 @@ begin
 				CurrentProject.MetaDecimalSeparator := Extractor.MetaDecimalSeperator;
 				CurrentProject.MetaWrapAt := Extractor.MetaWrapOutputAt;
 			end;
+			{$ELSE}
+			MessageDlg('Not implemented for FPC', mtInformation, [mbOK], 0);
+			{$ENDIF}
 		end;
 	finally
 		SC.Free;
@@ -2333,6 +2346,28 @@ begin
 	if Assigned(Connection) then
 		if Connection.ScriptRecorder.Recording then
 			Connection.ScriptRecorder.RecordScript(Script);
+end;
+
+procedure TMarathonIDE.CaptureSnippet(Snip: String);
+var
+	I: Integer;
+	Found: Boolean;
+
+begin
+	Found := False;
+	for I := 0 to Screen.FormCount-1 do
+		if Screen.Forms[I] is TfrmCodeSnippets Then
+		begin
+			Found := True;
+			TfrmCodeSnippets(Screen.Forms[i]).AddSnippet(Snip);
+			TfrmCodeSnippets(Screen.Forms[i]).BringToFront;
+		end;
+	if not Found Then
+	begin
+		frmCodeSnippets := TfrmCodeSnippets.Create(Self);
+		frmCodeSnippets.AddSnippet(Snip);
+		frmCodeSnippets.Show;
+	end;
 end;
 
 procedure TMarathonIDE.CloseDroppedWindow(Connection: String; ObjectName: String);

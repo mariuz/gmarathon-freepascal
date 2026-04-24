@@ -4,7 +4,7 @@ unit NewColorGrd;
 
 interface
 
-uses Windows, Messages, Classes, Graphics, Forms, Controls, ExtCtrls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} Classes, Graphics, Forms, Controls, ExtCtrls;
 
 const
   NumPaletteEntries = 20;

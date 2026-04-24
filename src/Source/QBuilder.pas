@@ -19,7 +19,7 @@ unit QBuilder;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, ExtCtrls, StdCtrls, ComCtrls, ToolWin, Menus, CheckLst, Grids, DB, DBTables, DBGrids, ExtDlgs, QBCriteria, QBAppendTo, SynEdit, SyntaxMemoWithStuff2;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, ExtCtrls, StdCtrls, ComCtrls, ToolWin, Menus, CheckLst, Grids, DB, DBTables, DBGrids, ExtDlgs, QBCriteria, QBAppendTo, SynEdit, SyntaxMemoWithStuff2;
 
 type
   TQBForm = class;

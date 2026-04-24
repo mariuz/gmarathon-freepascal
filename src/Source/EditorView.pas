@@ -66,7 +66,7 @@ unit EditorView;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, Tabs, ActnList, Buttons, rmCollectionListBox, rmTabs3x, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmNotebook2;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, ActnList, Buttons, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions;
 
 type
 	TfrmViewEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor)
@@ -2017,4 +2017,3 @@ begin
 end;
 
 end.
-

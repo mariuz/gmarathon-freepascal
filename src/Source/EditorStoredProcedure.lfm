@@ -307,7 +307,7 @@ object frmStoredProcedure: TfrmStoredProcedure
         inherited Panel1: TPanel
           Width = 624
         end
-        inherited tvCrud: TrmPathTreeView
+        inherited tvCrud: TTreeView
           Width = 624
           Height = 293
         end

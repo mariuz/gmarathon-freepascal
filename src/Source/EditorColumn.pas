@@ -56,7 +56,7 @@ unit EditorColumn;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, Buttons, SQLDB, rmTabs3x, rmCollectionListBox, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, rmNotebook2, rmPageControl;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, Buttons, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, rmPageControl;
 
 type
 	TColumnEditState = (stNewTable, stNewColumn, stColumnProperties);
@@ -1376,4 +1376,3 @@ begin
 end;
 
 end.
-

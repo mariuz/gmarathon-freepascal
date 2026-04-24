@@ -19,7 +19,7 @@ unit MarathonOptions;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, Registry, Buttons, SynEditHighlighter, SynHighlighterSQL, SynEdit, SyntaxMemoWithStuff2, NewColorGrd;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, Registry, Buttons, SynEditHighlighter, SynHighlighterSQL, SynEdit, SyntaxMemoWithStuff2, NewColorGrd;
 
 type
   TfrmMarathonOptions = class(TForm)

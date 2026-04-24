@@ -34,7 +34,7 @@ unit MetaDataSearchObject;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, IBConnection, SQLDB, Globals, MarathonProjectCache, MarathonProjectCacheTypes;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, IBConnection, SQLDB, Globals, MarathonProjectCache, MarathonProjectCacheTypes;
 
 type
   TMDSearchItem = record
@@ -1325,4 +1325,3 @@ begin
 end;
 
 end.
-

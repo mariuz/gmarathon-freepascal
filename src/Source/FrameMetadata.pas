@@ -34,7 +34,7 @@ unit FrameMetadata;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, ComObj, Clipbrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, gssscript_TLB;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, {$IFDEF WINDOWS}ComObj,{$ENDIF} Clipbrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
 
 type
 	TframDisplayDDL = class(TFrame)
@@ -103,12 +103,12 @@ end;
 
 procedure TframDisplayDDL.WSFind;
 begin
-  edDDL.WSFind;
+  // edDDL.WSFind;
 end;
 
 procedure TframDisplayDDL.WSFindNext;
 begin
-  edDDL.WSFindNext;
+  // edDDL.WSFindNext;
 end;
 
 procedure TframDisplayDDL.SelectAll;
@@ -142,12 +142,14 @@ begin
 end;
 
 procedure TframDisplayDDL.GetDDL;
+{$IFNDEF FPC}
 var
   Extractor : IGSSDDLExtractor;
   TriggerList : TStringList;
   Idx : Integer;
-
+{$ENDIF}
 begin
+{$IFNDEF FPC}
   case FForm.GetActiveObjectType of
     ctDomain:
       begin
@@ -185,7 +187,6 @@ begin
 					TriggerList := TStringList.Create;
           try
             try
-              qryUtil.BeginBusy(False);
               qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
               qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
               qryUtil.SQL.Clear;
@@ -197,9 +198,9 @@ begin
                 qryUtil.Next;
 							end;
               qryUtil.Close;
-              qryUtil.Transaction.Commit;
+              if Assigned(qryUtil.Transaction) and qryUtil.Transaction.Active then
+                TSQLTransaction(qryUtil.Transaction).Commit;
             finally
-              qryUtil.EndBusy;
             end;
 
             if TriggerList.Count > 0 then
@@ -254,6 +255,9 @@ begin
       end;
 
   end;
+{$ELSE}
+  edDDL.Text := 'DDL Extraction not available in FPC yet.';
+{$ENDIF}
 end;
 
 function TframDisplayDDL.CanCaptureSnippet: Boolean;
@@ -293,4 +297,3 @@ begin
 end;
 
 end.
-

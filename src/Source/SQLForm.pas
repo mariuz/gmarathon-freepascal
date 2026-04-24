@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, Tabs, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, rmCollectionListBox, rmTabs3x, BufDataset, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmNotebook2;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, BufDataset, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree;
 
 type
 	TExecuteMode = (exStatement, exScript);

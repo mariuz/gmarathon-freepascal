@@ -19,7 +19,7 @@ unit StoredProcedureParams;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Grids, DBGrids, StdCtrls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Grids, DBGrids, StdCtrls;
 
 type TSPParameters = class(TObject)
 public

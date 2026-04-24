@@ -157,6 +157,8 @@ type
 		function CanDoBrowserOperation(BrowserOp : TGSSCacheOp) : Boolean;
 		procedure DoBrowserOperation(Op: TGSSCacheOp);
 		procedure SearchEventHandler(Sender : TObject; Event : TSearchEventType; Status : String; Item : TResultItem);
+    function GetNodePath(N: TTreeNode): String;
+    function FindTreeNodeByPath(Path: String): TTreeNode;
 	public
 		{ Public declarations }
 		procedure LoadTree;
@@ -311,7 +313,7 @@ begin
 				//save positions and open states of nodes....
 				if tvDatabase.Selected <> nil then
 				begin
-					SelectedItem := tvDatabase.NodePath(tvDatabase.Selected);
+					SelectedItem := GetNodePath(tvDatabase.Selected);
 				end;
 				//------
 				Screen.Cursor := crHourGlass;
@@ -395,8 +397,8 @@ begin
       TNV := TMarathonTreeNode(Node.Data);
       if Assigned(TNV.Data) then
       begin
-        if Node.OverlayIndex <> TMarathonCacheBaseNode(TNV.Data).OverlayIndex then
-           Node.OverlayIndex := TMarathonCacheBaseNode(TNV.Data).OverlayIndex;
+        { if Node.OverlayIndex <> TMarathonCacheBaseNode(TNV.Data).OverlayIndex then
+           Node.OverlayIndex := TMarathonCacheBaseNode(TNV.Data).OverlayIndex; }
         Node.ImageIndex := TMarathonCacheBaseNode(TNV.Data).ImageIndex;
         Node.SelectedIndex := TMarathonCacheBaseNode(TNV.Data).ImageIndex;
         Node.StateIndex := -1;
@@ -406,7 +408,7 @@ begin
   begin
     Node.ImageIndex := 2;
     Node.SelectedIndex := 2;
-    Node.OverlayIndex := -1;
+    // Node.OverlayIndex := -1;
     Node.StateIndex := -1;
   end;
 end;
@@ -489,7 +491,7 @@ begin
 							begin
 								WItem.Data := WNode;
 								WItem.ImageIndex := tscObj.imageindex;
-                wItem.OverlayIndex := tscObj.OverlayIndex;
+                // wItem.OverlayIndex := tscObj.OverlayIndex;
 								WItem.StateIndex := -1;
 							end;
 						end;
@@ -557,7 +559,7 @@ begin
 
                if Assigned(wtnvNode.Data) then
                begin
-                 wNode.OverlayIndex := TMarathonCacheBaseNode(wTNVNode.Data).OverlayIndex;
+                 // wNode.OverlayIndex := TMarathonCacheBaseNode(wTNVNode.Data).OverlayIndex;
                  wNode.ImageIndex := TMarathonCacheBaseNode(wTNVNode.Data).ImageIndex;
                  wNode.SelectedIndex := TMarathonCacheBaseNode(wTNVNode.Data).ImageIndex;
                end;
@@ -604,7 +606,7 @@ var
 begin
 	SelNode := tvDatabase.Selected;
   if SelNode <> nil then
-     wSelNodePath := tvDatabase.NodePath(SelNode)
+     wSelNodePath := GetNodePath(SelNode)
   else
      wSelNodePath := '';
 
@@ -612,24 +614,24 @@ begin
 	tvDatabase.Items.BeginUpdate;
 	try
 		TNV := (Item as TMarathonCacheBaseNode).ContainerNode;
-    Assert(Assigned(TNV), 'TNV is not assigned');
-		TN := tvDatabase.FindPathNode(TNV.NodePath);
-		if Assigned(TN) then
-		begin
-			WNExpanded := TN.Expanded;
-			(Item as TMarathonCacheBaseNode).Expanded := False;
-			TN.Expanded := False;
-			TN.DeleteChildren;
-			TN.HasChildren := True;
-			if WNExpanded then
-				TN.Expand(false);
-//			AllowChange := True;
-			if not PreserveFocus then
-			begin
-//				tvDatabaseChanging(tvDatabase, TN, AllowChange);
-				tvDatabaseChange(tvDatabase, TN);
-			end;
-		end;
+    if Assigned(TNV) then
+    begin
+		  TN := FindTreeNodeByPath(TNV.NodePath());
+		  if Assigned(TN) then
+		  begin
+			  WNExpanded := TN.Expanded;
+			  (Item as TMarathonCacheBaseNode).Expanded := False;
+			  TN.Expanded := False;
+			  TN.DeleteChildren;
+			  TN.HasChildren := True;
+			  if WNExpanded then
+				  TN.Expand(false);
+			  if not PreserveFocus then
+			  begin
+				  tvDatabaseChange(tvDatabase, TN);
+			  end;
+		  end;
+    end;
 	finally
 		tvDatabase.Items.EndUpdate;
 	end;
@@ -637,7 +639,7 @@ begin
 	begin
 		if wSelNodePath <> '' then
 		begin
-      SelNode := tvDatabase.FindPathNode(wSelNodePath);
+      SelNode := FindTreeNodeByPath(wSelNodePath);
       if assigned(SelNode) then
       begin
          SelNode.Selected := True;
@@ -660,21 +662,16 @@ begin
 	tvDatabase.Items.BeginUpdate;
 	try
 		TNV := (Item as TMarathonCacheBaseNode).ContainerNode;
-		Path := TrmTreeNonView(TNV.TreeNonView).NodePath(TNV);
-		TN := tvDatabase.FindPathNode(Path);
+		Path := TNV.NodePath();
+		TN := FindTreeNodeByPath(Path);
 		if Assigned(TN) then
-		begin
-			TN.Expanded := False;
+    begin
 			TN.DeleteChildren;
 			TN.HasChildren := True;
 			TN.Expand(False);
 //			AllowChange := True;
 //			tvDatabaseChanging(tvDatabase, TN, AllowChange);
 			tvDatabaseChange(tvDatabase, TN);
-		end
-		else
-		begin
-			TN.HasChildren := True;
 		end;
 	finally
 		tvDatabase.Items.EndUpdate;
@@ -692,11 +689,10 @@ begin
 	tvDatabase.Items.BeginUpdate;
 	try
 		TNV := (Item as TMarathonCacheBaseNode).ContainerNode;
-		Path := TrmTreeNonView(TNV.TreeNonView).NodePath(TNV);
-		TN := tvDatabase.FindPathNode(Path);
-
+		Path := TNV.NodePath();
+		TN := FindTreeNodeByPath(Path);
 		if Assigned(TN) then
-		begin
+    begin
 			for Idx := 0 to lvDatabase.Items.Count - 1 do
 			begin
 				if lvDatabase.Items.Item[Idx].Data = TN then
@@ -707,7 +703,6 @@ begin
 			end;
 			TN.Free;
 		end;
-
 	finally
 		tvDatabase.Items.EndUpdate;
 	end;
@@ -1178,8 +1173,7 @@ begin
 					for Idx := 0 to RList.Count -1 do
 					begin
 						//bit of a sanity check to see whether the file exists or not...
-						if FileExistsUTF8(RList[Idx]) { *Converted from FileExists*  } then
-						begin
+						if FileExists(RList[Idx]) { *Converted from FileExists*  } then						begin
 							with lvRecent.Items.Add do
 							begin
 								Caption := RList[Idx];
@@ -1735,6 +1729,39 @@ begin
 	end;
 end;
 
+function TfrmDatabaseExplorer.GetNodePath(N: TTreeNode): String;
+begin
+  if Assigned(N) then
+  begin
+    Result := GetNodePath(N.Parent);
+    if Result <> '' then
+      Result := Result + #2 + N.Text
+    else
+      Result := N.Text;
+  end
+  else
+    Result := '';
+end;
+
+function TfrmDatabaseExplorer.FindTreeNodeByPath(Path: String): TTreeNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  if Path = '' then Exit;
+
+  if Path[1] = #2 then Delete(Path, 1, 1);
+
+  for i := 0 to tvDatabase.Items.Count - 1 do
+  begin
+    if GetNodePath(tvDatabase.Items[i]) = Path then
+    begin
+      Result := tvDatabase.Items[i];
+      Exit;
+    end;
+  end;
+end;
+
 procedure TfrmDatabaseExplorer.lvDatabaseDeletion(Sender: TObject; Item: TListItem);
 begin
 //
@@ -2012,7 +2039,7 @@ var
 	N : TTreeNode;
 begin
 	inherited;
-	N := tvDatabase.FindPathNode(#2 + 'Recent');
+	N := FindTreeNodeByPath(#2 + 'Recent');
 	if Assigned(N) then
 	begin
 		N.Selected := True;

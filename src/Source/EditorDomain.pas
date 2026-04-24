@@ -19,7 +19,7 @@ unit EditorDomain;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, rmCollectionListBox, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription, rmNotebook2;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription;
 
 type
 	TfrmDomains = class(TfrmBaseDocumentDataAwareForm, IMarathonDomainEditor)
@@ -517,7 +517,7 @@ begin
   begin
     qryDomain.Close;
     qryDomain.SQL.Clear;
-    qryDomain.// // // RequestLive := True;
+    qryDomain.// // // // // // RequestLive := True;
 		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
     qryDomain.Open;
     try
@@ -599,7 +599,7 @@ begin
 	begin
 		qryDomain.Close;
 		qryDomain.SQL.Clear;
-		qryDomain.// // // RequestLive := True;
+		qryDomain.// // // // // // RequestLive := True;
 		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
 		qryDomain.Open;
 		try

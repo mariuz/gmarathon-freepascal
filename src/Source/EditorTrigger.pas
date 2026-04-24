@@ -61,7 +61,7 @@ unit EditorTrigger;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, Tabs, FileCtrl, ActnList, ImgList, rmCollectionListBox, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, FileCtrl, ActnList, ImgList, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger;
 
 type
 	TTriggerHeader = class(TObject)

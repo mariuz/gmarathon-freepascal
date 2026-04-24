@@ -34,7 +34,7 @@ unit FrameDRUIMatrix;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Db, ComCtrls, StdCtrls, ExtCtrls, rmPathTreeView, BufDataset, MarathonInternalInterfaces;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Db, ComCtrls, StdCtrls, ExtCtrls, BufDataset, MarathonInternalInterfaces;
 
 type
 	TframeDRUI = class(TFrame)
@@ -46,12 +46,14 @@ type
 		Panel1: TPanel;
 		Label1: TLabel;
 		cmbGroup: TComboBox;
-		tvCrud: TrmPathTreeView;
+		tvCrud: TTreeView;
 		procedure cmbGroupChange(Sender: TObject);
 	private
 		{ Private declarations }
 		FForm: IMarathonBaseForm;
 		procedure RefreshGroupings;
+		function FindPathNode(Path: String): TTreeNode;
+		function AddPathNode(ParentNode: TTreeNode; Path: String): TTreeNode;
 	public
 		{ Public declarations }
 		procedure SetActive;
@@ -77,24 +79,24 @@ var
 
 begin
 	dtaCrud.Active := False;
-	dtaCrud.FieldRoster.Clear;
-	with dtaCrud.FieldRoster.Add do
+	dtaCrud.FieldDefs.Clear;
+	with TFieldDef(dtaCrud.FieldDefs.Add) do
 	begin
 		Name := 'line';
 		Size := 0;
-		FieldType := fdtInteger;
+		DataType := ftInteger;
 	end;
-	with dtaCrud.FieldRoster.Add do
+	with TFieldDef(dtaCrud.FieldDefs.Add) do
 	begin
 		Name := 'op';
 		Size := 40;
-		FieldType := fdtString;
+		DataType := ftString;
 	end;
-	with dtaCrud.FieldRoster.Add do
+	with TFieldDef(dtaCrud.FieldDefs.Add) do
 	begin
 		Name := 'table';
 		Size := 120;
-		FieldType := fdtString;
+		DataType := ftString;
 	end;
 	dtaCrud.Active := True;
 
@@ -102,7 +104,7 @@ begin
 	try
 		M.ParserType := ptDRUI;
 		M.Lexer.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-		M.Lexer.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
+		M.Lexer.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
 
 		M.Lexer.yyinput.Text := Source;
 		if M.yyparse = 0 then
@@ -131,9 +133,97 @@ begin
 	FForm := Form;
 end;
 
+function GetNodePath(N: TTreeNode): String;
+begin
+  if Assigned(N) then
+  begin
+    Result := GetNodePath(N.Parent);
+    if Result <> '' then
+      Result := Result + #2 + N.Text
+    else
+      Result := N.Text;
+  end
+  else
+    Result := '';
+end;
+
+function TframeDRUI.FindPathNode(Path: String): TTreeNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  if Path = '' then Exit;
+  if Path[1] = #2 then Delete(Path, 1, 1);
+  for i := 0 to tvCrud.Items.Count - 1 do
+  begin
+    if GetNodePath(tvCrud.Items[i]) = Path then
+    begin
+      Result := tvCrud.Items[i];
+      Exit;
+    end;
+  end;
+end;
+
+function TframeDRUI.AddPathNode(ParentNode: TTreeNode; Path: String): TTreeNode;
+var
+  i, Idx: Integer;
+  Target: String;
+  Node, Child: TTreeNode;
+begin
+  if Path = '' then
+  begin
+    Result := nil;
+    Exit;
+  end;
+  if Path[1] = #2 then Delete(Path, 1, 1);
+  Idx := Pos(#2, Path);
+  if Idx > 0 then
+    Target := Copy(Path, 1, Idx - 1)
+  else
+    Target := Path;
+  Node := ParentNode;
+  while Target <> '' do
+  begin
+    Child := nil;
+    if Assigned(Node) then
+    begin
+      for i := 0 to Node.Count - 1 do
+      begin
+        if Node.Items[i].Text = Target then
+        begin
+          Child := Node.Items[i];
+          Break;
+        end;
+      end;
+    end
+    else
+    begin
+      for i := 0 to tvCrud.Items.Count - 1 do
+      begin
+        if (tvCrud.Items[i].Parent = nil) and (tvCrud.Items[i].Text = Target) then
+        begin
+          Child := tvCrud.Items[i];
+          Break;
+        end;
+      end;
+    end;
+    if not Assigned(Child) then
+      Node := tvCrud.Items.AddChild(Node, Target)
+    else
+      Node := Child;
+    Delete(Path, 1, Length(Target) + 1);
+    Idx := Pos(#2, Path);
+    if Idx > 0 then
+      Target := Copy(Path, 1, Idx - 1)
+    else
+      Target := Path;
+  end;
+  Result := Node;
+end;
+
 procedure TframeDRUI.RefreshGroupings;
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	tvCrud.Items.BeginUpdate;
@@ -145,28 +235,28 @@ begin
 			case cmbGroup.ItemIndex of
 				0: // relation
 					begin
-						N := tvCrud.FindPathNode(#2 + dtaCrud.FieldByName('table').AsString + #2 + dtaCrud.FieldByName('op').AsString);
+						N := FindPathNode(#2 + dtaCrud.FieldByName('table').AsString + #2 + dtaCrud.FieldByName('op').AsString);
 						if Assigned(N) then
 						begin
 							tvCrud.Items.AddChild(N, dtaCrud.FieldByName('line').AsString);
 						end
 						else
 						begin
-							N := tvCrud.AddPathNode(nil, #2 + dtaCrud.FieldByName('table').AsString + #2 + dtaCrud.FieldByName('op').AsString);
+							N := AddPathNode(nil, #2 + dtaCrud.FieldByName('table').AsString + #2 + dtaCrud.FieldByName('op').AsString);
 							tvCrud.Items.AddChild(N, dtaCrud.FieldByName('line').AsString);
 						end;
 					end;
 
 				1: // operation
 					begin
-						N := tvCrud.FindPathNode(#2 + dtaCrud.FieldByName('op').AsString + #2 + dtaCrud.FieldByName('table').AsString);
+						N := FindPathNode(#2 + dtaCrud.FieldByName('op').AsString + #2 + dtaCrud.FieldByName('table').AsString);
 						if Assigned(N) then
 						begin
 							tvCrud.Items.AddChild(N, dtaCrud.FieldByName('line').AsString);
 						end
 						else
 						begin
-							N := tvCrud.AddPathNode(nil, #2 + dtaCrud.FieldByName('op').AsString + #2 + dtaCrud.FieldByName('table').AsString);
+							N := AddPathNode(nil, #2 + dtaCrud.FieldByName('op').AsString + #2 + dtaCrud.FieldByName('table').AsString);
 							tvCrud.Items.AddChild(N, dtaCrud.FieldByName('line').AsString);
 						end;
 					end;

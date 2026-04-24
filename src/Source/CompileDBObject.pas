@@ -19,14 +19,14 @@ unit CompileDBObject;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, IBConnection, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, SQLYacc, Globals;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, IBConnection, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, SQLYacc, Globals;
 
 type
 	TCreateType = (crtCallback, crtInline, crtMultiStatement);
 
 	TfrmCompileDBObject = class(TForm)
 		btnOK: TButton;
-		aniCompile: TAnimate;
+		aniCompile: TProgressBar;
 		memStatus: TMemo;
 		procedure FormCreate(Sender: TObject);
 		procedure FormDestroy(Sender: TObject);
@@ -44,7 +44,7 @@ type
 		FCreateType : TCreateType;
 		FStatusText : String;
 		procedure BailOut(ErrMessage : String);
-		procedure WMBuggerOff(var Message : TMessage); message WM_BUGGER_OFF;
+		procedure WMBuggerOff(var Message : TMessage); message LM_USER + 101;
 	public
 		{ Public declarations }
 		property CompileErrors : Boolean read FErrors;
@@ -78,7 +78,7 @@ begin
 	FObjectType := ObjectType;
 	FTransaction := Transaction;
 	FDatabase := Database;
-	AniCompile.ResName := 'compile';
+	// AniCompile.ResName := 'compile';
 	Caption := FormCaption;
 	FStatusText := StatusText;
 	ShowModal;
@@ -97,7 +97,7 @@ begin
 	FObjectType := ObjectType;
 	FTransaction := Transaction;
 	FDatabase := Database;
-	AniCompile.ResName := 'compile';
+	// AniCompile.ResName := 'compile';
 	ShowModal;
 end;
 
@@ -108,7 +108,7 @@ begin
 	FCreateType := crtCallback;
 	FErrors := False;
 	FForm := Form;
-	AniCompile.ResName := 'compile';
+	// AniCompile.ResName := 'compile';
 	ShowModal;
 end;
 
@@ -122,7 +122,7 @@ begin
 	FDatabase := Database;
 	FTransaction := Transaction;
 	FCompileText := CompileText;
-	AniCompile.ResName := 'compile';
+	// AniCompile.ResName := 'compile';
 	ShowModal;
 end;
 
@@ -141,7 +141,7 @@ begin
 	//go to the error
 	memStatus.Text := 'Operation Completed - There Were Errors';
 	memStatus.Lines.Add(ErrMessage);
-	AniCompile.Stop;
+	// AniCompile.Stop;
 	FErrors := True;
 end;
 
@@ -176,8 +176,8 @@ begin
 		else
 			memStatus.Text := FStatusText;
 		Refresh;
-		AniCompile.Open := True;
-		AniCompile.Active := True;
+		// AniCompile.Open := True;
+		// AniCompile.Active := True;
 		FForm.ClearErrors;
 		FForm.ForceRefresh;
 
@@ -200,7 +200,7 @@ begin
 										if MessageDlg('The Stored Procedure Name has changed. Compiling this stored proc will create a new stored proc with the ' +
 																	'name "' + FParser.yyText + '". Are you sure you wish to do this?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
 										begin
-											AniCompile.Stop;
+											// AniCompile.Stop;
 											memStatus.Text := 'Operation Aborted by User';
 											btnOK.Visible := True;
 											Exit;
@@ -277,7 +277,7 @@ begin
               FForm.SetObjectName(ThisObject);
               FForm.SetObjectModified(False);
 							memStatus.Text := 'Operation Completed - No Errors';
-              AniCompile.Stop;
+              // AniCompile.Stop;
 						except
               On E : EIB_ISCError do
               begin
@@ -327,7 +327,7 @@ begin
 
 											memStatus.Text := 'Operation Completed - There Were Errors';
                       FErrors := True;
-                      AniCompile.Stop;
+                      // AniCompile.Stop;
                     end
                     else
                     begin
@@ -399,7 +399,7 @@ begin
 							end;
 
               memStatus.Text := 'Operation Completed - No Errors';
-              AniCompile.Stop;
+              // AniCompile.Stop;
             except
               On E : EIB_ISCError do
 							begin
@@ -448,7 +448,7 @@ begin
                         FForm.AddCompileError(E.Message);
 
                       memStatus.Text := 'Operation Completed - There Were Errors';
-                      AniCompile.Stop;
+                      // AniCompile.Stop;
 											FErrors := True;
 										end
                     else
@@ -488,7 +488,7 @@ begin
                     if MessageDlg('The View Name has changed. Compiling this view will create a new view with the ' +
                                   'name "' + FParser.yyText + '". Are you sure you wish to do this?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
                     begin
-                      AniCompile.Stop;
+                      // AniCompile.Stop;
 											memStatus.Text := 'Operation Aborted by User';
                       btnOK.Visible := True;
                       Exit;
@@ -529,7 +529,7 @@ begin
               FForm.SetObjectName(ThisObject);
               FForm.SetObjectModified(False);
 							memStatus.Text := 'Operation Completed - No Errors';
-              AniCompile.Stop;
+              // AniCompile.Stop;
             except
               On E : Exception do
               begin
@@ -555,7 +555,7 @@ begin
 										if MessageDlg('The Exception Name has changed. Compiling this exception will create a new exception with the ' +
                                   'name "' + ThisObject + '". Are you sure you wish to do this?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
                     begin
-                      AniCompile.Stop;
+                      // AniCompile.Stop;
                       memStatus.Text := 'Operation Aborted by User';
                       btnOK.Visible := True;
 											Exit;
@@ -595,7 +595,7 @@ begin
               FForm.SetObjectModified(False);
               FForm.SetObjectName(ThisObject);
               memStatus.Text := 'Operation Completed - No Errors';
-              AniCompile.Stop;
+              // AniCompile.Stop;
             except
 							On E : EIB_ISCError do
               begin
@@ -631,7 +631,7 @@ begin
 							FForm.SetObjectModified(False);
               FForm.SetObjectName(ThisObject);
 							memStatus.Text := 'Operation Completed - No Errors';
-              AniCompile.Stop;
+              // AniCompile.Stop;
             except
               On E : EIB_ISCError do
               begin
@@ -716,7 +716,7 @@ begin
                 FForm.SetObjectModified(False);
 								FForm.SetObjectName(ThisObject);
                 memStatus.Text := 'Operation Completed - No Errors';
-								AniCompile.Stop;
+								// AniCompile.Stop;
               end
               else
                 raise Exception.Create('Internal Error');
@@ -781,7 +781,7 @@ begin
               FForm.SetObjectModified(False);
               FForm.SetObjectName(ThisObject);
               memStatus.Text := 'Operation Completed - No Errors';
-              AniCompile.Stop;
+              // AniCompile.Stop;
             except
               On E : EIB_ISCError do
 							begin
@@ -809,10 +809,10 @@ begin
 							end;
 							MarathonIDEInstance.RecordToScript(FCompileText.Text, FForm.GetActiveConnectionName);
 							memStatus.Text := 'Operation Completed - No Errors';
-							AniCompile.Stop;
-							PostMessage(Self.Handle, WM_BUGGER_OFF, 0, 0);
+							// AniCompile.Stop;
+							PostMessage(Self.Handle, LM_USER + 101, 0, 0);
 						except
-							on E: EIB_ISCError do
+							on E: EIBError do
 								BailOut(E.Message);
 							on E: Exception do
 								BailOut(E.Message);
@@ -842,10 +842,10 @@ begin
 						Q.Free;
 					end;
 					memStatus.Text := 'Operation Completed - No Errors';
-					AniCompile.Stop;
+					// AniCompile.Stop;
 					PostMessage(Self.Handle, WM_BUGGER_OFF, 0, 0);
 				except
-					on E: EIB_ISCError do
+					on E: EIBError do
 						BailOut(E.Message);
 					on E: Exception do
 						BailOut(E.Message);
@@ -859,7 +859,7 @@ begin
 						Domain.SaveDomain;
 						FForm.SetObjectModified(False);
 						memStatus.Text := 'Operation Completed - No Errors';
-						AniCompile.Stop;
+						// AniCompile.Stop;
 					except
 						On E : Exception do
 						begin
@@ -899,5 +899,19 @@ Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.5  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block
+
+}ock
+
+}
+
+}ock
+
+}w CVS powered comment block
+
+}ock
+
+}
+
+}ock
 
 }

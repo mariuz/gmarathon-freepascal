@@ -52,7 +52,7 @@ unit EditorIndex;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, ExtCtrls, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, ExtCtrls, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
 
 type
 	TfrmEditorIndex = class(TForm, IMarathonBaseForm)
@@ -450,4 +450,3 @@ begin
 end;
 
 end.
-

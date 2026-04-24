@@ -42,7 +42,13 @@ interface
 
 {$I compilerdefines.inc}
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, Registry, FileCtrl, ActnList, Buttons, rmPathTreeView, Globals, MarathonIDE;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, Registry, FileCtrl, ActnList, Buttons, Globals, MarathonIDE;
 
 type
 	TfrmCodeSnippets = class(TForm)
@@ -50,7 +56,7 @@ type
     Panel2: TPanel;
     Splitter1: TSplitter;
     memCodeSnippets: TMemo;
-    tvCodeSnippets: TrmPathTreeView;
+    tvCodeSnippets: TTreeView;
     PopupMenu1: TPopupMenu;
     mnuiStayOnTop: TMenuItem;
     N1: TMenuItem;
@@ -84,7 +90,7 @@ type
     actFullCollapse: TAction;
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure FormCreate(Sender: TObject);
-		procedure tvCodeSnippetsChange(Sender: TObject; Node: TrmTreeNode);
+		procedure tvCodeSnippetsChange(Sender: TObject; Node: TTreeNode);
 		procedure tvCodeSnippetsMouseDown(Sender: TObject; Button: TMouseButton;
 			Shift: TShiftState; X, Y: Integer);
 		procedure tvCodeSnippetsStartDrag(Sender: TObject; var DragObject: TDragObject);
@@ -113,14 +119,17 @@ type
 		procedure tvCodeSnippetsDragOver(Sender, Source: TObject; X,
 			Y: Integer; State: TDragState; var Accept: Boolean);
 		procedure tvCodeSnippetsCompare(Sender: TObject; Node1,
-			Node2: TrmTreeNode; Data: Integer; var Compare: Integer);
+			Node2: TTreeNode; Data: Integer; var Compare: Integer);
 		procedure tvCodeSnippetsKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 	private
 		{ Private declarations }
 		FOnTop: Boolean;
 		FCarla: TDragQueenCarla;
-		procedure RecurseAdd(FullPath, Snip: String; Node: TrmTreeNode);
-		procedure CatalogSnippets(Path: String; Node: TrmTreeNode);
+		procedure RecurseAdd(FullPath, Snip: String; Node: TTreeNode);
+		procedure CatalogSnippets(Path: String; Node: TTreeNode);
+    function GetNodePath(N: TTreeNode): String;
+    function AddPathNode(Path: String): TTreeNode;
+    function FindPathNode(Path: String): TTreeNode;
 		public
 		{ Public declarations }
 		procedure LoadSnippets;
@@ -136,14 +145,14 @@ uses InputDialog, EditorSnippet, HelpMap, GSSRegistry;
 
 {$R *.lfm}
 
-procedure TfrmCodeSnippets.RecurseAdd(FullPath, Snip: String; Node: TrmTreeNode);
+procedure TfrmCodeSnippets.RecurseAdd(FullPath, Snip: String; Node: TTreeNode);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 	P: PNodeData;
 	L: TStringList;
 
 begin
-	N := tvCodeSnippets.AddPathNode(nil, '\Snippets' + FullPath);
+	N := AddPathNode('\Snippets' + FullPath);
 	New(P);
 	P^.Caption := Snip;
 	L := TStringList.Create;
@@ -158,16 +167,16 @@ begin
 	N.SelectedIndex := 10;
 end;
 
-procedure TfrmCodeSnippets.CatalogSnippets(Path: String; Node: TrmTreeNode);
+procedure TfrmCodeSnippets.CatalogSnippets(Path: String; Node: TTreeNode);
 var
 	R: TSearchRec;
 	Res: Integer;
-	N: TrmTreeNode;
+	N: TTreeNode;
 	P: PNodeData;
 	L: TStringList;
 
 begin
-	Res := FindFirstUTF8(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
+	Res := FindFirst(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
 	while Res = 0 do
 	begin
 		if R.Attr = faDirectory then
@@ -200,16 +209,120 @@ begin
 				N.SelectedIndex := 10;
 			end;
 		end;
-		Res := FindNextUTF8(R); { *Converted from FindNext*  }
+		Res := FindNext(R); { *Converted from FindNext*  }
 	end;
-	FindCloseUTF8(R); { *Converted from FindClose*  }
+	FindClose(R); { *Converted from FindClose*  }
 
 	tvCodeSnippets.AlphaSort;
 end;
 
+function TfrmCodeSnippets.GetNodePath(N: TTreeNode): String;
+begin
+  if Assigned(N) then
+  begin
+    Result := GetNodePath(N.Parent);
+    if Result <> '' then
+      Result := Result + '\' + N.Text
+    else
+      Result := N.Text;
+  end
+  else
+    Result := '';
+end;
+
+function TfrmCodeSnippets.AddPathNode(Path: String): TTreeNode;
+var
+  i: Integer;
+  Target: String;
+  Idx: Integer;
+  Node, Child: TTreeNode;
+begin
+  if Path = '' then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
+  if Path[1] = '\' then Delete(Path, 1, 1);
+
+  Idx := Pos('\', Path);
+  if Idx > 0 then
+  begin
+    Target := Copy(Path, 1, Idx - 1);
+    Path := Copy(Path, Idx + 1, Length(Path));
+  end
+  else
+  begin
+    Target := Path;
+    Path := '';
+  end;
+
+  Node := nil;
+  for i := 0 to tvCodeSnippets.Items.Count - 1 do
+  begin
+    if (tvCodeSnippets.Items[i].Text = Target) and (GetNodePath(tvCodeSnippets.Items[i].Parent) = '') then
+    begin
+       Node := tvCodeSnippets.Items[i];
+       Break;
+    end;
+  end;
+
+  if not Assigned(Node) then
+    Node := tvCodeSnippets.Items.Add(nil, Target);
+
+  // Simple recursive add for segments
+  while Path <> '' do
+  begin
+    Idx := Pos('\', Path);
+    if Idx > 0 then
+    begin
+      Target := Copy(Path, 1, Idx - 1);
+      Path := Copy(Path, Idx + 1, Length(Path));
+    end
+    else
+    begin
+      Target := Path;
+      Path := '';
+    end;
+
+    Child := nil;
+    for i := 0 to Node.Count - 1 do
+    begin
+      if Node.Items[i].Text = Target then
+      begin
+        Child := Node.Items[i];
+        Break;
+      end;
+    end;
+    if not Assigned(Child) then
+      Node := tvCodeSnippets.Items.AddChild(Node, Target)
+    else
+      Node := Child;
+  end;
+  Result := Node;
+end;
+
+function TfrmCodeSnippets.FindPathNode(Path: String): TTreeNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  if Path = '' then Exit;
+  if Path[1] = '\' then Delete(Path, 1, 1);
+
+  for i := 0 to tvCodeSnippets.Items.Count - 1 do
+  begin
+    if GetNodePath(tvCodeSnippets.Items[i]) = Path then
+    begin
+      Result := tvCodeSnippets.Items[i];
+      Exit;
+    end;
+  end;
+end;
+
 procedure TfrmCodeSnippets.LoadSnippets;
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	tvCodeSnippets.Items.Clear;
@@ -220,7 +333,7 @@ end;
 
 procedure TfrmCodeSnippets.AddSnippet(Snip: String);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Items.GetFirstNode;
@@ -327,7 +440,7 @@ end;
 procedure TfrmCodeSnippets.actNewFolderExecute(Sender: TObject);
 var
 	Imp: TfrmInputDialog;
-	N: TrmTreeNode;
+	N: TTreeNode;
 	Path, NodePath: String;
 
 begin
@@ -340,12 +453,12 @@ begin
 		begin
 			// Get the full path, but delete the first "\Snippets\", because it is just
 			// the root and no folder name
-			NodePath := tvCodeSnippets.NodePath(tvCodeSnippets.Selected);
+			NodePath := GetNodePath(tvCodeSnippets.Selected);
 			Delete(NodePath, 1, 10);
 
 			Path := gSnippetsDir + NodePath + '\' + Imp.edItem.Text;
-			ForceDirectoriesUTF8(Path); { *Converted from ForceDirectories*  }
-			if tvCodeSnippets.FindPathNode(NodePath + '\' + Imp.edItem.Text) <> nil then
+			ForceDirectories(Path);
+			if FindPathNode(NodePath + '\' + Imp.edItem.Text) <> nil then
 			begin
 				MessageDlg('The folder "' + Imp.edItem.Text + '" already exists.', mtError, [mbOK], 0);
 				Exit;
@@ -364,7 +477,7 @@ end;
 
 procedure TfrmCodeSnippets.actNewFolderUpdate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Selected;
@@ -376,7 +489,7 @@ end;
 
 procedure TfrmCodeSnippets.actNewSnippetExecute(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 	NodePath, NewNodePath: String;
 
 begin
@@ -385,7 +498,7 @@ begin
 		// Get the full path, but delete the first "\Snippets", because it is just
 		// the root and no folder name
 		N := tvCodeSnippets.Selected;
-		NodePath := tvCodeSnippets.NodePath(N);
+		NodePath := GetNodePath(N);
 		Delete(NodePath, 1, 9);
 
 		with TfrmEditorSnippet.NewSnippet(Self, NodePath) do
@@ -406,7 +519,7 @@ end;
 
 procedure TfrmCodeSnippets.actNewSnippetUpdate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Selected;
@@ -418,7 +531,7 @@ end;
 
 procedure TfrmCodeSnippets.actDeleteFolderExecute(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 	NodePath: String;
 
 		procedure KillDirectory(Path : String);
@@ -427,7 +540,7 @@ var
 			Res: Integer;
 
 		begin
-			Res := FindFirstUTF8(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
+			Res := FindFirst(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
 			while Res = 0 do
 			begin
 				if R.Attr = faDirectory then
@@ -436,12 +549,12 @@ var
 						KillDirectory(Path + '\' + R.Name)
 				end
 				else
-					DeleteFileUTF8(Path + '\' + R.Name); { *Converted from DeleteFile*  }
-				Res := FindNextUTF8(R); { *Converted from FindNext*  }
+					DeleteFile(Path + '\' + R.Name); { *Converted from DeleteFile*  }
+				Res := FindNext(R); { *Converted from FindNext*  }
 			end;
-			FindCloseUTF8(R); { *Converted from FindClose*  }
-			if not RemoveDirectory(PChar(Path + '\')) then
-				ShowMessage(IntToStr(GetLastError));
+			FindClose(R); { *Converted from FindClose*  }
+			if not RemoveDir(Path) then
+				ShowMessage(SysErrorMessage(GetLastOSError));
 		end;
 
 begin
@@ -450,7 +563,7 @@ begin
 	begin
 		// Get the full path, but delete the first "\Snippets\", because it is just
 		// the root and no folder name
-		NodePath := tvCodeSnippets.NodePath(N);
+		NodePath := GetNodePath(N);
 		Delete(NodePath, 1, 10);
 
 		NodePath := gSnippetsDir + NodePath;
@@ -461,7 +574,7 @@ end;
 
 procedure TfrmCodeSnippets.actDeleteFolderUpdate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Selected;
@@ -473,7 +586,7 @@ end;
 
 procedure TfrmCodeSnippets.actDeleteSnippetExecute(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 	NodePath, Path: String;
 
 begin
@@ -482,13 +595,13 @@ begin
 	begin
 		// Get the full path, but delete the first "\Snippets\", because it is just
 		// the root and no folder name
-		NodePath := tvCodeSnippets.NodePath(N);
+		NodePath := GetNodePath(N);
 		Delete(NodePath, 1, 10);
 
 		Path := gSnippetsDir + NodePath;
-		if FileExistsUTF8(Path) { *Converted from FileExists*  } then
+		if FileExists(Path) then
 		begin
-			DeleteFileUTF8(Path); { *Converted from DeleteFile*  }
+			DeleteFile(Path); { *Converted from DeleteFile*  }
 			N.Delete;
 		end
 	end;
@@ -496,7 +609,7 @@ end;
 
 procedure TfrmCodeSnippets.actDeleteSnippetUpdate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Selected;
@@ -509,7 +622,7 @@ end;
 procedure TfrmCodeSnippets.actRenameExecute(Sender: TObject);
 var
 	NodePath, OldName, NewName: String;
-	N: TrmTreeNode;
+	N: TTreeNode;
 	Imp: TfrmInputDialog;
 
 begin
@@ -524,13 +637,13 @@ begin
 		begin
 			// Get the full path, but delete the first "\Snippets\", because it is just
 			// the root and no folder name
-			NodePath := tvCodeSnippets.NodePath(tvCodeSnippets.Selected);
+			NodePath := GetNodePath(tvCodeSnippets.Selected);
 			Delete(NodePath, 1, 10);
 
 			NodePath := gSnippetsDir + NodePath;
 			OldName := NodePath;
 			NewName := ExtractFilePath(OldName) + Imp.edItem.Text;
-			RenameFileUTF8(OldName,NewName); { *Converted from RenameFile*  }
+			RenameFile(OldName,NewName);
 			N.Text := Imp.edItem.Text;
 		end;
 	finally
@@ -540,7 +653,7 @@ end;
 
 procedure TfrmCodeSnippets.actRenameUpdate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Selected;
@@ -553,18 +666,18 @@ end;
 procedure TfrmCodeSnippets.actEditSnippetExecute(Sender: TObject);
 var
 	NodePath, FullPathWithFileName: String;
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	// Get the full path, but delete the first "\Snippets\", because it is just
 	// the root and no folder name
 	N := tvCodeSnippets.Selected;
-	NodePath := tvCodeSnippets.NodePath(N);
+	NodePath := GetNodePath(N);
 	Delete(NodePath, 1, 10);
 
 	FullPathWithFileName := gSnippetsDir + NodePath;
 
-	if FileExistsUTF8(FullPathWithFileName) { *Converted from FileExists*  } then
+	if FileExists(FullPathWithFileName) then
 		with TfrmEditorSnippet.ModifySnippet(Self, ExtractFilePath(NodePath), FullPathWithFileName) do
 			try
 				if ShowModal = mrOK then
@@ -579,7 +692,7 @@ end;
 
 procedure TfrmCodeSnippets.actEditSnippetUpdate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	N := tvCodeSnippets.Selected;
@@ -622,7 +735,7 @@ begin
 	{$ENDIF}
 end;
 
-procedure TfrmCodeSnippets.tvCodeSnippetsChange(Sender: TObject; Node: TrmTreeNode);
+procedure TfrmCodeSnippets.tvCodeSnippetsChange(Sender: TObject; Node: TTreeNode);
 begin
 	if Assigned(Node) then
 		if Assigned(Node.Data) then
@@ -632,7 +745,7 @@ begin
 end;
 
 procedure TfrmCodeSnippets.tvCodeSnippetsCompare(Sender: TObject; Node1,
-	Node2: TrmTreeNode; Data: Integer; var Compare: Integer);
+	Node2: TTreeNode; Data: Integer; var Compare: Integer);
 begin
 	// Make sure that folders are sorted before snippets
 	if Node1.ImageIndex < Node2.ImageIndex then
@@ -658,20 +771,20 @@ procedure TfrmCodeSnippets.tvCodeSnippetsDragDrop(Sender, Source: TObject;
 var
 	Attrs: Integer;
 	NodePath, ToPath, FromPath, FromTreePath: String;
-	Node, FromNode: TrmTreeNode;
+	Node, FromNode: TTreeNode;
 
 begin
-	if (Source is TDragQueenCarla) and (Sender is TrmPathTreeView) then
+	if (Source is TDragQueenCarla) and (Sender is TTreeView) then
 	begin
 		Node := tvCodeSnippets.GetNodeAt(X, Y);
 		// Get the full path, but delete the first "\Snippets\", because it is just
 		// the root and no folder name
-		NodePath := tvCodeSnippets.NodePath(Node);
+		NodePath := GetNodePath(Node);
 		Delete(NodePath, 1, 10);
 
 		ToPath := gSnippetsDir + NodePath;
 
-		Attrs := FileGetAttrUTF8(ToPath); { *Converted from FileGetAttr*  }
+		Attrs := FileGetAttr(ToPath); { *Converted from FileGetAttr*  }
 		// Make sure we are moving a snippet or directory to another directory
 		if (Attrs > 0) and ((Attrs and faDirectory) <> 0) then
 		begin
@@ -681,12 +794,11 @@ begin
 
 			if FromPath <> '' then
 			begin
-				FromNode := tvCodeSnippets.FindPathNode(FromTreePath);
-				if Assigned(FromNode) then
+				FromNode := FindPathNode(FromTreePath);				if Assigned(FromNode) then
 				begin
 					FromNode.MoveTo(Node, naAddChild);
 					ToPath := ToPath + '\' + ExtractFileName(FromPath);
-					RenameFileUTF8(FromPath,ToPath); { *Converted from RenameFile*  }
+					RenameFile(FromPath,ToPath); { *Converted from RenameFile*  }
 				end;
 			end;
 		end;
@@ -698,26 +810,26 @@ procedure TfrmCodeSnippets.tvCodeSnippetsDragOver(Sender, Source: TObject;
 var
 	Attrs: Integer;
 	NodePath, FromFolder, ToFolder: String;
-	Node: TrmTreeNode;
+	Node: TTreeNode;
 begin
 	Accept := false;
-	if (Source is TDragQueenCarla) and (Sender is TrmPathTreeView) then
+	if (Source is TDragQueenCarla) and (Sender is TTreeView) then
 	begin
 		Node := tvCodeSnippets.GetNodeAt(X, Y);
 		// Get the full path, but delete the first "\Snippets\", because it is just
 		// the root and no folder name
-		NodePath := tvCodeSnippets.NodePath(Node);
+		NodePath := GetNodePath(Node);
 		Delete(NodePath, 1, 10);
 
 		ToFolder :=  gSnippetsDir + NodePath;
 
-		Attrs := FileGetAttrUTF8(ToFolder); { *Converted from FileGetAttr*  }
+		Attrs := FileGetAttr(ToFolder); { *Converted from FileGetAttr*  }
 		if Attrs = faDirectory then
 		begin
 			Accept := True;
 			FromFolder := (Source as TDragQueenCarla).DragData;
 			// Make sure that we are not moving a directory into one of its sub-directories
-			Attrs := FileGetAttrUTF8(FromFolder); { *Converted from FileGetAttr*  }
+			Attrs := FileGetAttr(FromFolder); { *Converted from FileGetAttr*  }
 			if Attrs = faDirectory then
 				if StrLComp(PChar(FromFolder), PChar(ToFolder), Length(FromFolder)) = 0 then
 					Accept := False;
@@ -746,7 +858,7 @@ end;
 procedure TfrmCodeSnippets.tvCodeSnippetsMouseDown(Sender: TObject;
 	Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-	T: TrmTreeNode;
+	T: TTreeNode;
 
 begin
 	if Button = mbRight then
@@ -768,7 +880,7 @@ begin
 
 	// Get the full path, but delete the first "Snippets\", because it is just the root
 	// and no folder name
-	NodePath := tvCodeSnippets.NodePath(tvCodeSnippets.Selected);
+	NodePath := GetNodePath(tvCodeSnippets.Selected);
 	Delete(NodePath, 1, 10);
 
 	FCarla.DragData := gSnippetsDir + NodePath;

@@ -1,12 +1,16 @@
-
-
 unit FrameDescription;
 
 {$MODE Delphi}
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, SQLDB, MarathonInternalInterfaces;
+uses 
+  {$IFDEF FPC} 
+  LCLIntf, LCLType, LMessages, 
+  {$ELSE} 
+  Windows, Messages, 
+  {$ENDIF} 
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, SQLDB, IBConnection, MarathonInternalInterfaces, LazUTF8, FileUtil;
 
 type
 	TframeDesc = class(TFrame)
@@ -48,10 +52,8 @@ type
 		function CanFindNext : Boolean;
 		function CanPaste : Boolean;
 		function CanRedo : Boolean;
-		function CanSelectAll : Boolean;
 		function CanUndo : Boolean;
-		function CanReplace : Boolean;
-		function CanSaveDoco : Boolean;
+		function CanSelectAll : Boolean;
 		function CanCaptureSnippet : Boolean;
 	end;
 
@@ -61,97 +63,108 @@ uses MarathonIDE;
 
 {$R *.lfm}
 
+{ TframeDesc }
+
+procedure TframeDesc.Init(Form: IMarathonBaseForm);
+begin
+	FForm := Form;
+end;
+
 function TframeDesc.GetDoco: String;
 begin
 	Result := edDoco.Text;
 end;
 
-procedure TframeDesc.Init(Form : IMarathonBaseForm);
+procedure TframeDesc.SetActive;
 begin
-	FForm := Form;
-	SetupNonSyntaxEditor(edDoco);
+	try
+		SetupNonSyntaxEditor(edDoco);
+	except
+		// bite my crunker
+	end;
+	LoadDoco;
 end;
 
 procedure TframeDesc.LoadDoco;
 begin
 	try
-		qryDoco.BeginBusy(False);
+		// qryDoco.BeginBusy(False);
 		Screen.Cursor := crHourGlass;
-		qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-    qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
-    qryDoco.Close;
-    qryDoco.SQL.Clear;
+		qryDoco.Database := TIBConnection(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
+		qryDoco.Transaction := TSQLTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
+		qryDoco.Close;
+		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
-			ctDomain:
+			MarathonProjectCacheTypes.ctDomain:
 				qryDoco.SQL.Add('select rdb$field_name, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctSP:
+			MarathonProjectCacheTypes.ctSP:
 				qryDoco.SQL.Add('select rdb$procedure_name, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctTrigger:
+			MarathonProjectCacheTypes.ctTrigger:
 				qryDoco.SQL.Add('select rdb$trigger_name, rdb$description from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctException:
+			MarathonProjectCacheTypes.ctException:
 				qryDoco.SQL.Add('select rdb$exception_name, rdb$description from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctTable:
+			MarathonProjectCacheTypes.ctTable:
 				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctView:
+			MarathonProjectCacheTypes.ctView:
 				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctUDF:
+			MarathonProjectCacheTypes.ctUDF:
 				qryDoco.SQL.Add('select rdb$function_name, rdb$description from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
 		end;
 		qryDoco.Open;
-		Doco := qryDoco.FieldByName('rdb$description').AsString;
-    qryDoco.Close;
-    if qryDoco.Transaction.Active then
-      qryDoco.Transaction.Commit;
-    qryDoco.// // // RequestLive := False;
-    edDoco.Modified := False;
-    FDocoModified := False;
-  finally
-    qryDoco.EndBusy;
-    Screen.Cursor := crDefault;
+		SetDoco(qryDoco.FieldByName('rdb$description').AsString);
+		qryDoco.Close;
+		if qryDoco.Transaction.Active then
+			TSQLTransaction(qryDoco.Transaction).Commit;
+		// qryDoco.// // // RequestLive := False;
+		edDoco.Modified := False;
+		FDocoModified := False;
+	finally
+		// qryDoco.EndBusy;
+		Screen.Cursor := crDefault;
 	end;
 end;
 
 procedure TframeDesc.SaveDoco;
 begin
 	try
-		qryDoco.BeginBusy(False);
+		// qryDoco.BeginBusy(False);
 		Screen.Cursor := crHourGlass;
-		qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-		qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
+		qryDoco.Database := TIBConnection(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
+		qryDoco.Transaction := TSQLTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
 		qryDoco.Close;
-		qryDoco.// // // RequestLive := True;
+		// qryDoco.// // // RequestLive := True;
 		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
-			ctDomain:
+			MarathonProjectCacheTypes.ctDomain:
 				qryDoco.SQL.Add('select rdb$field_name, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctSP:
+			MarathonProjectCacheTypes.ctSP:
 				qryDoco.SQL.Add('select rdb$procedure_name, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctTrigger:
+			MarathonProjectCacheTypes.ctTrigger:
 				qryDoco.SQL.Add('select rdb$trigger_name, rdb$description from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctException:
+			MarathonProjectCacheTypes.ctException:
 				qryDoco.SQL.Add('select rdb$exception_name, rdb$description from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctTable:
+			MarathonProjectCacheTypes.ctTable:
 				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctView:
+			MarathonProjectCacheTypes.ctView:
 				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
-			ctUDF:
+			MarathonProjectCacheTypes.ctUDF:
 				qryDoco.SQL.Add('select rdb$function_name, rdb$description from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
 		end;
-    qryDoco.Open;
+		qryDoco.Open;
 		if not (qryDoco.BOF and qryDoco.EOF) then
-    begin
+		begin
 			qryDoco.Edit;
 			qryDoco.FieldByName('rdb$description').AsString := Doco;
 			qryDoco.Post;
 		end;
 		qryDoco.Close;
 		if qryDoco.Transaction.Active then
-			qryDoco.Transaction.Commit;
-		qryDoco.// // // RequestLive := False;
+			TSQLTransaction(qryDoco.Transaction).Commit;
+		// qryDoco.// // // RequestLive := False;
 		edDoco.Modified := False;
 		FDocoModified := False;
 	finally
-		qryDoco.EndBusy;
+		// qryDoco.EndBusy;
 		Screen.Cursor := crDefault;
 	end;
 end;
@@ -163,42 +176,29 @@ end;
 
 procedure TframeDesc.edDocoChange(Sender: TObject);
 begin
-	if Assigned(FForm) then
+	FDocoModified := True;
+end;
+
+procedure TframeDesc.edDocoDragOver(Sender, Source: TObject; X, Y: Integer;
+	State: TDragState; var Accept: Boolean);
+begin
+	Accept := False;
+	if Source is TMarathonTreeNode then
 	begin
-		if Assigned(FForm.GetActiveStatusBar) then
-			FDocoModified := UpdateEditorStatusBar(FForm.GetActiveStatusBar, edDoco);
+		if not edDoco.Focused then
+			edDoco.SetFocus;
+
+		edDoco.CaretXY := edDoco.PixelsToRowColumn(Point(X, Y));
+		Accept := True;
 	end;
 end;
 
-procedure TframeDesc.edDocoDragOver(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean);
+procedure TframeDesc.edDocoDragDrop(Sender, Source: TObject; X, Y: Integer);
 begin
-  if Assigned(FForm) then
-  begin
-    SetFocus;
-    if edDoco.InsertMode then
-    begin
-      if Assigned(FForm.GetActiveStatusBar) then
-        FForm.GetActiveStatusBar.Panels[2].Text := 'Insert'
-    end
-    else
-    begin
-      if Assigned(FForm.GetActiveStatusBar) then
-        FForm.GetActiveStatusBar.Panels[2].Text := 'Overwrite'
-    end;
-    edDoco.CaretXY := TBufferCoord(edDoco.PixelsToRowColumn(X,Y));
-    Accept := True;
-  end;
-end;
-
-procedure TframeDesc.edDocoDragDrop(Sender, Source: TObject; X,	Y: Integer);
-var
-	Tmp : String;
-
-begin
-	if Source is TDragQueen then
-		Tmp := TDragQueen(Source).DragText;
-
-	edDoco.SelText := Tmp;
+	if Source is TMarathonTreeNode then
+	begin
+		edDoco.SelText := TMarathonTreeNode(Source).Text;
+	end;
 end;
 
 procedure TframeDesc.CopyToClipboard;
@@ -213,57 +213,82 @@ end;
 
 procedure TframeDesc.WSFind;
 begin
-  edDoco.WSFind;
+  // edDoco.ExecuteFind;
 end;
 
 procedure TframeDesc.WSFindNext;
 begin
-  edDoco.WSFindNext;
+  // edDoco.ExecuteFindNext;
+end;
+
+procedure TframeDesc.WSReplace;
+begin
+  // edDoco.ExecuteReplace;
 end;
 
 procedure TframeDesc.PasteFromClipboard;
 begin
-  edDoco.PasteFromClipboard;
+	edDoco.PasteFromClipboard;
 end;
 
 procedure TframeDesc.Redo;
 begin
-  edDoco.Redo;
-end;
-
-procedure TframeDesc.SelectAll;
-begin
-  edDoco.SelectAll;
+	edDoco.Redo;
 end;
 
 procedure TframeDesc.Undo;
 begin
-  edDoco.Undo;
+	edDoco.Undo;
+end;
+
+procedure TframeDesc.SelectAll;
+begin
+	edDoco.SelectAll;
+end;
+
+procedure TframeDesc.CaptureSnippet;
+begin
+	MarathonIDEInstance.CaptureSnippet(edDoco.SelText);
+end;
+
+procedure TframeDesc.DoPrint;
+begin
+	//
+end;
+
+procedure TframeDesc.DoPrintPreview;
+begin
+	//
+end;
+
+function TframeDesc.CanPrint: Boolean;
+begin
+	Result := edDoco.Lines.Count > 0;
 end;
 
 function TframeDesc.CanCopy: Boolean;
 begin
-  Result := Length(edDoco.SelText) > 0;
+	Result := edDoco.SelLength > 0;
 end;
 
 function TframeDesc.CanCut: Boolean;
 begin
-  Result := Length(edDoco.SelText) > 0;
+	Result := (not edDoco.ReadOnly) and (edDoco.SelLength > 0);
 end;
 
 function TframeDesc.CanFind: Boolean;
 begin
-  Result := edDoco.Lines.Count > 0;
+	Result := edDoco.Lines.Count > 0;
 end;
 
 function TframeDesc.CanFindNext: Boolean;
 begin
-  Result := edDoco.Lines.Count > 0;
+	Result := edDoco.Lines.Count > 0;
 end;
 
 function TframeDesc.CanPaste: Boolean;
 begin
-  Result := Clipboard.HasFormat(CF_TEXT);
+	Result := not edDoco.ReadOnly;
 end;
 
 function TframeDesc.CanRedo: Boolean;
@@ -271,67 +296,19 @@ begin
 	Result := edDoco.CanRedo;
 end;
 
-function TframeDesc.CanSelectAll: Boolean;
-begin
-  Result := edDoco.Lines.Count > 0;
-end;
-
 function TframeDesc.CanUndo: Boolean;
 begin
-  Result := edDoco.CanUndo;
+	Result := edDoco.CanUndo;
 end;
 
-function TframeDesc.CanSaveDoco: Boolean;
+function TframeDesc.CanSelectAll: Boolean;
 begin
-  Result := FDocoModified;
-end;
-
-function TframeDesc.CanReplace: Boolean;
-begin
-  Result := edDoco.Lines.Count > 0;
-end;
-
-procedure TframeDesc.WSReplace;
-begin
-  edDoco.WSReplace;
-end;
-
-procedure TframeDesc.SetActive;
-begin
-  try
-    edDoco.SetFocus;
-  except
-    On E : Exception do
-    begin
-
-    end;
-  end;  
+	Result := edDoco.Lines.Count > 0;
 end;
 
 function TframeDesc.CanCaptureSnippet: Boolean;
 begin
-  Result := Length(edDoco.SelText) > 1;
-end;
-
-procedure TframeDesc.CaptureSnippet;
-begin
-
-end;
-
-function TframeDesc.CanPrint: Boolean;
-begin
-  Result := (not FForm.GetObjectNewStatus) and (edDoco.Lines.Count > 0);
-end;
-
-procedure TframeDesc.DoPrint;
-begin
-  MarathonIDEInstance.PrintObjectDoco(False, FForm.GetObjectName, FForm.GetActiveConnectionName, FForm.GetActiveObjectType);
-end;
-
-procedure TframeDesc.DoPrintPreview;
-begin
-  MarathonIDEInstance.PrintObjectDoco(True, FForm.GetObjectName, FForm.GetActiveConnectionName, FForm.GetActiveObjectType);
+	Result := Length(edDoco.SelText) > 1;
 end;
 
 end.
-

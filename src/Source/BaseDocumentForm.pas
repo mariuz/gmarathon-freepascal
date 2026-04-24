@@ -19,7 +19,7 @@ unit BaseDocumentForm;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, MarathonInternalInterfaces, Graphics, Controls, Forms, Dialogs, ComCtrls, MarathonProjectCacheTypes, Globals, GimbalToolsAPI;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, MarathonInternalInterfaces, Graphics, Controls, Forms, Dialogs, ComCtrls, MarathonProjectCacheTypes, Globals, GimbalToolsAPI;
 
 type
   TfrmBaseDocumentForm = class(TForm, IMarathonForm, IGimbalIDEWindow)

@@ -4,7 +4,7 @@ unit IBPerformanceMonitor;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBConnection, SQLDB;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBConnection, SQLDB;
 
 type
   TMetricValue = class(TObject)

@@ -37,7 +37,13 @@ unit EditorSnippet;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmPathTreeView, SynEdit, SyntaxMemoWithStuff2;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, SynEdit, SyntaxMemoWithStuff2;
 
 type
 	TfrmEditorSnippet = class(TForm)
@@ -49,7 +55,7 @@ type
 		pgEditorSnippet: TPageControl;
 		tsFolder: TTabSheet;
 		Label2: TLabel;
-		tvSnippetsFolders: TrmPathTreeView;
+		tvSnippetsFolders: TTreeView;
 		tsSnippet: TTabSheet;
 		Label3: TLabel;
 		edSnippet: TSyntaxMemoWithStuff2;
@@ -62,8 +68,9 @@ type
 	private
 		FullPathWithFileName, NodePath: String;
 		FNewSnippet, FModifySnippet: Boolean;
-		procedure CatalogSnippets(Path: String; Node: TrmTreeNode);
+		procedure CatalogSnippets(Path: String; Node: TTreeNode);
 		procedure SetSelectedFolder(Value: String);
+    function FindTreeNodeByPath(Path: String): TTreeNode;
 		{ Private declarations }
 	public
 		{ Public declarations }
@@ -80,10 +87,23 @@ uses Globals, HelpMap, Tools, MenuModule;
 {$R *.lfm}
 
 function TfrmEditorSnippet.GetNodePath(RemoveSnippetsRootFolder: Boolean): String;
+  function GetNodePathInternal(N: TTreeNode): String;
+  begin
+    if Assigned(N) then
+    begin
+      Result := GetNodePathInternal(N.Parent);
+      if Result <> '' then
+        Result := Result + '\' + N.Text
+      else
+        Result := N.Text;
+    end
+    else
+      Result := '';
+  end;
 begin
 	if Assigned(tvSnippetsFolders.Selected) then
 	begin
-		Result := Tools.AddBackSlash(tvSnippetsFolders.NodePath(tvSnippetsFolders.Selected));
+		Result := Tools.AddBackSlash(GetNodePathInternal(tvSnippetsFolders.Selected));
 		if RemoveSnippetsRootFolder then
 			Delete(Result, 1, 9);
 	end
@@ -91,14 +111,45 @@ begin
 		Result := '';
 end;
 
-procedure TfrmEditorSnippet.CatalogSnippets(Path: String; Node: TrmTreeNode);
+function TfrmEditorSnippet.FindTreeNodeByPath(Path: String): TTreeNode;
+var
+  i: Integer;
+  function GetNodePathInternal(N: TTreeNode): String;
+  begin
+    if Assigned(N) then
+    begin
+      Result := GetNodePathInternal(N.Parent);
+      if Result <> '' then
+        Result := Result + '\' + N.Text
+      else
+        Result := N.Text;
+    end
+    else
+      Result := '';
+  end;
+begin
+  Result := nil;
+  if Path = '' then Exit;
+  if Path[1] = '\' then Delete(Path, 1, 1);
+
+  for i := 0 to tvSnippetsFolders.Items.Count - 1 do
+  begin
+    if GetNodePathInternal(tvSnippetsFolders.Items[i]) = Path then
+    begin
+      Result := tvSnippetsFolders.Items[i];
+      Exit;
+    end;
+  end;
+end;
+
+procedure TfrmEditorSnippet.CatalogSnippets(Path: String; Node: TTreeNode);
 var
 	R: TSearchRec;
 	Res: Integer;
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
-	Res := FindFirstUTF8(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
+	Res := FindFirst(Path + '\*.*',faAnyFile,R); { *Converted from FindFirst*  }
 	while Res = 0 do
 	begin
 		if R.Attr = faDirectory then
@@ -111,27 +162,25 @@ begin
 				N.SelectedIndex := 1;
 			end;
 		end;
-		Res := FindNextUTF8(R); { *Converted from FindNext*  }
+		Res := FindNext(R); { *Converted from FindNext*  }
 	end;
-	FindCloseUTF8(R); { *Converted from FindClose*  }
+	FindClose(R); { *Converted from FindClose*  }
 end;
 
 procedure TfrmEditorSnippet.SetSelectedFolder(Value: String);
 var
-	N : TrmTreeNode;
+	N : TTreeNode;
 begin
 	// make sure there is no backslash at the end of the path string
 	if Copy(Value, Length(Value), 1) = '\' then
 		Delete(Value, Length(Value), 1);
 
-	N := tvSnippetsFolders.FindPathNode('\Snippets' + Value);
+	N := FindTreeNodeByPath('\Snippets' + Value);
 	if Assigned(N) then
 	begin
 		N.Selected := True;
 		N.Focused := True;
-	end
-	else
-		tvSnippetsFolders.TopItem.Selected;
+	end;
 end;
 
 constructor TfrmEditorSnippet.NewSnippet(const AOwner: TComponent; NodePath: String);
@@ -153,7 +202,7 @@ end;
 
 procedure TfrmEditorSnippet.FormCreate(Sender: TObject);
 var
-	N: TrmTreeNode;
+	N: TTreeNode;
 
 begin
 	LoadFormPosition(Self);
@@ -234,7 +283,7 @@ begin
 	if FNewSnippet then
 	begin
 		FullFileName := gSnippetsDir + GetNodePath(True) + edSnippetName.Text + '.snp';
-		if FileExistsUTF8(FullFileName) { *Converted from FileExists*  } then
+		if FileExists(FullFileName) { *Converted from FileExists*  } then
 		begin
 			MessageDlg('The snippet "' + edSnippetName.Text + '" already exists in this folder.', mtError, [mbOK], 0);
 			edSnippetName.SetFocus;

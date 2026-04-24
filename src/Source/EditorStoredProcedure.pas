@@ -21,9 +21,9 @@ unit EditorStoredProcedure;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, Tabs, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
 	Variants, {$ENDIF}
-	rmTabs3x, rmCollectionListBox, BufDataset, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmNotebook2;
+	  BufDataset, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI;
 
 type
 	TfrmStoredProcedure = class(TfrmBaseDocumentDataAwareForm, IMarathonStoredProcEditor, IGimbalIDESQLTextEditor)
@@ -39,14 +39,14 @@ type
     qryUtil: TSQLQuery;
 		edEditor: TSyntaxMemoWithStuff2;
 		tsDependencies: TTabSheet;
-    nbResults: TrmNoteBookControl;
+    nbResults: TPageControl;
 		grdResults: TDBGrid;
 		pnledResults: TDBPanelEdit;
 		pnlDataView: TPanel;
 		navDataView: TDBNavigator;
-    nbpForm : TrmNotebookPage;
-    nbpDataSheet : TrmNotebookPage;
-		tabResults: TrmTabSet;
+    nbpForm : TTabSheet;
+    nbpDataSheet : TTabSheet;
+		tabResults: TTabControl;
 		tranResults: TSQLTransaction;
 		tsDRUI: TTabSheet;
 		tsGrants: TTabSheet;
@@ -70,7 +70,7 @@ type
 		framDoco: TframeDesc;
     dlgSave: TSaveDialog;
     pnlMessages: TPanel;
-    lstResults: TrmCollectionListBox;
+    lstResults: TListBox;
 		procedure lstResultsClick(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure FormCreate(Sender: TObject);
@@ -86,7 +86,7 @@ type
 		procedure grdResultsDblClick(Sender: TObject);
 		procedure edEditorChange(Sender: TObject);
 		procedure tabResultsChange(Sender: TObject; NewTab: Integer; var AllowChange: Boolean);
-		procedure edEditorGetHintText(Sender: TObject; Token: String;	var HintText: String; HintType: THintType);
+		// procedure edEditorGetHintText(Sender: TObject; Token: String;	var HintText: String; HintType: THintType);
 		procedure edEditorNavigateHyperLinkClick(Sender: TObject;	Token: String);
 		procedure txtParametersnullValidate(Sender: TField);
 		procedure txtParametersnullChange(Sender: TField);
@@ -108,9 +108,11 @@ type
 		FParameterList: TStringList;
 		LinePos: LongInt;
 		It: TMenuItem;
+		{$IFDEF WINDOWS}
 		procedure WMMove(var Message: TMessage); message WM_MOVE;
 		procedure WMNCLButtonDown(var Message: TMessage); message WM_NCLBUTTONDOWN;
 		procedure WMNCRButtonDown(var Message: TMessage); message WM_NCRBUTTONDOWN;
+    {$ENDIF}
 		function GetParameters(Force: Boolean; var Params: String): Boolean;
 		function NeedParameters: Boolean;
 		function HasParameters: Boolean;
@@ -1461,7 +1463,7 @@ begin
 end;
 
 
-procedure TfrmStoredProcedure.edEditorGetHintText(Sender: TObject; Token: String; var HintText: String; HintType: THintType);
+{procedure TfrmStoredProcedure.edEditorGetHintText(Sender: TObject; Token: String; var HintText: String; HintType: THintType);
 var
 	Tmp: String;
 	V: Variant;
@@ -1500,7 +1502,7 @@ begin
 	end
 	else
 		HintText := MarathonIDEInstance.GetHintTextForToken(Token, ConnectionName);
-end;
+end;}
 
 procedure TfrmStoredProcedure.edEditorNavigateHyperLinkClick(Sender: TObject; Token: String);
 begin
@@ -1560,11 +1562,13 @@ begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmStoredProcedure.WMMove(var Message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 function TfrmStoredProcedure.CheckInputParamsImpact: Boolean;
 var
@@ -3188,5 +3192,7 @@ Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block
+
+}k
 
 }

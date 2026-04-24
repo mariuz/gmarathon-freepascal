@@ -21,7 +21,7 @@ interface
 
 {$I compilerdefines.inc}
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Menus, {$IFDEF D6_OR_HIGHER}
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Menus, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
 	ActnList;
 

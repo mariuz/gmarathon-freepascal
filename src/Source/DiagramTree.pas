@@ -2,7 +2,7 @@ unit DiagramTree;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ImgList, CommCtrl, InterBaseExplainPlan;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ImgList, ComCtrls, interbaseexplainplan;
 
 type
   TLayout = (loVertical, loHorizontal);
@@ -418,7 +418,7 @@ begin
 
   // Draw the node's value text.
   R := Rect(FPosition.Left + 2, FPosition.Top + 32, FPosition.Right - 2, FPosition.Bottom - 16);
-  DrawTextEx(cvs.Handle, PChar(Caption), Length(Caption), R, DT_CENTER or DT_SINGLELINE or DT_END_ELLIPSIS, nil);
+  DrawText(cvs.Handle, PChar(Caption), Length(Caption), R, DT_CENTER or DT_SINGLELINE or DT_END_ELLIPSIS);
 end;
 
 // Draw the subtree rooted at this node.
@@ -669,8 +669,9 @@ end;
 procedure TDiagramTree.CreateWnd;
 begin
   inherited CreateWnd;
-  if (Images <> nil) and Images.HandleAllocated then
-    Perform(TCM_SETIMAGELIST, 0, Images.Handle);
+  if (Images <> nil) then
+  begin
+  end;
 end;
 
 procedure TDiagramTree.DestroyWnd;
@@ -680,7 +681,6 @@ end;
 
 procedure TDiagramTree.ImageListChange(Sender : TObject);
 begin
-  Perform(TCM_SETIMAGELIST, 0, TCustomImageList(Sender).Handle);
 end;
 
 
@@ -693,10 +693,7 @@ begin
   begin
     Images.RegisterChanges(FImageChangeLink);
     Images.FreeNotification(Self);
-    Perform(TCM_SETIMAGELIST, 0, Images.Handle);
-  end
-  else
-    Perform(TCM_SETIMAGELIST, 0, 0);
+  end;
 end;
 
 procedure TDiagramTree.SelectNode(new_selected : TDiagramNode);
@@ -761,7 +758,7 @@ var
   Flags : longint;
 begin
   Result := Rect(0, 0, MaxWidth, 0);
-  Flags := DT_TOP or DT_NOPREFIX or DT_CALCRECT or DrawTextBiDiModeFlagsReadingOnly;
+  Flags := DT_TOP or DT_NOPREFIX or DT_CALCRECT;
 
   if Assigned(AData) and (TObject(AData) is TInterbasePlanObject) then
   begin
@@ -791,7 +788,7 @@ begin
   R := ClientRect;
   InflateRect(R, -4, -4);
   Canvas.Font.Color := clInfoText;
-  Flags := DT_TOP or DT_NOPREFIX or DT_WORDBREAK or DrawTextBiDiModeFlagsReadingOnly;
+  Flags := DT_TOP or DT_NOPREFIX or DT_WORDBREAK;
 
   if Assigned(FData) and (TObject(FData) is TInterbasePlanObject) then
     PaintPlanObject(R, TInterbasePlanObject(FData), Flags)
@@ -904,6 +901,21 @@ end;
 procedure Register;
 begin
   RegisterComponents('GSS', [TDiagramTree]);
+end;
+
+end.
+
+[TDiagramTree]);
+end;
+
+end.
+
+DiagramTree]);
+end;
+
+end.
+
+[TDiagramTree]);
 end;
 
 end.

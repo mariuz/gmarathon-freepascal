@@ -34,7 +34,7 @@ unit FramePermissions;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Db, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Db, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
 
 type
 	TframePerms = class(TFrame)
@@ -90,7 +90,7 @@ begin
 
 
 	if qryUtil.Transaction.Active then
-		qryUtil.Transaction.Commit;
+		TSQLTransaction(qryUtil.Transaction).Commit;
 
 	lvGrants.Items.BeginUpDate;
 	lvGrants.Items.Clear;
@@ -120,7 +120,7 @@ begin
   lvGrants.Items.EndUpDate;
 	qryUtil.Close;
 	if qryUtil.Transaction.Active then
-		qryUtil.Transaction.Commit;
+		TSQLTransaction(qryUtil.Transaction).Commit;
 end;
 
 procedure TframePerms.SetActive;
@@ -129,4 +129,3 @@ begin
 end;
 
 end.
-

@@ -19,7 +19,7 @@ unit StatementHistory;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Db, ImgList, rmCollectionListBox;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Db, ImgList;
 
 type
   TfrmStatementHistory = class(TForm)
