@@ -17,7 +17,7 @@ unit ScriptMain;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, Buttons, Db, DBCtrls, Registry, ImgList, rmCollectionListBox, rmDataStorage, rmPanel, IBConnection, SQLDB, IB_Constants, SynEdit, SynEditTypes, SynEditHighlighter, SynHighlighterSQL, SyntaxMemoWithStuff2, GSSRegistry{, CloseUpCombo};
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, Buttons, Db, DBCtrls, Registry, ImgList, rmCollectionListBox, rmDataStorage, IBConnection, SQLDB, IB_Constants, SynEdit, SynEditTypes, SynEditHighlighter, SynHighlighterSQL, SyntaxMemoWithStuff2, GSSRegistry{, CloseUpCombo};
 
 type
   TParseInfo = record
@@ -47,7 +47,7 @@ type
 		Options1: TMenuItem;
 		btnStop: TSpeedButton;
 		synHighlighter: TSynSQLSyn;
-		pnlResults: TrmPanel;
+		pnlResults: TPanel;
 		lvErrors: TrmCollectionListBox;
 		lstKeyWords: TrmTextDataStorage;
 		FDatabase: TIBConnection;

@@ -19,7 +19,7 @@ unit StatementHistory;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Db, ImgList, rmCornerGrip, rmCollectionListBox;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Db, ImgList, rmCollectionListBox;
 
 type
   TfrmStatementHistory = class(TForm)
@@ -27,7 +27,6 @@ type
 		btnCancel: TButton;
 		btnHelp: TButton;
 		ImageList1: TImageList;
-		rmCornerGrip1: TrmCornerGrip;
 		lvHistory: TrmCollectionListBox;
 		procedure btnOKClick(Sender: TObject);
 		procedure FormCreate(Sender: TObject);

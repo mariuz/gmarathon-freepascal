@@ -161,8 +161,4 @@ object frmEditorSnippet: TfrmEditorSnippet
       end
     end
   end
-  object rmCornerGrip1: TrmCornerGrip
-    Left = 332
-    Top = 294
-  end
 end

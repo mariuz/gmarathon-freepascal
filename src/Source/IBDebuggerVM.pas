@@ -7,9 +7,15 @@ interface
 
 {$I compilerdefines.inc}
 
-uses Classes, SysUtils, Windows, ParseCollection, Controls, Forms, Dialogs, {$IFDEF D6_OR_HIGHER}
+uses Classes, SysUtils,
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows,
+  {$ENDIF}
+  ParseCollection, Controls, Forms, Dialogs, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	rmMemoryDataSet, rmTreeNonView, IBConnection, SQLDB, MarathonProjectCacheTypes, YaccLib;
+	BufDataset, SQLDB, IBConnection, MarathonProjectCacheTypes, YaccLib;
 
 type
   TSymbolType = (stLocal, stInput, stOutput);
@@ -68,7 +74,7 @@ type
     function ProcessBreakpoint(Line : Integer) : Boolean;
     function GetNextStatement(S : TStatement; var BPSet : Boolean) : Boolean;
   public
-    ExecutionResults : TrmMemoryDataSet;
+    ExecutionResults : TBufDataset;
     procedure Execute(Step : Boolean);
     procedure Reset;
     procedure Clear;
@@ -208,7 +214,7 @@ constructor TProcModule.Create;
 begin
   inherited Create;
   FSymbolTable := TSymbolTable.Create;
-  ExecutionResults := TrmMemoryDataSet.Create(nil);
+  ExecutionResults := TBufDataset.Create(nil);
   FStepDownStack := TList.Create;
   FBreakList := TStringList.Create;
   FAllowBreakList := TStringList.Create;
@@ -1280,7 +1286,7 @@ begin
   FAllowBreakList := TStringList.Create;
   FBreakList := TStringList.Create;
   FStepDownStack := TList.Create;
-  ExecutionResults := TrmMemoryDataSet.Create(nil);
+  ExecutionResults := TBufDataset.Create(nil);
   FSQLParser := TSQLParser.Create(nil);
   TSQLParser(FSQLParser).Module := Self;
   FJunkList := TList.Create;

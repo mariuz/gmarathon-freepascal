@@ -34,7 +34,13 @@ unit BlobViewer;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls, Hexeditor, rmCornerGrip;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls;
 
 type
 	TfrmBlobViewer = class(TForm)
@@ -43,9 +49,7 @@ type
 		pgBlobViewer: TPageControl;
 		tsText: TTabSheet;
 		tsHex: TTabSheet;
-		edBlobHex: THexEditor;
-		edBlobText: TMemo;
-		rmCornerGrip1: TrmCornerGrip;
+		edBlobHex: TMemo;		edBlobText: TMemo;
 		procedure pgBlobViewerChanging(Sender: TObject;	var AllowChange: Boolean);
 		procedure btnOKClick(Sender: TObject);
 		procedure FormKeyDown(Sender: TObject; var Key: Word;	Shift: TShiftState);
@@ -75,7 +79,7 @@ begin
 	FData.Position := 0;
 	edBlobText.Lines.LoadFromStream(FData);
 	FData.Position := 0;
-	edBlobHex.LoadFromStream(FData);
+	edBlobHex.Lines.LoadFromStream(FData);
 end;
 
 procedure TfrmBlobViewer.pgBlobViewerChanging(Sender: TObject; var AllowChange: Boolean);
@@ -89,14 +93,14 @@ begin
 
         //load others...
         FData.Position := 0;
-        edBlobHex.LoadFromStream(FData);
+        edBlobHex.Lines.LoadFromStream(FData);
       end;
 
 		1 :
 			begin
 				//save current...
         fdata.clear;
-				edBlobHex.SaveToStream(FData);
+				edBlobHex.Lines.SaveToStream(FData);
 
 				//load others...
 				FData.Position := 0;
@@ -119,7 +123,7 @@ begin
 			begin
 				//save current...
         fData.Clear;
-				edBlobHex.SaveToStream(FData);
+				edBlobHex.Lines.SaveToStream(FData);
 			end;
 	end;
   fData.Position := 0;
@@ -130,7 +134,7 @@ procedure TfrmBlobViewer.SetReadOnly(const Value: Boolean);
 begin
 	FReadOnly := Value;
 	edBlobText.ReadOnly := FReadOnly;
-	edBlobHex.ReadOnlyView := FReadOnly;
+	edBlobHex.ReadOnly := FReadOnly;
 end;
 
 procedure TfrmBlobViewer.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);

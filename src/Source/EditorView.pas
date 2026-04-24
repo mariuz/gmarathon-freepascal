@@ -66,7 +66,7 @@ unit EditorView;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, Tabs, ActnList, Buttons, rmPanel, rmCollectionListBox, rmTabs3x, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, Tabs, ActnList, Buttons, rmCollectionListBox, rmTabs3x, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmNotebook2;
 
 type
 	TfrmViewEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor)
@@ -99,7 +99,7 @@ type
 		framDoco: TframeDesc;
 		framPerms: TframePerms;
     qryUtil: TSQLQuery;
-		pnlMessages: TrmPanel;
+		pnlMessages: TPanel;
 		lstResults: TrmCollectionListBox;
 		edEditor: TSyntaxMemoWithStuff2;
 		Panel1: TPanel;

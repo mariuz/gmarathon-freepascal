@@ -213,8 +213,4 @@ object frmStatementHistory: TfrmStatementHistory
       FF80000000000000FFC100000000000000000000000000000000000000000000
       000000000000}
   end
-  object rmCornerGrip1: TrmCornerGrip
-    Left = 396
-    Top = 132
-  end
 end

@@ -336,8 +336,4 @@ object frmSaveFileFormat: TfrmSaveFileFormat
     Left = 12
     Top = 200
   end
-  object rmCornerGrip1: TrmCornerGrip
-    Left = 64
-    Top = 200
-  end
 end

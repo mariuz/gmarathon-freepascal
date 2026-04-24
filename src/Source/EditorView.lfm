@@ -52,7 +52,7 @@ object frmViewEditor: TfrmViewEditor
     OnChanging = pgObjectEditorChanging
     object tsSQL: TTabSheet
       Caption = 'View'
-      object pnlMessages: TrmPanel
+      object pnlMessages: TPanel
         Left = 0
         Top = 261
         Width = 624

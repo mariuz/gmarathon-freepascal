@@ -19,7 +19,7 @@ unit EditorDomain;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, rmCollectionListBox, rmPanel, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, rmCollectionListBox, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription, rmNotebook2;
 
 type
 	TfrmDomains = class(TfrmBaseDocumentDataAwareForm, IMarathonDomainEditor)

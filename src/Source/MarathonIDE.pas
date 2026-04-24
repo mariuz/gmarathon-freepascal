@@ -21,11 +21,26 @@ interface
 
 {$I compilerdefines.inc}
 
-uses Classes, Windows, SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, Chart, DB, ComObj, {$IFDEF D6_or_higher}
+uses
+	Classes,
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst,
+	StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs,
+  {$IFNDEF FPC}
+  ComObj,
+  {$ENDIF}
+  {$IFDEF D6_or_higher}
 	Variants, {$ENDIF}
-	IBConnection, SQLDB, rmTreeNonView, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
+	IBConnection, SQLDB, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
 
 type
+  {$IFDEF FPC}
+  TMetafile = TGraphic;
+  {$ENDIF}
 	TMarathonIDE = class(TComponent, IMarathonIDE, IGimbalIDEServices)
 	private
 		FPluginsDialog: TfrmPlugins;
@@ -489,7 +504,7 @@ var
 	L: TStringList;
 	Extractor: IGSSDDLExtractor;
 	ConnectName: String;
-	N: TrmTreeNonViewNode;
+	N: TMarathonTreeNode;
 
 begin
 	case Event of
@@ -2732,9 +2747,9 @@ end;
 
 procedure TMarathonIDE.CreateProjectFolder(Item: TMarathonCacheBaseNode);
 var
-	wNode: TrmTreeNonViewNode;
-	NV: TrmTreeNonViewNode;
-//	CNV: TrmTreeNonViewNode;
+	wNode: TMarathonTreeNode;
+	NV: TMarathonTreeNode;
+//	CNV: TMarathonTreeNode;
 	wFolder: TMarathonCacheProjectFolder;
 //	Usages: TStringList;
 //	Found: Boolean;

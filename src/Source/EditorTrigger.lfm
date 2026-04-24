@@ -151,7 +151,7 @@ object frmTriggerEditor: TfrmTriggerEditor
           end>
         AddedKeystrokes = <>
       end
-      object pnlMessages: TrmPanel
+      object pnlMessages: TPanel
         Left = 0
         Top = 224
         Width = 624
@@ -243,7 +243,7 @@ object frmTriggerEditor: TfrmTriggerEditor
           Width = 624
           Height = 293
         end
-        inherited dtaCrud: TrmMemoryDataSet
+        inherited dtaCrud: TBufDataset
           FieldRoster = <
             item
               Size = 0

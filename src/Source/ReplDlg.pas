@@ -2,7 +2,13 @@ unit ReplDlg;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
 
 type
   TEdReplDlg = class(TForm)
@@ -51,7 +57,7 @@ var
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 { TEdReplDlg }
 

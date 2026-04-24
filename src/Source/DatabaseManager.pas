@@ -48,13 +48,19 @@ unit DatabaseManager;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, OleCtrls, rmTreeNonView, rmSplit, rmPanel, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetadataSearchObject, GimbalToolsAPI, GimbalToolsAPIImpl;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetadataSearchObject, GimbalToolsAPI, GimbalToolsAPIImpl;
 
 type
 	TfrmDatabaseExplorer = class(TfrmBaseDocumentForm, IMarathonBrowser, IGimbalIDEBrowserWindow)
 		stsDatabase: TStatusBar;
 		pnlTreeList: TPanel;
-		pnlListContent: TrmPanel;
+		pnlListContent: TPanel;
 		pnlRichContent: TPanel;
 		Image1: TImage;
 		Label1: TLabel;
@@ -382,11 +388,11 @@ end;
 
 procedure TfrmDatabaseExplorer.tvDatabaseGetImageIndex(Sender: TObject; Node: TTreeNode);
 var
-	TNV : TrmTreeNonViewNode;
+	TNV : TMarathonTreeNode;
 begin
 	if Node.Data <> nil then
 	begin
-      TNV := TrmTreeNonViewNode(Node.Data);
+      TNV := TMarathonTreeNode(Node.Data);
       if Assigned(TNV.Data) then
       begin
         if Node.OverlayIndex <> TMarathonCacheBaseNode(TNV.Data).OverlayIndex then
@@ -439,7 +445,7 @@ begin
 	begin
 		Screen.Cursor := crHourGlass;
 
-		tscObj := TMarathonCacheBaseNode(TrmTreeNonViewNode(Node.Data).Data);
+		tscObj := TMarathonCacheBaseNode(TMarathonTreeNode(Node.Data).Data);
 		if Assigned(tscObj) then
 		begin
 			if tscObj.ContentStr = '' then
@@ -476,9 +482,9 @@ begin
 					WItem.Caption := WNode.Text;
 					if Assigned(wNode.Data) then
 					begin
-						if Assigned(TrmTreeNonViewNode(WNode.Data).Data) then
+						if Assigned(TMarathonTreeNode(WNode.Data).Data) then
 						begin
-							tscObj := TMarathonCacheBaseNode(TrmTreeNonViewNode(WNode.Data).Data);
+							tscObj := TMarathonCacheBaseNode(TMarathonTreeNode(WNode.Data).Data);
 							if assigned(tscObj) then
 							begin
 								WItem.Data := WNode;
@@ -521,7 +527,7 @@ end;
 
 procedure TfrmDatabaseExplorer.tvDatabaseExpanding(Sender: TObject; Node: TTreeNode; var AllowExpansion: Boolean);
 var
-	tnvNode, wtnvNode: TrmTreeNonViewNode;
+	tnvNode, wtnvNode: TMarathonTreeNode;
 	tscObj: TMarathonCacheBaseNode;
 	WNode: TTreeNode;
 
@@ -532,7 +538,7 @@ begin
 		begin
       tvDatabase.Items.BeginUpdate;
       try
-         tnvNode := TrmTreeNonViewNode(Node.Data);
+         tnvNode := TMarathonTreeNode(Node.Data);
          tscObj := TMarathonCacheBaseNode(tnvNode.data);
          if assigned(tscObj) then
          begin
@@ -589,7 +595,7 @@ end;
 
 procedure TfrmDatabaseExplorer.RefreshNode(Item : TObject; PreserveFocus : Boolean);
 var
-	TNV : TrmTreeNonViewNode;
+	TNV : TMarathonTreeNode;
 	TN : TTreeNode;
 	SelNode : TTreeNode;
 //	AllowChange: Boolean;
@@ -645,7 +651,7 @@ end;
 
 procedure TfrmDatabaseExplorer.ExpandNode(Item : TObject);
 var
-	TNV : TrmTreeNonViewNode;
+	TNV : TMarathonTreeNode;
 	Path : String;
 	TN : TTreeNode;
 //	AllowChange: Boolean;
@@ -677,7 +683,7 @@ end;
 
 procedure TfrmDatabaseExplorer.RemoveNode(Item: TObject);
 var
-	TNV : TrmTreeNonViewNode;
+	TNV : TMarathonTreeNode;
 	Path : String;
 	TN : TTreeNode;
 	Idx : Integer;
@@ -799,7 +805,7 @@ end;
 
 function TfrmDatabaseExplorer.CanDoBrowserOperation(BrowserOp : TGSSCacheOp): Boolean;
 var
-	tnvNode: TrmTreeNonViewNode;
+	tnvNode: TMarathonTreeNode;
 	tscObj: TMarathonCacheBaseNode;
 	WNode: TTreeNode;
 	loop: integer;
@@ -809,7 +815,7 @@ begin
 	begin
 		if assigned(tvDatabase.Selected) then
 		begin
-			tnvNode := TrmTreeNonViewNode(tvDatabase.Selected.Data);
+			tnvNode := TMarathonTreeNode(tvDatabase.Selected.Data);
 			if assigned(tnvNode) then
 			begin
 				tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -837,7 +843,7 @@ begin
 						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 						begin
-							tnvNode := TrmTreeNonViewNode(WNode.Data);
+							tnvNode := TMarathonTreeNode(WNode.Data);
 							if assigned(tnvNode) then
 							begin
 								tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -874,7 +880,7 @@ begin
 								WNode := TTreeNode(lvDatabase.Items[loop].Data);
 								if assigned(WNode) then
 								begin
-									tnvNode := TrmTreeNonViewNode(WNode.Data);
+									tnvNode := TMarathonTreeNode(WNode.Data);
 									if assigned(tnvNode) then
 									begin
 										tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -908,7 +914,7 @@ end;
 
 procedure TfrmDatabaseExplorer.DoBrowserOperation(Op: TGSSCacheOp);
 var
-	tnvNode: TrmTreeNonViewNode;
+	tnvNode: TMarathonTreeNode;
 	tscObj: TMarathonCacheBaseNode;
 	WNode: TTreeNode;
 	loop: integer;
@@ -919,7 +925,7 @@ begin
 	try
 		if ActiveControl = tvDatabase then
 		begin
-			tnvNode := TrmTreeNonViewNode(tvDatabase.Selected.Data);
+			tnvNode := TMarathonTreeNode(tvDatabase.Selected.Data);
 			if assigned(tnvNode) then
 			begin
 				tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -937,7 +943,7 @@ begin
 						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 						begin
-							tnvNode := TrmTreeNonViewNode(WNode.Data);
+							tnvNode := TMarathonTreeNode(WNode.Data);
 							if assigned(tnvNode) then
 							begin
 								tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -964,7 +970,7 @@ begin
 					begin
 						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
-							tnvNode := TrmTreeNonViewNode(WNode.Data);
+							tnvNode := TMarathonTreeNode(WNode.Data);
 						if assigned(tnvNode) and assigned(tnvNode.Parent) then
 							ParentTSCObj := TMarathonCacheBaseNode(tnvNode.Parent.data);
 						if assigned(ParentTSCObj) then
@@ -995,7 +1001,7 @@ begin
 								WNode := TTreeNode(lvDatabase.items[loop].Data);
 								if assigned(WNode) then
 								begin
-									tnvNode := TrmTreeNonViewNode(WNode.Data);
+									tnvNode := TMarathonTreeNode(WNode.Data);
 									if assigned(tnvNode) then
 									begin
 										tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1096,13 +1102,13 @@ function TfrmDatabaseExplorer.GetUpdateActiveConnection: String;
 var
 	N : TTreeNode;
 	tscObj: TMarathonCacheBaseNode;
-	tnvNode: TrmTreeNonViewNode;
+	tnvNode: TMarathonTreeNode;
 
 begin
-	N := tvDatabase.FocussedNode;
+	N := tvDatabase.Selected;
 	if Assigned(N) then
 	begin
-		tnvNode := TrmTreeNonViewNode(N.Data);
+		tnvNode := TMarathonTreeNode(N.Data);
 		if assigned(tnvNode) then
 		begin
 			tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1247,7 +1253,7 @@ end;
 
 function TfrmDatabaseExplorer.CanCopy: Boolean;
 var
-	tnvNode: TrmTreeNonViewNode;
+	tnvNode: TMarathonTreeNode;
 	tscObj: TMarathonCacheBaseNode;
 	WNode: TTreeNode;
 	loop: integer;
@@ -1257,7 +1263,7 @@ begin
 	begin
 		if assigned(tvDatabase.Selected) then
 		begin
-			tnvNode := TrmTreeNonViewNode(tvDatabase.Selected.Data);
+			tnvNode := TMarathonTreeNode(tvDatabase.Selected.Data);
 			if assigned(tnvNode) then
 			begin
 				tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1288,7 +1294,7 @@ begin
 						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 						begin
-							tnvNode := TrmTreeNonViewNode(WNode.Data);
+							tnvNode := TMarathonTreeNode(WNode.Data);
 							if assigned(tnvNode) then
 							begin
 								tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1329,7 +1335,7 @@ begin
 								WNode := TTreeNode(lvDatabase.Items[loop].Data);
 								if assigned(WNode) then
 								begin
-									tnvNode := TrmTreeNonViewNode(WNode.Data);
+									tnvNode := TMarathonTreeNode(WNode.Data);
 									if assigned(tnvNode) then
 									begin
 										tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1827,7 +1833,7 @@ function TfrmDatabaseExplorer.IDEGetSelectedItems: IGimbalIDESelectedItems;
 var
 	Items : TGimbalIDESelectedItems;
 	Item : TGimbalIDESelectedItem;
-	tnvNode : TrmTreeNonViewNode;
+	tnvNode : TMarathonTreeNode;
 	tscObj : TMarathonCacheBaseNode;
 	WNode : TTreeNode;
 	loop : Integer;
@@ -1837,7 +1843,7 @@ begin
 	Result := Items;
 	if ActiveControl = tvDatabase then
 	begin
-		tnvNode := TrmTreeNonViewNode(tvDatabase.Selected.Data);
+		tnvNode := TMarathonTreeNode(tvDatabase.Selected.Data);
 		if assigned(tnvNode) then
 		begin
 			tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1868,7 +1874,7 @@ begin
 					WNode := TTreeNode(lvDatabase.Selected.Data);
 					if assigned(WNode) then
 					begin
-						tnvNode := TrmTreeNonViewNode(WNode.Data);
+						tnvNode := TMarathonTreeNode(WNode.Data);
 						if assigned(tnvNode) then
 						begin
 							tscObj := TMarathonCacheBaseNode(tnvNode.data);
@@ -1920,7 +1926,7 @@ begin
 							WNode := TTreeNode(lvDatabase.items[loop].Data);
 							if assigned(WNode) then
 							begin
-								tnvNode := TrmTreeNonViewNode(WNode.Data);
+								tnvNode := TMarathonTreeNode(WNode.Data);
 								if assigned(tnvNode) then
 								begin
 									tscObj := TMarathonCacheBaseNode(tnvNode.data);

@@ -34,7 +34,7 @@ unit ReorderColumns;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls;
 
 type
   TfrmReorderColumns = class(TForm)
@@ -43,7 +43,6 @@ type
     btnCancel: TButton;
     btnHelp: TButton;
     Label1: TLabel;
-    rmCornerGrip1: TrmCornerGrip;
 		procedure lvColumnsDragDrop(Sender, Source: TObject; X, Y: Integer);
 		procedure lvColumnsDragOver(Sender, Source: TObject; X, Y: Integer;	State: TDragState; var Accept: Boolean);
     procedure FormCreate(Sender: TObject);

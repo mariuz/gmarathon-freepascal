@@ -37,7 +37,13 @@ unit MenuModule;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ImgList, rmDataStorage, SynEditHighlighter, SynHighlighterSQL, SynEditMiscClasses, SynEditSearch;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ImgList, SynEditHighlighter, SynHighlighterSQL, SynEditMiscClasses, SynEditSearch;
 
 type
   TdmMenus = class(TDataModule)
@@ -96,8 +102,8 @@ type
     Compile2: TMenuItem;
     Parameters1: TMenuItem;
     Rollback2: TMenuItem;
-    lstKeyWords: TrmTextDataStorage;
-    lstCharSets: TrmTextDataStorage;
+    lstKeyWords: TStringList;
+    lstCharSets: TStringList;
     ilErrors: TImageList;
     Debugger1: TMenuItem;
     ObjectToggleBreakPoint1: TMenuItem;

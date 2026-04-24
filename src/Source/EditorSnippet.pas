@@ -37,13 +37,12 @@ unit EditorSnippet;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmCornerGrip, rmPathTreeView, SynEdit, SyntaxMemoWithStuff2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmPathTreeView, SynEdit, SyntaxMemoWithStuff2;
 
 type
 	TfrmEditorSnippet = class(TForm)
 		btnCancel: TButton;
 		btnOK: TButton;
-		rmCornerGrip1: TrmCornerGrip;
 		lblSnippetName: TLabel;
 		edSnippetName: TEdit;
 		btnHelp: TButton;

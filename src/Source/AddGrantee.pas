@@ -19,7 +19,7 @@ unit AddGrantee;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls;
 
 type
 	TfrmGranteeAdd = class(TForm)
@@ -34,7 +34,6 @@ type
 		Label2: TLabel;
 		edUser: TEdit;
 		btnHelp: TButton;
-		rmCornerGrip1: TrmCornerGrip;
 		procedure btnOKClick(Sender: TObject);
 		procedure cmbObjectChange(Sender: TObject);
 		procedure FormCreate(Sender: TObject);

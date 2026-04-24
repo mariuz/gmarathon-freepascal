@@ -38,7 +38,7 @@ unit SaveFileFormat;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, CheckLst, ComCtrls, rmBtnEdit, rmCornerGrip, rmBaseEdit, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, CheckLst, ComCtrls, rmBtnEdit, rmBaseEdit, rmNotebook2;
 
 type
   TfrmSaveFileFormat = class(TForm)
@@ -62,7 +62,6 @@ type
     dlgSave: TSaveDialog;
     Label5: TLabel;
     edTable: TEdit;
-    rmCornerGrip1: TrmCornerGrip;
     chkInsColNames: TCheckBox;
     Panel1: TPanel;
     chkInsColNamesSep: TCheckBox;

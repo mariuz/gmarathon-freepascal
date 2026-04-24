@@ -85,8 +85,4 @@ object frmReorderColumns: TfrmReorderColumns
     TabOrder = 3
     OnClick = btnHelpClick
   end
-  object rmCornerGrip1: TrmCornerGrip
-    Left = 36
-    Top = 276
-  end
 end

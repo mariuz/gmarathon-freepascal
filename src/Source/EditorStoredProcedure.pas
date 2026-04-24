@@ -23,7 +23,7 @@ interface
 
 uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, Tabs, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
 	Variants, {$ENDIF}
-	rmTabs3x, rmPanel, rmCollectionListBox, rmMemoryDataSet, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmNotebook2;
+	rmTabs3x, rmCollectionListBox, BufDataset, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmNotebook2;
 
 type
 	TfrmStoredProcedure = class(TfrmBaseDocumentDataAwareForm, IMarathonStoredProcEditor, IGimbalIDESQLTextEditor)
@@ -51,7 +51,7 @@ type
 		tsDRUI: TTabSheet;
 		tsGrants: TTabSheet;
 		tsDebuggerOutput: TTabSheet;
-		txtParameters: TrmMemoryDataSet;
+		txtParameters: TBufDataset;
 		txtParametersparam_name: TStringField;
 		txtParametersparam_type: TStringField;
 		txtParametersparam_value: TStringField;
@@ -69,7 +69,7 @@ type
 		edDebugInfo: TMemo;
 		framDoco: TframeDesc;
     dlgSave: TSaveDialog;
-    pnlMessages: TrmPanel;
+    pnlMessages: TPanel;
     lstResults: TrmCollectionListBox;
 		procedure lstResultsClick(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);

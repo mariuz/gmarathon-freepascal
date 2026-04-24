@@ -64,7 +64,7 @@ interface
 
 uses SysUtils, Windows, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	rmTreeNonView, rmPathTreeView, IBConnection, SQLDB, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, WindowLists, ScriptRecorder, GimbalToolsAPI;
+	IBConnection, SQLDB, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, WindowLists, ScriptRecorder, GimbalToolsAPI;
 
 const
    cSepChar = #2;
@@ -82,7 +82,7 @@ type
     FStatic: Boolean;
     FImageIndex: Integer;
     FRootItem: TMarathonProjectDatabaseCache;
-    FContainerNode: TrmTreeNonViewNode;
+    FContainerNode: TMarathonTreeNode;
     FWholePageContent: Boolean;
 		FCacheType: TGSSCacheType;
     procedure SetCaption(const Value: String); virtual;
@@ -106,7 +106,7 @@ type
     property ImageIndex: Integer read GetImageIndex write FImageIndex;
     property OverlayIndex: integer read GetOverlayIndex;
     property RootItem: TMarathonProjectDatabaseCache read FRootItem write FRootItem;
-    property ContainerNode: TrmTreeNonViewNode read FContainerNode write FContainerNode;
+    property ContainerNode: TMarathonTreeNode read FContainerNode write FContainerNode;
     property ContentStr: String read GetContentStr;
 		property WholePageContent: Boolean read FWholePageContent write FWholePageContent;
     property CacheType: TGSSCacheType read FCacheType write FCacheType;
@@ -529,7 +529,7 @@ type
 
   TMarathonProjectDatabaseCache = class(TComponent)
   private
-    FCache: TrmTreeNonView;
+    FCache: TMarathonTree;
     FModified: Boolean;
     FOnCacheEvent: TCacheEvent;
     FProjectItem: TMarathonProject;
@@ -543,7 +543,7 @@ type
     function GetConnectionCount: Integer;
     function GetConnectionByName(Index: String): TMarathonCacheConnection;
     procedure SetModified(const Value: Boolean);
-    procedure TreeDeletion(Sender: TObject; Node: TrmTreeNonViewNode);
+    procedure TreeDeletion(Sender: TObject; Node: TMarathonTreeNode);
     function GetServer(Index: Integer): TMarathonCacheServer;
     function GetServerByName(Index: String): TMarathonCacheServer;
     function GetServerCount: Integer;
@@ -553,7 +553,7 @@ type
 		function AddConnectionInternal: TMarathonCacheConnection;
     function AddServerInternal: TMarathonCacheServer;
     procedure DatabaseDisconnecting(ConnectionName: String);
-    procedure StartTree(TV: TrmPathTreeView);
+    procedure StartTree(TV: TTreeView);
     procedure Clear;
 		procedure AddRecentObjectOpen(ObjectName: String; ObjectType: TGSSCacheType; COnnectionName: String);
     procedure RemoveCacheItem(Item: TMarathonCacheBaseNode);
@@ -568,7 +568,7 @@ type
     property ServerCount: Integer read GetServerCount;
     property Servers[Index: Integer]: TMarathonCacheServer read GetServer;
     property ServerByName[Index: String]: TMarathonCacheServer read GetServerByName;
-    property Cache: TrmTreeNonView read FCache write FCache;
+    property Cache: TMarathonTree read FCache write FCache;
     property Modified: Boolean read FModified write SetModified;
     property OnCacheEvent: TCacheEvent read FOnCacheEvent write FOnCacheEvent;
     property ProjectItem: TMarathonProject read FProjectItem write FProjectItem;
@@ -669,7 +669,7 @@ type
     FEncoding: Integer;
 		FWindowList: TWindowList;
 		FSaveWindowPositions: Boolean;
-		FProjectView: TrmTreeNonView;
+		FProjectView: TMarathonTree;
     FMetaSearchStrings: TStringList;
     FLastMetaSearchString: String;
     FSearchOptions: TSearchOptions;
@@ -796,7 +796,7 @@ type
 		// Window list
 		property SaveWindowPositions: Boolean read FSaveWindowPositions write SetSaveWindowPositions;
 		property WindowList: TWindowList read FWindowList write FWindowList;
-		property ProjectView: TrmTreeNonView read FProjectView write FProjectView;
+		property ProjectView: TMarathonTree read FProjectView write FProjectView;
 		property MetaSearchStrings: TStringList read FMetaSearchStrings write FMetaSearchStrings;
 		property LastMetaSearchString: String read FLastMetaSearchString write SetLastMetaSearchString;
 		property SearchOptions: TSearchOptions read FSearchOptions write SetSearchOptions;
@@ -945,10 +945,10 @@ procedure TMarathonProjectDatabaseCache.AddCacheItem(ConnectionName,
 	ObjectName: String; ObjectType: TGSSCacheType);
 var
 	C: TMarathonCacheConnection;
-	N: TrmTreeNonViewNode;
-	CN: TrmTreeNonViewNode;
+	N: TMarathonTreeNode;
+	CN: TMarathonTreeNode;
 	wNode: TMarathonCacheObject;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 
 begin
 	C := GetConnectionByName(ConnectionName);
@@ -1020,9 +1020,9 @@ end;
 
 procedure TMarathonProjectDatabaseCache.AddRecentObjectOpen(ObjectName: String; ObjectType: TGSSCacheType; COnnectionName: String);
 var
-  NV: TrmTreeNonViewNode;
-  CNV: TrmTreeNonViewNode;
-	wNode: TrmTreeNonViewNode;
+  NV: TMarathonTreeNode;
+  CNV: TMarathonTreeNode;
+	wNode: TMarathonTreeNode;
 	wRecent: TMarathonCacheRecentItem;
 	Found: Boolean;
 
@@ -1095,7 +1095,7 @@ end;
 function TMarathonProjectDatabaseCache.AddConnectionInternal: TMarathonCacheConnection;
 var
 	C: TMarathonCacheConnection;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 
 begin
   NV := FCache.FindPathNode(FCache.SepChar + 'Connections');
@@ -1111,7 +1111,7 @@ end;
 function TMarathonProjectDatabaseCache.AddServerInternal: TMarathonCacheServer;
 var
   C: TMarathonCacheServer;
-  NV: TrmTreeNonViewNode;
+  NV: TMarathonTreeNode;
 
 begin
   NV := FCache.FindPathNode(FCache.SepChar + 'Server Administration');
@@ -1125,7 +1125,7 @@ end;
 
 function TMarathonProjectDatabaseCache.GetServer(Index: Integer): TMarathonCacheServer;
 var
-	TNV: TrmTreeNonViewNode;
+	TNV: TMarathonTreeNode;
 
 begin
 	Result := nil;
@@ -1136,8 +1136,8 @@ end;
 
 function TMarathonProjectDatabaseCache.GetServerByName(Index: String): TMarathonCacheServer;
 var
-	TNV: TrmTreeNonViewNode;
-	CTNV: TrmTreeNonViewNode;
+	TNV: TMarathonTreeNode;
+	CTNV: TMarathonTreeNode;
 
 begin
 	Result := nil;
@@ -1159,7 +1159,7 @@ end;
 
 function TMarathonProjectDatabaseCache.GetServerCount: Integer;
 var
-	TNV: TrmTreeNonViewNode;
+	TNV: TMarathonTreeNode;
 
 begin
 	Result := 0;
@@ -1207,7 +1207,7 @@ end;
 
 procedure TMarathonProjectDatabaseCache.BuildTree;
 var
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	wProjects: TMarathonCacheProjectHeader;
 	wConnections: TMarathonCacheConnectionsHeader;
 	wRecent: TMarathonCacheRecentHeader;
@@ -1255,7 +1255,7 @@ end;
 constructor TMarathonProjectDatabaseCache.Create(AOwner: TComponent);
 begin
   inherited;
-  FCache := TrmTreeNonView.Create(nil);
+  FCache := TMarathonTree.Create(nil);
 //  FCache.FireEvents := True;
   FCache.SepChar := cSepChar;
   FCache.OnDeletion := TreeDeletion;
@@ -1281,7 +1281,7 @@ end;
 
 function TMarathonProjectDatabaseCache.GetConnection(Index: Integer): TMarathonCacheConnection;
 var
-  TNV: TrmTreeNonViewNode;
+  TNV: TMarathonTreeNode;
 
 begin
   Result := nil;
@@ -1292,8 +1292,8 @@ end;
 
 function TMarathonProjectDatabaseCache.GetConnectionByName(Index: String): TMarathonCacheConnection;
 var
-	TNV: TrmTreeNonViewNode;
-	CTNV: TrmTreeNonViewNode;
+	TNV: TMarathonTreeNode;
+	CTNV: TMarathonTreeNode;
 
 begin
 	Result := nil;
@@ -1315,7 +1315,7 @@ end;
 
 function TMarathonProjectDatabaseCache.GetConnectionCount: Integer;
 var
-	TNV: TrmTreeNonViewNode;
+	TNV: TMarathonTreeNode;
 
 begin
 	Result := 0;
@@ -1378,8 +1378,8 @@ end;
 procedure TMarathonProjectDatabaseCache.RemoveCacheItemByName(Connection, ObjectName: String; ObjectType: TGSSCacheType);
 var
   C: TMarathonCacheConnection;
-  N: TrmTreeNonViewNode;
-  CN: TrmTreeNonViewNode;
+  N: TMarathonTreeNode;
+  CN: TMarathonTreeNode;
 
   function CovertObjTypeToName(OT: TGSSCacheType): String;
   begin
@@ -1445,10 +1445,10 @@ begin
 		FProjectItem.Modified := Value;
 end;
 
-procedure TMarathonProjectDatabaseCache.StartTree(TV: TrmPathTreeView);
+procedure TMarathonProjectDatabaseCache.StartTree(TV: TTreeView);
 var
-	NV: TrmTreeNonViewNode;
-	N: TrmTreeNode;
+	NV: TMarathonTreeNode;
+	N: TTreeNode;
 
 begin
 	TV.Items.Clear;
@@ -1485,7 +1485,7 @@ begin
 end;
 
 procedure TMarathonProjectDatabaseCache.TreeDeletion(Sender: TObject;
-	Node: TrmTreeNonViewNode);
+	Node: TMarathonTreeNode);
 begin
 	if Assigned(Node.Data) then
   begin
@@ -1758,7 +1758,7 @@ end;
 procedure TMarathonCacheConnection.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheHeader;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 
 begin
 	if not Connected then
@@ -2274,7 +2274,7 @@ end;
 { TMarathonProject }
 constructor TMarathonProject.Create(AOwner: TComponent);
 var
-	N: TrmTreeNonViewNode;
+	N: TMarathonTreeNode;
 
 begin
 	inherited Create(AOwner);
@@ -2283,7 +2283,7 @@ begin
 	FCache.FProjectItem := Self;
 	FSQLHistory := TSQLHistoryList.Create(Self);
 	FWindowList := TWindowList.Create(Self);
-	FProjectView := TrmTreeNonView.Create(Self);
+	FProjectView := TMarathonTree.Create(Self);
 	FProjectView.SepChar := cSepChar;
 	FMetaSearchStrings := TStringList.Create;
 	// Database Manager Columns
@@ -2932,15 +2932,15 @@ var
   Hist: TSQLHistoryListItem;
   Connection: TMarathonCacheConnection;
   Server: TMarathonCacheServer;
-	NV: TrmTreeNonViewNode;
-  wNode: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
+  wNode: TMarathonTreeNode;
   wRecent: TMarathonCacheRecentItem;
   F: File;
 
-  procedure ProcessFolders(NVNode: TrmTreeNonViewNode; Element: TDOMNode);
+  procedure ProcessFolders(NVNode: TMarathonTreeNode; Element: TDOMNode);
   var
     oFolderItem: TDOMNode;
-    wNode: TrmTreeNonViewNode;
+    wNode: TMarathonTreeNode;
     wFolder: TMarathonCacheProjectFolder;
     attr: TDomNOde;
 
@@ -3249,13 +3249,13 @@ var
 	Prop: TMarathonCustomProperty;
   Idx: Integer;
 	Idy: Integer;
-	NV: TrmTreeNonViewNode;
-	CNV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
+	CNV: TMarathonTreeNode;
 	wRecent: TMarathonCacheRecentItem;
 
-  procedure ProcessFolders(NonViewNode: TrmTreeNonViewNode; Element: TDomNode);
+  procedure ProcessFolders(NonViewNode: TMarathonTreeNode; Element: TDomNode);
   var
-    LNV: TrmTreeNonViewNode;
+    LNV: TMarathonTreeNode;
     oFolderItem: TDomNode;
 
   begin
@@ -3765,7 +3765,7 @@ end;
 procedure TMarathonCacheDomainsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheDomain;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -3817,7 +3817,7 @@ end;
 procedure TMarathonCacheUserDomainsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheDomain;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -3863,7 +3863,7 @@ end;
 procedure TMarathonCacheUDFsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheFunction;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -3913,7 +3913,7 @@ end;
 procedure TMarathonCacheExceptionsHeader.Expand(Recursive: Boolean);
 var
   wNode: TMarathonCacheException;
-  NV: TrmTreeNonViewNode;
+  NV: TMarathonTreeNode;
   Q: TSQLQuery;
 
 begin
@@ -3963,7 +3963,7 @@ end;
 procedure TMarathonCacheGeneratorsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheGenerator;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -4013,7 +4013,7 @@ end;
 procedure TMarathonCacheTriggersHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTrigger;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -4067,7 +4067,7 @@ end;
 procedure TMarathonCacheSystemTriggersHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTrigger;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -4120,7 +4120,7 @@ end;
 procedure TMarathonCacheStoredProceduresHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheProcedure;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -4171,7 +4171,7 @@ end;
 procedure TMarathonCacheViewsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheView;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -4221,7 +4221,7 @@ end;
 procedure TMarathonCacheTablesHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTable;
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	Q: TSQLQuery;
 
 begin
@@ -4544,7 +4544,7 @@ end;
 
 procedure TMarathonCacheServer.Expand(Recursive: Boolean);
 var
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	wNode: TMarathonCacheBaseNode;
 
 begin
@@ -4750,7 +4750,7 @@ end;
 
 procedure TMarathonCacheSysTablesHeader.Expand(Recursive: Boolean);
 var
-	NV: TrmTreeNonViewNode;
+	NV: TMarathonTreeNode;
 	wNode: TMarathonCacheTable;
 	Q: TSQLQuery;
 

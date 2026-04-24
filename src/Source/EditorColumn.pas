@@ -56,7 +56,7 @@ unit EditorColumn;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, Buttons, SQLDB, rmPanel, rmTabs3x, rmCollectionListBox, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, rmNotebook2, rmPageControl;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, Buttons, SQLDB, rmTabs3x, rmCollectionListBox, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, rmNotebook2, rmPageControl;
 
 type
 	TColumnEditState = (stNewTable, stNewColumn, stColumnProperties);
@@ -134,13 +134,13 @@ type
 		framColumnDoco: TframeDesc;
     edDomainInfo: TSyntaxMemoWithStuff2;
     tabRawDataType: TrmTabSet;
-    rmPanel1: TrmPanel;
+    rmPanel1: TPanel;
     edTableName: TEdit;
     Label1: TLabel;
     edColumnName: TEdit;
     Label7: TLabel;
     Bevel1: TBevel;
-    rmPanel2: TrmPanel;
+    rmPanel2: TPanel;
     btnOK: TButton;
     btnCancel: TButton;
 		procedure cmbDataTypeChange(Sender: TObject);

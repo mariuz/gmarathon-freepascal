@@ -120,7 +120,7 @@ object frmSQLForm: TfrmSQLForm
             end>
           AddedKeystrokes = <>
         end
-        object pnlMessages: TrmPanel
+        object pnlMessages: TPanel
           Left = 0
           Top = 258
           Width = 631
@@ -620,7 +620,7 @@ object frmSQLForm: TfrmSQLForm
     Left = 65
     Top = 125
   end
-  object dtaPerform: TrmMemoryDataSet
+  object dtaPerform: TBufDataset
     FieldRoster = <
       item
         Name = 'item'

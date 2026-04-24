@@ -2,7 +2,13 @@ unit FindDlg;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
+uses
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
 
 type
 
@@ -44,7 +50,7 @@ var
 
 implementation
 
-{$R *.DFM}
+{$R *.lfm}
 
 { TEdFindDlg }
 

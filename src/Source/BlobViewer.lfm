@@ -80,7 +80,7 @@ object frmBlobViewer: TfrmBlobViewer
     end
     object tsHex: TTabSheet
       Caption = 'Hex'
-      object edBlobHex: THexEditor
+      object edBlobHex: TMemo
         Left = 0
         Top = 0
         Width = 465
@@ -163,9 +163,5 @@ object frmBlobViewer: TfrmBlobViewer
           7)
       end
     end
-  end
-  object rmCornerGrip1: TrmCornerGrip
-    Left = 160
-    Top = 204
   end
 end

@@ -103,7 +103,7 @@ object frmStoredProcedure: TfrmStoredProcedure
           end>
         AddedKeystrokes = <>
       end
-      object pnlMessages: TrmPanel
+      object pnlMessages: TPanel
         Left = 0
         Top = 217
         Width = 624
@@ -311,7 +311,7 @@ object frmStoredProcedure: TfrmStoredProcedure
           Width = 624
           Height = 293
         end
-        inherited dtaCrud: TrmMemoryDataSet
+        inherited dtaCrud: TBufDataset
           FieldRoster = <
             item
               Size = 0
@@ -437,7 +437,7 @@ object frmStoredProcedure: TfrmStoredProcedure
     Left = 429
     Top = 129
   end
-  object txtParameters: TrmMemoryDataSet
+  object txtParameters: TBufDataset
     FieldRoster = <
       item
         Name = 'param_name'

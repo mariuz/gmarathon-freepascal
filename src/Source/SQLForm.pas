@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, Tabs, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, rmPanel, rmCollectionListBox, rmTabs3x, rmMemoryDataSet, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, Tabs, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, rmCollectionListBox, rmTabs3x, BufDataset, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmNotebook2;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -103,7 +103,7 @@ type
     navResults: TDBNavigator;
     pnlPerformance: TPanel;
     DBNavigator1: TDBNavigator;
-    dtaPerform: TrmMemoryDataSet;
+    dtaPerform: TBufDataset;
     dsPerform: TDataSource;
     perfSQL: TIBPerformanceMonitor;
     tsPerformance: TTabSheet;
@@ -136,7 +136,7 @@ type
   nbpStats : TrmNotebookPage;
   nbpChart : TrmNotebookPage;
   dlgOpen: TOpenDialog;
-  pnlMessages: TrmPanel;
+  pnlMessages: TPanel;
   lstResults: TrmCollectionListBox;
 		procedure edSQLStatementChange(Sender: TObject);
 		procedure lstResultsClick(Sender: TObject);

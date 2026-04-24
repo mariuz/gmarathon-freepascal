@@ -811,7 +811,7 @@ object frmDatabaseExplorer: TfrmDatabaseExplorer
     BevelOuter = bvNone
     Caption = 'TreeList'
     TabOrder = 0
-    object pnlListContent: TrmPanel
+    object pnlListContent: TPanel
       Left = 127
       Top = 0
       Width = 131

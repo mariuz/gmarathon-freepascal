@@ -987,7 +987,7 @@ object frmColumns: TfrmColumns
           end
         end
       end
-      object rmPanel1: TrmPanel
+      object rmPanel1: TPanel
         Left = 0
         Top = 0
         Width = 456
@@ -1121,7 +1121,7 @@ object frmColumns: TfrmColumns
       end>
     Visible = False
   end
-  object rmPanel2: TrmPanel
+  object rmPanel2: TPanel
     Left = 0
     Top = 401
     Width = 464

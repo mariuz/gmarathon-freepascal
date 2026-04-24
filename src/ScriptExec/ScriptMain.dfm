@@ -271,7 +271,7 @@ object frmScript: TfrmScript
         end>
       AddedKeystrokes = <>
     end
-    object pnlResults: TrmPanel
+    object pnlResults: TPanel
       Left = 0
       Top = 332
       Width = 578

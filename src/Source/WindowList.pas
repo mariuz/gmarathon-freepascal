@@ -19,7 +19,7 @@ unit WindowList;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ImgList, rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ImgList;
 
 type
   TfrmWindowList = class(TForm)
@@ -28,7 +28,6 @@ type
     btnHelp: TButton;
     lvWindows: TListView;
     ilWindows: TImageList;
-    rmCornerGrip1: TrmCornerGrip;
     procedure FormCreate(Sender: TObject);
     procedure btnOKClick(Sender: TObject);
     procedure btnHelpClick(Sender: TObject);

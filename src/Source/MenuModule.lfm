@@ -221,7 +221,7 @@ object dmMenus: TdmMenus
       Action = frmMarathonMain.FilePrint
     end
   end
-  object lstKeyWords: TrmTextDataStorage
+  object lstKeyWords: TStringList
     Left = 128
     Top = 4
     StoredData = {
@@ -256,7 +256,7 @@ object dmMenus: TdmMenus
       636861720D0A7661726961626C650D0A766965770D0A7768656E0D0A7768656E
       657665720D0A77686572650D0A776974680D0A}
   end
-  object lstCharSets: TrmTextDataStorage
+  object lstCharSets: TStringList
     Left = 128
     Top = 56
     StoredData = {

@@ -133,7 +133,4 @@ object frmGranteeAdd: TfrmGranteeAdd
     TabOrder = 3
     OnClick = btnHelpClick
   end
-  object rmCornerGrip1: TrmCornerGrip
-    Top = 204
-  end
 end

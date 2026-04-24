@@ -7,7 +7,7 @@ interface
 
 uses SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection, Forms, IBDebuggerVM, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	rmMemoryDataSet, PlanUnit;
+	BufDataset, PlanUnit;
 
 
 const _ACTION_ = 257;

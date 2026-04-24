@@ -220,8 +220,4 @@ object frmWindowList: TfrmWindowList
       000100000000000083FF00000000000000000000000000000000000000000000
       000000000000}
   end
-  object rmCornerGrip1: TrmCornerGrip
-    Left = 272
-    Top = 104
-  end
 end

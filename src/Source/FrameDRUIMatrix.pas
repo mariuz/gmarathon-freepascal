@@ -34,11 +34,11 @@ unit FrameDRUIMatrix;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Db, ComCtrls, StdCtrls, ExtCtrls, rmPathTreeView, rmMemoryDataSet, MarathonInternalInterfaces;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Db, ComCtrls, StdCtrls, ExtCtrls, rmPathTreeView, BufDataset, MarathonInternalInterfaces;
 
 type
 	TframeDRUI = class(TFrame)
-		dtaCrud: TrmMemoryDataSet;
+		dtaCrud: TBufDataset;
 		dtaCrudline: TIntegerField;
 		dtaCrudop: TStringField;
 		dtaCrudtable: TStringField;

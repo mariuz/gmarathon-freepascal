@@ -1,7 +1,13 @@
 unit SynEditDecorator;
 
 interface
-uses windows, SynEdit, classes, graphics, sysutils;
+uses 
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  windows,
+  {$ENDIF}
+  SynEdit, classes, graphics, sysutils;
 
 type
   TSynEditDecorator = class;
@@ -57,7 +63,7 @@ type
     fEditor           : TCustomSynEdit;
     fOnDrawDecoration : TDrawDecorationEvent;
 
-    Plugin            : TSynEditPlugin;
+    // Plugin            : TSynEditPlugin;
 
     procedure PaintDecorations(Canvas: TCanvas; AClip: TRect; FirstLine,LastLine: integer);
     procedure LinesDeleted(StartLine, Count : integer);
@@ -86,6 +92,7 @@ type
 
 implementation
 
+{
 type
   TDecoratorPlugin = class(TSynEditPlugin)
     decorator : TSynEditDecorator;
@@ -97,6 +104,7 @@ type
     procedure LinesInserted(StartLine, Count : integer); override;
     procedure LinesDeleted(StartLine, Count : integer); override;
   end;
+}
 
 { TSynEditDecorator }
 
@@ -114,8 +122,8 @@ destructor TSynEditDecorator.Destroy;
 begin
   fDecorations.Free;
 
-  if Plugin<>nil then
-    TDecoratorPlugin(Plugin).decorator:=nil;
+  { if Plugin<>nil then
+    TDecoratorPlugin(Plugin).decorator:=nil; }
 
   inherited Destroy;
 end;
@@ -173,6 +181,7 @@ var
 
       r.top:=r.bottom-4;
 
+      {$IFDEF MSWINDOWS}
       state:=saveDC(canvas.Handle);  // Save the state of the device context
       try
         // Set the new clipping rectangle
@@ -190,6 +199,7 @@ var
       finally
         RestoreDC(canvas.Handle,state); // Restore the state of the device context
       end;
+      {$ENDIF}
     finally
       b.Free;
     end;
@@ -200,19 +210,23 @@ var
     b   : TBitmap;
     i,j : integer;
     c   : TColor;
+    {$IFDEF MSWINDOWS}
     dc  : THandle;
+    {$ENDIF}
 
   begin
     b:=TBitmap.Create;
     try
       // Create a bitmap compatible with the device context.
 // TODO 1 -cUI -oDJLP: test this with multiple moitors
+      {$IFDEF MSWINDOWS}
       dc:=GetDC(editor.handle);
       try
         b.Handle:=CreateCompatibleBitmap(dc,r.right-r.left,r.bottom-r.top);
       finally
         ReleaseDC(editor.handle,DC);
       end;
+      {$ENDIF}
 
       b.canvas.CopyRect(rect(0,0,b.width,b.height),canvas,r);
 
@@ -330,10 +344,10 @@ begin
   if fEditor<>nil then
     FreeNotification(fEditor);
 
-  if Plugin<>nil then
+  { if Plugin<>nil then
     Plugin.Free;
 
-  Plugin:=TDecoratorPlugin.Create(self);
+  Plugin:=TDecoratorPlugin.Create(self); }
 end;
 
 procedure TSynEditDecorator.Notification(AComponent: TComponent;
@@ -448,13 +462,13 @@ end;
 
 
 { TDecoratorPlugin }
-
+{
 procedure TDecoratorPlugin.AfterPaint(Canvas: TCanvas; AClip: TRect; FirstLine,LastLine: integer);
 begin
   decorator.PaintDecorations(canvas,AClip,FirstLine,LastLine);
 end;
 
-constructor TDecoratorPlugin.Create(ADecorator: TSynEditDecorator);
+constructor TDecoratorPlugin.Create(ADecorator : TSynEditDecorator);
 begin
   if ADecorator=nil then
     raise Exception.Create('ADecorator must not be nil');
@@ -481,7 +495,6 @@ procedure TDecoratorPlugin.LinesInserted(StartLine, Count: integer);
 begin
   Decorator.LinesInserted(StartLine,Count);
 end;
+}
 
 end.
-
-

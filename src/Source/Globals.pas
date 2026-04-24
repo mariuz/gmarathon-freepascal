@@ -19,9 +19,10 @@ unit Globals;
 
 interface
 
-uses Classes, SysUtils, Messages, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls, SynEdit, StrUtils, rmTreeNonView, rmPanel, IBConnection, SQLDB, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule;
+uses Classes, SysUtils, Messages, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls, SynEdit, StrUtils, IBConnection, SQLDB, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
 
 const
+  WM_USER = 1024;
 	WM_BUGGER_OFF = WM_USER + 101;
 
 var
@@ -232,8 +233,8 @@ procedure LoadFormPosition(F : TForm);
 procedure SaveFormPosition(F : TForm);
 procedure ValidateFormState(F:TForm);
 
-procedure LoadSplitterPosition(F : TForm; Panel : TrmPanel);
-procedure SaveSplitterPosition(F : TForm; Panel : TrmPanel);
+procedure LoadSplitterPosition(F : TForm; Panel : TPanel);
+procedure SaveSplitterPosition(F : TForm; Panel : TPanel);
 
 function NoLangFormatDateTime(const Format: string; DateTime: TDateTime): string;
 
@@ -2194,7 +2195,7 @@ begin
    F.MakeFullyVisible(wMonitor);
 end;
 
-procedure LoadSplitterPosition(F : TForm; Panel : TrmPanel);
+procedure LoadSplitterPosition(F : TForm; Panel : TPanel);
 var
   R : TRegistry;
 
@@ -2214,7 +2215,7 @@ begin
   end;
 end;
 
-procedure SaveSplitterPosition(F : TForm; Panel : TrmPanel);
+procedure SaveSplitterPosition(F : TForm; Panel : TPanel);
 var
 	R : TRegistry;
 
