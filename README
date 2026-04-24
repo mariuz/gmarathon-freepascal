@@ -27,3 +27,26 @@ Marathon own component, TDiagramTree("Other\DiagramTree.pas")
 Marathon own component, TIBPerformanceMonitor("Other\IBPerformanceMonitor.pas")
 Marathon own component, TMarathonColorGrid("Other\NewColorGrd.pas")
 Modified FreePascal units("Other\xmlread.pas", "Other\xmlwrite.pas", "Other\dom.pas")
+
+## Porting Progress (2026-04-24)
+
+The following steps have been taken to enable compilation with modern FPC and Lazarus on Linux:
+
+### Work Performed
+1.  **Updated Project Configuration**: 
+    *   Modified `src/Source/marathon.lpi` to include `lib/Other` and `lib/SyntaxMemoWithStuff2` in unit search paths.
+    *   Removed references to obsolete Delphi-only libraries like `FastMM4` and `fastcode` from the build configuration.
+2.  **Cross-Platform Unit Compatibility**:
+    *   Created "compatibility" units in `src/Common/` to resolve Delphi-specific dependencies:
+        *   `Windows.pas`: Redirects to `LCLIntf` and `LCLType`.
+        *   `Messages.pas`: Redirects to `LMessages`.
+        *   `ShlObj.pas`: Redirects to `LCLIntf` and `LCLType`.
+    *   Updated `src/Source/MarathonMain.pas` with `{$IFDEF FPC}` blocks to use LCL units correctly.
+3.  **Build Testing**: Verified that the LCL and SynEdit dependencies are correctly detected by `lazbuild`.
+
+### Remaining Blockers
+The project still requires the following third-party libraries (Lazarus versions) to be installed in the environment and added to the project requirements:
+*   **IB Objects (IBO)**: Crucial for database connectivity (`TIBOQuery`, `TIB_Connection`).
+*   **rmControls**: Needed for `TrmPanel`, `TrmMemoryDataSet`, and other UI elements.
+*   **Toolbar2000 (TB2K)**: Required for the IDE toolbars and docking system.
+*   **VirtualTreeView**: Required for the database manager tree displays.

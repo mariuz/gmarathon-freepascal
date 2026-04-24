@@ -25,8 +25,8 @@
         <CompilerOptions>
           <Version Value="12"/>
           <SearchPaths>
-            <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastobj;../fastcode/061;../fastcode/fastmove;../FastMM4/474;$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
+            <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -58,8 +58,8 @@
         <CompilerOptions>
           <Version Value="12"/>
           <SearchPaths>
-            <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastobj;../fastcode/061;../fastcode/fastmove;../FastMM4/474;$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../fastcode/061;../fastcode/fastmove;../FastMM4/474"/>
+            <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
+            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>

@@ -7,7 +7,12 @@ unit MarathonMain;
 interface
 
 uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages,
+  {$ELSE}
+  Windows, Messages,
+  {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
 	Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList,
 	FileCtrl, CheckLst, ImgList,
 	IB_Components,
