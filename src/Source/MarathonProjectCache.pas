@@ -48,7 +48,7 @@ Revision 1.7  2002/09/25 12:12:49  tmuetze
 Remote server support has been added, at the moment it is strict experimental
 
 Revision 1.6  2002/05/04 08:48:12  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.5  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -62,25 +62,9 @@ unit MarathonProjectCache;
 interface
 {$I compilerdefines.inc}
 
-uses
-	SysUtils, Windows, Classes, ComCtrls, Controls, Dialogs,
-
-	{$IFDEF D6_OR_HIGHER}
-	Variants,
-	{$ENDIF}
-	rmTreeNonView,
-	rmPathTreeView,
-	IB_Components,
-	IB_Session,
-	IBODataset,
-	DOM,
-	XMLWrite,
-	XMLRead,
-	TypInfo,
-	MarathonProjectCacheTypes,
-	WindowLists,
-	ScriptRecorder,
-	GimbalToolsAPI;
+uses SysUtils, Windows, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
+	Variants, {$ENDIF}
+	rmTreeNonView, rmPathTreeView, IBConnection, SQLDB, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, WindowLists, ScriptRecorder, GimbalToolsAPI;
 
 const
    cSepChar = #2;
@@ -247,8 +231,8 @@ type
 		FDBFileName: String;
 		FUserName: String;
 		FServerName: String;
-		FConnection: TIB_Connection;
-		FTransaction: TIB_Transaction;
+		FConnection: TIBConnection;
+		FTransaction: TSQLTransaction;
 		FPassword: String;
 		FRememberPassword: Boolean;
 		FSQLRole: String;
@@ -291,8 +275,8 @@ type
 		procedure GetCharSetNames(S: TStrings);
 		procedure GetCollationNames(S: TStrings);
 		property Connected: Boolean read GetConnected;
-		property Connection: TIB_Connection read FConnection write FConnection;
-		property Transaction: TIB_Transaction read FTransaction write FTransaction;
+		property Connection: TIBConnection read FConnection write FConnection;
+		property Transaction: TSQLTransaction read FTransaction write FTransaction;
 		property DBFileName: String read FDBFileName write SetDBFileName;
 		property ServerName: String read FServerName write SetServerName;
 		property UserName: String read FUserName write SetUserName;
@@ -843,11 +827,7 @@ function GetImageIndexForCacheType(CT: TGSSCacheType): Integer;
 
 implementation
 
-uses
-	Globals,
-	MarathonIDE,
-	Login,
-	Crypt32, DB;
+uses Globals, MarathonIDE, Login, Crypt32, DB;
 
 function GetImageIndexForCacheType(CT: TGSSCacheType): Integer;
 begin
@@ -1653,39 +1633,25 @@ begin
 	if FErrorOnConnection then
 		Exit;
 
-	FConnection.Path := FDBFileName;
+	FConnection.DatabaseName := FDBFileName;
 
 	Server := MarathonIDEInstance.CurrentProject.Cache.ServerByName[FServerName];
-	if Server.Local then
-		FConnection.Protocol := cpLocal
-	else
-	begin
-		FConnection.Server := Server.HostName;
-		case Server.Protocol of
-			0:
-				FConnection.Protocol := cpTCP_IP;
+	if not Server.Local then
+		FConnection.HostName := Server.HostName;
 
-			1:
-				FConnection.Protocol := cpNetBEUI;
-
-			2:
-				FConnection.Protocol := cpNovell;
-		end;
-	end;
-	FConnection.Username := FUserName;
+	FConnection.UserName := FUserName;
 	FConnection.Password := FPassword;
-	FConnection.SQLRole := FSQLRole;
+	FConnection.Params.Add('role=' + FSQLRole);
 	if FSQLDialect = 0 then
 		FSQLDialect := 1;
 	try
-		FConnection.Connect;
+    FConnection.Dialect := FSQLDialect;
+		FConnection.Connected := True;
 		if IsIB6 then
 		begin
-			FConnection.Disconnect;
-			FConnection.SQLDialect := FSQLDialect;
-			FConnection.Connect;
-			if (FConnection.SQLDialect <> FSQLDialect) then
-				FSQLDialect := FConnection.SQLDialect;
+			FConnection.Connected := False;
+			FConnection.Dialect := FSQLDialect;
+			FConnection.Connected := True;
 		end;
 		Result := True;
 		Exit;
@@ -1724,13 +1690,13 @@ begin
 				FConnection.Username := FUserName;
 				FConnection.Password := FPassword;
 				FConnection.SQLRole := FSQLRole;
-				FConnection.SQLDialect := FSQLDialect;
+				FConnection.Dialect := FSQLDialect;
 				try
 					FConnection.Connect;
 					if IsIB6 then
 					begin
 						FConnection.Disconnect;
-						FConnection.SQLDialect := FSQLDialect;
+						FConnection.Dialect := FSQLDialect;
 						FCOnnection.Connect;
 					end;
 					Result := True;
@@ -1753,9 +1719,10 @@ begin
 	inherited;
 	FImageIndex := 0;
 	FStatic := True;
-	FConnection := TIB_Connection.Create(nil);
-	FTransaction := TIB_Transaction.Create(nil);
-	FTransaction.IB_Connection := FConnection;
+	FConnection := TIBConnection.Create(nil);
+	FTransaction := TSQLTransaction.Create(nil);
+	FTransaction.Database := FConnection;
+	FConnection.Transaction := FTransaction;
 	FCacheType := ctConnection;
 	FTableList := TStringList.Create;
   FViewList := TStringList.Create;
@@ -1916,14 +1883,14 @@ end;
 
 procedure TMarathonCacheConnection.GetCharSetNames(S: TStrings);
 var
-  Q: TIBOQuery;
-  TmpTrans: TIB_Transaction;
+  Q: TSQLQuery;
+  TmpTrans: TSQLTransaction;
 
 begin
   S.Clear;
   S.Add('');
-  Q := TIBOQuery.Create(nil);
-  TmpTrans := TIB_Transaction.Create(nil);
+  Q := TSQLQuery.Create(nil);
+  TmpTrans := TSQLTransaction.Create(nil);
   try
     TmpTrans.IB_Connection := FConnection;
     TmpTrans.Isolation := tiConCurrency;
@@ -1949,13 +1916,13 @@ end;
 
 function TMarathonCacheConnection.GetDBCharSetName(CharSetID: Integer): String;
 var
-  Q: TIBOQuery;
-  TmpTrans: TIB_Transaction;
+  Q: TSQLQuery;
+  TmpTrans: TSQLTransaction;
   CharSet: String;
 
 begin
-  Q := TIBOQuery.Create(nil);
-  TmpTrans := TIB_Transaction.Create(nil);
+  Q := TSQLQuery.Create(nil);
+  TmpTrans := TSQLTransaction.Create(nil);
   try
     TmpTrans.IB_Connection := FConnection;
     TmpTrans.Isolation := tiConCurrency;
@@ -1985,14 +1952,14 @@ end;
 
 procedure TMarathonCacheConnection.GetCollationNames(S: TStrings);
 var
-  Q: TIBOQuery;
-  TmpTrans: TIB_Transaction;
+  Q: TSQLQuery;
+  TmpTrans: TSQLTransaction;
 
 begin
   S.Clear;
   S.Add('');
-  Q := TIBOQuery.Create(nil);
-  TmpTrans := TIB_Transaction.Create(nil);
+  Q := TSQLQuery.Create(nil);
+  TmpTrans := TSQLTransaction.Create(nil);
   try
     TmpTrans.IB_Connection := FConnection;
     TmpTrans.Isolation := tiConCurrency;
@@ -2018,13 +1985,13 @@ end;
 
 function TMarathonCacheConnection.GetDBCollationName(CollationID: Integer; CharSetID: Integer): String;
 var
-	Q: TIBOQuery;
-	TmpTrans: TIB_Transaction;
+	Q: TSQLQuery;
+	TmpTrans: TSQLTransaction;
   CharSet: String;
 
 begin
-  Q := TIBOQuery.Create(nil);
-  TmpTrans := TIB_Transaction.Create(nil);
+  Q := TSQLQuery.Create(nil);
+  TmpTrans := TSQLTransaction.Create(nil);
   try
     TmpTrans.IB_Connection := FConnection;
     TmpTrans.Isolation := tiConCurrency;
@@ -2061,8 +2028,8 @@ function TMarathonCacheConnection.GetSQLDialect: Integer;
 begin
 	if FConnection.Connected then
 	begin
-		Result := FConnection.SQLDialect;
-		FSQLDialect := FConnection.SQLDialect;
+		Result := FConnection.Dialect;
+		FSQLDialect := FConnection.Dialect;
 	end
 	else
 		Result := FSQLDialect;
@@ -2070,16 +2037,16 @@ end;
 
 function TMarathonCacheConnection.GetTableList: TStringList;
 var
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FTableList.Clear;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
     Q.IB_Connection := Connection;
     Q.IB_Transaction := Transaction;
-    if Q.IB_Transaction.Started then
+    if Q.IB_Transaction.Active then
       Q.IB_Transaction.Commit;
     Q.IB_Transaction.StartTransaction;
     try
@@ -2107,16 +2074,16 @@ end;
 
 function TMarathonCacheConnection.GetViewList: TStringList;
 var
-  Q: TIBOQuery;
+  Q: TSQLQuery;
 
 begin
   FViewList.Clear;
-  Q := TIBOQuery.Create(nil);
+  Q := TSQLQuery.Create(nil);
   try
 		Q.BeginBusy(False);
 		Q.IB_Connection := Connection;
 		Q.IB_Transaction := Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -2144,16 +2111,16 @@ end;
 
 function TMarathonCacheConnection.GetDomainList: TStringList;
 var
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FDomainList.Clear;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := Connection;
 		Q.IB_Transaction := Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -3394,7 +3361,7 @@ begin
 					TDOMElement(oConnection).SetAttribute('password', Cache.Connections[Idx].EncPassword);
 				TDOMElement(oConnection).SetAttribute('charset', Cache.Connections[Idx].LangDriver);
 				TDOMElement(oConnection).SetAttribute('sqlrole', Cache.Connections[Idx].SQLRole);
-				TDOMElement(oConnection).SetAttribute('sqldialect', IntToStr(Cache.Connections[Idx].SQLDialect));
+				TDOMElement(oConnection).SetAttribute('sqldialect', IntToStr(Cache.Connections[Idx].Dialect));
 				oConnections.AppendChild(oConnection);
 			end;
 
@@ -3799,16 +3766,16 @@ procedure TMarathonCacheDomainsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheDomain;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -3851,11 +3818,11 @@ procedure TMarathonCacheUserDomainsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheDomain;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
@@ -3897,16 +3864,16 @@ procedure TMarathonCacheUDFsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheFunction;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -3947,16 +3914,16 @@ procedure TMarathonCacheExceptionsHeader.Expand(Recursive: Boolean);
 var
   wNode: TMarathonCacheException;
   NV: TrmTreeNonViewNode;
-  Q: TIBOQuery;
+  Q: TSQLQuery;
 
 begin
   FContainerNode.DeleteChildren;
-  Q := TIBOQuery.Create(nil);
+  Q := TSQLQuery.Create(nil);
   try
     Q.BeginBusy(False);
     Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
     Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if Q.IB_Transaction.Started then
+    if Q.IB_Transaction.Active then
       Q.IB_Transaction.Commit;
     Q.IB_Transaction.StartTransaction;
     try
@@ -3997,16 +3964,16 @@ procedure TMarathonCacheGeneratorsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheGenerator;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
   FContainerNode.DeleteChildren;
-  Q := TIBOQuery.Create(nil);
+  Q := TSQLQuery.Create(nil);
   try
     Q.BeginBusy(False);
     Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
     Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if Q.IB_Transaction.Started then
+    if Q.IB_Transaction.Active then
       Q.IB_Transaction.Commit;
     Q.IB_Transaction.StartTransaction;
     try
@@ -4047,16 +4014,16 @@ procedure TMarathonCacheTriggersHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTrigger;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -4101,16 +4068,16 @@ procedure TMarathonCacheSystemTriggersHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTrigger;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -4154,16 +4121,16 @@ procedure TMarathonCacheStoredProceduresHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheProcedure;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
     Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if Q.IB_Transaction.Started then
+    if Q.IB_Transaction.Active then
       Q.IB_Transaction.Commit;
     Q.IB_Transaction.StartTransaction;
     try
@@ -4205,16 +4172,16 @@ procedure TMarathonCacheViewsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheView;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -4255,16 +4222,16 @@ procedure TMarathonCacheTablesHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTable;
 	NV: TrmTreeNonViewNode;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try
@@ -4785,16 +4752,16 @@ procedure TMarathonCacheSysTablesHeader.Expand(Recursive: Boolean);
 var
 	NV: TrmTreeNonViewNode;
 	wNode: TMarathonCacheTable;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TIBOQuery.Create(nil);
+	Q := TSQLQuery.Create(nil);
 	try
 		Q.BeginBusy(False);
 		Q.IB_Connection := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.IB_Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if Q.IB_Transaction.Started then
+		if Q.IB_Transaction.Active then
 			Q.IB_Transaction.Commit;
 		Q.IB_Transaction.StartTransaction;
 		try

@@ -817,14 +817,9 @@ object frmDomains: TfrmDomains
       TabOrder = 0
     end
   end
-  object qryDomain: TIBOQuery
+  object qryDomain: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 8
     Top = 280
   end

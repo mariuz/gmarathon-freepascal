@@ -31,12 +31,7 @@ unit ScriptRecorder;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls,	Buttons, ActnList,
-	SynEdit,
-	SyntaxMemoWithStuff2,
-	MarathonInternalInterfaces;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, ActnList, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces;
 
 type
 	TfrmScriptRecorder = class(TForm, IMarathonScriptRecorder)
@@ -79,9 +74,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	Globals,
-	HelpMap;
+uses Globals, HelpMap;
 
 procedure TfrmScriptRecorder.FormCreate(Sender: TObject);
 begin

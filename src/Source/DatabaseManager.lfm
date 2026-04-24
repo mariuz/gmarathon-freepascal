@@ -1075,12 +1075,11 @@ object frmDatabaseExplorer: TfrmDatabaseExplorer
           TabOrder = 7
         end
       end
-      object tvDatabase: TrmPathTreeView
+      object tvDatabase: TTreeView
         Left = 0
         Top = 0
         Width = 127
         Height = 397
-        SepChar = #2
         Align = alClient
         HideSelection = False
         Images = frmMarathonMain.ilMarathonImages

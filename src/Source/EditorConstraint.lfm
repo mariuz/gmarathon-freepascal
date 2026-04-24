@@ -408,14 +408,9 @@ object frmEditorConstraint: TfrmEditorConstraint
       end
     end
   end
-  object qryConstraint: TIBOQuery
+  object qryConstraint: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 4
     Top = 372
   end

@@ -19,9 +19,7 @@ unit ArrayDialog;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  ComCtrls, StdCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls;
 
 type
   TfrmArrayDialog = class(TForm)

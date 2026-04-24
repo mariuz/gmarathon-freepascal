@@ -6,28 +6,10 @@ unit MarathonMain;
 
 interface
 
-uses
-  {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages,
-  {$ELSE}
-  Windows, Messages,
-  {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList,
-	FileCtrl, CheckLst, ImgList,
-	IB_Components,
-	IB_Monitor,
-	TB2Dock,
-	TB2Toolbar,
-    TB2Item,
-	rmPathTreeView,
-	rmTreeNonView,
-	rmKeyBindings,
-	rmTabs3x,
-	rmDataStorage,
-	SynEditHighlighter,
-	SynHighlighterSQL,
-	MarathonInternalInterfaces, rmComboBox, TB2MRU, rmPanel;
+uses {$IFDEF FPC}
+  LCLIntf, LCLType, LMessages, {$ELSE}
+  Windows, Messages, {$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList, FileCtrl, CheckLst, ImgList, IBConnection, SQLDB, SynEditHighlighter, SynHighlighterSQL, MarathonInternalInterfaces, Printers, PrintersDlgs;
 
 type
 	TfrmMarathonMain = class(TForm, IMarathonMainForm)
@@ -35,32 +17,32 @@ type
     dlgOpen: TSaveDialog;
     ilMarathonImages: TImageList;
     ilErrorInfo: TImageList;
-		dckTop: TTBDock;
-    tlbrStandard: TTBToolbar;
-    tlbrStandardOpenProject: TTBItem;
-    tlbrStandardNewProject: TTBItem;
+		dckTop: TPanel;
+    tlbrStandard: TToolBar;
+    tlbrStandardOpenProject: TToolButton;
+    tlbrStandardNewProject: TToolButton;
     actMain: TActionList;
     FileNewProject: TAction;
     FileOpenProject: TAction;
     FileCloseProject: TAction;
     FileConnect: TAction;
 		FileDisconnect: TAction;
-    ToolbarSep1: TTBSeparatorItem;
+    ToolbarSep1: TToolButton;
 		FileNewObject: TAction;
     FileCreateDatabase: TAction;
 		FilePrintSetup: TAction;
     FileExitApplication: TAction;
-    tlbrTools: TTBToolbar;
-		btnToolsViewDBManager: TTBItem;
-    btnToolsSQLTrace: TTBItem;
-    btnToolsCodeSnippets: TTBItem;
-    btnToolsMetdataSearch: TTBItem;
-		btnToolsSQLEditor: TTBItem;
-    tlbrScript: TTBToolbar;
-    btnScriptRecordNew: TTBItem;
-    btnScriptAppendExisting: TTBItem;
-    btnScriptExecute: TTBItem;
-    ToolbarSep2: TTBSeparatorItem;
+    tlbrTools: TToolBar;
+		btnToolsViewDBManager: TToolButton;
+    btnToolsSQLTrace: TToolButton;
+    btnToolsCodeSnippets: TToolButton;
+    btnToolsMetdataSearch: TToolButton;
+		btnToolsSQLEditor: TToolButton;
+    tlbrScript: TToolBar;
+    btnScriptRecordNew: TToolButton;
+    btnScriptAppendExisting: TToolButton;
+    btnScriptExecute: TToolButton;
+    ToolbarSep2: TToolButton;
     ViewViewBrowser: TAction;
     ToolsSQLEditor: TAction;
     ProjectProjectOptions: TAction;
@@ -84,29 +66,29 @@ type
     FileSaveProject: TAction;
 		FileSaveProjectAs: TAction;
 		dlgSaveProject: TSaveDialog;
-    btnPrint: TTBItem;
-		btnPrintPreview: TTBItem;
+    btnPrint: TToolButton;
+		btnPrintPreview: TToolButton;
     FilePrint: TAction;
     FilePrintPreview: TAction;
-		tlbrSQLEditor: TTBToolbar;
-    btnExecute: TTBItem;
-    btnCompile: TTBItem;
-    btnCommit: TTBItem;
-		btnRollback: TTBItem;
-    ToolbarSep6: TTBSeparatorItem;
-    btnUndo: TTBItem;
-    btnRedo: TTBItem;
-    ToolbarSep7: TTBSeparatorItem;
-    btnCaptureSnippet: TTBItem;
-    ToolbarSep8: TTBSeparatorItem;
-    btnCut: TTBItem;
-    btnCopy: TTBItem;
-    btnPaste: TTBItem;
-    ToolbarSep9: TTBSeparatorItem;
-    btnFind: TTBItem;
-    ToolbarSep10: TTBSeparatorItem;
-    btnDrop: TTBItem;
-    ToolbarSep4: TTBSeparatorItem;
+		tlbrSQLEditor: TToolBar;
+    btnExecute: TToolButton;
+    btnCompile: TToolButton;
+    btnCommit: TToolButton;
+		btnRollback: TToolButton;
+    ToolbarSep6: TToolButton;
+    btnUndo: TToolButton;
+    btnRedo: TToolButton;
+    ToolbarSep7: TToolButton;
+    btnCaptureSnippet: TToolButton;
+    ToolbarSep8: TToolButton;
+    btnCut: TToolButton;
+    btnCopy: TToolButton;
+    btnPaste: TToolButton;
+    ToolbarSep9: TToolButton;
+    btnFind: TToolButton;
+    ToolbarSep10: TToolButton;
+    btnDrop: TToolButton;
+    ToolbarSep4: TToolButton;
     EditUndo: TAction;
     EditRedo: TAction;
     EditCaptureSnippet: TAction;
@@ -134,11 +116,11 @@ type
 		Script2: TMenuItem;
     SQLEditor3: TMenuItem;
 		ToolsQueryBuilder: TAction;
-    btnStatementHistory: TTBItem;
+    btnStatementHistory: TToolButton;
     stsMain: TStatusBar;
-    btnNextStatement: TTBItem;
-		btnPrevStatement: TTBItem;
-    btnQueryBuilder: TTBItem;
+    btnNextStatement: TToolButton;
+		btnPrevStatement: TToolButton;
+    btnQueryBuilder: TToolButton;
     ViewPrevStatement: TAction;
     ViewNextStatement: TAction;
     ViewStatementHistory: TAction;
@@ -202,8 +184,8 @@ type
     FileSaveAs: TAction;
     ObjectShowQueryPlan: TAction;
     ObjectShowPerformanceData: TAction;
-    ToolbarSep3: TTBSeparatorItem;
-    cmbConnections: TrmComboBox;
+    ToolbarSep3: TToolButton;
+    cmbConnections: TComboBox;
     FileExport: TAction;
     ObjectParameters: TAction;
     ObjectSaveDocumentation: TAction;
@@ -248,231 +230,231 @@ type
 		ScriptAppendExisting: TAction;
 		ViewFolders: TAction;
     ViewSearch: TAction;
-		kbgKeys: TrmKeyBindings;
+		kbgKeys: TComponent;
     ObjectOpenSubObject: TAction;
     ViewList: TAction;
     FileLoad: TAction;
     FileLoadFrom: TAction;
-    TBControlItem: TTBControlItem;
-    TBToolbar1: TTBToolbar;
-    File1: TTBSubmenuItem;
-    New1: TTBItem;
-    Open1: TTBItem;
-    ReOpen1: TTBItem;
-    Close1: TTBItem;
-    SaveProject1: TTBItem;
-    SaveProjectAs1: TTBItem;
-    N20: TTBSeparatorItem;
-    New2: TTBItem;
-    Open2: TTBSubmenuItem;
-    FileOpenFile1: TTBItem;
-    FileOpenDatabaseObject1: TTBItem;
-    FileSave1: TTBItem;
-    FileSaveAs1: TTBItem;
-    Close2: TTBItem;
-    N28: TTBSeparatorItem;
-    F1: TTBItem;
-    N10: TTBSeparatorItem;
-    CreateDatabase1: TTBItem;
-    N3: TTBSeparatorItem;
-    Connect1: TTBItem;
-    Disconnect1: TTBItem;
-    N1: TTBSeparatorItem;
-    PrintSetup1: TTBItem;
-    Print1: TTBItem;
-    PrintPreview1: TTBItem;
-    N2: TTBSeparatorItem;
-    Exit1: TTBItem;
-    Edit1: TTBSubmenuItem;
-    Undo1: TTBItem;
-    actRedo1: TTBItem;
-    N4: TTBSeparatorItem;
-    Cut1: TTBItem;
-    Copy1: TTBItem;
-    Paste1: TTBItem;
-    SelectAll1: TTBItem;
-    N34: TTBSeparatorItem;
-    CaptureSnippet1: TTBItem;
-    N18: TTBSeparatorItem;
-    ToggleBookmark1: TTBSubmenuItem;
-    EditToggleBookmark01: TTBItem;
-    EditToggleBookmark11: TTBItem;
-    EditGotoBookmark21: TTBItem;
-    EditToggleBookmark31: TTBItem;
-    EditToggleBookmark41: TTBItem;
-    EditToggleBookmark51: TTBItem;
-    EditToggleBookmark61: TTBItem;
-    EditToggleBookmark71: TTBItem;
-    EditToggleBookmark81: TTBItem;
-    EditToggleBookmark91: TTBItem;
-    GotoBookmark1: TTBSubmenuItem;
-    EditGotoBookmark01: TTBItem;
-    EditGotoBookmark11: TTBItem;
-    EditGotoBookmark22: TTBItem;
-    EditGotoBookmark31: TTBItem;
-    EditGotoBookmark41: TTBItem;
-    EditGotoBookmark51: TTBItem;
-    EditGotoBookmark61: TTBItem;
-    EditGotoBookmark71: TTBItem;
-    EditGotoBookmark81: TTBItem;
-    EditGotoBookmark91: TTBItem;
-    N27: TTBSeparatorItem;
-    Encoding1: TTBSubmenuItem;
-    ANSI1: TTBItem;
-    Arabic1: TTBItem;
-    Symbol1: TTBItem;
-    Macintosh1: TTBItem;
-    Japanese1: TTBItem;
-    KoreanWansung1: TTBItem;
-    KoreanJohab1: TTBItem;
-    ChineseSimplified1: TTBItem;
-    ChineseTraditional1: TTBItem;
-    Greek1: TTBItem;
-    Turkish1: TTBItem;
-    Vietnamese1: TTBItem;
-    Hebrew1: TTBItem;
-    Arabic2: TTBItem;
-    Baltic1: TTBItem;
-    Russian1: TTBItem;
-    Thai1: TTBItem;
-    EasternEuropean1: TTBItem;
-    OEM1: TTBItem;
-    N5: TTBSeparatorItem;
-    Find1: TTBItem;
-    FindNext1: TTBItem;
-    Replace1: TTBItem;
-    View1: TTBSubmenuItem;
-    DatabaseManager1: TTBItem;
-    ViewDebuggerHeader1: TTBSubmenuItem;
-    ViewBreakPoints1: TTBItem;
-    ViewCallStack1: TTBItem;
-    ViewWatches1: TTBItem;
-    ViewLocalVariables1: TTBItem;
-    N19: TTBSeparatorItem;
-    Tools2: TTBSubmenuItem;
-    Standard1: TTBItem;
-    Tools3: TTBItem;
-    Scipt1: TTBItem;
-    SQLEditor2: TTBItem;
-    N6: TTBSeparatorItem;
-    actPrevStatement1: TTBItem;
-    actNextStatement1: TTBItem;
-    actStatementHistory1: TTBItem;
-    N17: TTBSeparatorItem;
-    Folders1: TTBItem;
-    Search1: TTBItem;
-    List1: TTBItem;
-    N12: TTBSeparatorItem;
-    ViewRefresh1: TTBItem;
-    N23: TTBSeparatorItem;
-    ViewPrevPage1: TTBItem;
-    ViewNextPage1: TTBItem;
-    N33: TTBSeparatorItem;
-    ObjectViewMessages1: TTBItem;
-    N26: TTBSeparatorItem;
-    NextWindow1: TTBItem;
-    Browser1: TTBSubmenuItem;
-    ProjectNewItem1: TTBItem;
-    ProjectOpenItem1: TTBItem;
-    ProjectExtractMetadata1: TTBItem;
-    ProjectAddToProject1: TTBItem;
-    ProjectCreateFolder1: TTBItem;
-    N24: TTBSeparatorItem;
-    ProjectItemDrop1: TTBItem;
-    ProjectItemDelete1: TTBItem;
-    N25: TTBSeparatorItem;
-    ProjectItemProperties1: TTBItem;
-    N22: TTBSeparatorItem;
-    NewConnection1: TTBItem;
-    NewServer1: TTBItem;
-    N21: TTBSeparatorItem;
-    ProjectOptions2: TTBItem;
-    Transaction1: TTBSubmenuItem;
-    Commit1: TTBItem;
-    Rollback1: TTBItem;
-    Object1: TTBSubmenuItem;
-    Compile1: TTBItem;
-    Execute1: TTBItem;
-    ObjectParameters1: TTBItem;
-    ScriptMode1: TTBItem;
-    N31: TTBSeparatorItem;
-    ObjectStepOver1: TTBItem;
-    ObjectStepInto1: TTBItem;
-    ObjectShowExecutionPoint1: TTBItem;
-    ObjectPause1: TTBItem;
-    ObjectReset1: TTBItem;
-    ObjectDebuggerHeader1: TTBSubmenuItem;
-    ObjectEvalModify1: TTBItem;
-    ObjectAddWatch1: TTBItem;
-    ObjectAddBreakPoint1: TTBItem;
-    N29: TTBSeparatorItem;
-    New3: TTBSubmenuItem;
-    ObjectNewField1: TTBItem;
-    ObjectNewConstraint1: TTBItem;
-    ObjectNewIndex1: TTBItem;
-    ObjectNewTrigger1: TTBItem;
-    ObjectNewInputParam1: TTBItem;
-    DropObject1: TTBSubmenuItem;
-    ObjectDropField1: TTBItem;
-    ObjectDropConstraint1: TTBItem;
-    ObjectDropIndex1: TTBItem;
-    ObjectDropTrigger1: TTBItem;
-    ObjectDropInputParam1: TTBItem;
-    Drop1: TTBItem;
-    Properties1: TTBItem;
-    N30: TTBSeparatorItem;
-    Tools5: TTBSubmenuItem;
-    ObjectShowPerformanceData1: TTBItem;
-    ObjectShowQueryPlan1: TTBItem;
-    N36: TTBSeparatorItem;
-    ObjectReorderColumns1: TTBItem;
-    ObjectResetGeneratorValue1: TTBItem;
-    Permissions1: TTBSubmenuItem;
-    ObjectGrant1: TTBItem;
-    ObjectRevoke1: TTBItem;
-    N32: TTBSeparatorItem;
-    AddToProject1: TTBItem;
-    ObjectSaveDocumentation1: TTBItem;
-    ObjectSaveAsTemplate1: TTBItem;
-    Script1: TTBSubmenuItem;
-    RecordNewScript1: TTBItem;
-    N37: TTBSeparatorItem;
-    AppendtoExistingScript1: TTBItem;
-    NewScript1: TTBItem;
-    N14: TTBSeparatorItem;
-    Record1: TTBItem;
-    Stop1: TTBItem;
-    Tools1: TTBSubmenuItem;
-    SQLEditor1: TTBItem;
-    UserEditor1: TTBItem;
-    N16: TTBSeparatorItem;
-    MetadataExtract1: TTBItem;
-    SearchMetadata1: TTBItem;
-    N13: TTBSeparatorItem;
-    SyntaxHelp1: TTBItem;
-    SQLCodeSnippets1: TTBItem;
-    N15: TTBSeparatorItem;
-    SQLTrace1: TTBItem;
-    N7: TTBSeparatorItem;
-    Plugins1: TTBItem;
-    N35: TTBSeparatorItem;
-    DebuggerEnabled1: TTBItem;
-    Options1: TTBItem;
-    Window1: TTBSubmenuItem;
-    WindowList2: TTBItem;
-    CloseAllWindows1: TTBItem;
-    N9: TTBSeparatorItem;
-    Help1: TTBSubmenuItem;
-    HelpTopics1: TTBItem;
-    N11: TTBSeparatorItem;
-    MarathonOntheWeb1: TTBItem;
-    EmailMarathonSupport1: TTBItem;
-    N8: TTBSeparatorItem;
-    About1: TTBItem;
-    TBMRUListItem1: TTBMRUListItem;
-    TBMRUList1: TTBMRUList;
-    rmPanel1: TrmPanel;
-    tabWindows: TrmTabSet;
+    TBControlItem: TToolButton;
+    TBToolbar1: TToolBar;
+    File1: TMenuItem;
+    New1: TToolButton;
+    Open1: TToolButton;
+    ReOpen1: TToolButton;
+    Close1: TToolButton;
+    SaveProject1: TToolButton;
+    SaveProjectAs1: TToolButton;
+    N20: TToolButton;
+    New2: TToolButton;
+    Open2: TMenuItem;
+    FileOpenFile1: TToolButton;
+    FileOpenDatabaseObject1: TToolButton;
+    FileSave1: TToolButton;
+    FileSaveAs1: TToolButton;
+    Close2: TToolButton;
+    N28: TToolButton;
+    F1: TToolButton;
+    N10: TToolButton;
+    CreateDatabase1: TToolButton;
+    N3: TToolButton;
+    Connect1: TToolButton;
+    Disconnect1: TToolButton;
+    N1: TToolButton;
+    PrintSetup1: TToolButton;
+    Print1: TToolButton;
+    PrintPreview1: TToolButton;
+    N2: TToolButton;
+    Exit1: TToolButton;
+    Edit1: TMenuItem;
+    Undo1: TToolButton;
+    actRedo1: TToolButton;
+    N4: TToolButton;
+    Cut1: TToolButton;
+    Copy1: TToolButton;
+    Paste1: TToolButton;
+    SelectAll1: TToolButton;
+    N34: TToolButton;
+    CaptureSnippet1: TToolButton;
+    N18: TToolButton;
+    ToggleBookmark1: TMenuItem;
+    EditToggleBookmark01: TToolButton;
+    EditToggleBookmark11: TToolButton;
+    EditGotoBookmark21: TToolButton;
+    EditToggleBookmark31: TToolButton;
+    EditToggleBookmark41: TToolButton;
+    EditToggleBookmark51: TToolButton;
+    EditToggleBookmark61: TToolButton;
+    EditToggleBookmark71: TToolButton;
+    EditToggleBookmark81: TToolButton;
+    EditToggleBookmark91: TToolButton;
+    GotoBookmark1: TMenuItem;
+    EditGotoBookmark01: TToolButton;
+    EditGotoBookmark11: TToolButton;
+    EditGotoBookmark22: TToolButton;
+    EditGotoBookmark31: TToolButton;
+    EditGotoBookmark41: TToolButton;
+    EditGotoBookmark51: TToolButton;
+    EditGotoBookmark61: TToolButton;
+    EditGotoBookmark71: TToolButton;
+    EditGotoBookmark81: TToolButton;
+    EditGotoBookmark91: TToolButton;
+    N27: TToolButton;
+    Encoding1: TMenuItem;
+    ANSI1: TToolButton;
+    Arabic1: TToolButton;
+    Symbol1: TToolButton;
+    Macintosh1: TToolButton;
+    Japanese1: TToolButton;
+    KoreanWansung1: TToolButton;
+    KoreanJohab1: TToolButton;
+    ChineseSimplified1: TToolButton;
+    ChineseTraditional1: TToolButton;
+    Greek1: TToolButton;
+    Turkish1: TToolButton;
+    Vietnamese1: TToolButton;
+    Hebrew1: TToolButton;
+    Arabic2: TToolButton;
+    Baltic1: TToolButton;
+    Russian1: TToolButton;
+    Thai1: TToolButton;
+    EasternEuropean1: TToolButton;
+    OEM1: TToolButton;
+    N5: TToolButton;
+    Find1: TToolButton;
+    FindNext1: TToolButton;
+    Replace1: TToolButton;
+    View1: TMenuItem;
+    DatabaseManager1: TToolButton;
+    ViewDebuggerHeader1: TMenuItem;
+    ViewBreakPoints1: TToolButton;
+    ViewCallStack1: TToolButton;
+    ViewWatches1: TToolButton;
+    ViewLocalVariables1: TToolButton;
+    N19: TToolButton;
+    Tools2: TMenuItem;
+    Standard1: TToolButton;
+    Tools3: TToolButton;
+    Scipt1: TToolButton;
+    SQLEditor2: TToolButton;
+    N6: TToolButton;
+    actPrevStatement1: TToolButton;
+    actNextStatement1: TToolButton;
+    actStatementHistory1: TToolButton;
+    N17: TToolButton;
+    Folders1: TToolButton;
+    Search1: TToolButton;
+    List1: TToolButton;
+    N12: TToolButton;
+    ViewRefresh1: TToolButton;
+    N23: TToolButton;
+    ViewPrevPage1: TToolButton;
+    ViewNextPage1: TToolButton;
+    N33: TToolButton;
+    ObjectViewMessages1: TToolButton;
+    N26: TToolButton;
+    NextWindow1: TToolButton;
+    Browser1: TMenuItem;
+    ProjectNewItem1: TToolButton;
+    ProjectOpenItem1: TToolButton;
+    ProjectExtractMetadata1: TToolButton;
+    ProjectAddToProject1: TToolButton;
+    ProjectCreateFolder1: TToolButton;
+    N24: TToolButton;
+    ProjectItemDrop1: TToolButton;
+    ProjectItemDelete1: TToolButton;
+    N25: TToolButton;
+    ProjectItemProperties1: TToolButton;
+    N22: TToolButton;
+    NewConnection1: TToolButton;
+    NewServer1: TToolButton;
+    N21: TToolButton;
+    ProjectOptions2: TToolButton;
+    Transaction1: TMenuItem;
+    Commit1: TToolButton;
+    Rollback1: TToolButton;
+    Object1: TMenuItem;
+    Compile1: TToolButton;
+    Execute1: TToolButton;
+    ObjectParameters1: TToolButton;
+    ScriptMode1: TToolButton;
+    N31: TToolButton;
+    ObjectStepOver1: TToolButton;
+    ObjectStepInto1: TToolButton;
+    ObjectShowExecutionPoint1: TToolButton;
+    ObjectPause1: TToolButton;
+    ObjectReset1: TToolButton;
+    ObjectDebuggerHeader1: TMenuItem;
+    ObjectEvalModify1: TToolButton;
+    ObjectAddWatch1: TToolButton;
+    ObjectAddBreakPoint1: TToolButton;
+    N29: TToolButton;
+    New3: TMenuItem;
+    ObjectNewField1: TToolButton;
+    ObjectNewConstraint1: TToolButton;
+    ObjectNewIndex1: TToolButton;
+    ObjectNewTrigger1: TToolButton;
+    ObjectNewInputParam1: TToolButton;
+    DropObject1: TMenuItem;
+    ObjectDropField1: TToolButton;
+    ObjectDropConstraint1: TToolButton;
+    ObjectDropIndex1: TToolButton;
+    ObjectDropTrigger1: TToolButton;
+    ObjectDropInputParam1: TToolButton;
+    Drop1: TToolButton;
+    Properties1: TToolButton;
+    N30: TToolButton;
+    Tools5: TMenuItem;
+    ObjectShowPerformanceData1: TToolButton;
+    ObjectShowQueryPlan1: TToolButton;
+    N36: TToolButton;
+    ObjectReorderColumns1: TToolButton;
+    ObjectResetGeneratorValue1: TToolButton;
+    Permissions1: TMenuItem;
+    ObjectGrant1: TToolButton;
+    ObjectRevoke1: TToolButton;
+    N32: TToolButton;
+    AddToProject1: TToolButton;
+    ObjectSaveDocumentation1: TToolButton;
+    ObjectSaveAsTemplate1: TToolButton;
+    Script1: TMenuItem;
+    RecordNewScript1: TToolButton;
+    N37: TToolButton;
+    AppendtoExistingScript1: TToolButton;
+    NewScript1: TToolButton;
+    N14: TToolButton;
+    Record1: TToolButton;
+    Stop1: TToolButton;
+    Tools1: TMenuItem;
+    SQLEditor1: TToolButton;
+    UserEditor1: TToolButton;
+    N16: TToolButton;
+    MetadataExtract1: TToolButton;
+    SearchMetadata1: TToolButton;
+    N13: TToolButton;
+    SyntaxHelp1: TToolButton;
+    SQLCodeSnippets1: TToolButton;
+    N15: TToolButton;
+    SQLTrace1: TToolButton;
+    N7: TToolButton;
+    Plugins1: TToolButton;
+    N35: TToolButton;
+    DebuggerEnabled1: TToolButton;
+    Options1: TToolButton;
+    Window1: TMenuItem;
+    WindowList2: TToolButton;
+    CloseAllWindows1: TToolButton;
+    N9: TToolButton;
+    Help1: TMenuItem;
+    HelpTopics1: TToolButton;
+    N11: TToolButton;
+    MarathonOntheWeb1: TToolButton;
+    EmailMarathonSupport1: TToolButton;
+    N8: TToolButton;
+    About1: TToolButton;
+    TBMRUListItem1: TMenuItem;
+    TBMRUList1: TMenuItem;
+    rmPanel1: TPanel;
+    tabWindows: TTabControl;
     Bevel1: TBevel;
 		procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -708,13 +690,17 @@ type
     procedure FileLoadFromUpdate(Sender: TObject);
 	private
 		{ Private declarations }
+    const
+      WM_GETMINMAXINFO = 36;
+      WM_QUERYENDSESSION = 17;
+      WM_ENDSESSION = 22;
+		var
 		FDroppedDown: Boolean;
 		FInternalHeight: Integer;
 		FForceClose: Boolean;
-		procedure MinMaxInfo(var Message: TMessage); message WM_GETMINMAXINFO;
-		procedure QueryEndSession(var Message: TMessage); message WM_QUERYENDSESSION;
-		procedure EndSession(var Message: TMessage); message WM_ENDSESSION;
-		function AppHelp(Command: Word; Data: Longint; var CallHelp: Boolean): Boolean;
+		procedure MinMaxInfo(var Message: TLMessage); message WM_GETMINMAXINFO;
+		procedure QueryEndSession(var Message: TLMessage); message WM_QUERYENDSESSION;
+		procedure EndSession(var Message: TLMessage); message WM_ENDSESSION;		function AppHelp(Command: Word; Data: Longint; var CallHelp: Boolean): Boolean;
 		procedure ExecuteMRU(Sender: TObject);
 		procedure IdleHandler(Sender: TObject; var Done: Boolean);
     function MenuItem(Index: Integer): TMenuItem;
@@ -742,20 +728,7 @@ var
 
 implementation
 
-uses
-	Globals,
-	Tools,
-	SyntaxHelp,
-	CodeSnippets,
-	TipOfTheDay,
-	MenuModule,
-	HelpMap,
-	WindowLists,
-	BaseDocumentForm,
-	MarathonProjectCache,
-	MarathonProjectCacheTypes,
-	MarathonIDE,
-	GSSRegistry;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry;
 
 {$R *.lfm}
 {$R MarathonAVI.RES}
@@ -768,23 +741,25 @@ begin
 	Result := True;
 end;
 
-procedure TfrmMarathonMain.MinMaxInfo(var Message: TMessage);
-var
-	Diff: Integer;
+procedure TfrmMarathonMain.MinMaxInfo(var Message: TLMessage);
 begin
-	// Adjust for large fonts menu bar height
-	Diff := GetSystemMetrics(SM_CYSIZEFRAME) * 2;
-	Diff := Diff + GetSystemMetrics(SM_CYCAPTION);
-//	Diff := Diff + GetSystemMetrics(SM_CYMENU);
+	{ var
+		Diff: Integer;
+	begin
+		// Adjust for large fonts menu bar height
+		Diff := GetSystemMetrics(SM_CYSIZEFRAME) * 2;
+		Diff := Diff + GetSystemMetrics(SM_CYCAPTION);
+	//	Diff := Diff + GetSystemMetrics(SM_CYMENU);
 
-	TMinMaxInfo(Pointer(Message.lParam)^).ptMaxSize.x := Monitor.Width + (GetSystemMetrics(SM_CYSIZEFRAME) * 2);
-	TMinMaxInfo(Pointer(Message.lParam)^).ptMaxSize.y := FInternalHeight + Diff;
+		TMinMaxInfo(Pointer(Message.lParam)^).ptMaxSize.x := Monitor.Width + (GetSystemMetrics(SM_CYSIZEFRAME) * 2);
+		TMinMaxInfo(Pointer(Message.lParam)^).ptMaxSize.y := FInternalHeight + Diff;
 
-	TMinMaxInfo(Pointer(Message.lParam)^).ptMinTrackSize.x := 580;
-	TMinMaxInfo(Pointer(Message.lParam)^).ptMinTrackSize.y := FInternalHeight + Diff;
+		TMinMaxInfo(Pointer(Message.lParam)^).ptMinTrackSize.x := 580;
+		TMinMaxInfo(Pointer(Message.lParam)^).ptMinTrackSize.y := FInternalHeight + Diff;
 
-	TMinMaxInfo(Pointer(Message.lParam)^).ptMaxTrackSize.x := Monitor.Width + (GetSystemMetrics(SM_CYSIZEFRAME) * 2);
-	TMinMaxInfo(Pointer(Message.lParam)^).ptMaxTrackSize.y := FInternalHeight + Diff;
+		TMinMaxInfo(Pointer(Message.lParam)^).ptMaxTrackSize.x := Monitor.Width + (GetSystemMetrics(SM_CYSIZEFRAME) * 2);
+		TMinMaxInfo(Pointer(Message.lParam)^).ptMaxTrackSize.y := FInternalHeight + Diff;
+	}
 end;
 
 procedure TfrmMarathonMain.FormCreate(Sender: TObject);
@@ -1421,13 +1396,13 @@ begin
 	MarathonIDEInstance.ToolsEnvironmentOptions;
 end;
 
-procedure TfrmMarathonMain.QueryEndSession(var Message: TMessage);
+procedure TfrmMarathonMain.QueryEndSession(var Message: TLMessage);
 begin
 	FForceClose := True;
 	Message.Result := 1;
 end;
 
-procedure TfrmMarathonMain.EndSession(var Message: TMessage);
+procedure TfrmMarathonMain.EndSession(var Message: TLMessage);
 begin
 	Close;
 end;
@@ -2561,10 +2536,10 @@ end;
 
 procedure TfrmMarathonMain.AddMenuItem(MenuAction: TBasicAction);
 var
-  wTBItem : TTBItem;
+  wTBItem : TToolButton;
 begin
 //	Window1_old.Add(TMenuItem(Menu));  //rjm - tbmenufix
-  wTBItem := TTBItem.Create(TBToolbar1);
+  wTBItem := TToolButton.Create(TBToolbar1);
   wTBItem.Action := MenuAction;
   Menuaction.FreeNotification(self);
   Window1.Add(wTBItem);
@@ -3638,11 +3613,11 @@ begin
         while not wFound and (loop < Self.ComponentCount-1) do
         begin
            wComponent := self.Components[loop];
-           if (wComponent is TTBItem) and (TTBItem(wComponent).Action = TBasicAction(aComponent)) then
+           if (wComponent is TToolButton) and (TToolButton(wComponent).Action = TBasicAction(aComponent)) then
            begin
               wFound := true;
-              TTBItem(wComponent).Action := nil;
-              TTBItem(wComponent).Free;
+              TToolButton(wComponent).Action := nil;
+              TToolButton(wComponent).Free;
            end
            else
            inc(loop);

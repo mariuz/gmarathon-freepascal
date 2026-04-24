@@ -31,9 +31,7 @@ unit SQLAssistantDragAndDrop;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  ExtCtrls, StdCtrls, ComCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls;
 
 type
   TfrmSQLAssistant = class(TForm)

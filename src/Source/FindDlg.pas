@@ -2,9 +2,7 @@ unit FindDlg;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, SynEdit, SynEditTypes, SyntaxMemoWithStuff2;
 
 type
 

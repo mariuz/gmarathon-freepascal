@@ -19,9 +19,7 @@ unit DebugWatches;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  ComCtrls, Menus, ActnList;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Menus, ActnList;
 
 type
   TfrmWatches = class(TForm)
@@ -81,11 +79,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-  AddWatch,
-  MarathonIDE,
-  MarathonInternalInterfaces,
-  IBDebuggerVM;
+uses AddWatch, MarathonIDE, MarathonInternalInterfaces, IBDebuggerVM;
 
 procedure TfrmWatches.UpdateInfo;
 var

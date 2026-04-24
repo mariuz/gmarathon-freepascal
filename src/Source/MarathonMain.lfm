@@ -45,57 +45,49 @@ object frmMarathonMain: TfrmMarathonMain
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object dckTop: TTBDock
+  object dckTop: TPanel
     Left = 0
     Top = 0
     Width = 728
     Height = 75
     PopupMenu = mnuTools
     OnResize = dckTopResize
-    object tlbrStandard: TTBToolbar
+    object tlbrStandard: TToolBar
       Left = 0
       Top = 23
       Caption = 'Standard Toolbar'
-      DefaultDock = dckTop
-      DockPos = 0
       ParentShowHint = False
       PopupMenu = mnuTools
       ShowHint = True
-      TabOrder = 0
-      object tlbrStandardNewProject: TTBItem
+      object tlbrStandardNewProject: TToolButton
         Action = FileNewProject
-        Images = imgMenuTools
       end
-      object tlbrStandardOpenProject: TTBItem
+      object tlbrStandardOpenProject: TToolButton
         Action = FileOpenProject
-        Images = imgMenuTools
         Left = 25
       end
-      object tlbrStandardCloBroject: TTBItem
+      object tlbrStandardCloBroject: TToolButton
         Action = FileCloseProject
-        Images = imgMenuTools
         Left = 50
       end
-      object ToolbarSep1: TTBSeparatorItem
+      object ToolbarSep1: TToolButton
         Left = 131
       end
-      object btnPrint: TTBItem
+      object btnPrint: TToolButton
         Action = FilePrint
-        Images = imgMenuTools
         Left = 81
       end
-      object btnPrintPreview: TTBItem
+      object btnPrintPreview: TToolButton
         Action = FilePrintPreview
-        Images = imgMenuTools
         Left = 106
       end
-      object ToolbarSep3: TTBSeparatorItem
+      object ToolbarSep3: TToolButton
         Left = 75
       end
-      object TBControlItem: TTBControlItem
+      object TBControlItem: TToolButton
         Control = cmbConnections
       end
-      object cmbConnections: TrmComboBox
+      object cmbConnections: TComboBox
         Left = 127
         Top = 0
         Width = 180
@@ -103,187 +95,154 @@ object frmMarathonMain: TfrmMarathonMain
         Style = csDropDownList
         ItemHeight = 13
         RegKey = rkHKEY_CLASSES_ROOT
-        TabOrder = 0
         OnChange = cmbConnectionsChange
         OnCloseUp = cmbConnectionsCloseUp
         OnDropDown = cmbConnectionsDropDown
       end
     end
-    object tlbrTools: TTBToolbar
+    object tlbrTools: TToolBar
       Left = 317
       Top = 23
       Caption = 'SQL Tools Toolbar'
-      DefaultDock = dckTop
-      DockPos = 313
       ParentShowHint = False
       PopupMenu = mnuTools
       ShowHint = True
-      TabOrder = 1
-      object btnToolsViewDBManager: TTBItem
+      object btnToolsViewDBManager: TToolButton
         Action = ViewViewBrowser
-        Images = imgMenuTools
       end
-      object btnToolsSQLEditor: TTBItem
+      object btnToolsSQLEditor: TToolButton
         Action = ToolsSQLEditor
-        Images = imgMenuTools
         Left = 25
       end
-      object ToolbarSep2: TTBSeparatorItem
+      object ToolbarSep2: TToolButton
         Left = 50
       end
-      object btnToolsMetdataSearch: TTBItem
+      object btnToolsMetdataSearch: TToolButton
         Action = ToolsMetaSearch
-        Images = imgMenuTools
         Left = 56
       end
-      object btnToolsCodeSnippets: TTBItem
+      object btnToolsCodeSnippets: TToolButton
         Action = ToolsSQLCodeSnippets
-        Images = imgMenuTools
         Left = 81
       end
-      object btnToolsSQLTrace: TTBItem
+      object btnToolsSQLTrace: TToolButton
         Action = ToolsSQLTrace
-        Images = imgMenuTools
         Left = 106
       end
     end
-    object tlbrScript: TTBToolbar
+    object tlbrScript: TToolBar
       Left = 448
       Top = 23
       Caption = 'Script Toolbar'
-      DefaultDock = dckTop
-      DockPos = 436
       ParentShowHint = False
       PopupMenu = mnuTools
       ShowHint = True
-      TabOrder = 2
-      object btnScriptRecordNew: TTBItem
+      object btnScriptRecordNew: TToolButton
         Action = ScriptRecordScript
-        Images = imgMenuTools
       end
-      object btnScriptAppendExisting: TTBItem
+      object btnScriptAppendExisting: TToolButton
         Caption = '&Append To Existing Script...'
         Hint = 'Append Actions to Existing Script File'
         ImageIndex = 11
-        Images = imgMenuTools
         Left = 25
       end
-      object btnScriptExecute: TTBItem
+      object btnScriptExecute: TToolButton
         Caption = 'E&xecute Script...'
         Hint = 'Execute Firebird or InterBase SQL Script'
         ImageIndex = 12
-        Images = imgMenuTools
         Left = 50
       end
     end
-    object tlbrSQLEditor: TTBToolbar
+    object tlbrSQLEditor: TToolBar
       Left = 0
       Top = 49
       Caption = 'Edit Toolbar'
-      DefaultDock = dckTop
-      DockPos = 0
-      DockRow = 1
       ParentShowHint = False
       PopupMenu = mnuTools
       ShowHint = True
-      TabOrder = 3
-      object btnUndo: TTBItem
+      object btnUndo: TToolButton
         Action = EditUndo
-        Images = imgMenuTools
       end
-      object btnRedo: TTBItem
+      object btnRedo: TToolButton
         Action = EditRedo
-        Images = imgMenuTools
         Left = 25
       end
-      object ToolbarSep6: TTBSeparatorItem
+      object ToolbarSep6: TToolButton
         Left = 380
       end
-      object btnCaptureSnippet: TTBItem
+      object btnCaptureSnippet: TToolButton
         Action = EditCaptureSnippet
-        Images = imgMenuTools
         Left = 56
       end
-      object btnQueryBuilder: TTBItem
+      object btnQueryBuilder: TToolButton
         Action = ToolsQueryBuilder
-        Images = imgMenuTools
         Left = 81
       end
-      object btnPrevStatement: TTBItem
+      object btnPrevStatement: TToolButton
         Action = ViewPrevStatement
-        Images = imgMenuTools
         Left = 106
       end
-      object btnNextStatement: TTBItem
+      object btnNextStatement: TToolButton
         Action = ViewNextStatement
-        Images = imgMenuTools
         Left = 131
       end
-      object btnStatementHistory: TTBItem
+      object btnStatementHistory: TToolButton
         Action = ViewStatementHistory
-        Images = imgMenuTools
         Left = 156
       end
-      object ToolbarSep7: TTBSeparatorItem
+      object ToolbarSep7: TToolButton
         Left = 50
       end
-      object btnCut: TTBItem
+      object btnCut: TToolButton
         Action = EditCut
-        Images = imgMenuTools
         Left = 187
       end
-      object btnCopy: TTBItem
+      object btnCopy: TToolButton
         Action = EditCopy
-        Images = imgMenuTools
         Left = 212
       end
-      object btnPaste: TTBItem
+      object btnPaste: TToolButton
         Action = EditPaste
-        Images = imgMenuTools
         Left = 237
       end
-      object ToolbarSep8: TTBSeparatorItem
+      object ToolbarSep8: TToolButton
         Left = 181
       end
-      object btnFind: TTBItem
+      object btnFind: TToolButton
         Action = EditFind
-        Images = imgMenuTools
         Left = 268
       end
-      object ToolbarSep9: TTBSeparatorItem
+      object ToolbarSep9: TToolButton
         Left = 262
       end
-      object btnCompile: TTBItem
+      object btnCompile: TToolButton
         Action = ObjectCompile
-        Images = imgMenuTools
         Left = 299
       end
-      object btnExecute: TTBItem
+      object btnExecute: TToolButton
         Action = ObjectExecute
-        Images = imgMenuTools
         Left = 324
       end
-      object ToolbarSep4: TTBSeparatorItem
+      object ToolbarSep4: TToolButton
         Left = 349
       end
-      object btnDrop: TTBItem
+      object btnDrop: TToolButton
         Action = ObjectDrop
-        Images = imgMenuTools
         Left = 355
       end
-      object ToolbarSep10: TTBSeparatorItem
+      object ToolbarSep10: TToolButton
         Left = 293
       end
-      object btnCommit: TTBItem
+      object btnCommit: TToolButton
         Action = TransactionCommit
         Left = 386
       end
-      object btnRollback: TTBItem
+      object btnRollback: TToolButton
         Action = TransactionRollback
         Left = 440
       end
     end
-    object TBToolbar1: TTBToolbar
+    object TBToolbar1: TToolBar
       Left = 0
       Top = 0
       BorderStyle = bsNone
@@ -291,723 +250,720 @@ object frmMarathonMain: TfrmMarathonMain
       CloseButton = False
       DockMode = dmCannotFloatOrChangeDocks
       DragHandleStyle = dhNone
-      FullSize = True
       HideWhenInactive = False
-      Images = imgMenuTools
       MenuBar = True
       ProcessShortCuts = True
       ShrinkMode = tbsmWrap
-      TabOrder = 4
-      object File1: TTBSubmenuItem
+      object File1: TMenuItem
         Tag = -1
         Caption = '&File'
         GroupIndex = 1
-        object New1: TTBItem
+        object New1: TToolButton
           Action = FileNewProject
           GroupIndex = 1
         end
-        object Open1: TTBItem
+        object Open1: TToolButton
           Tag = 1
           Action = FileOpenProject
           GroupIndex = 2
         end
-        object TBMRUListItem1: TTBMRUListItem
+        object TBMRUListItem1: TMenuItemItem
         end
-        object ReOpen1: TTBItem
+        object ReOpen1: TToolButton
           Caption = '&Re-Open'
           GroupIndex = 2
         end
-        object Close1: TTBItem
+        object Close1: TToolButton
           Tag = -2
           Action = FileCloseProject
           GroupIndex = 3
         end
-        object SaveProject1: TTBItem
+        object SaveProject1: TToolButton
           Action = FileSaveProject
           GroupIndex = 3
         end
-        object SaveProjectAs1: TTBItem
+        object SaveProjectAs1: TToolButton
           Action = FileSaveProjectAs
           GroupIndex = 3
         end
-        object N20: TTBSeparatorItem
+        object N20: TToolButton
         end
-        object New2: TTBItem
+        object New2: TToolButton
           Tag = -2
           Action = FileNewObject
           GroupIndex = 3
         end
-        object Open2: TTBSubmenuItem
+        object Open2: TMenuItem
           Caption = '&Open'
           GroupIndex = 3
-          object FileOpenFile1: TTBItem
+          object FileOpenFile1: TToolButton
             Action = FileOpenFile
           end
-          object FileOpenDatabaseObject1: TTBItem
+          object FileOpenDatabaseObject1: TToolButton
             Action = FileOpenDatabaseObject
           end
         end
-        object FileSave1: TTBItem
+        object FileSave1: TToolButton
           Action = FileSave
           GroupIndex = 3
         end
-        object FileSaveAs1: TTBItem
+        object FileSaveAs1: TToolButton
           Action = FileSaveAs
           GroupIndex = 3
         end
-        object Close2: TTBItem
+        object Close2: TToolButton
           Tag = -2
           Action = FileClose
           GroupIndex = 3
         end
-        object N28: TTBSeparatorItem
+        object N28: TToolButton
         end
-        object F1: TTBItem
+        object F1: TToolButton
           Action = FileExport
           GroupIndex = 3
         end
-        object N10: TTBSeparatorItem
+        object N10: TToolButton
           Tag = -2
         end
-        object CreateDatabase1: TTBItem
+        object CreateDatabase1: TToolButton
           Tag = -2
           Action = FileCreateDatabase
           GroupIndex = 3
         end
-        object N3: TTBSeparatorItem
+        object N3: TToolButton
           Tag = -2
         end
-        object Connect1: TTBItem
+        object Connect1: TToolButton
           Tag = -2
           Action = FileConnect
           GroupIndex = 4
         end
-        object Disconnect1: TTBItem
+        object Disconnect1: TToolButton
           Tag = -2
           Action = FileDisconnect
           GroupIndex = 5
         end
-        object N1: TTBSeparatorItem
+        object N1: TToolButton
           Tag = -2
         end
-        object PrintSetup1: TTBItem
+        object PrintSetup1: TToolButton
           Tag = -2
           Action = FilePrintSetup
           GroupIndex = 6
         end
-        object Print1: TTBItem
+        object Print1: TToolButton
           Tag = -2
           Action = FilePrint
           GroupIndex = 7
         end
-        object PrintPreview1: TTBItem
+        object PrintPreview1: TToolButton
           Tag = -2
           Action = FilePrintPreview
           GroupIndex = 7
         end
-        object N2: TTBSeparatorItem
+        object N2: TToolButton
           Tag = -2
         end
-        object Exit1: TTBItem
+        object Exit1: TToolButton
           Tag = -2
           Action = FileExitApplication
           GroupIndex = 8
         end
       end
-      object Edit1: TTBSubmenuItem
+      object Edit1: TMenuItem
         Tag = -1
         Caption = '&Edit'
         GroupIndex = 1
-        object Undo1: TTBItem
+        object Undo1: TToolButton
           Tag = -2
           Action = EditUndo
         end
-        object actRedo1: TTBItem
+        object actRedo1: TToolButton
           Action = EditRedo
         end
-        object N4: TTBSeparatorItem
+        object N4: TToolButton
           Tag = -2
         end
-        object Cut1: TTBItem
+        object Cut1: TToolButton
           Tag = -2
           Action = EditCut
         end
-        object Copy1: TTBItem
+        object Copy1: TToolButton
           Tag = -2
           Action = EditCopy
         end
-        object Paste1: TTBItem
+        object Paste1: TToolButton
           Tag = -2
           Action = EditPaste
         end
-        object SelectAll1: TTBItem
+        object SelectAll1: TToolButton
           Tag = -2
           Action = EditSelectAll
         end
-        object N34: TTBSeparatorItem
+        object N34: TToolButton
         end
-        object CaptureSnippet1: TTBItem
+        object CaptureSnippet1: TToolButton
           Action = EditCaptureSnippet
         end
-        object N18: TTBSeparatorItem
+        object N18: TToolButton
         end
-        object ToggleBookmark1: TTBSubmenuItem
+        object ToggleBookmark1: TMenuItem
           Caption = '&Toggle Bookmark'
-          object EditToggleBookmark01: TTBItem
+          object EditToggleBookmark01: TToolButton
             Action = EditToggleBookmark0
           end
-          object EditToggleBookmark11: TTBItem
+          object EditToggleBookmark11: TToolButton
             Action = EditToggleBookmark1
           end
-          object EditGotoBookmark21: TTBItem
+          object EditGotoBookmark21: TToolButton
             Action = EditToggleBookmark2
           end
-          object EditToggleBookmark31: TTBItem
+          object EditToggleBookmark31: TToolButton
             Action = EditToggleBookmark3
           end
-          object EditToggleBookmark41: TTBItem
+          object EditToggleBookmark41: TToolButton
             Action = EditToggleBookmark4
           end
-          object EditToggleBookmark51: TTBItem
+          object EditToggleBookmark51: TToolButton
             Action = EditToggleBookmark5
           end
-          object EditToggleBookmark61: TTBItem
+          object EditToggleBookmark61: TToolButton
             Action = EditToggleBookmark6
           end
-          object EditToggleBookmark71: TTBItem
+          object EditToggleBookmark71: TToolButton
             Action = EditToggleBookmark7
           end
-          object EditToggleBookmark81: TTBItem
+          object EditToggleBookmark81: TToolButton
             Action = EditToggleBookmark8
           end
-          object EditToggleBookmark91: TTBItem
+          object EditToggleBookmark91: TToolButton
             Action = EditToggleBookmark9
           end
         end
-        object GotoBookmark1: TTBSubmenuItem
+        object GotoBookmark1: TMenuItem
           Caption = '&Goto Bookmark'
-          object EditGotoBookmark01: TTBItem
+          object EditGotoBookmark01: TToolButton
             Action = EditGotoBookmark0
           end
-          object EditGotoBookmark11: TTBItem
+          object EditGotoBookmark11: TToolButton
             Action = EditGotoBookmark1
           end
-          object EditGotoBookmark22: TTBItem
+          object EditGotoBookmark22: TToolButton
             Action = EditGotoBookmark2
           end
-          object EditGotoBookmark31: TTBItem
+          object EditGotoBookmark31: TToolButton
             Action = EditGotoBookmark3
           end
-          object EditGotoBookmark41: TTBItem
+          object EditGotoBookmark41: TToolButton
             Action = EditGotoBookmark4
           end
-          object EditGotoBookmark51: TTBItem
+          object EditGotoBookmark51: TToolButton
             Action = EditGotoBookmark5
           end
-          object EditGotoBookmark61: TTBItem
+          object EditGotoBookmark61: TToolButton
             Action = EditGotoBookmark6
           end
-          object EditGotoBookmark71: TTBItem
+          object EditGotoBookmark71: TToolButton
             Action = EditGotoBookmark7
           end
-          object EditGotoBookmark81: TTBItem
+          object EditGotoBookmark81: TToolButton
             Action = EditGotoBookmark8
           end
-          object EditGotoBookmark91: TTBItem
+          object EditGotoBookmark91: TToolButton
             Action = EditGotoBookmark9
           end
         end
-        object N27: TTBSeparatorItem
+        object N27: TToolButton
         end
-        object Encoding1: TTBSubmenuItem
+        object Encoding1: TMenuItem
           Caption = 'Enc&oding'
-          object ANSI1: TTBItem
+          object ANSI1: TToolButton
             Action = EditEncANSI
             RadioItem = True
           end
-          object Arabic1: TTBItem
+          object Arabic1: TToolButton
             Action = EditEncDefault
             RadioItem = True
           end
-          object Symbol1: TTBItem
+          object Symbol1: TToolButton
             Action = EditEncSymbol
             RadioItem = True
           end
-          object Macintosh1: TTBItem
+          object Macintosh1: TToolButton
             Action = EncMacintosh
             RadioItem = True
           end
-          object Japanese1: TTBItem
+          object Japanese1: TToolButton
             Action = EditEncSHIFTJIS
             RadioItem = True
           end
-          object KoreanWansung1: TTBItem
+          object KoreanWansung1: TToolButton
             Action = EditEncHANGEUL
             RadioItem = True
           end
-          object KoreanJohab1: TTBItem
+          object KoreanJohab1: TToolButton
             Action = EditEncJOHAB
             RadioItem = True
           end
-          object ChineseSimplified1: TTBItem
+          object ChineseSimplified1: TToolButton
             Action = EditEncGB2312
             RadioItem = True
           end
-          object ChineseTraditional1: TTBItem
+          object ChineseTraditional1: TToolButton
             Action = EditEncCHINESEBIG5
             RadioItem = True
           end
-          object Greek1: TTBItem
+          object Greek1: TToolButton
             Action = EditEncGreek
             RadioItem = True
           end
-          object Turkish1: TTBItem
+          object Turkish1: TToolButton
             Action = EditEncTurkish
             RadioItem = True
           end
-          object Vietnamese1: TTBItem
+          object Vietnamese1: TToolButton
             Action = EditEncVietnamese
             RadioItem = True
           end
-          object Hebrew1: TTBItem
+          object Hebrew1: TToolButton
             Action = EditEncHebrew
             RadioItem = True
           end
-          object Arabic2: TTBItem
+          object Arabic2: TToolButton
             Action = EditEncArabic
             RadioItem = True
           end
-          object Baltic1: TTBItem
+          object Baltic1: TToolButton
             Action = EditEncBaltic
             RadioItem = True
           end
-          object Russian1: TTBItem
+          object Russian1: TToolButton
             Action = EditEncRussian
             RadioItem = True
           end
-          object Thai1: TTBItem
+          object Thai1: TToolButton
             Action = EditEncThai
             RadioItem = True
           end
-          object EasternEuropean1: TTBItem
+          object EasternEuropean1: TToolButton
             Action = EditEncEasternEuropean
             RadioItem = True
           end
-          object OEM1: TTBItem
+          object OEM1: TToolButton
             Action = EditEncOEM
             RadioItem = True
           end
         end
-        object N5: TTBSeparatorItem
+        object N5: TToolButton
           Tag = -2
         end
-        object Find1: TTBItem
+        object Find1: TToolButton
           Tag = -2
           Action = EditFind
         end
-        object FindNext1: TTBItem
+        object FindNext1: TToolButton
           Tag = -2
           Action = EditFindNext
         end
-        object Replace1: TTBItem
+        object Replace1: TToolButton
           Tag = -2
           Action = EditReplace
         end
       end
-      object View1: TTBSubmenuItem
+      object View1: TMenuItem
         Tag = -1
         Caption = '&View'
         GroupIndex = 2
-        object DatabaseManager1: TTBItem
+        object DatabaseManager1: TToolButton
           Tag = -2
           Action = ViewViewBrowser
         end
-        object ViewDebuggerHeader1: TTBSubmenuItem
+        object ViewDebuggerHeader1: TMenuItem
           Caption = '&Debug Windows'
-          object ViewBreakPoints1: TTBItem
+          object ViewBreakPoints1: TToolButton
             Action = ViewBreakPoints
           end
-          object ViewCallStack1: TTBItem
+          object ViewCallStack1: TToolButton
             Action = ViewCallStack
           end
-          object ViewWatches1: TTBItem
+          object ViewWatches1: TToolButton
             Action = ViewWatches
           end
-          object ViewLocalVariables1: TTBItem
+          object ViewLocalVariables1: TToolButton
             Action = ViewLocalVariables
           end
         end
-        object N19: TTBSeparatorItem
+        object N19: TToolButton
         end
-        object Tools2: TTBSubmenuItem
+        object Tools2: TMenuItem
           Caption = '&Toolbars'
-          object Standard1: TTBItem
+          object Standard1: TToolButton
             Action = ViewToolbarStandard
           end
-          object Tools3: TTBItem
+          object Tools3: TToolButton
             Action = ViewToolbarTools
           end
-          object Scipt1: TTBItem
+          object Scipt1: TToolButton
             Action = ViewToolbarScript
           end
-          object SQLEditor2: TTBItem
+          object SQLEditor2: TToolButton
             Action = ViewToolbarSQLEditor
           end
         end
-        object N6: TTBSeparatorItem
+        object N6: TToolButton
           Tag = -2
         end
-        object actPrevStatement1: TTBItem
+        object actPrevStatement1: TToolButton
           Action = ViewPrevStatement
         end
-        object actNextStatement1: TTBItem
+        object actNextStatement1: TToolButton
           Action = ViewNextStatement
         end
-        object actStatementHistory1: TTBItem
+        object actStatementHistory1: TToolButton
           Action = ViewStatementHistory
         end
-        object N17: TTBSeparatorItem
+        object N17: TToolButton
         end
-        object Folders1: TTBItem
+        object Folders1: TToolButton
           Action = ViewFolders
         end
-        object Search1: TTBItem
+        object Search1: TToolButton
           Action = ViewSearch
         end
-        object List1: TTBItem
+        object List1: TToolButton
           Action = ViewList
         end
-        object N12: TTBSeparatorItem
+        object N12: TToolButton
         end
-        object ViewRefresh1: TTBItem
+        object ViewRefresh1: TToolButton
           Action = ViewRefresh
         end
-        object N23: TTBSeparatorItem
+        object N23: TToolButton
         end
-        object ViewPrevPage1: TTBItem
+        object ViewPrevPage1: TToolButton
           Action = ViewPrevPage
         end
-        object ViewNextPage1: TTBItem
+        object ViewNextPage1: TToolButton
           Action = ViewNextPage
         end
-        object N33: TTBSeparatorItem
+        object N33: TToolButton
         end
-        object ObjectViewMessages1: TTBItem
+        object ObjectViewMessages1: TToolButton
           Action = ViewMessages
         end
-        object N26: TTBSeparatorItem
+        object N26: TToolButton
         end
-        object NextWindow1: TTBItem
+        object NextWindow1: TToolButton
           Tag = -2
           Action = ViewNextWindow
         end
       end
-      object Browser1: TTBSubmenuItem
+      object Browser1: TMenuItem
         Caption = '&Project'
         GroupIndex = 2
-        object ProjectNewItem1: TTBItem
+        object ProjectNewItem1: TToolButton
           Action = ProjectNewItem
         end
-        object ProjectOpenItem1: TTBItem
+        object ProjectOpenItem1: TToolButton
           Action = ProjectOpenItem
         end
-        object ProjectExtractMetadata1: TTBItem
+        object ProjectExtractMetadata1: TToolButton
           Action = ProjectExtractMetadata
         end
-        object ProjectAddToProject1: TTBItem
+        object ProjectAddToProject1: TToolButton
           Action = ProjectAddToProject
         end
-        object ProjectCreateFolder1: TTBItem
+        object ProjectCreateFolder1: TToolButton
           Action = ProjectCreateFolder
         end
-        object N24: TTBSeparatorItem
+        object N24: TToolButton
         end
-        object ProjectItemDrop1: TTBItem
+        object ProjectItemDrop1: TToolButton
           Action = ProjectItemDrop
         end
-        object ProjectItemDelete1: TTBItem
+        object ProjectItemDelete1: TToolButton
           Action = ProjectItemDelete
         end
-        object N25: TTBSeparatorItem
+        object N25: TToolButton
         end
-        object ProjectItemProperties1: TTBItem
+        object ProjectItemProperties1: TToolButton
           Action = ProjectItemProperties
         end
-        object N22: TTBSeparatorItem
+        object N22: TToolButton
         end
-        object NewConnection1: TTBItem
+        object NewConnection1: TToolButton
           Action = ProjectNewConnection
         end
-        object NewServer1: TTBItem
+        object NewServer1: TToolButton
           Action = ProjectNewServer
         end
-        object N21: TTBSeparatorItem
+        object N21: TToolButton
         end
-        object ProjectOptions2: TTBItem
+        object ProjectOptions2: TToolButton
           Action = ProjectProjectOptions
         end
       end
-      object Transaction1: TTBSubmenuItem
+      object Transaction1: TMenuItem
         Caption = 'Tra&nsaction'
         GroupIndex = 10
-        object Commit1: TTBItem
+        object Commit1: TToolButton
           Action = TransactionCommit
         end
-        object Rollback1: TTBItem
+        object Rollback1: TToolButton
           Action = TransactionRollback
         end
       end
-      object Object1: TTBSubmenuItem
+      object Object1: TMenuItem
         Caption = '&Object'
         GroupIndex = 10
-        object Compile1: TTBItem
+        object Compile1: TToolButton
           Action = ObjectCompile
         end
-        object Execute1: TTBItem
+        object Execute1: TToolButton
           Action = ObjectExecute
         end
-        object ObjectParameters1: TTBItem
+        object ObjectParameters1: TToolButton
           Action = ObjectParameters
         end
-        object ScriptMode1: TTBItem
+        object ScriptMode1: TToolButton
           Action = ObjectExecuteAsScript
         end
-        object N31: TTBSeparatorItem
+        object N31: TToolButton
         end
-        object ObjectStepOver1: TTBItem
+        object ObjectStepOver1: TToolButton
           Action = ObjectStepOver
         end
-        object ObjectStepInto1: TTBItem
+        object ObjectStepInto1: TToolButton
           Action = ObjectStepInto
         end
-        object ObjectShowExecutionPoint1: TTBItem
+        object ObjectShowExecutionPoint1: TToolButton
           Action = ObjectShowExecutionPoint
         end
-        object ObjectPause1: TTBItem
+        object ObjectPause1: TToolButton
           Action = ObjectPause
         end
-        object ObjectReset1: TTBItem
+        object ObjectReset1: TToolButton
           Action = ObjectReset
         end
-        object ObjectDebuggerHeader1: TTBSubmenuItem
+        object ObjectDebuggerHeader1: TMenuItem
           Caption = '&Debugger'
-          object ObjectEvalModify1: TTBItem
+          object ObjectEvalModify1: TToolButton
             Action = ObjectEvalModify
           end
-          object ObjectAddWatch1: TTBItem
+          object ObjectAddWatch1: TToolButton
             Action = ObjectAddWatch
           end
-          object ObjectAddBreakPoint1: TTBItem
+          object ObjectAddBreakPoint1: TToolButton
             Action = ObjectAddBreakPoint
           end
         end
-        object N29: TTBSeparatorItem
+        object N29: TToolButton
         end
-        object New3: TTBSubmenuItem
+        object New3: TMenuItem
           Caption = '&New'
-          object ObjectNewField1: TTBItem
+          object ObjectNewField1: TToolButton
             Action = ObjectNewField
           end
-          object ObjectNewConstraint1: TTBItem
+          object ObjectNewConstraint1: TToolButton
             Action = ObjectNewConstraint
           end
-          object ObjectNewIndex1: TTBItem
+          object ObjectNewIndex1: TToolButton
             Action = ObjectNewIndex
           end
-          object ObjectNewTrigger1: TTBItem
+          object ObjectNewTrigger1: TToolButton
             Action = ObjectNewTrigger
           end
-          object ObjectNewInputParam1: TTBItem
+          object ObjectNewInputParam1: TToolButton
             Action = ObjectNewInputParam
           end
         end
-        object DropObject1: TTBSubmenuItem
+        object DropObject1: TMenuItem
           Caption = 'D&rop'
-          object ObjectDropField1: TTBItem
+          object ObjectDropField1: TToolButton
             Action = ObjectDropField
           end
-          object ObjectDropConstraint1: TTBItem
+          object ObjectDropConstraint1: TToolButton
             Action = ObjectDropConstraint
           end
-          object ObjectDropIndex1: TTBItem
+          object ObjectDropIndex1: TToolButton
             Action = ObjectDropIndex
           end
-          object ObjectDropTrigger1: TTBItem
+          object ObjectDropTrigger1: TToolButton
             Action = ObjectDropTrigger
           end
-          object ObjectDropInputParam1: TTBItem
+          object ObjectDropInputParam1: TToolButton
             Action = ObjectDropInputParam
           end
         end
-        object Drop1: TTBItem
+        object Drop1: TToolButton
           Action = ObjectDrop
         end
-        object Properties1: TTBItem
+        object Properties1: TToolButton
           Action = ObjectProperties
         end
-        object N30: TTBSeparatorItem
+        object N30: TToolButton
         end
-        object Tools5: TTBSubmenuItem
+        object Tools5: TMenuItem
           Caption = '&Tools'
-          object ObjectShowPerformanceData1: TTBItem
+          object ObjectShowPerformanceData1: TToolButton
             Action = ObjectShowPerformanceData
           end
-          object ObjectShowQueryPlan1: TTBItem
+          object ObjectShowQueryPlan1: TToolButton
             Action = ObjectShowQueryPlan
           end
-          object N36: TTBSeparatorItem
+          object N36: TToolButton
           end
-          object ObjectReorderColumns1: TTBItem
+          object ObjectReorderColumns1: TToolButton
             Action = ObjectReorderColumns
           end
-          object ObjectResetGeneratorValue1: TTBItem
+          object ObjectResetGeneratorValue1: TToolButton
             Action = ObjectResetGeneratorValue
           end
         end
-        object Permissions1: TTBSubmenuItem
+        object Permissions1: TMenuItem
           Caption = '&Permissions'
-          object ObjectGrant1: TTBItem
+          object ObjectGrant1: TToolButton
             Action = ObjectGrant
           end
-          object ObjectRevoke1: TTBItem
+          object ObjectRevoke1: TToolButton
             Action = ObjectRevoke
           end
         end
-        object N32: TTBSeparatorItem
+        object N32: TToolButton
         end
-        object AddToProject1: TTBItem
+        object AddToProject1: TToolButton
           Action = ObjectAddToProject
         end
-        object ObjectSaveDocumentation1: TTBItem
+        object ObjectSaveDocumentation1: TToolButton
           Action = ObjectSaveDocumentation
         end
-        object ObjectSaveAsTemplate1: TTBItem
+        object ObjectSaveAsTemplate1: TToolButton
           Action = ObjectSaveAsTemplate
         end
       end
-      object Script1: TTBSubmenuItem
+      object Script1: TMenuItem
         Tag = -1
         Caption = '&Script'
         GroupIndex = 10
-        object RecordNewScript1: TTBItem
+        object RecordNewScript1: TToolButton
           Tag = -2
           Action = ScriptRecordScript
         end
-        object N37: TTBSeparatorItem
+        object N37: TToolButton
         end
-        object AppendtoExistingScript1: TTBItem
+        object AppendtoExistingScript1: TToolButton
           Tag = -2
           Action = ScriptAppendExisting
         end
-        object NewScript1: TTBItem
+        object NewScript1: TToolButton
           Action = ScriptNewScript
         end
-        object N14: TTBSeparatorItem
+        object N14: TToolButton
           Tag = -2
         end
-        object Record1: TTBItem
+        object Record1: TToolButton
           Tag = -2
           Action = ScriptStartRecord
         end
-        object Stop1: TTBItem
+        object Stop1: TToolButton
           Tag = -2
           Action = ScriptStopRecord
         end
       end
-      object Tools1: TTBSubmenuItem
+      object Tools1: TMenuItem
         Tag = -1
         Caption = '&Tools'
         GroupIndex = 10
-        object SQLEditor1: TTBItem
+        object SQLEditor1: TToolButton
           Tag = -2
           Action = ToolsSQLEditor
         end
-        object UserEditor1: TTBItem
+        object UserEditor1: TToolButton
           Action = ToolsUserEditor
         end
-        object N16: TTBSeparatorItem
+        object N16: TToolButton
           Tag = -2
         end
-        object MetadataExtract1: TTBItem
+        object MetadataExtract1: TToolButton
           Tag = -2
           Action = ToolsMetaExtract
         end
-        object SearchMetadata1: TTBItem
+        object SearchMetadata1: TToolButton
           Tag = -2
           Action = ToolsMetaSearch
         end
-        object N13: TTBSeparatorItem
+        object N13: TToolButton
           Tag = -2
         end
-        object SyntaxHelp1: TTBItem
+        object SyntaxHelp1: TToolButton
           Tag = -2
           Action = ToolsSyntaxHelp
         end
-        object SQLCodeSnippets1: TTBItem
+        object SQLCodeSnippets1: TToolButton
           Tag = -2
           Action = ToolsSQLCodeSnippets
         end
-        object N15: TTBSeparatorItem
+        object N15: TToolButton
           Tag = -2
         end
-        object SQLTrace1: TTBItem
+        object SQLTrace1: TToolButton
           Tag = -2
           Action = ToolsSQLTrace
         end
-        object N7: TTBSeparatorItem
+        object N7: TToolButton
           Tag = -2
         end
-        object Plugins1: TTBItem
+        object Plugins1: TToolButton
           Action = ToolsPlugins
         end
-        object N35: TTBSeparatorItem
+        object N35: TToolButton
         end
-        object DebuggerEnabled1: TTBItem
+        object DebuggerEnabled1: TToolButton
           Action = ObjectDebuggerEnabled
         end
-        object Options1: TTBItem
+        object Options1: TToolButton
           Tag = -2
           Action = ToolsMarathonOptions
         end
       end
-      object Window1: TTBSubmenuItem
+      object Window1: TMenuItem
         Tag = -1
         Caption = '&Window'
         GroupIndex = 10
         OnClick = Window1Click
-        object WindowList2: TTBItem
+        object WindowList2: TToolButton
           Tag = -2
           Action = WindowWindowList
         end
-        object CloseAllWindows1: TTBItem
+        object CloseAllWindows1: TToolButton
           Action = WindowCloseAllWindows
         end
-        object N9: TTBSeparatorItem
+        object N9: TToolButton
           Tag = -2
         end
       end
-      object Help1: TTBSubmenuItem
+      object Help1: TMenuItem
         Tag = -1
         Caption = '&Help'
         GroupIndex = 10
-        object HelpTopics1: TTBItem
+        object HelpTopics1: TToolButton
           Tag = -2
           Action = HelpHelpTopics
         end
-        object N11: TTBSeparatorItem
+        object N11: TToolButton
         end
-        object MarathonOntheWeb1: TTBItem
+        object MarathonOntheWeb1: TToolButton
           Action = HelpMarathonOnTheWeb
           Caption = '&Marathon at Sourceforge...'
           Hint = 'Go to Marathon at Sourceforge'
         end
-        object EmailMarathonSupport1: TTBItem
+        object EmailMarathonSupport1: TToolButton
           Action = HelpEmailSupport
         end
-        object N8: TTBSeparatorItem
+        object N8: TToolButton
           Tag = -2
         end
-        object About1: TTBItem
+        object About1: TToolButton
           Tag = -2
           Action = HelpAbout
         end
@@ -1024,14 +980,13 @@ object frmMarathonMain: TfrmMarathonMain
         Width = 500
       end>
   end
-  object rmPanel1: TrmPanel
+  object rmPanel1: TPanel
     Left = 0
     Top = 75
     Width = 728
     Height = 25
     Align = alTop
     ParentBackground = True
-    TabOrder = 2
     object Bevel1: TBevel
       Left = 0
       Top = 0
@@ -1040,7 +995,7 @@ object frmMarathonMain: TfrmMarathonMain
       Align = alTop
       Shape = bsSpacer
     end
-    object tabWindows: TrmTabSet
+    object tabWindows: TTabControl
       Left = 0
       Top = 3
       Width = 728
@@ -1751,7 +1706,6 @@ object frmMarathonMain: TfrmMarathonMain
     Top = 68
   end
   object actMain: TActionList
-    Images = imgMenuTools
     Left = 276
     Top = 68
     object FileNewProject: TAction
@@ -4062,7 +4016,6 @@ object frmMarathonMain: TfrmMarathonMain
     Top = 68
   end
   object mnuTools: TPopupMenu
-    Images = imgMenuTools
     Left = 248
     Top = 68
     object Standard2: TMenuItem
@@ -4082,13 +4035,13 @@ object frmMarathonMain: TfrmMarathonMain
     Left = 304
     Top = 68
   end
-  object kbgKeys: TrmKeyBindings
+  object kbgKeys: TComponent
     Actions = actMain
     DisplayActionName = True
     Left = 644
     Top = 68
   end
-  object TBMRUList1: TTBMRUList
+  object TBMRUList1: TMenuItem
     Prefix = 'MRU'
     Left = 561
     Top = 57

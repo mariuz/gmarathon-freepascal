@@ -19,8 +19,7 @@ unit QBAppendTo;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs;
 
 type
   TfrmAppendTo = class(TForm)

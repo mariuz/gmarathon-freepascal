@@ -31,8 +31,7 @@ unit GimbalToolsAPI;
 
 interface
 
-uses
-  Windows, SysUtils, Classes;
+uses Windows, SysUtils, Classes;
 
 type
   TGimbalMenuType = (

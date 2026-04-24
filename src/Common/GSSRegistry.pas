@@ -19,8 +19,7 @@ unit GSSRegistry;
 
 interface
 
-uses
-  Windows, SysUtils, Classes, Registry;
+uses Windows, SysUtils, Classes, Registry;
 
 const
 	// Marathon

@@ -19,24 +19,14 @@ unit EditorUDF;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls,	Printers, ExtCtrls,
-	ActnList, ClipBrd,
-	IBODataset,
-	MarathonIDE,
-	BaseDocumentDataAwareForm,
-	MarathonProjectCacheTypes,
-	MarathonInternalInterfaces,
-	FrameDescription,
-	FrameMetadata;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, Printers, ExtCtrls, ActnList, ClipBrd, SQLDB, MarathonIDE, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameDescription, FrameMetadata;
 
 type
   TfrmUDFEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonUDFEditor)
     pgObjectEditor: TPageControl;
     tsObject: TTabSheet;
 		tsDocoView: TTabSheet;
-    qryUtil: TIBOQuery;
+    qryUtil: TSQLQuery;
     tsDDL: TTabSheet;
     framDoco: TframeDesc;
 		stsEditor: TStatusBar;
@@ -154,12 +144,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	CompileDBObject,
-	DropObject,
-	UDFInputParam;
+uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam;
 
 {$R *.lfm}
 
@@ -335,23 +320,23 @@ begin
   inherited;
   if Value = '' then
 	begin
-		qryUtil.IB_Connection := nil;
-    framDoco.qryDoco.IB_Connection := nil;
-    framDoco.qryDoco.IB_Transaction := nil;
+		qryUtil.Database := nil;
+    framDoco.qryDoco.Database := nil;
+    framDoco.qryDoco.Transaction := nil;
     IsInterbase6 := False;
     SQLDialect := 0;
     stsEditor.Panels[3].Text := 'No Connection';
   end
   else
   begin
-    qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+    qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-    framDoco.qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    framDoco.qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+    framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-    SQLDialect := qryUtil.IB_Connection.SQLDialect;
+    SQLDialect := qryUtil.Database.Dialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -390,7 +375,7 @@ begin
 		RtnPosition := qryUtil.FieldByName('rdb$return_argument').AsInteger;
 
 		qryUtil.Close;
-		qryUtil.IB_Transaction.Commit;
+		qryUtil.Transaction.Commit;
 
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select * from rdb$function_arguments where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + ' order by rdb$argument_position asc;');
@@ -442,7 +427,7 @@ begin
       qryUtil.Next;
     end;
     qryUtil.Close;
-    qryUtil.IB_Transaction.Commit;
+    qryUtil.Transaction.Commit;
 
     InternalCaption := 'UDF - [' + FObjectName + ']';
     It.Caption := '&1 UDF - [' + FObjectName + ']';
@@ -542,7 +527,7 @@ begin
 	CompileText := '';
 
 	TmpIntf := Self;
-	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryUtil.IB_Connection, qryUtil.IB_Transaction, ctUDF, CompileText);
+	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryUtil.Database, qryUtil.Transaction, ctUDF, CompileText);
 	FErrors := FCompile.CompileErrors;
 	FCompile.Free;
 
@@ -1016,10 +1001,10 @@ Revision 1.5  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.4  2002/04/29 10:45:38  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/29 10:30:28  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block

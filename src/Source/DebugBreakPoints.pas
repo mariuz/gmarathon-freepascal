@@ -19,9 +19,7 @@ unit DebugBreakPoints;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  ComCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls;
 
 type
   TfrmDebugBreakPoints = class(TForm)

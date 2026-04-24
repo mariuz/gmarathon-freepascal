@@ -20,12 +20,8 @@ unit ParseCollection;
 interface
 {$I compilerdefines.inc}
 
-uses
-	Classes, SysUtils, Dialogs, ComCtrls, DB,
-	{$IFDEF D6_OR_HIGHER}
-	Variants,
-	{$ENDIF}
-	IB_Components;
+uses Classes, SysUtils, Dialogs, ComCtrls, DB, {$IFDEF D6_OR_HIGHER}
+	Variants, IBConnection, SQLDB;
 	 
 const
   ty_blr_text                         = 14;
@@ -219,7 +215,7 @@ type
 
   TForSelectStatement = class(TStatement)
   private
-    Q : TIB_Cursor;
+    Q : TSQLQuery;
     S : TStringList;
   public
     SQLStatement : TStatement;
@@ -289,8 +285,7 @@ type
 
 implementation
 
-uses
-  IBDebuggerVM;
+uses IBDebuggerVM;
 
 
 function CleanSymbol(S : String) : String;
@@ -650,12 +645,12 @@ end;
 
 function TOperatorStatement.GetGenIDValue(Generator : String; Increment : String) : Integer;
 var
-  Q : TIB_Cursor;
+  Q : TSQLQuery;
 
 begin
-  Q := TIB_Cursor.Create(nil);
+  Q := TSQLQuery.Create(nil);
   try
-    Q.IB_Connection := TProcModule(Module).DebuggerVM.Database;
+    Q.Database := TProcModule(Module).DebuggerVM.Database;
     Q.SQL.Text := 'select gen_id(' + Generator + ', ' + Increment + ') as genid from rdb$database';
     Q.Prepare;
     Q.Execute;
@@ -1193,7 +1188,7 @@ end;
 
 function TSingletonSelectStatement.Execute : Variant;
 var
-  Q : TIB_Cursor;
+  Q : TSQLQuery;
   S : TStringList;
   Tmp : String;
   Idx : Integer;
@@ -1217,9 +1212,9 @@ begin
       Tmp := Trim(ParseSection(VariableList.SQLStatement, Idx, ','));
     end;
 
-    Q := TIB_Cursor.Create(nil);
+    Q := TSQLQuery.Create(nil);
     try
-      Q.IB_Connection := TProcModule(Module).DebuggerVM.Database;
+      Q.Database := TProcModule(Module).DebuggerVM.Database;
       Q.SQL.Text := SQLStatement.SQLStatement;
       Q.Prepare;
       for Idx := 0 to Q.ParamCount - 1 do
@@ -1326,8 +1321,8 @@ var
 begin
   if Not Assigned(Q) then
   begin
-    Q := TIB_Cursor.Create(nil);
-    Q.IB_Connection := TProcModule(Module).DebuggerVM.Database;
+    Q := TSQLQuery.Create(nil);
+    Q.Database := TProcModule(Module).DebuggerVM.Database;
     S := TStringList.Create;
 
     Idx := 1;
@@ -1482,16 +1477,16 @@ end;
 
 function TDMLStatement.Execute : Variant;
 var
-  Q : TIB_DSQL;
+  Q : TSQLQuery;
   Idx : Integer;
   VarName : Variant;
   VarValue : Variant;
 
 
 begin
-  Q := TIB_DSQL.Create(nil);
+  Q := TSQLQuery.Create(nil);
   try
-    Q.IB_Connection := TProcModule(Module).DebuggerVM.Database;
+    Q.Database := TProcModule(Module).DebuggerVM.Database;
     Q.SQL.Text := SQLStatement;
     Q.Prepare;
     for Idx := 0 to Q.ParamCount - 1 do

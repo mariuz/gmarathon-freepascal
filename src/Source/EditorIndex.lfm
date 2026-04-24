@@ -173,14 +173,9 @@ object frmEditorIndex: TfrmEditorIndex
       end
     end
   end
-  object qryIndex: TIBOQuery
+  object qryIndex: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 4
     Top = 304
   end

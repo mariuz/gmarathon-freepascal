@@ -31,9 +31,7 @@ unit NewTrigger;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ExtCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls;
 
 type
   TfrmNewTrigger = class(TForm)
@@ -62,10 +60,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE;
+uses Globals, HelpMap, MarathonIDE;
 
 {$R *.lfm}
 

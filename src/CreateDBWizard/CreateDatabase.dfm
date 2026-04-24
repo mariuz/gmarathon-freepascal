@@ -533,18 +533,18 @@ object frmCreateDatabase: TfrmCreateDatabase
         E0000000}
     end
   end
-  object dbCreateDatabase: TIB_Connection
+  object dbCreateDatabase: TIBConnection
     Left = 12
     Top = 320
   end
-  object tranCreateConnection: TIB_Transaction
-    IB_Connection = dbCreateDatabase
+  object tranCreateConnection: TSQLTransaction
+    Database = dbCreateDatabase
     Left = 44
     Top = 320
   end
-  object qryConnection: TIB_DSQL
-    IB_Connection = dbCreateDatabase
-    IB_Transaction = tranCreateConnection
+  object qryConnection: TSQLQuery
+    Database = dbCreateDatabase
+    Transaction = tranCreateConnection
     ParamCheck = False
     Left = 76
     Top = 320
@@ -555,11 +555,11 @@ object frmCreateDatabase: TfrmCreateDatabase
     Left = 108
     Top = 320
   end
-  object ibScript: TIB_Script
+  object ibScript: TSQLScript
     Yield = False
     OnError = ibScriptError
-    IB_Connection = dbCreateDatabase
-    IB_Transaction = tranCreateConnection
+    Database = dbCreateDatabase
+    Transaction = tranCreateConnection
     Left = 144
     Top = 320
   end

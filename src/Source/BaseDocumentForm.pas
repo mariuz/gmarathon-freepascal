@@ -19,11 +19,7 @@ unit BaseDocumentForm;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, MarathonInternalInterfaces,
-	Graphics, Controls, Forms, Dialogs, ComCtrls,
-	MarathonProjectCacheTypes, Globals,
-	GimbalToolsAPI;
+uses Windows, Messages, SysUtils, Classes, MarathonInternalInterfaces, Graphics, Controls, Forms, Dialogs, ComCtrls, MarathonProjectCacheTypes, Globals, GimbalToolsAPI;
 
 type
   TfrmBaseDocumentForm = class(TForm, IMarathonForm, IGimbalIDEWindow)
@@ -324,8 +320,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	MarathonIDE, Types;
+uses MarathonIDE, Types;
 
 function TfrmBaseDocumentForm.CanAddToProject: Boolean;
 begin

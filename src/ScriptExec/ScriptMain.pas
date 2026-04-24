@@ -17,24 +17,7 @@ unit ScriptMain;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls, ExtCtrls, Menus, Buttons, Db, DBCtrls,
-	Registry, ImgList,
-	rmCollectionListBox,
-	rmDataStorage,
-	rmPanel,
-	IB_Components,
-	IB_Session,
-	IB_Constants,
-	IB_Header,
-	SynEdit,
-  SynEditTypes,
-	SynEditHighlighter,
-	SynHighlighterSQL,
-	SyntaxMemoWithStuff2,
-	GSSRegistry{,
-	CloseUpCombo};
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, Buttons, Db, DBCtrls, Registry, ImgList, rmCollectionListBox, rmDataStorage, rmPanel, IBConnection, SQLDB, IB_Constants, SynEdit, SynEditTypes, SynEditHighlighter, SynHighlighterSQL, SyntaxMemoWithStuff2, GSSRegistry{, CloseUpCombo};
 
 type
   TParseInfo = record
@@ -67,9 +50,9 @@ type
 		pnlResults: TrmPanel;
 		lvErrors: TrmCollectionListBox;
 		lstKeyWords: TrmTextDataStorage;
-		FDatabase: TIB_Connection;
-		FTransaction: TIB_Transaction;
-		FSQL: TIB_DSQL;
+		FDatabase: TIBConnection;
+		FTransaction: TSQLTransaction;
+		FSQL: TSQLQuery;
 		imgError: TImageList;
     btnMultiOpen: TSpeedButton;
     CBFiles: TComboBox;         // hexplorador
@@ -195,11 +178,7 @@ implementation
 
 {$R *.DFM}
 
-uses
-  AboutBox,
-  ScriptOptions,
-  StopDialog,
-	ScriptExecutive;
+uses AboutBox, ScriptOptions, StopDialog, ScriptExecutive;
 
 const
 	STRDELIM1 = '"';
@@ -831,7 +810,7 @@ begin
           DoIsql;
           Cursor := crDefault;
         end;
-        if FTransaction.Started then
+        if FTransaction.Active then
           FTransaction.Commit;
         if FDatabase.COnnected then
 					FDatabase.Connected := False;

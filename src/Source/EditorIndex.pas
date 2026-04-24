@@ -39,7 +39,7 @@ Revision 1.5  2002/05/15 08:58:11  tmuetze
 Removed some references to TIBGSSDataset
 
 Revision 1.4  2002/04/29 06:47:09  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block
@@ -52,12 +52,7 @@ unit EditorIndex;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls, DB, ExtCtrls,
-	IBODataset,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, ExtCtrls, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
 
 type
 	TfrmEditorIndex = class(TForm, IMarathonBaseForm)
@@ -78,7 +73,7 @@ type
 		cmbIdxColumn: TComboBox;
 		btnAdd: TButton;
 		btnDelete: TButton;
-		qryIndex: TIBOQuery;
+		qryIndex: TSQLQuery;
 		procedure btnOKClick(Sender: TObject);
 		procedure FormCreate(Sender: TObject);
 		procedure btnHelpClick(Sender: TObject);
@@ -122,12 +117,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	Tools,
-	MarathonIDE,
-	CompileDBObject;
+uses Globals, HelpMap, Tools, MarathonIDE, CompileDBObject;
 
 {$R *.lfm}
 
@@ -267,11 +257,11 @@ end;
 procedure TfrmEditorIndex.SetDatabaseName(const Value: String);
 begin
 	FDatabaseName := Value;
-	qryIndex.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-	qryIndex.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+	qryIndex.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+	qryIndex.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
 	FIsInterbase5 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB5;
-	FSQLDialect := qryIndex.IB_Connection.SQLDialect;
+	FSQLDialect := qryIndex.Database.Dialect;
 end;
 
 procedure TfrmEditorIndex.SetObjectModified(Value: Boolean);
@@ -404,7 +394,7 @@ begin
 	end;
 
 	with TfrmCompileDBObject.CreateMultiStatementCompile(Self, Self,
-		qryIndex.IB_Connection, qryIndex.IB_Transaction, AlterSQL) do
+		qryIndex.Database, qryIndex.Transaction, AlterSQL) do
 	begin
 		FErrors := CompileErrors;
 		Free;
@@ -460,5 +450,4 @@ begin
 end;
 
 end.
-
 

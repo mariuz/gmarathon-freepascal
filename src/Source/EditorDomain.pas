@@ -19,19 +19,7 @@ unit EditorDomain;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls, ExtCtrls, DB,	Printers, Menus,	ClipBrd,
-	IB_Header,
-	IBODataset,
-	rmCollectionListBox,
-	rmPanel,
-	SynEdit,
-	SyntaxMemoWithStuff2,
-	BaseDocumentDataAwareForm,
-	MarathonInternalInterfaces,
-	FrameMetadata,
-	FrameDescription, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, DB, Printers, Menus, ClipBrd, SQLDB, rmCollectionListBox, rmPanel, SynEdit, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, MarathonInternalInterfaces, FrameMetadata, FrameDescription, rmNotebook2;
 
 type
 	TfrmDomains = class(TfrmBaseDocumentDataAwareForm, IMarathonDomainEditor)
@@ -42,7 +30,7 @@ type
 		tsDefault: TTabSheet;
 		tsConstraint: TTabSheet;
     Bevel1: TBevel;
-    qryDomain: TIBOQuery;
+    qryDomain: TSQLQuery;
     tsDDL: TTabSheet;
     Label3: TLabel;
     cmbDataType: TComboBox;
@@ -204,14 +192,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE,
-	MarathonProjectCacheTypes,
-	CompileDBObject,
-	DropObject,
-	ArrayDialog;
+uses Globals, HelpMap, MarathonIDE, MarathonProjectCacheTypes, CompileDBObject, DropObject, ArrayDialog;
 
 const
 	TY_NONE = -1;
@@ -536,7 +517,7 @@ begin
   begin
     qryDomain.Close;
     qryDomain.SQL.Clear;
-    qryDomain.RequestLive := True;
+    qryDomain.// // // RequestLive := True;
 		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
     qryDomain.Open;
     try
@@ -601,12 +582,12 @@ begin
 					end;
 				end;
 
-				qryDomain.IB_Transaction.Commit;
+				qryDomain.Transaction.Commit;
 				SetObjectName(edColumn.Text);
 			except
 				on E : Exception do
 				begin
-					qryDomain.IB_Transaction.Rollback;
+					qryDomain.Transaction.Rollback;
 					raise;
 				end;
 			end;
@@ -618,7 +599,7 @@ begin
 	begin
 		qryDomain.Close;
 		qryDomain.SQL.Clear;
-		qryDomain.RequestLive := True;
+		qryDomain.// // // RequestLive := True;
 		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
 		qryDomain.Open;
 		try
@@ -691,11 +672,11 @@ begin
 					end;
 				end;
 
-				qryDomain.IB_Transaction.Commit;
+				qryDomain.Transaction.Commit;
 			except
 				on E : Exception do
 				begin
-					qryDomain.IB_Transaction.Rollback;
+					qryDomain.Transaction.Rollback;
 					raise;
         end;
       end;
@@ -1093,7 +1074,7 @@ begin
 	if not IsInterbase6 then
 		edColumn.ReadOnly := True;
 	qryDomain.Close;
-	qryDomain.IB_Transaction.Commit;
+	qryDomain.Transaction.Commit;
 	FChangeDefault := False;
 	FChangeCheck := False;
 	FChangeName := False;
@@ -1118,10 +1099,10 @@ end;
 procedure TfrmDomains.SetDatabaseName(const Value: String);
 begin
 	inherited;
-	qryDomain.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-	qryDomain.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+	qryDomain.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+	qryDomain.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-	SQLDialect := qryDomain.IB_Connection.SQLDialect;
+	SQLDialect := qryDomain.Database.Dialect;
 	stsEditor.Panels[3].Text := Value;
 end;
 
@@ -1511,7 +1492,7 @@ begin
 
 		FCompileText := 'create domain ' + edColumn.Text + ' as ' + GetDataType + GetDefault + GetNotNull + GetCheck + GetCollate;
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryDomain.IB_Connection, qryDomain.IB_Transaction, ctDomain, FCompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryDomain.Database, qryDomain.Transaction, ctDomain, FCompileText);
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 
@@ -1795,7 +1776,7 @@ Revision 1.4  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.3  2002/04/29 14:52:40  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

@@ -19,17 +19,15 @@ unit Tools;
 
 interface
 
-uses
-	Controls, Classes,
-	IBODataset;
+uses Controls, Classes, SQLDB;
 
 // String Operation
 function AddBackslash(sPath: String): String;
 // Components
 procedure ChangeEnables(const aControls: array of TControl; bValue: Boolean);
 // Database
-function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TIBOQuery; overload;
-function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TIBOQuery; overload;
+function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery; overload;
+function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery; overload;
 // System
 procedure ExecuteWin32Program(sPath: String);
 function GetBuildInfo(const sFilename: String; var wVer1, wVer2, wVer3, wVer4: Word): Boolean;
@@ -38,8 +36,7 @@ procedure EnumNetResources(List: TStrings);
 
 implementation
 
-uses
-	ShellAPI, Forms, Windows, Dialogs;
+uses ShellAPI, Forms, Windows, Dialogs;
 
 // String Operation
 function AddBackslash(sPath: String): String;
@@ -60,18 +57,15 @@ begin
 end;
 
 // Database
-function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TIBOQuery;
+function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery;
 var
 	sSubStr: String;
 begin
-	Result := TIBOQuery.Create(nil);
+	Result := TSQLQuery.Create(nil);
 	with Result do
 		try
-			DatabaseName := sDatabaseName;
-			FetchWholeRows := False;
-			KeyLinksAutoDefine := not bIsReadOnly;
-			ReadOnly := bIsReadOnly;
-			RequestLive := not bIsReadOnly;
+			// DatabaseName := sDatabaseName; // IBX uses Database property, not DatabaseName string
+			// ReadOnly := bIsReadOnly;
 			SQL.Add(sSQL);
 			if (bOpenIt = True) then
 				Open;
@@ -81,7 +75,7 @@ begin
 		end;
 end;
 
-function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TIBOQuery;
+function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery;
 var
 	I: Integer;
 begin

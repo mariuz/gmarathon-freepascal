@@ -19,13 +19,7 @@ unit PrintPreviewForm;
 
 interface
 
-uses
-  SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls,
-  Forms, StdCtrls, Printers, Dialogs, ExtCtrls, DBCtrls, Menus, ComCtrls,
-	ToolWin, Buttons, ActnList,
-	PagePrnt,
-	BaseDocumentFOrm,
-	GlobalPrintingRoutines;
+uses SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls, Forms, StdCtrls, Printers, Dialogs, ExtCtrls, DBCtrls, Menus, ComCtrls, ToolWin, Buttons, ActnList, PagePrnt, BaseDocumentFOrm, GlobalPrintingRoutines;
 
 type
 
@@ -104,11 +98,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	//MarathonMain,
-  MarathonIDE;
+uses Globals, HelpMap, //MarathonMain, MarathonIDE;
 
 {$R *.lfm}
 

@@ -17,8 +17,7 @@ unit SQLParser;
 
 interface
 
-uses
-  Windows, Classes, SysUtils;
+uses Windows, Classes, SysUtils;
 
 type
   TTokenType = (tkNone, tkKeyWord, tkIdent, tkNumber, tkString, tkComment,

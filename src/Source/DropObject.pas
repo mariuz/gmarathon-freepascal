@@ -19,16 +19,7 @@ unit DropObject;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls, Db, ImgList,
-	IB_Session,
-	rmCollectionListBox,
-	IBODataset,
-	Globals,
-	MarathonProjectCacheTypes,
-	MarathonProjectCache,
-	MarathonIDE;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, Db, ImgList, IBConnection, SQLDB, rmCollectionListBox, Globals, MarathonProjectCacheTypes, MarathonProjectCache, MarathonIDE;
 
 type
 	TfrmDropObject = class(TForm)
@@ -125,7 +116,7 @@ procedure TfrmDropObject.DoDropObjects;
 var
   Idx : Integer;
   SQL : String;
-  Q : TIBOQuery;
+  Q : TSQLQuery;
   DoIt : Boolean;
   Msg : String;
   Item : TMarathonCacheBaseNode;
@@ -141,10 +132,10 @@ begin
       case Item.CacheType of
         ctDomain:
           begin
-            Q := TIBOQuery.Create(Self);
+            Q := TSQLQuery.Create(Self);
             try
-              Q.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
-              Q.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
+              Q.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
+              Q.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
 
               Q.SQL.Text := 'select rdb$procedure_name, rdb$parameter_name from ' +
                             'rdb$procedure_parameters where rdb$field_source = ' +
@@ -161,14 +152,14 @@ begin
               else
                 DoIt := True;
 							Q.Close;
-              Q.IB_Transaction.Commit;
+              Q.Transaction.Commit;
             finally
               Q.Free;
             end;
             if DoIt then
             begin
               SQL := 'drop domain ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               DoDrop(Item, SQL);
             end;
           end;
@@ -176,28 +167,28 @@ begin
         ctTable:
           begin
             SQL := 'drop table ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctView:
           begin
             SQL := 'drop view ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctSP:
           begin
             SQL := 'drop procedure ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctTrigger:
           begin
             SQL := 'drop trigger ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
             DoDrop(Item, SQL);
 					end;
 
@@ -210,14 +201,14 @@ begin
         ctException:
           begin
             SQL := 'drop exception ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctUDF:
           begin
             SQL := 'drop external function ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
             DoDrop(Item, SQL);
           end;
 
@@ -231,18 +222,18 @@ end;
 
 procedure TfrmDropObject.DoDrop(Item : TMarathonCacheBaseNode; SQL : String);
 var
-  Q : TIBOQuery;
+  Q : TSQLQuery;
 
 begin
-  Q := TIBOQuery.Create(Self);
+  Q := TSQLQuery.Create(Self);
   try
     try
-      Q.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
-			Q.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
+      Q.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
+			Q.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
 
       Q.SQL.Text := SQL;
       Q.ExecSQL;
-      Q.IB_Transaction.Commit;
+      Q.Transaction.Commit;
 
       AddStatusItem('Dropping ' + Item.Caption, 'Successful', 0);
 
@@ -260,12 +251,12 @@ begin
     except
       On E : EIB_ISCError do
       begin
-        Q.IB_Transaction.Rollback;
+        Q.Transaction.Rollback;
         AddStatusItem('Dropping ' + Item.Caption, EIB_ISCError(E).ErrorMessage.Text, 1);
       end;
       On E : Exception do
       begin
-        Q.IB_Transaction.RollBack;
+        Q.Transaction.RollBack;
         AddStatusItem('Dropping ' + Item.Caption, E.Message, 1);
       end;
     end;
@@ -277,7 +268,7 @@ end;
 procedure TfrmDropObject.FormShow(Sender: TObject);
 var
 	SQL : String;
-  Q : TIBOQuery;
+  Q : TSQLQuery;
   Msg : String;
   Item : TMarathonCacheBaseNode;
   Idx : Integer;
@@ -301,7 +292,7 @@ begin
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
             SQL := 'drop procedure ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
           end;
 
         ctTrigger:
@@ -313,7 +304,7 @@ begin
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
 						SQL := 'drop trigger ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
           end;
 
         ctTable:
@@ -325,7 +316,7 @@ begin
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
 						SQL := 'drop table ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
           end;
 
         ctException:
@@ -337,7 +328,7 @@ begin
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
             SQL := 'drop exception ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
           end;
 
         ctUDF:
@@ -349,7 +340,7 @@ begin
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
             SQL := 'drop external function ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
           end;
 
 				ctView:
@@ -361,7 +352,7 @@ begin
 							ImageIndex := GetImageIndexForCacheType(FDropCacheType);
 						end;
 						SQL := 'drop view ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-																			 MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+																			 MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
 					end;
 
         ctGenerator:
@@ -428,10 +419,10 @@ begin
               SubItems.Add('Domain');
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
-            Q := TIBOQuery.Create(Self);
+            Q := TSQLQuery.Create(Self);
             try
-              Q.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Connection;
-              Q.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Transaction;
+              Q.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Connection;
+              Q.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Transaction;
 
               Q.SQL.Text := 'select rdb$procedure_name, rdb$parameter_name from rdb$procedure_parameters where rdb$field_source = ' + AnsiQuotedStr(FDropItem, '''') + ';';
               Q.Open;
@@ -444,12 +435,12 @@ begin
 							else
                 Msg := '';
               Q.Close;
-              Q.IB_Transaction.Commit;
+              Q.Transaction.Commit;
             finally
               Q.Free;
             end;
             SQL := 'drop domain ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Dialect) + ';';
           end;
       else
         begin
@@ -458,10 +449,10 @@ begin
         end;
       end;
 
-      Q := TIBOQuery.Create(Self);
+      Q := TSQLQuery.Create(Self);
       try
-        Q.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Connection;
-        Q.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Transaction;
+        Q.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Connection;
+        Q.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].Transaction;
         try
           if Msg <> '' then
             raise Exception.Create(Msg);
@@ -469,7 +460,7 @@ begin
 
           Q.SQL.Text := SQL;
           Q.ExecSQL;
-          Q.IB_Transaction.Commit;
+          Q.Transaction.Commit;
 
           //write to script system
           MarathonIDEInstance.RecordToScript(SQL, FDropConnection);
@@ -481,13 +472,13 @@ begin
         except
 					On E : EIB_ISCError do
           begin
-            Q.IB_Transaction.Rollback;
+            Q.Transaction.Rollback;
             AddStatusItem('Dropping ' + FDropItem, EIB_ISCError(E).ErrorMessage.Text, 1);
             FSuccess := False;
           end;
           On E : Exception do
           begin
-            Q.IB_Transaction.Rollback;
+            Q.Transaction.Rollback;
             AddStatusItem('Dropping ' + FDropItem, E.Message, 1);
             FSuccess := False;
           end;
@@ -524,7 +515,7 @@ begin
                   ImageIndex := Item.ImageIndex;
                 end;
                 SQL := 'drop procedure ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
             ctTrigger:
@@ -536,7 +527,7 @@ begin
                   ImageIndex := Item.ImageIndex;
                 end;
                 SQL := 'drop trigger ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
             ctTable:
@@ -548,7 +539,7 @@ begin
                   ImageIndex := Item.ImageIndex;
                 end;
                 SQL := 'drop table ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
             ctException:
@@ -560,7 +551,7 @@ begin
 									ImageIndex := Item.ImageIndex;
                 end;
                 SQL := 'drop exception ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
             ctUDF:
@@ -572,7 +563,7 @@ begin
                   ImageIndex := Item.ImageIndex;
                 end;
                 SQL := 'drop external function ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
 
@@ -585,7 +576,7 @@ begin
                   ImageIndex := Item.ImageIndex;
                 end;
                 SQL := 'drop view ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
 
@@ -653,10 +644,10 @@ begin
                   SubItems.Add('Domain');
                   ImageIndex := Item.ImageIndex;
                 end;
-                Q := TIBOQuery.Create(Self);
+                Q := TSQLQuery.Create(Self);
                 try
-                  Q.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
-                  Q.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
+                  Q.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
+                  Q.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
 
                   Q.SQL.Text := 'select rdb$procedure_name, rdb$parameter_name from rdb$procedure_parameters where rdb$field_source = ' + AnsiQuotedStr(Item.Caption, '''') + ';';
                   Q.Open;
@@ -669,12 +660,12 @@ begin
                   else
                     Msg := '';
                   Q.Close;
-                  Q.IB_Transaction.Commit;
+                  Q.Transaction.Commit;
                 finally
                   Q.Free;
                 end;
                 SQL := 'drop domain ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-																				MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+																				MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Dialect) + ';';
               end;
 
             ctConnection,   //AC:
@@ -692,10 +683,10 @@ begin
             end;
           end;
 
-          Q := TIBOQuery.Create(Self);
+          Q := TSQLQuery.Create(Self);
           try
-            Q.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
-            Q.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
+            Q.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Connection;
+            Q.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].Transaction;
             try
               if Msg <> '' then
                 raise Exception.Create(Msg);
@@ -703,7 +694,7 @@ begin
 
               Q.SQL.Text := SQL;
               Q.ExecSQL;
-              Q.IB_Transaction.Commit;
+              Q.Transaction.Commit;
 
               //write to script system
               MarathonIDEInstance.RecordToScript(SQL, TMarathonCacheObject(Item).ConnectionName);
@@ -718,13 +709,13 @@ begin
             except
               On E : EIB_ISCError do
               begin
-                Q.IB_Transaction.Rollback;
+                Q.Transaction.Rollback;
                 AddStatusItem('Dropping ' + Item.Caption, EIB_ISCError(E).ErrorMessage.Text, 1);
                 FSuccess := False;
 							end;
               On E : Exception do
               begin
-                Q.IB_Transaction.Rollback;
+                Q.Transaction.Rollback;
                 AddStatusItem('Dropping ' + Item.Caption, E.Message, 1);
                 FSuccess := False;
               end;
@@ -780,7 +771,7 @@ Revision 1.4  2003/11/05 05:32:22  figmentsoft
 Added ability to drop connections and server.  This is still considered to be experimental as I don't know if I'm implementing code as the author has intended?!  But it works for me.
 
 Revision 1.3  2002/04/29 10:30:28  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

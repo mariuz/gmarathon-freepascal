@@ -50,7 +50,7 @@ Revision 1.8  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.7  2002/05/06 06:23:32  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.6  2002/04/25 12:31:54  tmuetze
 Bugfix for 509075, Syntax error while creating a new view
@@ -66,26 +66,7 @@ unit EditorView;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls,	ExtCtrls, ClipBrd,
-	Printers, Tabs, ActnList, Buttons,
-	rmPanel,
-	rmCollectionListBox,
-	rmTabs3x,
-	IB_Components,
-	IBODataset,
-	SynEdit,
-  SynEditTypes,
-	SyntaxMemoWithStuff2,
-	adbpedit,
-	BaseDocumentDataAwareForm,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes,
-	FrameDependencies,
-	FrameDescription,
-	FrameMetadata,
-	FramePermissions, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, Tabs, ActnList, Buttons, rmPanel, rmCollectionListBox, rmTabs3x, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmNotebook2;
 
 type
 	TfrmViewEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor)
@@ -102,22 +83,22 @@ type
 		tsSQL: TTabSheet;
 		lvFieldList: TListView;
 		tsDoco: TTabSheet;
-    qryTable: TIBOQuery;
-    qryTriggers: TIBOQuery;
-    tblTableData: TIBOQuery;
+    qryTable: TSQLQuery;
+    qryTriggers: TSQLQuery;
+    tblTableData: TSQLQuery;
     nbResults: TrmNoteBookControl;
     nbpDatasheet : TrmNotebookPage;
     nbpForm : TrmNotebookPage;
 		tabResults: TrmTabSet;
 		grdDataView: TDBGrid;
 		pnledResults: TDBPanelEdit;
-		tranTableData: TIB_Transaction;
+		tranTableData: TSQLTransaction;
 		tsGrants: TTabSheet;
 		btnRefresh: TSpeedButton;
 		framDepend: TframeDepend;
 		framDoco: TframeDesc;
 		framPerms: TframePerms;
-    qryUtil: TIBOQuery;
+    qryUtil: TSQLQuery;
 		pnlMessages: TrmPanel;
 		lstResults: TrmCollectionListBox;
 		edEditor: TSyntaxMemoWithStuff2;
@@ -257,17 +238,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE,
-	MarathonOptions,
-	DropObject,
-	SaveFileFormat,
-	CompileDBObject,
-	BlobViewer,
-	QBuilder,
-	EditorGrant;
+uses Globals, HelpMap, MarathonIDE, MarathonOptions, DropObject, SaveFileFormat, CompileDBObject, BlobViewer, QBuilder, EditorGrant;
 
 {$R *.lfm}
 
@@ -511,7 +482,7 @@ begin
 				end;
 		end;
 		qryTriggers.Close;
-		qryTriggers.IB_Transaction.Commit;
+		qryTriggers.Transaction.Commit;
 	finally
 		qryTriggers.EndBusy;
 		tvTriggers.Items.EndUpdate;
@@ -534,7 +505,7 @@ begin
 				tranTableData.Rollback;
 		end
 		else
-			if tranTableData.Started then
+			if tranTableData.Active then
 				tranTableData.Rollback;
 	end;
 end;
@@ -628,7 +599,7 @@ begin
 		qryTable.Next;
 	end;
 	qryTable.Close;
-	qryTable.IB_Transaction.Commit;
+	qryTable.Transaction.Commit;
 end;
 
 procedure TfrmViewEditor.pgObjectEditorChange(Sender: TObject);
@@ -996,36 +967,36 @@ begin
 	inherited;
 	if Value = '' then
 	begin
-		tblTableData.IB_Connection := nil;
-		tranTableData.IB_Connection := nil;
-		qryTable.IB_Connection := nil;
-		qryUtil.IB_Connection := nil;
-		qryTriggers.IB_Connection := nil;
-		framDoco.qryDoco.IB_Connection := nil;
-		framDoco.qryDoco.IB_Transaction := nil;
+		tblTableData.Database := nil;
+		tranTableData.Database := nil;
+		qryTable.Database := nil;
+		qryUtil.Database := nil;
+		qryTriggers.Database := nil;
+		framDoco.qryDoco.Database := nil;
+		framDoco.qryDoco.Transaction := nil;
 		IsInterbase6 := False;
 		SQLDialect := 0;
 		stsEditor.Panels[3].Text := 'No Connection';
 	end
 	else
 	begin
-		tblTableData.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		tranTableData.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tblTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tranTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 
-		qryTable.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTable.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTable.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryTable.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryTriggers.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTriggers.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTriggers.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryTriggers.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		framDoco.qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		framDoco.qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryTable.IB_Connection.SQLDialect;
+		SQLDialect := qryTable.Database.Dialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -1561,7 +1532,7 @@ begin
 		FCompileText := 'drop trigger ' + MakeQUotedIdent(DropObjectName, IsInterbase6, SQLDialect);
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.IB_Connection, qryTable.IB_Transaction, ctSQL, FCompileText, 'Dropping Trigger', 'Dropping...');
+		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.Database, qryTable.Transaction, ctSQL, FCompileText, 'Dropping Trigger', 'Dropping...');
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 		pgObjectEditorChange(pgObjectEditor);
@@ -1592,12 +1563,12 @@ end;
 
 function TfrmViewEditor.CanTransactionCommit: Boolean;
 begin
-	Result := tranTableData.Started;
+	Result := tranTableData.Active;
 end;
 
 function TfrmViewEditor.CanTransactionRollback: Boolean;
 begin
-	Result := tranTableData.Started;
+	Result := tranTableData.Active;
 end;
 
 procedure TfrmViewEditor.DOTransactionCommit;
@@ -1686,7 +1657,7 @@ begin
 		Refresh;
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryTable.IB_Connection, qryTable.IB_Transaction, ctView, edEditor.Text);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryTable.Database, qryTable.Transaction, ctView, edEditor.Text);
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 
@@ -1866,8 +1837,8 @@ begin
 	end;
 	qryUtil.Close;
 	Tmp := Tmp + ')' + #13#10 + 'as ' + #13#10 + Trim(Tmp1);
-	if qryUtil.IB_Transaction.Started then
-		qryUtil.IB_Transaction.Commit;
+	if qryUtil.Transaction.Active then
+		qryUtil.Transaction.Commit;
 	edEditor.Text := Tmp;
 end;
 
@@ -2046,5 +2017,4 @@ begin
 end;
 
 end.
-
 

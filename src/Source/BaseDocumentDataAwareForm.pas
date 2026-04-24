@@ -38,10 +38,7 @@ unit BaseDocumentDataAwareForm;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE,
-  MarathonProjectCacheTypes, Menus;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus;
 
 type
 	TfrmBaseDocumentDataAwareForm = class(TfrmBaseDocumentForm)

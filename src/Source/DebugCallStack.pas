@@ -19,9 +19,7 @@ unit DebugCallStack;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  ComCtrls, Menus, ActnList;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Menus, ActnList;
 
 type
   TCallStackHolder = class(TObject)
@@ -62,10 +60,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-  MarathonIDE,
-  MarathonInternalInterfaces,
-  IBDebuggerVM;
+uses MarathonIDE, MarathonInternalInterfaces, IBDebuggerVM;
 
 procedure TfrmDebugCallStack.FormShow(Sender: TObject);
 begin

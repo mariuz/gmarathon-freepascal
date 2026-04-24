@@ -19,9 +19,7 @@ unit TipOfTheDay;
 
 interface
 
-uses
-  SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls,
-	Forms, Dialogs, StdCtrls, ExtCtrls, Buttons, Registry;
+uses SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons, Registry;
 
 type
   TfrmTipOfTheDay = class(TForm)
@@ -52,9 +50,7 @@ var
 
 implementation
 
-uses
-	Globals,
-	GSSRegistry;
+uses Globals, GSSRegistry;
 
 {$R *.lfm}
 

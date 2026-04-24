@@ -21,12 +21,8 @@ interface
 
 {$I compilerdefines.inc}
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls,
-  {$IFDEF D6_OR_HIGHER}
-  Variants,
-  {$ENDIF}
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, {$IFDEF D6_OR_HIGHER}
+  Variants, {$ENDIF}
   IBDebuggerVM;
 
 type

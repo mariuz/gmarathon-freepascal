@@ -19,9 +19,7 @@ unit StoredProcParamWarn;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ComCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls;
 
 type
   TfrmParameterChange = class(TForm)
@@ -38,8 +36,7 @@ type
 
 implementation
 
-{uses
-  MarathonMain;}
+{uses MarathonMain;}
 
 {$R *.lfm}
 

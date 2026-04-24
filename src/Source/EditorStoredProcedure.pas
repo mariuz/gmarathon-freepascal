@@ -21,33 +21,9 @@ unit EditorStoredProcedure;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry,
-	Clipbrd, FileCtrl, Tabs, DBCtrls, ActnList, ImgList,
-	{$IFDEF d6_or_higher}
-	Variants,
-	{$ENDIF}
-	rmTabs3x,
-	rmPanel,
-	rmCollectionListBox,
-	rmMemoryDataSet,
-	IB_Components,
-	IB_Header,
-	IBODataset,
-	SynEdit,
-  SynEditTypes,
-	SyntaxMemoWithStuff2,
-	adbpedit,
-	BaseDocumentDataAwareForm,
-	FrameDescription,
-	FrameDependencies,
-	FrameDRUIMatrix,
-	FramePermissions,
-	FrameMetadata,
-	MarathonProjectCacheTypes,
-	MarathonInternalInterfaces,
-	GimbalToolsAPI, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, Tabs, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
+	Variants, {$ENDIF}
+	rmTabs3x, rmPanel, rmCollectionListBox, rmMemoryDataSet, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmNotebook2;
 
 type
 	TfrmStoredProcedure = class(TfrmBaseDocumentDataAwareForm, IMarathonStoredProcEditor, IGimbalIDESQLTextEditor)
@@ -58,9 +34,9 @@ type
 		tsStoredProc: TTabSheet;
 		tsDocoView: TTabSheet;
 		tsExecute: TTabSheet;
-    qryStoredProc: TIBOQuery;
-    qryResults: TIBOQuery;
-    qryUtil: TIBOQuery;
+    qryStoredProc: TSQLQuery;
+    qryResults: TSQLQuery;
+    qryUtil: TSQLQuery;
 		edEditor: TSyntaxMemoWithStuff2;
 		tsDependencies: TTabSheet;
     nbResults: TrmNoteBookControl;
@@ -71,7 +47,7 @@ type
     nbpForm : TrmNotebookPage;
     nbpDataSheet : TrmNotebookPage;
 		tabResults: TrmTabSet;
-		tranResults: TIB_Transaction;
+		tranResults: TSQLTransaction;
 		tsDRUI: TTabSheet;
 		tsGrants: TTabSheet;
 		tsDebuggerOutput: TTabSheet;
@@ -85,7 +61,7 @@ type
 		txtParametersmatch: TStringField;
 		txtParametersnull: TStringField;
 		edErrors: TSyntaxMemoWithStuff2;
-		qryWarnings: TIB_DSQL;
+		qryWarnings: TSQLQuery;
 		framDepend: TframeDepend;
 		frameDRUI: TframeDRUI;
 		framePerms: TframePerms;
@@ -300,22 +276,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	SQLYacc,
-	CompileDBObject,
-	DropObject,
-	StoredProcedureParams,
-	SaveFileFormat,
-	MarathonIDE,
-	MarathonOptions,
-	BlobViewer,
-	InputDialog,
-	QBuilder,
-	EditorGrant,
-	StoredProcParamWarn,
-	IBDebuggerVM;
+uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, StoredProcedureParams, SaveFileFormat, MarathonIDE, MarathonOptions, BlobViewer, InputDialog, QBuilder, EditorGrant, StoredProcParamWarn, IBDebuggerVM;
 
 {$R *.lfm}
 
@@ -401,8 +362,8 @@ begin
 		tmp := tmp + ')';
 	end;
 	qryStoredProc.Close;
-	if qryStoredProc.IB_Transaction.Started then
-		qryStoredProc.IB_Transaction.Commit;
+	if qryStoredProc.Transaction.Active then
+		qryStoredProc.Transaction.Commit;
 	qryStoredProc.SQL.Clear;
 	if FIsInterbase6 {and (FSQLDialect = 3)} then
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
@@ -461,8 +422,8 @@ begin
 	end;
 
 	qryStoredProc.Close;
-	if qryStoredProc.IB_Transaction.Started then
-		qryStoredProc.IB_Transaction.Commit;
+	if qryStoredProc.Transaction.Active then
+		qryStoredProc.Transaction.Commit;
 
 	P := TStringList.Create;
 	try
@@ -477,8 +438,8 @@ begin
 			P.Text := Tmp1;
 		end;
 		qryStoredProc.Close;
-		if qryStoredProc.IB_Transaction.Started then
-			qryStoredProc.IB_Transaction.Commit;
+		if qryStoredProc.Transaction.Active then
+			qryStoredProc.Transaction.Commit;
 		qryStoredProc.SQL.Clear;
 		Tmp := tmp + P.Text;
 
@@ -667,8 +628,8 @@ begin
 			qryUtil.Next;
 		end;
 		qryUtil.Close;
-		if qryUtil.IB_Transaction.Started then
-			 qryUtil.IB_Transaction.Commit;
+		if qryUtil.Transaction.Active then
+			 qryUtil.Transaction.Commit;
 		FAppendFlag := False;
 
 		// Ok we now have our input paramters check to see if we have any matching
@@ -981,8 +942,8 @@ begin
 			qryUtil.Next;
 		end;
 		qryUtil.Close;
-		if qryUtil.IB_Transaction.Started then
-			 qryUtil.IB_Transaction.Commit;
+		if qryUtil.Transaction.Active then
+			 qryUtil.Transaction.Commit;
 		FAppendFlag := False;
 
 		// Ok we now have our input paramters check to see if we have any matching
@@ -1237,8 +1198,8 @@ begin
 		else
 			Result := False;
 		qryUtil.Close;
-		if qryUtil.IB_Transaction.Started then
-			qryUtil.IB_Transaction.Commit;
+		if qryUtil.Transaction.Active then
+			qryUtil.Transaction.Commit;
 	finally
 		qryUtil.EndBusy;
 	end;
@@ -1247,8 +1208,8 @@ end;
 function TfrmStoredProcedure.HasParameters: Boolean;
 begin
 	try
-		if qryUtil.IB_Transaction.Started then
-			qryUtil.IB_Transaction.Commit;
+		if qryUtil.Transaction.Active then
+			qryUtil.Transaction.Commit;
 		qryUtil.BeginBusy(False);
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
@@ -1260,8 +1221,8 @@ begin
 		else
 			Result := False;
 		qryUtil.Close;
-		if qryUtil.IB_Transaction.Started then
-			qryUtil.IB_Transaction.Commit;
+		if qryUtil.Transaction.Active then
+			qryUtil.Transaction.Commit;
 	finally
 		qryUtil.EndBusy;
 	end;
@@ -1402,7 +1363,7 @@ begin
 						framDoco.SaveDoco;
 
 			PG_RESULTS:
-				if tranResults.Started then
+				if tranResults.Active then
 				begin
 					MessageDlg('There is an open transaction for the results - Commit or Rollback before changing View.', mtWarning, [mbOK], 0);
 					AllowChange := False;
@@ -1651,8 +1612,8 @@ begin
 				end;
 			finally
 				qryStoredProc.Close;
-				if qryStoredProc.IB_Transaction.Started then
-					qryStoredProc.IB_Transaction.Commit;
+				if qryStoredProc.Transaction.Active then
+					qryStoredProc.Transaction.Commit;
 			end;
 
 			// Assume there is a difference
@@ -1664,7 +1625,7 @@ begin
 				try
 					M.ParserType := ptCheckInputParms;
 					M.Lexer.IsInterbase6 := FIsInterbase6;
-					M.Lexer.SQLDialect := FSQLDialect;
+					M.Lexer.Dialect := FSQLDialect;
 
 					M.Lexer.yyinput.Text := edEditor.Text;
 					if M.yyparse = 0 then
@@ -1701,8 +1662,8 @@ begin
 					end;
 
 				qryStoredProc.Close;
-				if qryStoredProc.IB_Transaction.Started then
-					qryStoredProc.IB_Transaction.Commit;
+				if qryStoredProc.Transaction.Active then
+					qryStoredProc.Transaction.Commit;
 
 				if not ((ParseList.Count = 0) and (ProcList.Count = 0)) then
 				begin
@@ -1965,12 +1926,12 @@ end;
 
 function TfrmStoredProcedure.CanTransactionCommit: Boolean;
 begin
-	Result := tranResults.Started;
+	Result := tranResults.Active;
 end;
 
 function TfrmStoredProcedure.CanTransactionRollback: Boolean;
 begin
-	Result := tranResults.Started;
+	Result := tranResults.Active;
 end;
 
 function TfrmStoredProcedure.CanUndo: Boolean;
@@ -2173,7 +2134,7 @@ begin
 			except
 				on E: Exception do
 				begin
-					if tranResults.InTransaction then
+					if tranResults.Active then
 						tranResults.Rollback;
 					pgObjectEditor.ActivePage := tsStoredProc;
 					if not pnlMessages.Visible then
@@ -2598,37 +2559,37 @@ begin
 	inherited;
 	if Value = '' then
 	begin
-		tranResults.IB_Connection := nil;
-		qryWarnings.IB_Connection := nil;
-		qryResults.IB_Connection := nil;
-		qryUtil.IB_Connection := nil;
-		qryStoredProc.IB_Connection := nil;
-		framDoco.qryDoco.IB_Connection := nil;
-		framDoco.qryDoco.IB_Transaction := nil;
+		tranResults.Database := nil;
+		qryWarnings.Database := nil;
+		qryResults.Database := nil;
+		qryUtil.Database := nil;
+		qryStoredProc.Database := nil;
+		framDoco.qryDoco.Database := nil;
+		framDoco.qryDoco.Transaction := nil;
 		IsInterbase6 := False;
 		SQLDialect := 0;
 		stsEditor.Panels[3].Text := 'No Connection';
 	end
 	else
 	begin
-		tranResults.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryResults.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryResults.IB_Transaction := tranResults;
+		tranResults.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryResults.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryResults.Transaction := tranResults;
 
-		qryWarnings.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryWarnings.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryWarnings.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryWarnings.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryStoredProc.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryStoredProc.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryStoredProc.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryStoredProc.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		framDoco.qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		framDoco.qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryUtil.IB_Connection.SQLDialect;
+		SQLDialect := qryUtil.Database.Dialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -2673,7 +2634,7 @@ var
 
 begin
 	try
-		if tranResults.Started then
+		if tranResults.Active then
 		begin
 			MessageDlg('There is an open transaction from the last execution - Commit or Rollback before compiling.', mtWarning, [mbOK], 0);
 			FErrors := True;
@@ -2703,7 +2664,7 @@ begin
 		end;
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryStoredProc.IB_Connection, qryStoredProc.IB_Transaction, ctSP, CompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryStoredProc.Database, qryStoredProc.Transaction, ctSP, CompileText);
 
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
@@ -2725,7 +2686,7 @@ begin
 			M.ParserType := ptWarnings;
 			M.OnStatementFound := WarningsHandler;
 			M.Lexer.IsInterbase6 := FIsInterbase6;
-			M.Lexer.SQLDialect := FSQLDialect;
+			M.Lexer.Dialect := FSQLDialect;
 
 			M.Lexer.yyinput.Text := edEditor.Text;
 			if M.yyparse = 0 then
@@ -2747,7 +2708,7 @@ begin
 		if MarathonIDEInstance.IsDebuggerEnabled and MarathonIDEInstance.CanDebuggerEnabled then
 		begin
 			MarathonIDEInstance.DebuggerVM.DatabaseName := FDatabaseName;
-			MarathonIDEInstance.DebuggerVM.Database := qryResults.IB_Connection;
+			MarathonIDEInstance.DebuggerVM.Database := qryResults.Database;
 			if not MarathonIDEInstance.DebuggerVM.Compile(FObjectName, edEditor.Text) then
 			begin
 				MessageDlg('Marathon was unable to compile the source in the editor.', mtError, [mbOK], 0);
@@ -3223,7 +3184,7 @@ Revision 1.5  2002/05/25 10:24:21  tmuetze
 Fixed SP update bug #556457
 
 Revision 1.4  2002/05/06 06:23:32  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

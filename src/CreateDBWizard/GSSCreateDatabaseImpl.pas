@@ -17,9 +17,7 @@ unit GSSCreateDatabaseImpl;
 
 interface
 
-uses
-	ComObj, ActiveX, StdVcl,
-	GimbalCreateDatabase_TLB;
+uses ComObj, ActiveX, StdVcl, GimbalCreateDatabase_TLB;
 
 type
   TGSSCreateDatabase = class(TAutoObject, IGSSCreateDatabase)
@@ -32,13 +30,7 @@ type
 
 implementation
 
-uses
-  ComServ,
-  CreateDatabase,
-  GSSCreateDatabaseConsts,
-  GSSDatabaseInfoImpl,
-  Controls,
-  Forms;
+uses ComServ, CreateDatabase, GSSCreateDatabaseConsts, GSSDatabaseInfoImpl, Controls, Forms;
 
 function TGSSCreateDatabase.Execute(AppHandle, CallingApp,
   State: Integer): IGSSCreateDatabaseInfo;

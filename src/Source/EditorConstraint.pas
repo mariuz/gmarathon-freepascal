@@ -34,10 +34,10 @@ Revision 1.5  2002/05/15 08:58:11  tmuetze
 Removed some references to TIBGSSDataset
 
 Revision 1.4  2002/04/29 11:35:41  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/29 06:47:09  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block
@@ -50,12 +50,7 @@ unit EditorConstraint;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls, DB, Grids, DBGrids, math,
-	IBODataset,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes, ActnList;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, Grids, DBGrids, math, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, ActnList;
 
 type
 	TfrmEditorConstraint = class(TForm, IMarathonBaseForm)
@@ -103,7 +98,7 @@ type
     cmbUniqueColumn: TComboBox;
     btnUniqueAdd: TButton;
     btnUniqueDelete: TButton;
-    qryConstraint: TIBOQuery;
+    qryConstraint: TSQLQuery;
     ActionList1: TActionList;
     actFKAdd: TAction;
     actFKDelete: TAction;
@@ -176,11 +171,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE,
-	CompileDBObject;
+uses Globals, HelpMap, MarathonIDE, CompileDBObject;
 
 {$R *.lfm}
 
@@ -479,11 +470,11 @@ end;
 procedure TfrmEditorConstraint.SetDatabaseName(const Value: String);
 begin
 	FDatabaseName := Value;
-	qryConstraint.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-	qryConstraint.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+	qryConstraint.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+	qryConstraint.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
 	FIsInterbase5 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB5;
-	FSQLDialect := qryConstraint.IB_Connection.SQLDialect;
+	FSQLDialect := qryConstraint.Database.Dialect;
 
 	if FIsInterbase5 or FIsInterbase6 then
 	begin
@@ -805,7 +796,7 @@ begin
 	end;
 
 	with TfrmCompileDBObject.CreateMultiStatementCompile(Self, Self,
-		qryConstraint.IB_Connection, qryConstraint.IB_Transaction, AlterSQL) do
+		qryConstraint.Database, qryConstraint.Transaction, AlterSQL) do
 	begin
 		FErrors := CompileErrors;
 		Free;
@@ -850,13 +841,13 @@ end;
 
 procedure TfrmEditorConstraint.cmbTablesChange(Sender: TObject);
 var
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
-	Q := TIBOQuery.Create(Self);
+	Q := TSQLQuery.Create(Self);
 	try
-		Q.IB_Connection := qryConstraint.IB_Connection;
-		Q.IB_Transaction := qryConstraint.IB_Transaction;
+		Q.Database := qryConstraint.Database;
+		Q.Transaction := qryConstraint.Transaction;
 		try
 			Q.SQL.Add('select RDB$FIELD_NAME from RDB$RELATION_FIELDS where RDB$RELATION_NAME = ' +
 								AnsiQuotedStr(cmbTables.Text, '''') + ' order by RDB$FIELD_POSITION asc');
@@ -868,12 +859,12 @@ begin
 				Q.Next;
 			end;
 			Q.Close;
-			Q.IB_Transaction.Commit;
+			Q.Transaction.Commit;
 			cmbFKRefColumns.ItemIndex := 0;
 		except
 			on E : Exception do
 			begin
-				Q.IB_Transaction.Rollback;
+				Q.Transaction.Rollback;
 				raise;
 			end;
 		end;
@@ -1015,5 +1006,4 @@ begin
 end;
 
 end.
-
 

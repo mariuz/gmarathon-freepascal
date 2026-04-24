@@ -124,14 +124,9 @@ object frmExceptions: TfrmExceptions
       end>
     SimplePanel = False
   end
-  object qryException: TIBOQuery
+  object qryException: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 28
     Top = 100
   end

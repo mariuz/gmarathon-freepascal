@@ -56,7 +56,7 @@ Revision 1.12  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.11  2002/05/06 06:23:32  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.10  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -69,25 +69,7 @@ unit EditorTable;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls,	ExtCtrls,
-	ClipBrd, Tabs, ActnList, Buttons,
-	rmTabs3x,
-	IB_Components,
-	IBODataset,
-	adbpedit,
-	MarathonProjectCacheTypes,
-	MarathonInternalInterfaces,
-	MarathonIDE,
-	BaseDocumentDataAwareForm,
-	FrameDependencies,
-	FrameDescription,
-	FrameMetadata,
-	FramePermissions,
-  MenuModule,
-	GimbalToolsAPI,
-	GimbalToolsAPIImpl, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Tabs, ActnList, Buttons, rmTabs3x, IBConnection, SQLDB, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmNotebook2;
 
 type
 	TfrmTables = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor, IGimbalIDETableEditorWindow)
@@ -107,17 +89,17 @@ type
 		lvConstraints: TListView;
 		tsIndexes: TTabSheet;
 		lvIndex: TListView;
-    qryTable: TIBOQuery;
-    qryConstraints: TIBOQuery;
-    qryTriggers: TIBOQuery;
-    tblTableData: TIBOQuery;
+    qryTable: TSQLQuery;
+    qryConstraints: TSQLQuery;
+    qryTriggers: TSQLQuery;
+    tblTableData: TSQLQuery;
     nbResults: TrmNoteBookControl;
     nbpForm : TrmNotebookPage;
     nbpDatasheet : TrmNotebookPage;
 		tabResults: TrmTabSet;
 		grdDataView: TDBGrid;
 		pnledResults: TDBPanelEdit;
-		tranTableData: TIB_Transaction;
+		tranTableData: TSQLTransaction;
 		tsGrants: TTabSheet;
 		tsDDL: TTabSheet;
 		btnRefresh: TSpeedButton;
@@ -285,19 +267,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonOptions,
-	DropObject,
-	SaveFileFormat,
-	EditorColumn,
-	CompileDBObject,
-	EditorConstraint,
-	EditorIndex,
-	BlobViewer,
-	ReOrderColumns,
-	EditorGrant, Math;
+uses Globals, HelpMap, MarathonOptions, DropObject, SaveFileFormat, EditorColumn, CompileDBObject, EditorConstraint, EditorIndex, BlobViewer, ReOrderColumns, EditorGrant, Math;
 
 {$R *.lfm}
 
@@ -555,7 +525,7 @@ begin
 				end;
 		end;
 		qryTriggers.Close;
-		qryTriggers.IB_Transaction.Commit;
+		qryTriggers.Transaction.Commit;
 	finally
 		qryTriggers.EndBusy;
 		tvTriggers.Items.EndUpdate;
@@ -578,7 +548,7 @@ begin
 				tranTableData.Rollback;
 		end
 		else
-			if tranTableData.Started then
+			if tranTableData.Active then
 				tranTableData.Rollback;
 	end;
 end;
@@ -675,14 +645,14 @@ begin
 		qryTable.Next;
 	end;
 	qryTable.Close;
-	qryTable.IB_Transaction.Commit;
+	qryTable.Transaction.Commit;
 end;
 
 procedure TfrmTables.pgObjectEditorChange(Sender: TObject);
 var
 	Tmp: String;
 	L: TListItem;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 
 begin
 	try
@@ -736,9 +706,9 @@ begin
 							(qryConstraints.FieldByName('rdb$constraint_type').AsString = 'PRIMARY KEY') or
 							(qryConstraints.FieldByName('rdb$constraint_type').AsString = 'UNIQUE')) then
 						begin
-							Q := TIBOQuery.Create(Self);
+							Q := TSQLQuery.Create(Self);
 							try
-								Q.IB_Connection := qryTable.IB_Connection;
+								Q.Database := qryTable.Database;
 								Q.SQL.Add('select * from rdb$index_segments where rdb$index_name = ''' +
 									qryConstraints.FieldByName('rdb$index_name').AsString + ''' order by rdb$field_position asc;');
 								Q.Open;
@@ -755,9 +725,9 @@ begin
 								Q.Free;
 							end;
 
-							Q := TIBOQuery.Create(Self);
+							Q := TSQLQuery.Create(Self);
 							try
-								Q.IB_Connection := qryTable.IB_Connection;
+								Q.Database := qryTable.Database;
 								Q.SQL.Add('select rdb$relation_name from rdb$indices where rdb$index_name in ' +
 									'(select rdb$foreign_key from rdb$indices where rdb$index_name	= ''' +
 									qryConstraints.FieldByName('rdb$index_name').AsString + ''');');
@@ -786,9 +756,9 @@ begin
 
 							// IB 5.0 only
 							try
-								Q := TIBOQuery.Create(Self);
+								Q := TSQLQuery.Create(Self);
 								try
-									Q.IB_Connection := qryTable.IB_Connection;
+									Q.Database := qryTable.Database;
 									Q.SQL.Add('select rdb$update_rule, rdb$delete_rule from rdb$ref_constraints where rdb$constraint_name = ''' +
 										qryConstraints.FieldByName('rdb$constraint_name').AsString + ''';');
 									Q.Open;
@@ -813,9 +783,9 @@ begin
 						begin
 							if (qryConstraints.FieldByName('rdb$constraint_type').AsString = 'CHECK') then
 							begin
-								Q := TIBOQuery.Create(Self);
+								Q := TSQLQuery.Create(Self);
 								try
-									Q.IB_Connection := qryTable.IB_Connection;
+									Q.Database := qryTable.Database;
 									Q.SQL.Add('select rdb$trigger_name from rdb$check_constraints where rdb$constraint_name = ''' + qryConstraints.FieldByName('rdb$constraint_name').AsString + ''';');
 									Q.Open;
 
@@ -842,7 +812,7 @@ begin
 					lvConstraints.Columns[6].Width := MarathonIDEInstance.CurrentProject.TEConstraintsColumns.Items[6].Width;
 					lvConstraints.Items.EndUpdate;
 					qryConstraints.Close;
-					qryConstraints.IB_Transaction.Commit;
+					qryConstraints.Transaction.Commit;
 					ActiveControl := lvConstraints;
 				end;
 
@@ -867,9 +837,9 @@ begin
 						L.ImageIndex := 10;
 						L.Caption := qryTable.FieldByName('rdb$index_name').AsString;
 
-						Q := TIBOQuery.Create(Self);
+						Q := TSQLQuery.Create(Self);
 						try
-							Q.IB_Connection := qryTable.IB_Connection;
+							Q.Database := qryTable.Database;
 							Q.SQL.Add('select * from rdb$index_segments where rdb$index_name = ''' +
 								qryTable.FieldByName('rdb$index_name').AsString + ''' order by rdb$field_position asc;');
 							Q.Open;
@@ -912,7 +882,7 @@ begin
 					lvIndex.Columns[4].Width := MarathonIDEInstance.CurrentProject.TEIndexesColumns.Items[4].Width;
 					lvIndex.Items.EndUpdate;
 					qryTable.Close;
-					qryTable.IB_Transaction.Commit;
+					qryTable.Transaction.Commit;
 					ActiveControl := lvIndex;
 				end;
 
@@ -1517,36 +1487,36 @@ begin
 	inherited;
 	if Value = '' then
 	begin
-		tblTableData.IB_Connection := nil;
-		tranTableData.IB_Connection := nil;
-		qryTable.IB_Connection := nil;
-		qryConstraints.IB_Connection := nil;
-		qryTriggers.IB_Connection := nil;
-		framDoco.qryDoco.IB_Connection := nil;
-		framDoco.qryDoco.IB_Transaction := nil;
+		tblTableData.Database := nil;
+		tranTableData.Database := nil;
+		qryTable.Database := nil;
+		qryConstraints.Database := nil;
+		qryTriggers.Database := nil;
+		framDoco.qryDoco.Database := nil;
+		framDoco.qryDoco.Transaction := nil;
 		IsInterbase6 := False;
 		SQLDialect := 0;
 		stsEditor.Panels[3].Text := 'No Connection';
 	end
 	else
 	begin
-		tblTableData.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		tranTableData.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tblTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tranTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 
-		qryTable.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTable.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTable.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryTable.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryConstraints.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryConstraints.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryConstraints.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryConstraints.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryTriggers.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTriggers.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTriggers.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryTriggers.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		framDoco.qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		framDoco.qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryTable.IB_Connection.SQLDialect;
+		SQLDialect := qryTable.Database.Dialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -2155,7 +2125,7 @@ begin
 		FCompileText := 'alter table ' + MakeQUotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' drop ' + MakeQUotedIdent(DropObjectName, IsInterbase6, SQLDialect);
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.IB_Connection, qryTable.IB_Transaction, ctSQL, FCompileText, 'Dropping Column', 'Dropping...');
+		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.Database, qryTable.Transaction, ctSQL, FCompileText, 'Dropping Column', 'Dropping...');
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 		pgObjectEditorChange(pgObjectEditor);
@@ -2200,7 +2170,7 @@ begin
 		FCompileText := 'drop trigger ' + MakeQuotedIdent(DropObjectName, IsInterbase6, SQLDialect);
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.IB_Connection, qryTable.IB_Transaction, ctSQL, FCompileText, 'Dropping Trigger', 'Dropping...');
+		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.Database, qryTable.Transaction, ctSQL, FCompileText, 'Dropping Trigger', 'Dropping...');
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 		pgObjectEditorChange(pgObjectEditor);
@@ -2252,7 +2222,7 @@ begin
 		FCompileText := 'alter table ' + MakeQUotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' drop constraint ' + MakeQUotedIdent(DropObjectName, IsInterbase6, SQLDialect);
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.IB_Connection, qryTable.IB_Transaction, ctSQL, FCompileText, 'Dropping Constraint', 'Dropping...');
+		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.Database, qryTable.Transaction, ctSQL, FCompileText, 'Dropping Constraint', 'Dropping...');
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 		pgObjectEditorChange(pgObjectEditor);
@@ -2299,7 +2269,7 @@ begin
 		FCompileText := 'drop index ' + MakeQUotedIdent(DropObjectName, IsInterbase6, SQLDialect);
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.IB_Connection, qryTable.IB_Transaction, ctSQL, FCompileText, 'Dropping Index', 'Dropping...');
+		FCompile := TfrmCompileDBObject.CreateAlter(Self, TmpIntf, qryTable.Database, qryTable.Transaction, ctSQL, FCompileText, 'Dropping Index', 'Dropping...');
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 		pgObjectEditorChange(pgObjectEditor);
@@ -2339,7 +2309,7 @@ end;
 procedure TfrmTables.DoObjectProperties;
 var
 	ConstraintType: Byte;
-	qryFields: TIBOQuery;
+	qryFields: TSQLQuery;
 	frmColumns: TfrmColumns;
 
 begin
@@ -2353,10 +2323,10 @@ begin
 						frmColumns := TfrmColumns.Create(Self);
 						with frmColumns do
 						begin
-							qryFields := TIBOQuery.Create(Self);
+							qryFields := TSQLQuery.Create(Self);
 							try
-								qryFields.IB_Connection := qryTable.IB_Connection;
-								qryFields.IB_Transaction := qryTable.IB_Transaction;
+								qryFields.Database := qryTable.Database;
+								qryFields.Transaction := qryTable.Transaction;
 								qryFields.Close;
 								qryFields.SQL.Clear;
 								qryFields.SQL.Add('select RDB$FIELD_SOURCE, RDB$DESCRIPTION, RDB$DEFAULT_SOURCE, RDB$NULL_FLAG ' +
@@ -2372,9 +2342,9 @@ begin
 									Self.pgObjectEditor.OnChange(Self.pgObjectEditor);
 							finally
 								frmColumns.Free;
-								if qryFields.IB_Transaction.Started then
-									qryFields.IB_Transaction.Commit;
-								qryFields.RequestLive := False;
+								if qryFields.Transaction.Active then
+									qryFields.Transaction.Commit;
+								// qryFields.// // RequestLive := False;
 								qryFields.Free;
 							end;
 						end;
@@ -2453,7 +2423,7 @@ begin
 						' and rdb$field_name = ' + AnsiQuotedStr(F.lvColumns.Items.Item[Idx].Caption, '''') + ';');
 					qryTable.ExecSQL;
 				end;
-				qryTable.IB_Transaction.Commit;
+				qryTable.Transaction.Commit;
 			finally
 				qryTable.EndBusy;
 				Screen.Cursor := crDefault;
@@ -2520,12 +2490,12 @@ end;
 
 function TfrmTables.CanTransactionCommit: Boolean;
 begin
-	Result := tranTableData.Started;
+	Result := tranTableData.Active;
 end;
 
 function TfrmTables.CanTransactionRollback: Boolean;
 begin
-	Result := tranTableData.Started;
+	Result := tranTableData.Active;
 end;
 
 procedure TfrmTables.DoTransactionCommit;

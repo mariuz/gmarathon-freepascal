@@ -19,15 +19,7 @@ unit EditorException;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	DB, Menus, ComCtrls, DBCtrls, StdCtrls, Printers, ExtCtrls, ClipBrd, ActnList,
-	IBODataset,
-	BaseDocumentDataAwareForm,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes,
-	FrameDescription,
-	FrameMetadata;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, Printers, ExtCtrls, ClipBrd, ActnList, SQLDB, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, FrameMetadata;
 
 type
   TfrmExceptions = class(TfrmBaseDocumentDataAwareForm)
@@ -38,7 +30,7 @@ type
     edExceptionName: TEdit;
     Label2: TLabel;
     edExceptionText: TEdit;
-    qryException: TIBOQuery;
+    qryException: TSQLQuery;
     tsDDL: TTabSheet;
     framDoco: TframeDesc;
     stsEditor: TStatusBar;
@@ -125,12 +117,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE,
-	CompileDBObject,
-	DropObject;
+uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject;
 
 {$R *.lfm}
 
@@ -321,23 +308,23 @@ begin
   inherited;
   if Value = '' then
   begin
-    qryException.IB_Connection := nil;
-    framDoco.qryDoco.IB_Connection := nil;
-    framDoco.qryDoco.IB_Transaction := nil;
+    qryException.Database := nil;
+    framDoco.qryDoco.Database := nil;
+    framDoco.qryDoco.Transaction := nil;
     IsInterbase6 := False;
     SQLDialect := 0;
     stsEditor.Panels[3].Text := 'No Connection';
   end
   else
   begin
-    qryException.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    qryException.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    qryException.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+    qryException.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-    framDoco.qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    framDoco.qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+    framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryException.IB_Connection.SQLDialect;
+		SQLDialect := qryException.Database.Dialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -366,7 +353,7 @@ begin
     edExceptionName.Text := qryException.FieldByName('rdb$exception_name').AsString;
     edExceptionText.Text := qryException.FieldByName('rdb$message').AsString;
     qryException.Close;
-    qryException.IB_Transaction.Commit;
+    qryException.Transaction.Commit;
 
     FObjectName := ExceptionName;
     InternalCaption := 'Exception - [' + FObjectName + ']';
@@ -476,7 +463,7 @@ begin
 	CompileText := 'create exception ' + edExceptionName.Text + ' ''' + edExceptionText.Text + ''';';
 
 	TmpIntf := Self;
-	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryException.IB_Connection, qryException.IB_Transaction, ctException, CompileText);
+	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryException.Database, qryException.Transaction, ctException, CompileText);
 	FErrors := FCompile.CompileErrors;
 	FCompile.Free;
 
@@ -973,7 +960,7 @@ Revision 1.4  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.3  2002/04/29 11:54:53  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

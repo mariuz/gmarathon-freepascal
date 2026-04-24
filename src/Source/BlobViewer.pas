@@ -34,11 +34,7 @@ unit BlobViewer;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, Grids, ComCtrls,
-	Hexeditor,
-	rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Grids, ComCtrls, Hexeditor, rmCornerGrip;
 
 type
 	TfrmBlobViewer = class(TForm)
@@ -71,8 +67,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	Globals;
+uses Globals;
 
 procedure TfrmBlobViewer.SetData(const Value: TMemoryStream);
 begin

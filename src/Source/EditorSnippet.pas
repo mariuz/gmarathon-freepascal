@@ -37,13 +37,7 @@ unit EditorSnippet;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls,
-	rmCornerGrip,
-	rmPathTreeView,
-	SynEdit,
-	SyntaxMemoWithStuff2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmCornerGrip, rmPathTreeView, SynEdit, SyntaxMemoWithStuff2;
 
 type
 	TfrmEditorSnippet = class(TForm)
@@ -82,11 +76,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	Tools,
-	MenuModule;
+uses Globals, HelpMap, Tools, MenuModule;
 
 {$R *.lfm}
 

@@ -19,24 +19,7 @@ unit Globals;
 
 interface
 
-uses
-	Classes, SysUtils, Messages, Graphics, Registry, ActnList,
-	Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls,
-	SynEdit,
-  StrUtils,
-	rmTreeNonView,
-	rmPanel,
-	IB_Components,
-	IB_Header,
-	SyntaxMemoWithStuff2,
-	DOM,
-	XMLRead,
-	XMLWrite,
-	adbpedit,
-	IBODataSet,
-	GSSRegistry,
-	MarathonProjectCacheTypes,
-	MenuModule;
+uses Classes, SysUtils, Messages, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls, SynEdit, StrUtils, rmTreeNonView, rmPanel, IBConnection, SQLDB, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule;
 
 const
 	WM_BUGGER_OFF = WM_USER + 101;
@@ -312,12 +295,7 @@ var
 
 implementation
 
-uses
-	BlobViewer,
-	SQLAssistantDragAndDrop,
-	MarathonProjectCache,
-	EditorSnippet,
-	MarathonIDE;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE;
 
 function TMarathonScreen.GetTop: Integer;
 var
@@ -784,17 +762,17 @@ end;
 function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String): Boolean;
 var
 	DB : TMarathonCacheConnection;
-	Q : TIBOQuery;
+	Q : TSQLQuery;
 
 begin
 	Result := False;
 	DB := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[DatabaseName];
 	if Assigned(DB) then
 	begin
-		Q := TIBOQuery.Create(nil);
+		Q := TSQLQuery.Create(nil);
 		try
-			Q.IB_Connection := DB.Connection;
-			Q.IB_Transaction := DB.Transaction;
+			Q.Database := DB.Connection;
+			Q.Transaction := DB.Transaction;
 
 			case ObjType of
 				ctTable :
@@ -2395,7 +2373,7 @@ function TDragQueenPearl.GetText: String;
   Tmp: String;
   Idx: Integer;
   Alias: String;
-	qryUtil : TIBOQuery;
+	qryUtil : TSQLQuery;
  } 
 begin
 (*  frmSQLAssistant := TfrmSQLAssistant.Create(nil);
@@ -2424,10 +2402,10 @@ begin
       if FDragItemType = dbntStoredProc then
       begin
         //add arguments...
-				qryUtil := TIBOQuery.Create(nil);
+				qryUtil := TSQLQuery.Create(nil);
         try
-//          qryUtil.IB_Connection := frmMarathonMain.IBObjDatabase;
-//          qryUtil.IB_Transaction := frmMarathonMain.IBObjTransaction;
+//          qryUtil.Database := frmMarathonMain.IBObjDatabase;
+//          qryUtil.Transaction := frmMarathonMain.IBObjTransaction;
 
           qryUtil.Close;
           qryUtil.SQL.Clear;
@@ -2453,7 +2431,7 @@ begin
             tmp := tmp + ')';
           end;
           qryUtil.Close;
-//          if frmMarathonMain.IBObjTransaction.Started then
+//          if frmMarathonMain.IBObjTransaction.Active then
 //            frmMarathonMain.IBObjTransaction.Commit;
         finally
           qryUtil.Free;
@@ -2497,7 +2475,7 @@ function TDragQueenFiFi.GetText: String;
   Tmp: String;
   Idx: Integer;
   Alias: String;
-	qryUtil : TIBOQuery;
+	qryUtil : TSQLQuery;
   Cnt: Integer;
   Wrap: Boolean;
   ColsPerLine: Integer;

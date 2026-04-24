@@ -21,12 +21,8 @@ interface
 
 {$I compilerdefines.inc}
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, Menus,
-	{$IFDEF D6_OR_HIGHER}
-	Variants,
-	{$ENDIF}
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Menus, {$IFDEF D6_OR_HIGHER}
+	Variants, {$ENDIF}
 	ActnList;
 
 type
@@ -51,10 +47,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	MarathonIDE,
-	MarathonInternalInterfaces,
-	IBDebuggerVM;
+uses MarathonIDE, MarathonInternalInterfaces, IBDebuggerVM;
 
 procedure TfrmDebugLocals.UpdateInfo;
 var

@@ -7,17 +7,9 @@ interface
 
 {$I compilerdefines.inc}
 
-uses
-	Classes, SysUtils, Windows, ParseCollection, Controls, Forms, Dialogs,
-	{$IFDEF D6_OR_HIGHER}
-	Variants,
-	{$ENDIF}
-	rmMemoryDataSet,
-	rmTreeNonView,
-	IB_Components,
-	IBODataset,
-	MarathonProjectCacheTypes,
-	YaccLib;
+uses Classes, SysUtils, Windows, ParseCollection, Controls, Forms, Dialogs, {$IFDEF D6_OR_HIGHER}
+	Variants, {$ENDIF}
+	rmMemoryDataSet, rmTreeNonView, IBConnection, SQLDB, MarathonProjectCacheTypes, YaccLib;
 
 type
   TSymbolType = (stLocal, stInput, stOutput);
@@ -146,7 +138,7 @@ type
     FModules : TList;
     FExecuting: Boolean;
     FEnabled: Boolean;
-    FDatabase : TIB_Connection;
+    FDatabase : TIBConnection;
     FDatabaseName: String;
     FWatchList : TList;
     function GetModuleByIndex(Index: Integer): TProcModule;
@@ -189,7 +181,7 @@ type
     property WatchList : TList read FWatchList write FWatchList;
     property Executing : Boolean read FExecuting;
     property Enabled : Boolean read FEnabled write FEnabled;
-    property Database : TIB_COnnection read FDatabase write FDatabase;
+    property Database : TIBConnection read FDatabase write FDatabase;
     property DatabaseName : String read FDatabaseName write FDatabaseName;
     property State : TInterpreterState read GetState;
   end;
@@ -210,18 +202,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	MarathonIDE,
-	MarathonInternalInterfaces,
-  DebugAddBreakPoint,
-  DebugEvalModify,
-  DebugCallStack,
-  DebugLocalVariables,
-	DebugBreakPoints,
-  DebugWatches,
-  AddWatch,
-  SQLYacc;
+uses Globals, MarathonIDE, MarathonInternalInterfaces, DebugAddBreakPoint, DebugEvalModify, DebugCallStack, DebugLocalVariables, DebugBreakPoints, DebugWatches, AddWatch, SQLYacc;
 
 constructor TProcModule.Create;
 begin
@@ -1615,14 +1596,14 @@ begin
   M := TProcModule.Create;
   M.DebuggerVM := Self;
   M.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].IsIB6;
-	M.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].SQLDialect;
+	M.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Dialect;
   FModules.Add(M);
   Result := M.Compile(ProcName, ProcSource);
 end;
 
 function TIBDebuggerVM.CompileSubProc(ProcName: String): Boolean;
 var
-	Q : TIBOQuery;
+	Q : TSQLQuery;
   tmp : String;
   tmp1: String;
   P : TStringList;
@@ -1634,10 +1615,10 @@ var
 
 begin
   FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].IsIB6;
-  FSQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].SQLDialect;
-  Q := TIBOQuery.Create(nil);
+  FSQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Dialect;
+  Q := TSQLQuery.Create(nil);
   try
-    Q.IB_Connection := FDatabase;
+    Q.Database := FDatabase;
     Q.Close;
     Q.SQL.Clear;
     if ShouldBeQuoted(ProcName) then
@@ -1670,7 +1651,7 @@ begin
                                                                                            Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                            Q.FieldByName('rdb$field_precision').AsInteger,
                                                                                            True,
-                                                                                           Database.SQLDialect);
+                                                                                           Database.Dialect);
       end
       else
       begin
@@ -1680,7 +1661,7 @@ begin
                                                                                            -1,
                                                                                            -1,
                                                                                            False,
-                                                                                           Database.SQLDialect);
+                                                                                           Database.Dialect);
       end;
       CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
       if CharSet <> '' then
@@ -1699,7 +1680,7 @@ begin
                                                                                              Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                              Q.FieldByName('rdb$field_precision').AsInteger,
                                                                                              True,
-                                                                                             Database.SQLDialect);
+                                                                                             Database.Dialect);
         end
         else
         begin
@@ -1709,7 +1690,7 @@ begin
                                                                                              -1,
                                                                                              -1,
                                                                                              False,
-                                                                                             Database.SQLDialect);
+                                                                                             Database.Dialect);
         end;
         CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
         if CharSet <> '' then
@@ -1721,8 +1702,8 @@ begin
       tmp := tmp + ')';
     end;
     Q.Close;
-    if Q.IB_Transaction.Started then
-      Q.IB_Transaction.Commit;
+    if Q.Transaction.Active then
+      Q.Transaction.Commit;
     Q.SQL.Clear;
     if FIsInterbase6 then
     begin
@@ -1751,7 +1732,7 @@ begin
                                                                                            Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                            Q.FieldByName('rdb$field_precision').AsInteger,
                                                                                            True,
-                                                                                           Database.SQLDialect);
+                                                                                           Database.Dialect);
       end
       else
       begin
@@ -1761,7 +1742,7 @@ begin
                                                                                            -1,
                                                                                            -1,
                                                                                            False,
-                                                                                           Database.SQLDialect);
+                                                                                           Database.Dialect);
       end;
 
       CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
@@ -1781,7 +1762,7 @@ begin
                                                                                              Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                              Q.FieldByName('rdb$field_precision').AsInteger,
                                                                                              True,
-                                                                                             Database.SQLDialect);
+                                                                                             Database.Dialect);
         end
         else
         begin
@@ -1791,7 +1772,7 @@ begin
                                                                                              -1,
                                                                                              -1,
                                                                                              False,
-                                                                                             Database.SQLDialect);
+                                                                                             Database.Dialect);
         end;
         CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
         if CharSet <> '' then
@@ -1804,8 +1785,8 @@ begin
     end;
 
     Q.Close;
-    if Q.IB_Transaction.Started then
-      Q.IB_Transaction.Commit;
+    if Q.Transaction.Active then
+      Q.Transaction.Commit;
 
     Tmp := WrapText(Tmp, #10#13, [' ', #9], 80);
 
@@ -1832,15 +1813,15 @@ begin
         P.Text := Tmp1;
       end;
       Q.Close;
-      if Q.IB_Transaction.Started then
-        Q.IB_Transaction.Commit;
+      if Q.Transaction.Active then
+        Q.Transaction.Commit;
       Q.SQL.Clear;
       Tmp := tmp + P.Text;
 
       M := TProcModule.Create;
       M.DebuggerVM := Self;
       M.IsInterbase6 := FIsInterbase6;
-      M.SQLDialect := FSQLDialect;
+      M.Dialect := FSQLDialect;
       FModules.Add(M);
       Result := M.Compile(ProcName, Tmp);
     finally
@@ -2367,5 +2348,4 @@ begin
 end;
 
 end.
-
 

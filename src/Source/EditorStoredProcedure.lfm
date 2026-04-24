@@ -412,42 +412,27 @@ object frmStoredProcedure: TfrmStoredProcedure
     Left = 361
     Top = 164
   end
-  object qryStoredProc: TIBOQuery
+  object qryStoredProc: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 396
     Top = 96
   end
-  object qryResults: TIBOQuery
+  object qryResults: TSQLQuery
     Params = <>
-    CallbackInc = 10
-    FetchWholeRows = False
-    IB_Transaction = tranResults
-    KeyLinksAutoDefine = False
+    Transaction = tranResults
     ReadOnly = True
-    RecordCountAccurate = False
     AfterOpen = qryResultsAfterOpen
-    FieldOptions = []
     Left = 360
     Top = 96
   end
-  object qryUtil: TIBOQuery
+  object qryUtil: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 396
     Top = 164
   end
-  object tranResults: TIB_Transaction
+  object tranResults: TSQLTransaction
     Isolation = tiConcurrency
     Left = 429
     Top = 129
@@ -541,7 +526,7 @@ object frmStoredProcedure: TfrmStoredProcedure
       Size = 4
     end
   end
-  object qryWarnings: TIB_DSQL
+  object qryWarnings: TSQLQuery
     Left = 316
     Top = 116
   end

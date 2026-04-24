@@ -19,16 +19,7 @@ unit CompileDBObject;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls,
-	IB_Components,
-	IB_Session,
-	IBODataset,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes,
-	SQLYacc,
-	Globals;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, IBConnection, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, SQLYacc, Globals;
 
 type
 	TCreateType = (crtCallback, crtInline, crtMultiStatement);
@@ -46,8 +37,8 @@ type
 		FCompileText : TStringList;
 		FNewFlag : Boolean;
 		FForm : IMarathonBaseForm;
-		FTransaction : TIB_Transaction;
-		FDatabase : TIB_Connection;
+		FTransaction : TSQLTransaction;
+		FDatabase : TIBConnection;
 		FObjectType : TGSSCacheType;
 		FErrors : Boolean;
 		FCreateType : TCreateType;
@@ -57,25 +48,24 @@ type
 	public
 		{ Public declarations }
 		property CompileErrors : Boolean read FErrors;
-		constructor CreateAlter(AOwner : TComponent; Form : IMarathonBaseForm; Database : TIB_Connection;
-			Transaction : TIB_Transaction; ObjectType : TGSSCacheType; CompileText : String;
+		constructor CreateAlter(AOwner : TComponent; Form : IMarathonBaseForm; Database : TIBConnection;
+			Transaction : TSQLTransaction; ObjectType : TGSSCacheType; CompileText : String;
 			FormCaption : String; StatusText : String);
-		constructor CreateCompile(AOwner : TComponent; Form : IMarathonBaseForm; Database : TIB_COnnection;
-			Transaction : TIB_Transaction; ObjectType : TGSSCacheType; CompileText : String);
+		constructor CreateCompile(AOwner : TComponent; Form : IMarathonBaseForm; Database : TIBConnection;
+			Transaction : TSQLTransaction; ObjectType : TGSSCacheType; CompileText : String);
 		constructor CreateCompileCallBack(AOwner : TComponent; Form : IMarathonBaseForm);
 		constructor CreateMultiStatementCompile(const AOwner: TComponent; const Form: IMarathonBaseForm;
-			const Database: TIB_Connection; const Transaction: TIB_Transaction; const CompileText: TStringList);
+			const Database: TIBConnection; const Transaction: TSQLTransaction; const CompileText: TStringList);
 	end;
 
 implementation
 
-uses
-	MarathonIDE;
+uses MarathonIDE;
 
 {$R *.lfm}
 
 constructor TfrmCompileDBObject.CreateAlter(AOwner: TComponent;	Form: IMarathonBaseForm;
-	Database: TIB_Connection; Transaction: TIB_Transaction; ObjectType: TGSSCacheType;
+	Database: TIBConnection; Transaction: TSQLTransaction; ObjectType: TGSSCacheType;
 	CompileText, FormCaption, StatusText: String);
 begin
 	inherited Create(AOwner);
@@ -94,8 +84,8 @@ begin
 	ShowModal;
 end;
 
-constructor TfrmCompileDBObject.CreateCompile(AOwner : TComponent; Form : IMarathonBaseFOrm; Database : TIB_COnnection;
-	Transaction : TIB_Transaction; ObjectType : TGSSCacheType; CompileText : String);
+constructor TfrmCompileDBObject.CreateCompile(AOwner : TComponent; Form : IMarathonBaseFOrm; Database : TIBConnection;
+	Transaction : TSQLTransaction; ObjectType : TGSSCacheType; CompileText : String);
 begin
 	inherited Create(AOwner);
 	FParser := TSQLLexer.Create(Self);
@@ -123,7 +113,7 @@ begin
 end;
 
 constructor TfrmCompileDBObject.CreateMultiStatementCompile(const AOwner: TComponent; const Form: IMarathonBaseForm;
-	const Database: TIB_Connection; const Transaction: TIB_Transaction; const CompileText: TStringList);
+	const Database: TIBConnection; const Transaction: TSQLTransaction; const CompileText: TStringList);
 begin
 	inherited Create(AOwner);
 	FCreateType := crtMultiStatement;
@@ -144,7 +134,7 @@ end;
 procedure TfrmCompileDBObject.BailOut(ErrMessage : String);
 begin
 	if Assigned(FTransaction) then
-		if FTransaction.Started then
+		if FTransaction.Active then
 			FTransaction.Rollback;
 	FForm.OpenMessages;
 	FForm.AddCompileError(ErrMessage);
@@ -172,7 +162,7 @@ var
 	I, Idx, Idy: Integer;
 	Found, ErrorReported : Boolean;
 	DTmp, ThisObject: String;
-	Q: TIBOQuery;
+	Q: TSQLQuery;
 	M: TSQLParser;
 	Domain : IMarathonDomainEditor;
 	TableEditor : IMarathonTableEditor;
@@ -236,12 +226,12 @@ begin
                 raise Exception.Create('Syntax Error');
 
               FNewFlag := True;
-              Q := TIBOQuery.Create(Self);
+              Q := TSQLQuery.Create(Self);
               try
                 Q.ParamCheck := false;
 
-                Q.IB_Connection := FDatabase;
-                Q.IB_Transaction := FTransaction;
+                Q.Database := FDatabase;
+                Q.Transaction := FTransaction;
 
                 FParser.Reset;
                 FParser.yyInput.Text  := FCompileText.Text;
@@ -297,12 +287,12 @@ begin
 									try
                     M.ParserType := ptColUnknown;
 										M.Lexer.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-                    M.Lexer.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+                    M.Lexer.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
 
                     M.Lexer.yyinput.Text := FCompileText.Text;
                     if M.yyparse = 0 then
                     begin
-											if FTransaction.Started then
+											if FTransaction.Active then
 												FTransaction.Rollback;
                       FForm.OpenMessages;
 
@@ -383,11 +373,11 @@ begin
 							else
 								raise Exception.Create('Syntax Error');
 
-              Q := TIBOQuery.Create(Self);
+              Q := TSQLQuery.Create(Self);
               try
                 Q.ParamCheck := false;
-                Q.IB_Connection := FDatabase;
-                Q.IB_Transaction := FTransaction;
+                Q.Database := FDatabase;
+                Q.Transaction := FTransaction;
 
                 Q.SQL.Text := FCompileText.Text;
 								Q.ExecSQL;
@@ -419,12 +409,12 @@ begin
                   try
                     M.ParserType := ptColUnknown;
                     M.Lexer.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-                    M.Lexer.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+                    M.Lexer.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
 
 										M.Lexer.yyinput.Text := FCompileText.Text;
                     if M.yyparse = 0 then
                     begin
-                      if FTransaction.Started then
+                      if FTransaction.Active then
                         FTransaction.Rollback;
                       FForm.OpenMessages;
 
@@ -524,10 +514,10 @@ begin
 								raise Exception.Create('Syntax Error');
 
 							FNewFlag := True;
-              Q := TIBOQuery.Create(Self);
+              Q := TSQLQuery.Create(Self);
               try
-                Q.IB_Connection := FDatabase;
-                Q.IB_Transaction := FTransaction;
+                Q.Database := FDatabase;
+                Q.Transaction := FTransaction;
                 FTransaction.Commit;
 								Q.SQL.Text := FCompileText.Text;
                 Q.ExecSQL;
@@ -590,10 +580,10 @@ begin
               else
                 raise Exception.Create('Syntax Error');
 
-              Q := TIBOQuery.Create(Self);
+              Q := TSQLQuery.Create(Self);
               try
-                Q.IB_Connection := FDatabase;
-                Q.IB_Transaction := FTransaction;
+                Q.Database := FDatabase;
+                Q.Transaction := FTransaction;
 
                 Q.SQL.Text := FCompileText.Text;
                 Q.ExecSQL;
@@ -626,10 +616,10 @@ begin
               begin
 								ThisObject := AnsiUpperCase(ThisObject);
               end;
-              Q := TIBOQuery.Create(Self);
+              Q := TSQLQuery.Create(Self);
               try
-                Q.IB_Connection := FDatabase;
-                Q.IB_Transaction := FTransaction;
+                Q.Database := FDatabase;
+                Q.Transaction := FTransaction;
 
                 Q.SQL.Text := FCompileText.Text;
                 Q.ExecSQL;
@@ -659,10 +649,10 @@ begin
               if FForm.QueryInterface(IMarathonUDFEditor, UDFEditor) = S_OK then
               begin
                 ThisObject := StripQuotesFromQuotedIdentifier(AnsiQuotedStr(UDFEditor.GetCurrentName, ''''));
-                Q := TIBOQuery.Create(Self);
+                Q := TSQLQuery.Create(Self);
                 try
-                  Q.IB_Connection := FDatabase;
-                  Q.IB_Transaction := FTransaction;
+                  Q.Database := FDatabase;
+                  Q.Transaction := FTransaction;
 									Q.SQL.Add('select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(ThisObject, '''') + ';');
                   Q.Open;
                   If not (Q.BOF and Q.EOF) then
@@ -670,13 +660,13 @@ begin
                   else
                     FNewFlag := True;
                   Q.Close;
-                  Q.IB_Transaction.Commit;
+                  Q.Transaction.Commit;
                   Q.SQL.Clear;
 
 
                   if Not FNewFlag then
                   begin
-                    DTmp := 'drop external function ' + MakeQuotedIdent(ThisObject, UDFEditor.IsInterbaseSix, FDatabase.SQLDialect)  + ';';
+                    DTmp := 'drop external function ' + MakeQuotedIdent(ThisObject, UDFEditor.IsInterbaseSix, FDatabase.Dialect)  + ';';
 										Q.SQL.Text := DTmp;
                     Q.ExecSQL;
 									end;
@@ -684,7 +674,7 @@ begin
                   FTransaction.Commit;
 
                   //build the statement from the owner form......
-                  DTmp := 'declare external function ' + MakeQuotedIdent(ThisObject, UDFEditor.IsInterbaseSix, FDatabase.SQLDialect) + ' ';
+                  DTmp := 'declare external function ' + MakeQuotedIdent(ThisObject, UDFEditor.IsInterbaseSix, FDatabase.Dialect) + ' ';
 
                   //add input params
 									for Idx := 0 to UDFEditor.UDFParamCount - 1 do
@@ -772,10 +762,10 @@ begin
               else
                 raise Exception.Create('Syntax Error');
 
-							Q := TIBOQuery.Create(Self);
+							Q := TSQLQuery.Create(Self);
               try
-                Q.IB_Connection := FDatabase;
-                Q.IB_Transaction := FTransaction;
+                Q.Database := FDatabase;
+                Q.Transaction := FTransaction;
 
 								Q.SQL.Text := FCompileText.Text;
                 Q.ExecSQL;
@@ -806,10 +796,10 @@ begin
 				ctSQL :
 					begin
 						try
-							Q := TIBOQuery.Create(Self);
+							Q := TSQLQuery.Create(Self);
 							try
-								Q.IB_Connection := FDatabase;
-								Q.IB_Transaction := FTransaction;
+								Q.Database := FDatabase;
+								Q.Transaction := FTransaction;
 
 								Q.SQL.Text := FCompileText.Text;
 								Q.ExecSQL;
@@ -834,11 +824,11 @@ begin
 			if FCreateType = crtMultiStatement then
 			begin
 				try
-					Q := TIBOQuery.Create(Self);
+					Q := TSQLQuery.Create(Self);
 					try
             Q.ParamCheck := false;
-						Q.IB_Connection := FDatabase;
-						Q.IB_Transaction := FTransaction;
+						Q.Database := FDatabase;
+						Q.Transaction := FTransaction;
 
 						for I := 0 to FCompileText.Count - 1 do
 						begin
@@ -905,7 +895,7 @@ Revision 1.7  2002/05/29 11:02:24  tmuetze
 Added a patch from Pavel Odstrcil:  If a stored procedure contains select into variable, query was checking parameters and exception was raised
 
 Revision 1.6  2002/04/29 14:46:11  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.5  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

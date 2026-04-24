@@ -19,11 +19,7 @@ unit StatementHistory;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, Db, ImgList,
-	rmCornerGrip,
-	rmCollectionListBox;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Db, ImgList, rmCornerGrip, rmCollectionListBox;
 
 type
   TfrmStatementHistory = class(TForm)
@@ -47,9 +43,7 @@ type
 
 implementation
 
-uses
-	HelpMap,
-	Globals;
+uses HelpMap, Globals;
 
 {$R *.lfm}
 

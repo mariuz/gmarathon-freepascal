@@ -6,18 +6,12 @@ unit FrameDescription;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd,
-	SynEdit, SynEditTypes,
-	SyntaxMemoWithStuff2,
-	IBODataset,
-	MarathonInternalInterfaces;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, SQLDB, MarathonInternalInterfaces;
 
 type
 	TframeDesc = class(TFrame)
 		edDoco: TSyntaxMemoWithStuff2;
-    qryDoco: TIBOQuery;
+    qryDoco: TSQLQuery;
 		procedure edDocoChange(Sender: TObject);
 		procedure edDocoDragOver(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean);
 		procedure edDocoDragDrop(Sender, Source: TObject; X, Y: Integer);
@@ -63,8 +57,7 @@ type
 
 implementation
 
-uses
-	MarathonIDE;
+uses MarathonIDE;
 
 {$R *.lfm}
 
@@ -84,8 +77,8 @@ begin
 	try
 		qryDoco.BeginBusy(False);
 		Screen.Cursor := crHourGlass;
-		qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-    qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
+		qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
+    qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
     qryDoco.Close;
     qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
@@ -107,9 +100,9 @@ begin
 		qryDoco.Open;
 		Doco := qryDoco.FieldByName('rdb$description').AsString;
     qryDoco.Close;
-    if qryDoco.IB_Transaction.Started then
-      qryDoco.IB_Transaction.Commit;
-    qryDoco.RequestLive := False;
+    if qryDoco.Transaction.Active then
+      qryDoco.Transaction.Commit;
+    qryDoco.// // // RequestLive := False;
     edDoco.Modified := False;
     FDocoModified := False;
   finally
@@ -123,10 +116,10 @@ begin
 	try
 		qryDoco.BeginBusy(False);
 		Screen.Cursor := crHourGlass;
-		qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-		qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
+		qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
+		qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
 		qryDoco.Close;
-		qryDoco.RequestLive := True;
+		qryDoco.// // // RequestLive := True;
 		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
 			ctDomain:
@@ -152,9 +145,9 @@ begin
 			qryDoco.Post;
 		end;
 		qryDoco.Close;
-		if qryDoco.IB_Transaction.Started then
-			qryDoco.IB_Transaction.Commit;
-		qryDoco.RequestLive := False;
+		if qryDoco.Transaction.Active then
+			qryDoco.Transaction.Commit;
+		qryDoco.// // // RequestLive := False;
 		edDoco.Modified := False;
 		FDocoModified := False;
 	finally
@@ -341,5 +334,4 @@ begin
 end;
 
 end.
-
 

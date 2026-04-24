@@ -19,11 +19,7 @@ unit ScriptEditorHost;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls,	Buttons, ActnList,
-	BaseDocumentForm,
-	MarathonInternalInterfaces;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, ActnList, BaseDocumentForm, MarathonInternalInterfaces;
 
 type
   TScriptHostTabSheet = class(TTabSheet)
@@ -78,11 +74,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE,
-	MarathonProjectCache;
+uses Globals, HelpMap, MarathonIDE, MarathonProjectCache;
 
 procedure TfrmScriptEditorHost.MinMaxInfo(var Message : TWMGetMinMaxInfo);
 var

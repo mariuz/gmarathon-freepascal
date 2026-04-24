@@ -4,9 +4,7 @@ unit SecureDBLogin;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, FileCtrl, ExtCtrls, Registry;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, FileCtrl, ExtCtrls, Registry;
 
 type
   TfrmSecureConnect = class(TForm)
@@ -28,10 +26,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	MarathonIDE{,
-	MarathonMain};
+uses Globals, MarathonIDE{, MarathonMain};
 
 {$R *.lfm}
 

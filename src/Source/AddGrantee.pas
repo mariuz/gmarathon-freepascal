@@ -19,10 +19,7 @@ unit AddGrantee;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls,
-	rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmCornerGrip;
 
 type
 	TfrmGranteeAdd = class(TForm)
@@ -55,9 +52,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	Globals,
-	HelpMap;
+uses Globals, HelpMap;
 
 procedure TfrmGranteeAdd.btnOKClick(Sender: TObject);
 begin

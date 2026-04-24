@@ -122,14 +122,9 @@ object frmGenerators: TfrmGenerators
       end>
     SimplePanel = False
   end
-  object qryGenerator: TIBOQuery
+  object qryGenerator: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 28
     Top = 124
   end

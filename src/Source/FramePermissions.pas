@@ -21,7 +21,7 @@ Revision 1.5  2005/04/13 16:04:28  rjmills
 *** empty log message ***
 
 Revision 1.4  2002/04/29 11:54:53  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -34,17 +34,12 @@ unit FramePermissions;
 
 interface
 
-uses 
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, Db,
-	IBODataset,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Db, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
 
 type
 	TframePerms = class(TFrame)
 		lvGrants: TListView;
-    qryUtil: TIBOQuery;
+    qryUtil: TSQLQuery;
 	private
 		{ Private declarations }
 		FForm : IMarathonBaseForm;
@@ -61,8 +56,7 @@ type
 
 implementation
 
-uses
-	MarathonIDE;
+uses MarathonIDE;
 
 {$R *.lfm}
 
@@ -91,12 +85,12 @@ var
 	L : TListItem;
 
 begin
-	qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-	qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
+	qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
+	qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
 
 
-	if qryUtil.IB_Transaction.Started then
-		qryUtil.IB_Transaction.Commit;
+	if qryUtil.Transaction.Active then
+		qryUtil.Transaction.Commit;
 
 	lvGrants.Items.BeginUpDate;
 	lvGrants.Items.Clear;
@@ -125,8 +119,8 @@ begin
   end;
   lvGrants.Items.EndUpDate;
 	qryUtil.Close;
-	if qryUtil.IB_Transaction.Started then
-		qryUtil.IB_Transaction.Commit;
+	if qryUtil.Transaction.Active then
+		qryUtil.Transaction.Commit;
 end;
 
 procedure TframePerms.SetActive;
@@ -135,5 +129,4 @@ begin
 end;
 
 end.
-
 

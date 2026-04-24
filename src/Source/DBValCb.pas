@@ -2,9 +2,7 @@ unit Dbvalcb;
 
 interface
 
-uses
-  SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls,
-  Forms, Menus, Dialogs, StdCtrls, DB, DBCtrls;
+uses SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls, Forms, Menus, Dialogs, StdCtrls, DB, DBCtrls;
 
 type
   TDBValComboBox = class(TComboBox)

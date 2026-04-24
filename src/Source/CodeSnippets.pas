@@ -42,12 +42,7 @@ interface
 
 {$I compilerdefines.inc}
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ExtCtrls, Menus, Registry, FileCtrl, ActnList, Buttons,
-	rmPathTreeView,
-	Globals,
-  MarathonIDE;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, Registry, FileCtrl, ActnList, Buttons, rmPathTreeView, Globals, MarathonIDE;
 
 type
 	TfrmCodeSnippets = class(TForm)
@@ -137,11 +132,7 @@ var
 
 implementation
 
-uses
-	InputDialog,
-	EditorSnippet,
-	HelpMap,
-	GSSRegistry;
+uses InputDialog, EditorSnippet, HelpMap, GSSRegistry;
 
 {$R *.lfm}
 

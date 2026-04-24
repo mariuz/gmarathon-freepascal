@@ -19,9 +19,7 @@ unit ManageBrowserItems;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ComCtrls, ActnList;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ActnList;
 
 type
   TfrmManageBrowserItems = class(TForm)

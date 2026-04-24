@@ -406,19 +406,19 @@ object frmScript: TfrmScript
       0D0A646F0D0A6E65770D0A6F6C640D0A707265636973696F6E0D0A73716C636F
       64650D0A}
   end
-  object FDatabase: TIB_Connection
+  object FDatabase: TIBConnection
     Left = 260
     Top = 147
   end
-  object FTransaction: TIB_Transaction
-    IB_Connection = FDatabase
+  object FTransaction: TSQLTransaction
+    Database = FDatabase
     Isolation = tiConcurrency
     Left = 296
     Top = 147
   end
-  object FSQL: TIB_DSQL
-    IB_Connection = FDatabase
-    IB_Transaction = FTransaction
+  object FSQL: TSQLQuery
+    Database = FDatabase
+    Transaction = FTransaction
     ParamChar = '?'
     Left = 364
     Top = 147

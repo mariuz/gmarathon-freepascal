@@ -17,9 +17,7 @@ unit ScriptOptions;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Buttons, StdCtrls, ComCtrls, Registry;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, StdCtrls, ComCtrls, Registry;
 
 type
 	TfrmScriptOptions = class(TForm)
@@ -45,9 +43,7 @@ type
 
 implementation
 
-uses
-	GSSRegistry,
-	ChooseFolder, ScriptMain;
+uses GSSRegistry, ChooseFolder, ScriptMain;
 
 {$R *.DFM}
 

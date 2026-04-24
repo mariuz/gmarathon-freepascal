@@ -39,14 +39,9 @@ object framePerms: TframePerms
     TabOrder = 0
     ViewStyle = vsReport
   end
-  object qryUtil: TIBOQuery
+  object qryUtil: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 44
     Top = 116
   end

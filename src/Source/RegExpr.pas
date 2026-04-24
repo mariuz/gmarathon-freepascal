@@ -69,8 +69,7 @@ unit RegExpr;
 
 interface
 
-uses
- Classes; // TStrings in Split method
+uses Classes; // TStrings in Split method
 
 const
  NSUBEXP = 10; // max number of substitutions
@@ -239,8 +238,7 @@ function ReplaceRegExpr (const ARegExpr, AInputStr, AReplaceStr : string) : stri
 
 implementation
 
-uses
- SysUtils;
+uses SysUtils;
 
 
 {=============================================================}

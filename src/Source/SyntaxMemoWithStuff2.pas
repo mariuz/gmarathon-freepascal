@@ -4,9 +4,7 @@ interface
 
 {$I CompilerDefines.inc}
 
-uses
-	Windows, SynEdit, Classes, dialogs, Graphics, SysUtils, Controls, ImgList, ExtCtrls, StdCtrls,
-	Messages, Forms, SynEditTypes, SynEditDecorator;
+uses Windows, SynEdit, Classes, dialogs, Graphics, SysUtils, Controls, ImgList, ExtCtrls, StdCtrls, Messages, Forms, SynEditTypes, SynEditDecorator;
 
 type
 	TSynEditSaveFormat = (sfTEXT, sfRTF, sfHTML, sfUNIX);
@@ -383,11 +381,7 @@ type
 procedure Register;
 
 implementation
-uses
-	FindDlg,
-	ReplDlg,
-	SynEditKeyCmds,
-	Registry;
+uses FindDlg, ReplDlg, SynEditKeyCmds, Registry;
 
 const
 	DIGIT = ['0'..'9'];

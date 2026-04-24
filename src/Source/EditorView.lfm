@@ -432,53 +432,33 @@ object frmViewEditor: TfrmViewEditor
     Left = 112
     Top = 152
   end
-  object qryTable: TIBOQuery
+  object qryTable: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 48
     Top = 188
   end
-  object qryTriggers: TIBOQuery
+  object qryTriggers: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 48
     Top = 256
   end
-  object tblTableData: TIBOQuery
+  object tblTableData: TSQLQuery
     Params = <>
-    CallbackInc = 10
-    FetchWholeRows = False
-    IB_Transaction = tranTableData
-    RecordCountAccurate = True
+    Transaction = tranTableData
     AfterOpen = tblTableDataAfterOpen
-    RequestLive = True
-    FieldOptions = []
     Left = 48
     Top = 152
   end
-  object tranTableData: TIB_Transaction
+  object tranTableData: TSQLTransaction
     Isolation = tiConcurrency
     Left = 80
     Top = 152
   end
-  object qryUtil: TIBOQuery
+  object qryUtil: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 48
     Top = 224
   end

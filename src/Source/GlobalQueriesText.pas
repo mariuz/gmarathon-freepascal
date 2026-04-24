@@ -26,8 +26,7 @@ function GetQueryText(
 
 implementation
 
-uses
-  SysUtils;
+uses SysUtils;
   
 function GetQueryText(ObjectType: string; ObjectName: string): string;
 var

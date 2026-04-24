@@ -34,12 +34,7 @@ unit FrameDRUIMatrix;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Db, ComCtrls, StdCtrls, ExtCtrls,
-	rmPathTreeView,
-	rmMemoryDataSet,
-	MarathonInternalInterfaces;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Db, ComCtrls, StdCtrls, ExtCtrls, rmPathTreeView, rmMemoryDataSet, MarathonInternalInterfaces;
 
 type
 	TframeDRUI = class(TFrame)
@@ -71,9 +66,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	SQLYacc,
-	MarathonIDE;
+uses SQLYacc, MarathonIDE;
 
 { TframeDRUI }
 
@@ -109,7 +102,7 @@ begin
 	try
 		M.ParserType := ptDRUI;
 		M.Lexer.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-		M.Lexer.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+		M.Lexer.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
 
 		M.Lexer.yyinput.Text := Source;
 		if M.yyparse = 0 then

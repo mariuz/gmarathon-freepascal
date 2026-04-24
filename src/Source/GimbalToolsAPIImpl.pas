@@ -19,11 +19,7 @@ unit GimbalToolsAPIImpl;
 
 interface
 
-uses
-	Windows, SysUtils, Classes, ActnList, Menus, Dialogs, Forms,
-	GimbalToolsAPI,
-	MarathonProjectCache,
-	MarathonProjectCacheTypes;
+uses Windows, SysUtils, Classes, ActnList, Menus, Dialogs, Forms, GimbalToolsAPI, MarathonProjectCache, MarathonProjectCacheTypes;
 
 type
   TGimbalIDEPlugin = class(TObject)
@@ -186,9 +182,7 @@ type
 
 implementation
 
-uses
-  MarathonToolsAPIDocForm,
-  MarathonIDE;
+uses MarathonToolsAPIDocForm, MarathonIDE;
 
 function CacheTypetoItemType(CacheType : TGSSCacheType) : TGimbalIDESelectedItemType;
 begin
@@ -621,7 +615,7 @@ end;
 
 function TGimbalIDEConnection.IDEGetSQLDialect: Integer;
 begin
-	Result := FConnection.SQLDialect;
+	Result := FConnection.Dialect;
 end;
 
 { TGimbalIDEMarathonForm }

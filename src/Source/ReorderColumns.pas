@@ -34,10 +34,7 @@ unit ReorderColumns;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls,
-	rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, rmCornerGrip;
 
 type
   TfrmReorderColumns = class(TForm)
@@ -63,10 +60,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	Globals,
-	HelpMap{,
-	MarathonMain};
+uses Globals, HelpMap{, MarathonMain};
 
 procedure TfrmReorderColumns.lvColumnsDragDrop(Sender, Source: TObject; X, Y: Integer);
 var

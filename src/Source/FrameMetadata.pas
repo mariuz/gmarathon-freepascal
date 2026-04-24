@@ -21,7 +21,7 @@ Revision 1.4  2005/04/13 16:04:28  rjmills
 *** empty log message ***
 
 Revision 1.3  2002/04/29 11:43:41  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -34,20 +34,12 @@ unit FrameMetadata;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Globals, Db, ComCtrls, ComObj, Clipbrd,
-	IBODataset, 
-	SynEdit,
-	SyntaxMemoWithStuff2,
-	MarathonInternalInterfaces,
-	MarathonProjectCacheTypes,
-	gssscript_TLB;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, ComObj, Clipbrd, SQLDB, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, gssscript_TLB;
 
 type
 	TframDisplayDDL = class(TFrame)
 		edDDL: TSyntaxMemoWithStuff2;
-    qryUtil: TIBOQuery;
+    qryUtil: TSQLQuery;
 		procedure edDDLKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 	private
 		FForm : IMarathonBaseForm;
@@ -74,8 +66,7 @@ type
 
 implementation
 
-uses
-	MarathonIDE;
+uses MarathonIDE;
 
 const
 	ddlDomain         = 0;
@@ -161,7 +152,7 @@ begin
     ctDomain:
       begin
 				Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+        Extractor.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
         Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
         Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
         edDDL.Text := Extractor.Extract(ddlDomain, ddlstNone, FForm.GetObjectName);
@@ -171,7 +162,7 @@ begin
         Screen.Cursor := crHourGlass;
         try
           Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-          Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+          Extractor.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
           Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
           Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
           edDDL.Text := Extractor.Extract(ddlTable, ddlstNone, FForm.GetObjectName);
@@ -195,8 +186,8 @@ begin
           try
             try
               qryUtil.BeginBusy(False);
-              qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-              qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
+              qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
+              qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
               qryUtil.SQL.Clear;
               qryUtil.SQL.Add('select rdb$trigger_name, rdb$trigger_type from rdb$triggers where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints);');
               qryUtil.Open;
@@ -206,7 +197,7 @@ begin
                 qryUtil.Next;
 							end;
               qryUtil.Close;
-              qryUtil.IB_Transaction.Commit;
+              qryUtil.Transaction.Commit;
             finally
               qryUtil.EndBusy;
             end;
@@ -240,7 +231,7 @@ begin
     ctGenerator:
       begin
         Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+        Extractor.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
         Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
         Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
 				edDDL.Text := Extractor.Extract(ddlGenerator, ddlstNone, FForm.GetObjectName);
@@ -248,7 +239,7 @@ begin
     ctException:
       begin
         Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+        Extractor.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
         Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
         Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
         edDDL.Text := Extractor.Extract(ddlException, ddlstNone, FForm.GetObjectName);
@@ -256,7 +247,7 @@ begin
     ctUDF:
       begin
 				Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
+        Extractor.Dialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Dialect;
         Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
         Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
         edDDL.Text := Extractor.Extract(ddlUDF, ddlstNone, FForm.GetObjectName);
@@ -302,5 +293,4 @@ begin
 end;
 
 end.
-
 

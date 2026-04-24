@@ -45,13 +45,8 @@ object frameDesc: TframeDesc
       end>
     AddedKeystrokes = <>
   end
-  object qryDoco: TIBOQuery
+  object qryDoco: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    RecordCountAccurate = False
-    RequestLive = True
-    FieldOptions = []
     Left = 28
     Top = 20
   end

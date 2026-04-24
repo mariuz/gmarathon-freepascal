@@ -89,14 +89,9 @@ object frmUsers: TfrmUsers
       end
     end
   end
-  object qryUser: TIBOQuery
+  object qryUser: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 252
     Top = 36
   end
@@ -325,26 +320,21 @@ object frmUsers: TfrmUsers
       OnExecute = WindowListClick
     end
   end
-  object dbSecurity: TIB_Connection
+  object dbSecurity: TIBConnection
     Left = 12
     Top = 32
   end
-  object tranSecurity: TIB_Transaction
-    IB_Connection = dbSecurity
+  object tranSecurity: TSQLTransaction
+    Database = dbSecurity
     Isolation = tiConcurrency
     Left = 12
     Top = 64
   end
-  object qrySecurity: TIBOQuery
+  object qrySecurity: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    IB_Connection = dbSecurity
-    IB_Transaction = tranSecurity
-    KeyLinksAutoDefine = False
+    Database = dbSecurity
+    Transaction = tranSecurity
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 44
     Top = 32
   end

@@ -19,9 +19,7 @@ unit StoredProcedureParams;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	DB, Grids, DBGrids, StdCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Grids, DBGrids, StdCtrls;
 
 type TSPParameters = class(TObject)
 public
@@ -52,10 +50,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	EditorStoredProcedure;
+uses Globals, HelpMap, EditorStoredProcedure;
 
 {$R *.lfm}
 

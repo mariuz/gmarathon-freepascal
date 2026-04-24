@@ -17,9 +17,7 @@ unit GSSDatabaseInfoImpl;
 
 interface
 
-uses
-	ComObj, ActiveX, StdVcl,
-	GimbalCreateDatabase_TLB;
+uses ComObj, ActiveX, StdVcl, GimbalCreateDatabase_TLB;
 
 type
   TGSSCreateDatabaseInfo = class(TAutoObject, IGSSCreateDatabaseInfo)

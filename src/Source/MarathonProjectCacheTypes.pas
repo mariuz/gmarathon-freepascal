@@ -30,8 +30,7 @@ unit MarathonProjectCacheTypes;
 
 interface
 
-uses
-  SysUtils, Classes;
+uses SysUtils, Classes;
 
 type
   TGSSCacheOp = (

@@ -178,7 +178,7 @@ object frmEditorGrant: TfrmEditorGrant
     TabOrder = 3
     OnChange = cmbPrivilegeNameChange
   end
-  object dsqlGrants: TIB_DSQL
+  object dsqlGrants: TSQLQuery
     Left = 540
     Top = 8
   end
@@ -225,24 +225,16 @@ object frmEditorGrant: TfrmEditorGrant
       OnClick = mnuiGrantToAllClick
     end
   end
-  object qryGrants: TIBOQuery
+  object qryGrants: TSQLQuery
     Params = <>
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 596
     Top = 8
   end
-  object qryGrants2: TIBOQuery
+  object qryGrants2: TSQLQuery
     Params = <>
     AutoFetchAll = True
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 596
     Top = 36
   end

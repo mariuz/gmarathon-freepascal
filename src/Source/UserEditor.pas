@@ -19,20 +19,14 @@ unit UserEditor;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls,	ExtCtrls, ClipBrd,
-	Spin, ActnList, Tabs,
-	rmTabs3x,
-	IB_Components,
-	IBODataset;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, Tabs, rmTabs3x, IBConnection, SQLDB;
 
 type
 	TfrmUsers = class(TForm)
 		stsUsers: TStatusBar;
 		pgUsers: TPageControl;
 		tsUserView: TTabSheet;
-    qryUser: TIBOQuery;
+    qryUser: TSQLQuery;
 		ActionList1: TActionList;
 		actPrint: TAction;
 		actPrintPreview: TAction;
@@ -54,9 +48,9 @@ type
 		actClose: TAction;
 		actSaveToFile: TAction;
 		actOpenFromFile: TAction;
-		dbSecurity: TIB_Connection;
-		tranSecurity: TIB_Transaction;
-    qrySecurity: TIBOQuery;
+		dbSecurity: TIBConnection;
+		tranSecurity: TSQLTransaction;
+    qrySecurity: TSQLQuery;
 		Splitter1: TSplitter;
 		Panel1: TPanel;
 		tabGrants: TrmTabSet;
@@ -88,12 +82,7 @@ const
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	//MarathonMain,
-  MarathonIDE,
-	SecureDBLogin;
+uses Globals, HelpMap, //MarathonMain, MarathonIDE, SecureDBLogin;
 
 {$R *.lfm}
 
@@ -253,7 +242,7 @@ Revision 1.4  2002/09/25 12:12:49  tmuetze
 Remote server support has been added, at the moment it is strict experimental
 
 Revision 1.3  2002/04/29 14:25:40  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block

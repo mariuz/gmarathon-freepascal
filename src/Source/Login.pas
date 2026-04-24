@@ -33,9 +33,7 @@ unit Login;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, FileCtrl, ExtCtrls, Registry, Buttons;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, FileCtrl, ExtCtrls, Registry, Buttons;
 
 type
   TfrmConnect = class(TForm)
@@ -61,8 +59,7 @@ type
 
 implementation
 
-uses
-	Globals;
+uses Globals;
 	
 {$R *.lfm}
 

@@ -38,12 +38,7 @@ unit SaveFileFormat;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ExtCtrls, CheckLst, ComCtrls,
-	rmBtnEdit,
-	rmCornerGrip,
-  rmBaseEdit, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, CheckLst, ComCtrls, rmBtnEdit, rmCornerGrip, rmBaseEdit, rmNotebook2;
 
 type
   TfrmSaveFileFormat = class(TForm)
@@ -92,9 +87,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap;
+uses Globals, HelpMap;
 
 {$R *.lfm}
 

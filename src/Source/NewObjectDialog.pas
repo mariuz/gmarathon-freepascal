@@ -5,10 +5,7 @@ unit NewObjectDialog;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ImgList,
-	MarathonProjectCacheTypes;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ImgList, MarathonProjectCacheTypes;
 
 type
   TfrmNewObject = class(TForm)
@@ -53,10 +50,7 @@ const
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE;
+uses Globals, HelpMap, MarathonIDE;
 
 {$R *.lfm}
 

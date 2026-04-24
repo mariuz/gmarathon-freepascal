@@ -1,8 +1,7 @@
 unit adbpedit;
 
 interface
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-     DB, StdCtrls, DBCtrls, ExtCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, StdCtrls, DBCtrls, ExtCtrls;
 
 type
 

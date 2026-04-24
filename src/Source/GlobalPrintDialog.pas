@@ -19,11 +19,7 @@ unit GlobalPrintDialog;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls,
-	rmSpin,
-	rmBaseEdit, ExtCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, rmSpin, rmBaseEdit, ExtCtrls;
 
 type
   TfrmGlobalPrintDialogOption = (
@@ -133,9 +129,7 @@ type
 
 implementation
 
-uses
-	MarathonIDE,
-	GlobalPrintingRoutines;
+uses MarathonIDE, GlobalPrintingRoutines;
 
 {$R *.lfm}
 

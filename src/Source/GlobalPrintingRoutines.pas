@@ -19,18 +19,7 @@ unit GlobalPrintingRoutines;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ExtCtrls, DB, Printers, Registry, Chart,
-	PagePrnt,
-	DSprint,
-	SynEdit,
-	SyntaxMemoWithStuff2,
-	IBODataset,
-	GSSRegistry,
-	MarathonProjectCacheTypes,
-	MarathonProjectCache,
-	GlobalPrintDialog;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, DB, Printers, Registry, Chart, PagePrnt, DSprint, SynEdit, SyntaxMemoWithStuff2, SQLDB, GSSRegistry, MarathonProjectCacheTypes, MarathonProjectCache, GlobalPrintDialog;
 
 type
   TfrmGlobalPrintingRoutines = class(TForm)
@@ -38,7 +27,7 @@ type
     pnlBase: TPanel;
     ppPrinter: TPagePrinter;
     edPrintProxy: TSyntaxMemoWithStuff2;
-    qryUtil: TIBOQuery;
+    qryUtil: TSQLQuery;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
 		{ Private declarations }
@@ -180,12 +169,7 @@ function DoWeHaveAPrinter : Boolean;
 
 implementation
 
-uses
-	Globals,
-	MarathonIDE,
-	PrintPreviewForm,
-  GlobalQueriesText,
-  Math;
+uses Globals, MarathonIDE, PrintPreviewForm, GlobalQueriesText, Math;
 
 {$R *.lfm}
 
@@ -751,12 +735,12 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.qryUtilPrepare;
 begin
-  qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Connection;
-  qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Transaction;
+  qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Connection;
+  qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Transaction;
 
-  if qryUtil.IB_Transaction.Started then
-    qryUtil.IB_Transaction.Commit;
-  qryUtil.IB_Transaction.StartTransaction;
+  if qryUtil.Transaction.Active then
+    qryUtil.Transaction.Commit;
+  qryUtil.Transaction.StartTransaction;
 end;
 
 procedure TfrmGlobalPrintingRoutines.qryUtilOpen(sql: string);
@@ -823,7 +807,7 @@ begin
   if qryUtil.Active then
   begin
     qryUtil.Close;
-    qryUtil.IB_Transaction.Commit;
+    qryUtil.Transaction.Commit;
   end;
 end;
 
@@ -1412,7 +1396,7 @@ end;
 
 function TfrmGlobalPrintingRoutines.getDataType: string;
 begin
-  if MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].IsIB6 and (MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].SQLDialect = 3) then
+  if MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].IsIB6 and (MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ipConnectionName].Dialect = 3) then
   begin
     Result := ConvertFieldType(
       qryUtil.FieldByName('rdb$field_type').AsInteger,
@@ -1574,13 +1558,13 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.InternalPrintTableStructure;
 var
-  q: TIBOQuery;
+  q: TSQLQuery;
   s: string;
 begin
   IPProcHeaderLine('Table Structure');
   q := qryUtil;
   try
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
     qryUtilOpen(GetQueryText('TABLE', ipObjectName));
 
@@ -1611,8 +1595,8 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.InternalPrintTableConstraints;
 var
-  q: TIBOQuery;
-  qq: TIBOQuery;
+  q: TSQLQuery;
+  qq: TSQLQuery;
   s: string;
   s1: string;
   s2: string;
@@ -1632,10 +1616,10 @@ begin
   q := qryUtil;
   try
 
-    qq := TIBOQuery.Create(nil);
-		qq.IB_Connection := qryUtil.IB_Connection;
+    qq := TSQLQuery.Create(nil);
+		qq.Database := qryUtil.Database;
 
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
 
     l0 := TStringList.Create;
@@ -1849,8 +1833,8 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.InternalPrintTableIndexes;
 var
-  q: TIBOQuery;
-  qq: TIBOQuery;
+  q: TSQLQuery;
+  qq: TSQLQuery;
   s: string;
   s1: string;
   s2: string;
@@ -1863,10 +1847,10 @@ begin
   q := qryUtil;
   try
 
-    qq := TIBOQuery.Create(nil);
-		qq.IB_Connection := qryUtil.IB_Connection;
+    qq := TSQLQuery.Create(nil);
+		qq.Database := qryUtil.Database;
 
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
 
     l0 := TStringList.Create;
@@ -1946,14 +1930,14 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.InternalPrintTableTriggers(Detail: boolean);
 var
-  q: TIBOQuery;
+  q: TSQLQuery;
   s: string;
 begin
   IPProcHeaderLine('Table Triggers');
   q := qryUtil;
   try
 
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
 
     qryUtilOpen(GetQueryText('TRIGGER', ipObjectName));
@@ -2025,13 +2009,13 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.InternalPrintViewStruct;
 var
-  q: TIBOQuery;
+  q: TSQLQuery;
   s: string;
 begin
   IPProcHeaderLine('View Structure');
   q := qryUtil;
   try
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
     qryUtilOpen(GetQueryText('TABLE', ipObjectName));
 
@@ -2062,14 +2046,14 @@ end;
 
 procedure TfrmGlobalPrintingRoutines.InternalPrintViewTriggers;
 var
-  q: TIBOQuery;
+  q: TSQLQuery;
   s: string;
 begin
   IPProcHeaderLine('View Triggers');
   q := qryUtil;
   try
 
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
 
     qryUtilOpen(GetQueryText('TRIGGER', ipObjectName));
@@ -2142,7 +2126,7 @@ end;
 procedure TfrmGlobalPrintingRoutines.InternalPrintUDFUDF;
 var
   i: integer;
-  q: TIBOQuery;
+  q: TSQLQuery;
   s: string;
   s1: string;
   l0: TStringList;
@@ -2161,7 +2145,7 @@ begin
   q := qryUtil;
   try
 
-    qryUtil := TIBOQuery.Create(nil);
+    qryUtil := TSQLQuery.Create(nil);
     qryUtilPrepare;
     qryUtilOpen(GetQueryText('FUNCTION_ARGUMENTS', ipObjectName));
 
@@ -2292,7 +2276,7 @@ begin
           if not qryUtil.Eof then
             InternalPrintTableStructure;
           qryUtil.Close;
-          qryUtil.IB_Transaction.Commit;
+          qryUtil.Transaction.Commit;
 
           ppPrinter.EndDoc;
         finally
@@ -2491,7 +2475,7 @@ Revision 1.4  2002/06/06 07:36:43  tmuetze
 Added a patch from Pavel Odstrcil: Now most basic print functions (right click in db navigator, print) work.
 
 Revision 1.3  2002/04/29 14:46:11  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block

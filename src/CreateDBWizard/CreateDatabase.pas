@@ -17,14 +17,7 @@ unit CreateDatabase;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ExtCtrls, ComCtrls, StdCtrls, Buttons,
-	IB_Header,
-	IB_Components,
-	IB_Session,
-	IB_Process,
-	IB_Script;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, StdCtrls, Buttons, IBConnection, SQLDB, SQLScript, IB_Script;
 
 type
   TfrmCreateDatabase = class(TForm)
@@ -59,16 +52,16 @@ type
     edResults: TMemo;
     Label10: TLabel;
 		Label12: TLabel;
-    dbCreateDatabase: TIB_Connection;
-		tranCreateConnection: TIB_Transaction;
-    qryConnection: TIB_DSQL;
+    dbCreateDatabase: TIBConnection;
+		tranCreateConnection: TSQLTransaction;
+    qryConnection: TSQLQuery;
     dlgOpen: TOpenDialog;
     Bevel1: TBevel;
     Panel2: TPanel;
     Bevel2: TBevel;
     Label8: TLabel;
     Label13: TLabel;
-    ibScript: TIB_Script;
+    ibScript: TSQLScript;
     cmbDialect: TComboBox;
     Label14: TLabel;
 		pnlMarathon: TPanel;
@@ -112,9 +105,7 @@ implementation
 
 {$R *.DFM}
 
-uses
-	DBAddSecondaryFile,
-	GSSCreateDatabaseConsts;
+uses DBAddSecondaryFile, GSSCreateDatabaseConsts;
 
 function IntSizeStr(Size : integer) : string;
 var
@@ -460,7 +451,7 @@ begin
 					asm
 						fstcw [SaveCW]
 					end;
-					with dbCreateDatabase.IB_Session do
+					with dbCreateDatabase.IBDatabase do
 					begin
 						errcode := isc_dsql_execute_immediate( @Status,
 																								 @dbHandle,

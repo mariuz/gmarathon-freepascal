@@ -19,9 +19,7 @@ unit DescribeForm;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Buttons, StdCtrls, ExtCtrls, ComCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, StdCtrls, ExtCtrls, ComCtrls;
 
 type
   TfrmDescribe = class(TForm)
@@ -45,8 +43,7 @@ var
 
 implementation
 
-uses
-	Globals;
+uses Globals;
 
 {$R *.lfm}
 

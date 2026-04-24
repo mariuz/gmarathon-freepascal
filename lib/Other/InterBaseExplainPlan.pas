@@ -2,8 +2,7 @@ unit InterbaseExplainPlan;
 
 interface
 
-uses
-  Classes;
+uses Classes;
 
 type
   TPlanNodeType = (pntOperation, pntRelation);

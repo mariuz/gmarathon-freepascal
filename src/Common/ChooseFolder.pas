@@ -19,9 +19,7 @@ unit ChooseFolder;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, FileCtrl;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, FileCtrl;
 
 type
   TfrmChooseFolder = class(TForm)

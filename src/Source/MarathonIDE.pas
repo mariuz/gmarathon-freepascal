@@ -21,24 +21,9 @@ interface
 
 {$I compilerdefines.inc}
 
-uses
-	Classes, Windows, SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst,
-	StdCtrls, ActnList, Graphics, Chart, DB, ComObj,
-	{$IFDEF D6_or_higher}
-	Variants,
-	{$ENDIF}
-	IBODataset,
-	IB_Components,
-	rmTreeNonView,
-	SyntaxMemoWithStuff2,
-	MarathonInternalInterfaces,
-	MarathonProjectCache,
-	MarathonProjectCacheTypes,
-	GimbalToolsAPI,
-	GimbalToolsAPIImpl,
-	GSSRegistry,
-	IBDebuggerVM,
-	PluginsDialog;
+uses Classes, Windows, SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, Chart, DB, ComObj, {$IFDEF D6_or_higher}
+	Variants, {$ENDIF}
+	IBConnection, SQLDB, rmTreeNonView, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
 
 type
 	TMarathonIDE = class(TComponent, IMarathonIDE, IGimbalIDEServices)
@@ -234,47 +219,7 @@ var
 
 implementation
 
-uses
-  MarathonMain,
-	Login,
-	DatabaseManager,
-	SyntaxHelp,
-	CodeSnippets,
-	EditorStoredProcedure,
-	EditorTable,
-	EditorView,
-	EditorTrigger,
-	NewObjectDialog,
-	SQLForm,
-	MarathonOptions,
-	EditorException,
-	AboutBox,
-	WindowList,
-	EditorGenerator,
-	EditorUDF,
-	ScriptEditorHost,
-	PrintPreviewForm,
-	EditorDomain,
-	TipOfTheDay,
-	SQLTrace,
-	ShellAPI,
-	UserEditor,
-	DropObject,
-	MarathonMasterProperties,
-	Globals,
-	BaseDocumentForm,
-	BaseDocumentDataAwareForm,
-	GlobalPrintingRoutines,
-	SelectConnectionDialog,
-	GSSCreateDatabaseConsts,
-	InputDialog,
-	MenuModule,
-	MarathonToolsAPIDocForm,
-	DebugBreakPoints,
-	DebugWatches,
-	DebugCallStack,
-	DebugLocalVariables,
-	gssscript_TLB;
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, ShellAPI, UserEditor, DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, gssscript_TLB;
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -919,7 +864,7 @@ begin
 						Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
 						Extractor.AppHandle := Application.Handle;
 						ConnectName := TMarathonCacheObject(Item).ConnectionName;
-						Extractor.SQLDialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect;
+						Extractor.Dialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.Dialect;
 						Extractor.DatabaseHandle := Integer(FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.DBHandle);
 						Extractor.IB6 := FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6;
 						Extractor.MetaDBDatabaseName := FCurrentProject.Cache.ConnectionByName[ConnectName].DBFileName;
@@ -1256,7 +1201,7 @@ begin
           Connection.DBFileName := DBInfo.DatabaseName;
           Connection.UserName := DBInfo.UserName;
           Connection.Password := DBInfo.Password;
-          Connection.SQLDialect := DBInfo.Dialect;
+          Connection.Dialect := DBInfo.Dialect;
           Connection.LangDriver := DBInfo.CharSet;
 					Item := Connection.GetParentObject;
           if Assigned(Item) then
@@ -1279,7 +1224,7 @@ begin
           Connection.DBFileName := DBInfo.DatabaseName;
           Connection.UserName := DBInfo.UserName;
           Connection.Password := DBInfo.Password;
-          Connection.SQLDialect := DBInfo.Dialect;
+          Connection.Dialect := DBInfo.Dialect;
           Connection.LangDriver := DBInfo.CharSet;
           Item := Connection.GetParentObject;
           if Assigned(Item) then
@@ -1632,7 +1577,7 @@ begin
 
 			Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
 			Extractor.AppHandle := Application.Handle;
-			Extractor.SQLDialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect;
+			Extractor.Dialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.Dialect;
 			Extractor.DatabaseHandle := Integer(FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.DBHandle);
 			Extractor.IB6 := FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6;
 			Extractor.MetaDBDatabaseName := FCurrentProject.Cache.ConnectionByName[ConnectName].DBFileName;
@@ -2003,7 +1948,7 @@ begin
 	if not CheckConnected(Connection) then
 		Exit;
 
-	if FCurrentProject.Cache.ConnectionByName[Connection].IsIB6 and (FCurrentProject.Cache.ConnectionByName[Connection].SQLDialect = 3) then
+	if FCurrentProject.Cache.ConnectionByName[Connection].IsIB6 and (FCurrentProject.Cache.ConnectionByName[Connection].Dialect = 3) then
 	begin
 		if not ShouldBeQuoted(ProcedureName) then
 			ProcedureName := AnsiUpperCase(ProcedureName);
@@ -2512,7 +2457,7 @@ end;
 procedure TMarathonIDE.GetTableColumnsEvent(Sender: TObject; TableName,
 	Connection: String; List: TCheckListBox);
 begin
-	with TIBOQuery.Create(Self) do
+	with TSQLQuery.Create(Self) do
 		try
 			SQL.Add('select A.RDB$FIELD_NAME, A.RDB$FIELD_SOURCE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, ' +
 				'B.RDB$FIELD_TYPE from RDB$RELATION_FIELDS A, RDB$FIELDS B where ' +
@@ -3669,7 +3614,7 @@ Revision 1.8  2002/09/25 12:12:49  tmuetze
 Remote server support has been added, at the moment it is strict experimental
 
 Revision 1.7  2002/04/29 14:46:11  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.6  2002/04/29 06:48:50  tmuetze
 Fixed bug 538259, charsets are not saved

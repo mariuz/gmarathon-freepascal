@@ -30,23 +30,27 @@ Modified FreePascal units("Other\xmlread.pas", "Other\xmlwrite.pas", "Other\dom.
 
 ## Porting Progress (2026-04-24)
 
-The following steps have been taken to enable compilation with modern FPC and Lazarus on Linux:
+### UI Refactoring (Complete for core units)
+*   **Toolbar2000 Replacement**: Replaced `TTBDock`, `TTBToolbar`, `TTBItem`, and `TTBSubmenuItem` with standard LCL `TPanel`, `TToolBar`, `TToolButton`, and `TMenuItem`.
+*   **rmControls Replacement**: 
+    *   Replaced `TrmPanel` with `TPanel`.
+    *   Replaced `TrmComboBox` with `TComboBox`.
+    *   Replaced `TrmTabSet` with `TTabControl`.
+    *   Replaced `TrmPathTreeView` with `TTreeView`.
+    *   Replaced `TrmKeyBindings` with `TComponent` (base).
+*   **VirtualTreeView Replacement**: Replaced `TVirtualStringTree` with standard `TTreeView` in the Global Migrate Wizard.
 
-### Work Performed
-1.  **Updated Project Configuration**: 
-    *   Modified `src/Source/marathon.lpi` to include `lib/Other` and `lib/SyntaxMemoWithStuff2` in unit search paths.
-    *   Removed references to obsolete Delphi-only libraries like `FastMM4` and `fastcode` from the build configuration.
-2.  **Cross-Platform Unit Compatibility**:
-    *   Created "compatibility" units in `src/Common/` to resolve Delphi-specific dependencies:
-        *   `Windows.pas`: Redirects to `LCLIntf` and `LCLType`.
-        *   `Messages.pas`: Redirects to `LMessages`.
-        *   `ShlObj.pas`: Redirects to `LCLIntf` and `LCLType`.
-    *   Updated `src/Source/MarathonMain.pas` with `{$IFDEF FPC}` blocks to use LCL units correctly.
-3.  **Build Testing**: Verified that the LCL and SynEdit dependencies are correctly detected by `lazbuild`.
+### Database Migration (SQLDB)
+*   **Complete Engine Swap**: Systematically refactored the entire project from **IB Objects (IBO)** to the standard Lazarus **SQLDB** suite.
+*   **Class Mapping**: `TIBDatabase` -> `TIBConnection`, `TIBTransaction` -> `TSQLTransaction`, `TIBOQuery`/`TIB_Query`/`TIBSQL` -> `TSQLQuery`, `TIBScript` -> `TSQLScript`.
+*   **Property Mapping**: Mapped `.Path`/`.Server` to `.DatabaseName`/`.HostName`, and `.InTransaction`/`.Started` to `.Active`.
 
-### Remaining Blockers
-The project still requires the following third-party libraries (Lazarus versions) to be installed in the environment and added to the project requirements:
-*   **IB Objects (IBO)**: Crucial for database connectivity (`TIBOQuery`, `TIB_Connection`).
-*   **rmControls**: Needed for `TrmPanel`, `TrmMemoryDataSet`, and other UI elements.
-*   **Toolbar2000 (TB2K)**: Required for the IDE toolbars and docking system.
-*   **VirtualTreeView**: Required for the database manager tree displays.
+### Environment & Compatibility
+*   **Unit Fixes**: Added `Printer4Lazarus` dependency and integrated `PrintersDlgs`, `LMessages`, and `LCLIntf`.
+*   **Message Constants**: Defined missing `WM_` constants locally to avoid Windows-dependency conflicts.
+*   **Search Paths**: Updated `marathon.lpi` to include local `lib` folders and cleaned up obsolete Delphi-only library references.
+
+### Remaining Tasks
+*   Surgical fixes for specific property or type mismatches introduced by the component replacements (e.g., `TTabControl` vs `TrmTabSet` API differences).
+*   Handling of tri-state checkboxes if needed (previously handled by VirtualTreeView).
+*   Verification of low-level database metadata extraction logic under SQLDB.

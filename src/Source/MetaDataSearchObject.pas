@@ -21,7 +21,7 @@ Revision 1.4  2005/04/13 16:04:30  rjmills
 *** empty log message ***
 
 Revision 1.3  2002/04/29 11:43:41  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -34,14 +34,7 @@ unit MetaDataSearchObject;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ExtCtrls, Menus,
-	IB_Components,
-	IBODataset,
-	Globals,
-	MarathonProjectCache,
-	MarathonProjectCacheTypes;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, IBConnection, SQLDB, Globals, MarathonProjectCache, MarathonProjectCacheTypes;
 
 type
   TMDSearchItem = record
@@ -57,10 +50,10 @@ type
     FConnectionList : TStringList;
     FOptions : TSearchOptions;
     FSearch : String;
-    DB : TIB_Connection;
-    Xact : TIB_Transaction;
-		Q : TIBOQuery;
-		Q1 : TIBOQuery;
+    DB : TIBConnection;
+    Xact : TSQLTransaction;
+		Q : TSQLQuery;
+		Q1 : TSQLQuery;
     L : TStringList;
     Line : String;
     SPos : Integer;
@@ -90,9 +83,7 @@ type
 
 implementation
 
-uses
-	HelpMap,
-	MarathonIDE;
+uses HelpMap, MarathonIDE;
 
 constructor TMDSearchObject.Create;
 begin
@@ -121,14 +112,14 @@ begin
   try
     try
       Halted := False;
-      DB := TIB_Connection.Create(nil);
-      Xact := TIB_Transaction.Create(nil);
+      DB := TIBConnection.Create(nil);
+      Xact := TSQLTransaction.Create(nil);
       try
-        Xact.IB_Connection := DB;
+        Xact.Database := DB;
         try
           for DBCount := 0 to FConnectionList.Count - 1 do
           begin
-            if XAct.InTransaction then
+            if XAct.Active then
               XAct.Commit;
 
             DB.Connected := False;
@@ -146,11 +137,11 @@ begin
               end;
             end;
             Xact.StartTransaction;
-						Q := TIBOQuery.Create(nil);
-						Q1 := TIBOQuery.Create(nil);
+						Q := TSQLQuery.Create(nil);
+						Q1 := TSQLQuery.Create(nil);
 						try
-              Q.IB_Connection := DB;
-              Q1.IB_Connection := DB;
+              Q.Database := DB;
+              Q1.Database := DB;
               try
                 L := TStringList.Create;
                 try
@@ -1303,7 +1294,7 @@ begin
               Q.Free;
               Q1.Free;
             end;
-            if XAct.InTransaction then
+            if XAct.Active then
               XAct.Commit;
           end;
         finally
@@ -1334,5 +1325,4 @@ begin
 end;
 
 end.
-
 

@@ -19,17 +19,13 @@ unit EditorGrant;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ExtCtrls, StdCtrls, ComCtrls, CheckLst, CommCtrl, Menus, DB,
-	IB_Components,
-	IBODataset;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, CheckLst, CommCtrl, Menus, DB, IBConnection, SQLDB;
 
 type
 	TGrantObjectType = (otTable, otView, otProcedure);
 
 	TfrmEditorGrant = class(TForm)
-		dsqlGrants: TIB_DSQL;
+		dsqlGrants: TSQLQuery;
 		cmbPrivileges: TComboBox;
 		Label6: TLabel;
 		lblObject: TLabel;
@@ -55,8 +51,8 @@ type
 		N4: TMenuItem;
 		mnuiGrant: TMenuItem;
 		mnuiRevoke: TMenuItem;
-		qryGrants: TIBOQuery;
-		qryGrants2: TIBOQuery;
+		qryGrants: TSQLQuery;
+		qryGrants2: TSQLQuery;
 		procedure FormCreate(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure cmbObjectsChange(Sender: TObject);
@@ -90,18 +86,15 @@ implementation
 
 {$R *.lfm}
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE;
+uses Globals, HelpMap, MarathonIDE;
 
 constructor TfrmEditorGrant.Create(const AOwner: TComponent; FDatabaseName, ObjectName: String; GrantObjectType: TGrantObjectType);
 begin
 	inherited Create(AOwner);
-	qryGrants.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Connection;
-	qryGrants.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Transaction;
-	qryGrants2.IB_Connection := qryGrants.IB_Connection;
-	qryGrants2.IB_Transaction := qryGrants.IB_Transaction;
+	qryGrants.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Connection;
+	qryGrants.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].Transaction;
+	qryGrants2.Database := qryGrants.Database;
+	qryGrants2.Transaction := qryGrants.Transaction;
 	FObjectName := ObjectName;
 	Self.GrantObjectType := GrantObjectType;
 end;
@@ -313,10 +306,10 @@ begin
 		end;
 	finally
 		if Errors then
-			qryGrants.IB_Transaction.Rollback
+			qryGrants.Transaction.Rollback
 		else
 		begin
-			qryGrants.IB_Transaction.Commit;
+			qryGrants.Transaction.Commit;
 			cmbPrivileges.OnChange(Sender);
 		end;
 	end;
@@ -339,10 +332,10 @@ begin
 		end;
 	finally
 		if Errors then
-			qryGrants.IB_Transaction.Rollback
+			qryGrants.Transaction.Rollback
 		else
 		begin
-			qryGrants.IB_Transaction.Commit;
+			qryGrants.Transaction.Commit;
 			cmbPrivileges.OnChange(Sender);
 		end;
 	end;
@@ -422,10 +415,10 @@ begin
 		end;
 	finally
 		if Errors then
-			qryGrants.IB_Transaction.Rollback
+			qryGrants.Transaction.Rollback
 		else
 		begin
-			qryGrants.IB_Transaction.Commit;
+			qryGrants.Transaction.Commit;
 			cmbPrivileges.OnChange(Sender);
 		end;
 	end;
@@ -751,10 +744,10 @@ begin
 			end;
 		finally
 			if Errors then
-				qryGrants.IB_Transaction.Rollback
+				qryGrants.Transaction.Rollback
 			else
 			begin
-				qryGrants.IB_Transaction.Commit;
+				qryGrants.Transaction.Commit;
 				if lvObjects.Selected.SubItems[FClickedOnSubItem] = 'No' then
 					lvObjects.Selected.SubItems[FClickedOnSubItem] := 'Yes'
 				else
@@ -821,10 +814,10 @@ begin
 			end;
 		finally
 			if Errors then
-				qryGrants.IB_Transaction.Rollback
+				qryGrants.Transaction.Rollback
 			else
 			begin
-				qryGrants.IB_Transaction.Commit;
+				qryGrants.Transaction.Commit;
 				if lvColumns.Selected.SubItems[FClickedOnSubItem] = 'No' then
 					lvColumns.Selected.SubItems[FClickedOnSubItem] := 'Yes'
 				else
@@ -855,7 +848,7 @@ Revision 1.5  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.4  2002/04/29 06:47:09  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

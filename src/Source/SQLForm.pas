@@ -56,7 +56,7 @@ Revision 1.7  2002/05/30 15:40:34  tmuetze
 Added a patch from Pavel Odstrcil: Added posibility to create insert statement with column names optionally surrounded by quotes, data values now enclosed in single quotes, added largeint type
 
 Revision 1.6  2002/05/21 09:59:52  tmuetze
-TIBOQuery.FetchAll instead of TIBOQuery.Last, this should also display the fetch dialog
+TSQLQuery.FetchAll instead of TSQLQuery.Last, this should also display the fetch dialog
 
 Revision 1.5  2002/05/15 08:54:09  tmuetze
 Fixed some IBPerformanceMonitor and SQLForm statistic related issues
@@ -65,7 +65,7 @@ Revision 1.4  2002/05/14 07:14:56  tmuetze
 Readded the PrepareTime, FetchTime performance values, but some more testing is needed
 
 Revision 1.3  2002/05/06 14:27:49  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -78,30 +78,7 @@ unit SQLForm;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls,ExtCtrls, DB, Menus, Grids, DBGrids,	Buttons, Registry,
-	ClipBrd, ToolWin, Printers, Tabs, DBCtrls, Series, TeeProcs, TeEngine,
-	Chart, ActnList, ImgList,
-	rmPanel,
-	rmCollectionListBox,
-	rmTabs3x,
-	rmMemoryDataSet,
-	IB_Process,
-	IB_Session,
-	IB_Components,
-	IBODataset,
-	SynEdit,
-  SynEditTypes,
-	SyntaxMemoWithStuff2,
-	adbpedit,
-	BaseDocumentForm,
-	BaseDocumentDataAwareForm,
-	MarathonInternalInterfaces,
-	GimbalToolsAPI,
-	SQLYacc,
-	IBPerformanceMonitor,
-	DiagramTree, rmNotebook2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, Tabs, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, rmPanel, rmCollectionListBox, rmTabs3x, rmMemoryDataSet, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmNotebook2;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -110,8 +87,8 @@ type
 		stsSQLStatement: TStatusBar;
 		dsSQLStatement: TDataSource;
 		dlgSave: TSaveDialog;
-    qrySQLStatement: TIBOQuery;
-    qryUtil: TIBOQuery;
+    qrySQLStatement: TSQLQuery;
+    qryUtil: TSQLQuery;
     pnlBase: TPanel;
     pgSQLStatement: TPageControl;
     tsSQLStatement: TTabSheet;
@@ -121,7 +98,7 @@ type
     tabResults: TrmTabSet;
     grdSQLStatement: TDBGrid;
     pnlResForm: TDBPanelEdit;
-    transSQLStatement: TIB_Transaction;
+    transSQLStatement: TSQLTransaction;
     pnlNavigator: TPanel;
     navResults: TDBNavigator;
     pnlPerformance: TPanel;
@@ -140,7 +117,7 @@ type
 		SpeedButton1: TSpeedButton;
 		imgSuccess: TImage;
 		cmbMode: TComboBox;
-		qryScript: TIB_DSQL;
+		qryScript: TSQLQuery;
 		rmTabSet1: TrmTabSet;
     nbPerform: TrmNoteBookControl;
 		grdPerform: TDBGrid;
@@ -353,16 +330,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	GSSRegistry,
-	MarathonIDE,
-	StatementHistory,
-	ScriptExecutive,
-	SaveFileFormat,
-	BlobViewer,
-	QBuilder;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, QBuilder;
 
 {$R *.lfm}
 
@@ -903,7 +871,7 @@ begin
 		qryScript.IB_Transaction := transSQLStatement;
 		qryUtil.IB_Transaction := transSQLStatement;
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qrySQLStatement.IB_Connection.SQLDialect;
+		SQLDialect := qrySQLStatement.IB_Connection.Dialect;
 		stsSQLStatement.Panels[4].Text := Value;
 	end;
 end;
@@ -1045,12 +1013,12 @@ end;
 
 function TfrmSQLForm.CanTransactionCommit: Boolean;
 begin
-	Result := qrySQLStatement.IB_Transaction.Started;
+	Result := qrySQLStatement.IB_Transaction.Active;
 end;
 
 function TfrmSQLForm.CanTransactionRollback: Boolean;
 begin
-	Result := qrySQLStatement.IB_Transaction.Started;
+	Result := qrySQLStatement.IB_Transaction.Active;
 end;
 
 function TfrmSQLForm.CanUndo: Boolean;
@@ -1233,10 +1201,10 @@ begin
 					end;
 				end;
 
-				case qrySQLStatement.StatementType of
+				case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
 					stSelect, stSelectForUpdate:
 						begin
-							qrySQLStatement.RequestLive := True;
+							qrySQLStatement.// // RequestLive := True;
 							qrySQLStatement.Open;
 							pgSQLStatement.ActivePage := tsResultsView;
 							pgSQLStatementChange(pgSQLStatement);
@@ -1245,7 +1213,7 @@ begin
 						end;
 				else
 					begin
-						qrySQLStatement.RequestLive := False;
+						qrySQLStatement.// // RequestLive := False;
 						qrySQLStatement.ExecSQL;
 						MarathonIDEInstance.RecordToScript(qrySQLStatement.SQL.Text, GetActiveConnectionName);
 						stsSQLStatement.Panels[3].Text := '      Statement Execution Successful';
@@ -1289,7 +1257,7 @@ begin
 						// Fill the memory dataset
 						dtaPerform.Close;
 						dtaPerform.Open;
-						case qrySQLStatement.StatementType of
+						case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
 							stSelect, stSelectForUpdate:
 								begin
 									dtaPerform.Append;
@@ -1444,7 +1412,7 @@ begin
 					Refresh;
 				end;
 
-				if FShowPlan and (qrySQLStatement.StatementType in [stSelect, stSelectForUpdate, stUpdate, stDelete]) and (qrySQLStatement.Plan <> '') then
+				if FShowPlan and (qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } in [stSelect, stSelectForUpdate, stUpdate, stDelete]) and (qrySQLStatement.Plan <> '') then
 				begin
 					edPlan.Text := qrySQLStatement.Plan;
 					PlanParser := TSQLParser.Create(Self);
@@ -1452,7 +1420,7 @@ begin
 						PlanParser.ParserType := ptPlan;
 						PlanParser.Lexer.yyinput.Text := edPlan.Text;
 						PlanParser.Lexer.IsInterbase6 := FIsInterbase6;
-						PlanParser.Lexer.SQLDialect := FSQLDialect;
+						PlanParser.Lexer.Dialect := FSQLDialect;
 						if PlanParser.yyparse = 0 then
 						begin
 							PlanParser.PlanObject.FillTree(dtPlan);
@@ -1941,7 +1909,7 @@ begin
 	Result := True;
 	if not FCLoseQueried then
 	begin
-		if transSQLStatement.Started then
+		if transSQLStatement.Active then
 		begin
 			if MessageDlg('Commit Work?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 			begin

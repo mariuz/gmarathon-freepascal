@@ -37,12 +37,7 @@ unit MenuModule;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	Menus, ImgList,
-	rmDataStorage,
-	SynEditHighlighter,
-	SynHighlighterSQL, SynEditMiscClasses, SynEditSearch;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ImgList, rmDataStorage, SynEditHighlighter, SynHighlighterSQL, SynEditMiscClasses, SynEditSearch;
 
 type
   TdmMenus = class(TDataModule)
@@ -183,8 +178,7 @@ var
 
 implementation
 
-{uses
-  MarathonMain;}
+{uses MarathonMain;}
 
 {$R *.lfm}
 

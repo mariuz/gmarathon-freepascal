@@ -19,9 +19,7 @@ unit SplashForm;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ExtCtrls, StdCtrls, jpeg;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, jpeg;
 
 type
 	TfrmSplash = class(TForm)
@@ -43,8 +41,7 @@ var
 
 implementation
 
-uses
-	Tools;
+uses Tools;
 
 {$R *.lfm}
 

@@ -2,9 +2,7 @@ unit DiagramTree;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  ExtCtrls, ImgList, CommCtrl, InterBaseExplainPlan;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ImgList, CommCtrl, InterBaseExplainPlan;
 
 type
   TLayout = (loVertical, loHorizontal);

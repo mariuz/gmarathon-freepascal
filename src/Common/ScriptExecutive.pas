@@ -19,14 +19,7 @@ unit ScriptExecutive;
 
 interface
 
-uses
-	Classes, Windows, SysUtils, Registry, Dialogs, Forms, Messages, Controls, StdCtrls,
-	IB_Components,
-	IB_Session,
-	IB_Header,
-	DOM,
-	XMLRead,
-	XMLWrite;
+uses Classes, Windows, SysUtils, Registry, Dialogs, Forms, Messages, Controls, StdCtrls, IBConnection, SQLDB, DOM, XMLRead, XMLWrite;
 
 type
   TISQLExceptionCode = (eeInitialization, eeInvDialect, eeFOpen, eeParse,
@@ -69,17 +62,17 @@ type
   TIBSQLObj = class (TComponent)
   private
     FQuery: TStrings;
-    FDatabase: TIB_Connection;
-    FSQLQuery: TIB_DSQL;
-    FTmpQuery: TIB_DSQL;
-    FTmpTransaction : TIB_Transaction;
-    FDDLQuery: TIB_DSQL;
-    FDDLTransaction : TIB_Transaction;
+    FDatabase: TIBConnection;
+    FSQLQuery: TSQLQuery;
+    FTmpQuery: TSQLQuery;
+    FTmpTransaction : TSQLTransaction;
+    FDDLQuery: TSQLQuery;
+    FDDLTransaction : TSQLTransaction;
     FProgressEvent: TNotifyEvent;
     FStatements: integer;
     FCanceled,
     FAutoDDL: boolean;
-    FTransaction: TIB_Transaction;
+    FTransaction: TSQLTransaction;
     FOnUpdateLine: TLineUpdateEvent;
     FOnReportError: TReportErrorEvent;
 
@@ -106,9 +99,9 @@ type
   published
     property AutoDDL: boolean read FAutoDDL write SetAutoDDL;
 		property Query: TStrings read FQuery write FQuery;
-    property Database: TIB_Connection read FDatabase write FDatabase;
-    property SQLQuery: TIB_DSQL read FSQLQuery write FSQLQuery;
-    property Transaction : TIB_Transaction read FTransaction write FTransaction;
+    property Database: TIBConnection read FDatabase write FDatabase;
+    property SQLQuery: TSQLQuery read FSQLQuery write FSQLQuery;
+    property Transaction : TSQLTransaction read FTransaction write FTransaction;
     property Statements: Integer read FStatements;
     property OnQueryProgress: TNotifyEvent read FProgressEvent write FProgressEvent;
     property OnLineUpdate : TLineUpdateEvent read FOnUpdateLine write FOnUpdateLine;
@@ -125,8 +118,7 @@ type
 
 implementation
 
-uses
-	IBHeader;
+uses ;
 
 function StripQuotes(I : String) : String;
 var
@@ -606,9 +598,9 @@ begin
         ClientDialect := 1;
         CharSet := '';
 
-        FTransaction.IB_Connection := FDatabase;
-				FSQLQuery.IB_COnnection := FDatabase;
-        FSQLQuery.IB_Transaction := FTransaction;
+        FTransaction.Database := FDatabase;
+				FSQLQuery.Database := FDatabase;
+        FSQLQuery.Transaction := FTransaction;
 
         if not ParseSQL (Source, Data, ';') then
           raise EISQLException.Create (0, '', eeParse, 'Unable to parse script');
@@ -719,7 +711,7 @@ begin
               ClientDialect := ISQLValue;
               if Assigned (Database) then
               try
-                Database.SQLDialect := ClientDialect;
+                Database.Dialect := ClientDialect;
               except
                 on E: Exception do
                 begin
@@ -762,7 +754,7 @@ begin
                         begin
                           FTmpQuery.SQL.Text := oNodeOne.Attributes.GetNamedItem('sql').NodeValue;
 
-													if not FTmpTransaction.Started then
+													if not FTmpTransaction.Active then
                             FTmpTransaction.StartTransaction;
                           FTmpQuery.Prepare;
                           Break;
@@ -840,15 +832,15 @@ begin
             if Assigned(FOnReportError) then
               FOnReportError(Self, LineNumber, 'CREATE DATABASE statement skipped');
 
-						FTmpQuery.IB_Connection := FDatabase;
+						FTmpQuery.Database := FDatabase;
             FTmpQuery.ParamCheck := False;
-            FTmpQuery.IB_Transaction := FTmpTransaction;
-            FTmpTransaction.IB_Connection := FDatabase;
+            FTmpQuery.Transaction := FTmpTransaction;
+            FTmpTransaction.Database := FDatabase;
 
-            FDDLQuery.IB_Connection := FDatabase;
+            FDDLQuery.Database := FDatabase;
             FDDLQuery.ParamCheck := False;
-            FDDLQuery.IB_Transaction := FDDLTransaction;
-            FDDLTransaction.IB_Connection := FDatabase;
+            FDDLQuery.Transaction := FDDLTransaction;
+            FDDLTransaction.Database := FDatabase;
 
           end
           else
@@ -864,7 +856,7 @@ begin
                 except
                   on E: Exception do
                   begin
-                    if FTransaction.Started then
+                    if FTransaction.Active then
                       raise EISQLException.Create (0, FConnDBName, eeConnect, E.Message+#13#10'Commit or Rollback the current transaction')
                     else
                       FDatabase.Close;
@@ -873,10 +865,11 @@ begin
 
                 dbHandle := nil;
                 trHandle := nil;
+                {
                 asm
                   fstcw [SaveCW]
                 end;
-                with FDatabase.IB_Session do
+                with FDatabase.IBDatabase do
                 begin
                   errcode := isc_dsql_execute_immediate(@Status,
 																											 @dbHandle,
@@ -901,9 +894,10 @@ begin
                   if errcode <> 0 then
                     HandleException( Self );
                 end;
+                }
 
                 FDatabase.DatabaseName := FConnDBName;
-                FDatabase.SQLDialect := ClientDialect;
+                FDatabase.Dialect := ClientDialect;
                 FDatabase.Username := FConnDBUser;
                 FDatabase.Password := FConnDBPassword;
 
@@ -911,15 +905,15 @@ begin
 
                 FDatabase.Open;
 
-                FTmpQuery.IB_Connection := FDatabase;
+                FTmpQuery.Database := FDatabase;
                 FTmpQuery.ParamCheck := False;
-                FTmpQuery.IB_Transaction := FTmpTransaction;
-                FTmpTransaction.IB_Connection := FDatabase;
+                FTmpQuery.Transaction := FTmpTransaction;
+                FTmpTransaction.Database := FDatabase;
 
-                FDDLQuery.IB_Connection := FDatabase;
+                FDDLQuery.Database := FDatabase;
                 FDDLQuery.ParamCheck := False;
-								FDDLQuery.IB_Transaction := FDDLTransaction;
-                FDDLTransaction.IB_Connection := FDatabase;
+								FDDLQuery.Transaction := FDDLTransaction;
+                FDDLTransaction.Database := FDatabase;
 
               except
                 on E: Exception do
@@ -938,15 +932,15 @@ begin
             if Assigned(FOnReportError) then
               FOnReportError(Self, LineNumber, 'CONNECT statement skipped');
 
-            FTmpQuery.IB_Connection := FDatabase;
+            FTmpQuery.Database := FDatabase;
             FTmpQuery.ParamCheck := False;
-            FTmpQuery.IB_Transaction := FTmpTransaction;
-            FTmpTransaction.IB_Connection := FDatabase;
+            FTmpQuery.Transaction := FTmpTransaction;
+            FTmpTransaction.Database := FDatabase;
 
-            FDDLQuery.IB_Connection := FDatabase;
+            FDDLQuery.Database := FDatabase;
             FDDLQuery.ParamCheck := False;
-            FDDLQuery.IB_Transaction := FTmpTransaction;
-            FDDLTransaction.IB_Connection := FDatabase;
+            FDDLQuery.Transaction := FTmpTransaction;
+            FDDLTransaction.Database := FDatabase;
           end
           else
           begin
@@ -961,7 +955,7 @@ begin
                 except
                   on E: Exception do
                   begin
-                    if FTransaction.Started then
+                    if FTransaction.Active then
                       raise EISQLException.Create (0, FConnDBName, eeConnect, E.Message+#13#10'Commit or Rollback the current transaction')
                     else
                       FDatabase.Close;
@@ -971,18 +965,18 @@ begin
                 FDatabase.Username := FConnDBUser;
                 FDatabase.Password := FConnDBPassword;
                 FDatabase.LoginPrompt := false;
-                FDatabase.SQLDialect := ClientDialect;
+                FDatabase.Dialect := ClientDialect;
                 FDatabase.Open;
 
-                FTmpQuery.IB_Connection := FDatabase;
+                FTmpQuery.Database := FDatabase;
                 FTmpQuery.ParamCheck := False;
-                FTmpQuery.IB_Transaction := FTmpTransaction;
-                FTmpTransaction.IB_Connection := FDatabase;
+                FTmpQuery.Transaction := FTmpTransaction;
+                FTmpTransaction.Database := FDatabase;
 
-                FDDLQuery.IB_Connection := FDatabase;
+                FDDLQuery.Database := FDatabase;
                 FDDLQuery.ParamCheck := False;
-                FDDLQuery.IB_Transaction := FTmpTransaction;
-                FDDLTransaction.IB_Connection := FDatabase;
+                FDDLQuery.Transaction := FTmpTransaction;
+                FDDLTransaction.Database := FDatabase;
 
               except
                 on E: Exception do
@@ -997,7 +991,7 @@ begin
         FSQLQuery.SQL.Add(Data.Strings[lCnt]);
         // See if the statement is valid
 				try
-          if FTmpTransaction.Started or FTmpTransaction.InTransaction then
+          if FTmpTransaction.Active or FTmpTransaction.Active then
             FTmpTransaction.Commit;
 
           FTmpTransaction.StartTransaction;
@@ -1005,16 +999,16 @@ begin
           FTmpQuery.SQL := FSQLQuery.SQL;
           FTmpQuery.Prepare;
 
-          if FTmpTransaction.Started or FTmpTransaction.InTransaction then
+          if FTmpTransaction.Active or FTmpTransaction.Active then
             FTmpTransaction.Commit;
 
-          case FTmpQuery.StatementType of
+          case FTmpQuery.StatementType { TODO: StatementType not supported in TSQLQuery } of
             stCommit:
               begin
                 try
-                  if FTransaction.Started or FTransaction.InTransaction then
+                  if FTransaction.Active or FTransaction.Active then
                     FTransaction.Commit;
-                  if FDDLTransaction.Started or FDDLTransaction.InTransaction then
+                  if FDDLTransaction.Active or FDDLTransaction.Active then
                     FDDLTransaction.Commit;
                 except
                   on E : Exception do
@@ -1028,9 +1022,9 @@ begin
             stRollback:
               begin
                 try
-                  if FTransaction.Started or FTransaction.InTransaction then
+                  if FTransaction.Active or FTransaction.Active then
                     FTransaction.Rollback;
-                  if FDDLTransaction.Started or FDDLTransaction.InTransaction then
+                  if FDDLTransaction.Active or FDDLTransaction.Active then
                     FDDLTransaction.Rollback;
                 except
                   on E : Exception do
@@ -1047,7 +1041,7 @@ begin
                 FDDLQuery.SQL.Clear;
                 FDDLQuery.SQL := FSQLQuery.SQL;
                 try
-                  if not (FDDLTransaction.Started or FDDLTransaction.InTransaction) then
+                  if not (FDDLTransaction.Active or FDDLTransaction.Active) then
                     FDDLTransaction.StartTransaction;
                   FDDLQuery.Prepare;
                   FDDLQuery.ExecSQL;
@@ -1068,7 +1062,7 @@ begin
             stDelete, stInsert, stUpdate:
               begin
                 try
-                  if not (FTransaction.Started or FTransaction.InTransaction) then
+                  if not (FTransaction.Active or FTransaction.Active) then
                     FTransaction.StartTransaction;
 
                   FSQLQuery.Prepare;
@@ -1122,10 +1116,10 @@ constructor TIBSQLObj.Create(AComponent: TComponent);
 begin
   inherited;
   FAutoDDL := true;
-  FTmpQuery := TIB_DSQL.Create(nil);
-  FTmpTransaction := TIB_Transaction.Create(nil);
-  FDDLQuery := TIB_DSQL.Create(nil);
-  FDDLTransaction := TIB_Transaction.Create(nil);
+  FTmpQuery := TSQLQuery.Create(nil);
+  FTmpTransaction := TSQLTransaction.Create(nil);
+  FDDLQuery := TSQLQuery.Create(nil);
+  FDDLTransaction := TSQLTransaction.Create(nil);
 end;
 
 

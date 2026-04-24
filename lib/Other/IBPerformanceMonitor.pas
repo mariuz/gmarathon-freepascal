@@ -4,9 +4,7 @@ unit IBPerformanceMonitor;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  IB_Header, IB_Session, IB_Components;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBConnection, SQLDB;
 
 type
   TMetricValue = class(TObject)
@@ -67,7 +65,7 @@ type
 		FInitialised : Boolean;
 		FShowSystemTables : Boolean;
 		FRelationList : TRelationItems;
-		FIBConnection : TIB_Connection;
+		FIBConnection : TIBConnection;
 		FReadIdxCount : TPerformItems;
     FReadSeqCount : TPerformItems;
 
@@ -85,7 +83,7 @@ type
 		function GetReadIdxCount : TPerformItems;
 		function GetReadSeqCount : TPerformItems;
 		function GetReadCurrentMemory: Integer;
-		procedure SetIBConnection(Value : TIB_Connection);
+		procedure SetIBConnection(Value : TIBConnection);
 		procedure SetPerformItemsRetVal(ItemList : TPerformItems; RelId : String; RVal : LongInt);
 		procedure SetPerformMetricRetVal(Item : TMetricValue; RVal : LongInt);
 		function GetReadBackoutCount: TMetricValue;
@@ -126,7 +124,7 @@ type
 		procedure ResetCounters;
 	published
 		{ Published declarations }
-		property IB_Connection : TIB_Connection read FIBConnection write SetIBConnection;
+		property IB_Connection : TIBConnection read FIBConnection write SetIBConnection;
 	end;
 
 procedure Register;
@@ -273,14 +271,16 @@ begin
 end;
 
 procedure TIBPerformanceMonitor.Initialise;
-var
-	Q : TIB_Cursor;
-
+{var
+	Q : TSQLQuery;
+}
 begin
+  // TODO: Implement using IBX TSQLQuery or TSQLQuery
 	FRelationList.Clear;
-	Q := TIB_Cursor.Create(Self);
+  {
+	Q := TSQLQuery.Create(Self);
 	try
-		Q.IB_Connection := FIBConnection;
+		Q.Database := FIBConnection;
 		Q.SQL.Text := 'select rdb$relation_id, rdb$relation_name from rdb$relations';
 		Q.Open;
 		Q.First;
@@ -296,6 +296,7 @@ begin
 	finally
 		Q.Free;
 	end;
+  }
 	ResetCounters;
 	FInitialised := True;
 end;
@@ -329,7 +330,7 @@ begin
 end;
 
 function TIBPerformanceMonitor.GetReadIdxCount : TPerformItems;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
@@ -337,31 +338,33 @@ var
 
 	RelId : String;
 	RVal : LongInt;
-
+}
 begin
 	Result := nil;
+  {
 	_DBInfoCommand := Char(isc_info_read_idx_count);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
 		Idx := 3;
 		while Idx < Len do
 		begin
-			RelId := IntToStr({$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[Idx], 2));
-			RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[Idx + 2], 4);
+			RelId := IntToStr({$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[Idx], 2));
+			RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[Idx + 2], 4);
 			SetPerformItemsRetVal(FReadIdxCount, RelId, RVal);
 			Idx := Idx + 6;
 		end;
 	end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-		FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+		FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadIdxCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadSeqCount : TPerformItems;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
@@ -369,320 +372,346 @@ var
 
 	RelId : String;
 	RVal : LongInt;
-
+}
 begin
 	Result := nil;
+  {
 	_DBInfoCommand := Char(isc_info_read_seq_count);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
 		Idx := 3;
 		while Idx < Len do
 		begin
-			RelId := IntToStr({$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[Idx], 2));
-			RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[Idx + 2], 4);
+			RelId := IntToStr({$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[Idx], 2));
+			RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[Idx + 2], 4);
 			SetPerformItemsRetVal(FReadSeqCount, RelId, RVal);
 			Idx := Idx + 6;
 		end;
 	end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-		FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+		FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadSeqCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadCurrentMemory: Integer;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
 
 	RVal : LongInt;
-
+}
 begin
-	RVal := 0;
+	// RVal := 0;
 	Result := 0;
+  {
   _DBInfoCommand := Char(isc_info_current_memory);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
   begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
   end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
 	else
     Result := RVal;
+  }
 end;
 
-procedure TIBPerformanceMonitor.SetIBConnection(Value : TIB_Connection);
+procedure TIBPerformanceMonitor.SetIBConnection(Value : TIBConnection);
 begin
 	FIBConnection := Value;
 end;
 
 function TIBPerformanceMonitor.GetReadBackoutCount: TMetricValue;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
 
 	RVal : LongInt;
-
+}
 begin
   Result := nil;
+  {
   _DBInfoCommand := Char(isc_info_backout_count);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
   begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadBackoutCount, RVal);
 	end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
   else
     Result := FReadBackoutCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadDeleteCount: TMetricValue;
-var
+{var
   local_buffer: array[0..8191] of Char;
 	len: Integer;
   _DBInfoCommand: Char;
 
 	RVal : LongInt;
-
+}
 begin
   Result := nil;
+  {
   _DBInfoCommand := Char(isc_info_delete_count);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadDeleteCount, RVal);
 	end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadDeleteCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadExpungeCount: TMetricValue;
-var
+{var
   local_buffer: array[0..8191] of Char;
   len: Integer;
   _DBInfoCommand: Char;
 
   RVal : LongInt;
-
+}
 begin
   Result := nil;
+  {
   _DBInfoCommand := Char(isc_info_expunge_count);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
   begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadExpungeCount, RVal);
   end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
   else
 		Result := FReadExpungeCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadFetchesCount: TMetricValue;
-var
+{var
   local_buffer: array[0..8191] of Char;
   len: Integer;
 	_DBInfoCommand: Char;
 
   RVal : LongInt;
-
+}
 begin
 	Result := nil;
+  {
   _DBInfoCommand := Char(isc_info_fetches);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
   begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadFetchesCount, RVal);
   end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
   else
     Result := FReadFetchesCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadInsertCount: TMetricValue;
-var
+{var
   local_buffer: array[0..8191] of Char;
   len: Integer;
   _DBInfoCommand: Char;
 
   RVal : LongInt;
-
+}
 begin
   Result := nil;
+  {
   _DBInfoCommand := Char(isc_info_insert_count);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadInsertCount, RVal);
   end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-		FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+		FIBConnection.IBDatabase.HandleException(Self)
   else
     Result := FReadInsertCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadMarksCount: TMetricValue;
-var
+{var
 	local_buffer: array[0..8191] of Char;
   len: Integer;
   _DBInfoCommand: Char;
 
   RVal : LongInt;
-
+}
 begin
   Result := nil;
+  {
 	_DBInfoCommand := Char(isc_info_marks);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadMarksCount, RVal);
   end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
   else
     Result := FReadMarksCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadNumBuffers: Integer;
-var
+{var
   local_buffer: array[0..8191] of Char;
 	len: Integer;
   _DBInfoCommand: Char;
 
   RVal : LongInt;
-
+}
 begin
-  RVal := 0;
+  // RVal := 0;
 	Result := 0;
+  {
 	_DBInfoCommand := Char(isc_info_num_buffers);
-  FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+  FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
   begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
 	end;
-  if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+  if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
   else
 		Result := RVal;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadPurgeCount: TMetricValue;
-var
+{var
   local_buffer: array[0..8191] of Char;
   len: Integer;
   _DBInfoCommand: Char;
 
   RVal : LongInt;
-
+}
 begin
   Result := nil;
+  {
   _DBInfoCommand := Char(isc_info_purge_count);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-  if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+  if FIBConnection.IBDatabase.errcode = 0 then
   begin
-    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+    len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+    RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
     SetPerformMetricRetVal(FReadPurgeCount, RVal);
   end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-    FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+    FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadPurgeCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadReadCount: TMetricValue;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
 
 	RVal : LongInt;
-
+}
 begin
 	Result := nil;
+  {
 	_DBInfoCommand := Char(isc_info_reads);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
 		SetPerformMetricRetVal(FReadReadCount, RVal);
 	end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-		FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+		FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadReadCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadUpdateCount: TMetricValue;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
 
 	RVal : LongInt;
-
+}
 begin
 	Result := nil;
+  {
 	_DBInfoCommand := Char(isc_info_update_count);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
 		SetPerformMetricRetVal(FReadUpdateCount, RVal);
 	end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-		FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+		FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadUpdateCount;
+  }
 end;
 
 function TIBPerformanceMonitor.GetReadWriteCount: TMetricValue;
-var
+{var
 	local_buffer: array[0..8191] of Char;
 	len: Integer;
 	_DBInfoCommand: Char;
 
 	RVal : LongInt;
-
+}
 begin
 	Result := nil;
+  {
 	_DBInfoCommand := Char(isc_info_writes);
-	FIBConnection.IB_Session.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_database_info(@FIBConnection.IB_Session.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
-	if FIBConnection.IB_Session.errcode = 0 then
+	FIBConnection.IBDatabase.errcode := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_database_info(@FIBConnection.IBDatabase.Status, @FIBConnection.DBHandle, 1, @_DBInfoCommand, 8192, local_buffer);
+	if FIBConnection.IBDatabase.errcode = 0 then
 	begin
-		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
-		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IB_Session.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
+		len := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[1], 2);
+		RVal := {$IFnDEF IBO_40_OR_GREATER}FIBConnection.IBDatabase.{$ENDIF}isc_vax_integer(@local_buffer[3], Len);
 		SetPerformMetricRetVal(FReadWriteCount, RVal);
 	end;
-	if FIBConnection.IB_Session.errcode <> 0 then
-		FIBConnection.IB_Session.HandleException(Self)
+	if FIBConnection.IBDatabase.errcode <> 0 then
+		FIBConnection.IBDatabase.HandleException(Self)
 	else
 		Result := FReadWriteCount;
+  }
 end;
 
 procedure TIBPerformanceMonitor.SetPerformMetricRetVal(Item: TMetricValue; RVal: Integer);

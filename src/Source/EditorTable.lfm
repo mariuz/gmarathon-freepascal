@@ -461,53 +461,33 @@ object frmTables: TfrmTables
     Left = 112
     Top = 152
   end
-  object qryTable: TIBOQuery
+  object qryTable: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 50
     Top = 190
   end
-  object qryConstraints: TIBOQuery
+  object qryConstraints: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 48
     Top = 224
   end
-  object qryTriggers: TIBOQuery
+  object qryTriggers: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 48
     Top = 256
   end
-  object tblTableData: TIBOQuery
+  object tblTableData: TSQLQuery
     Params = <>
-    CallbackInc = 10
-    FetchWholeRows = False
-    IB_Transaction = tranTableData
+    Transaction = tranTableData
     PreparedInserts = True
-    RecordCountAccurate = True
     AfterOpen = tblTableDataAfterOpen
-    RequestLive = True
-    FieldOptions = []
     Left = 50
     Top = 152
   end
-  object tranTableData: TIB_Transaction
+  object tranTableData: TSQLTransaction
     Left = 80
     Top = 152
   end

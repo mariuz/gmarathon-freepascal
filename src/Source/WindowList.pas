@@ -19,10 +19,7 @@ unit WindowList;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, ComCtrls, ImgList,
-	rmCornerGrip;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ImgList, rmCornerGrip;
 
 type
   TfrmWindowList = class(TForm)
@@ -45,10 +42,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonMain;
+uses Globals, HelpMap, MarathonMain;
 
 {$R *.lfm}
 

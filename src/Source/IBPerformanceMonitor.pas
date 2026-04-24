@@ -4,9 +4,7 @@ unit IBPerformanceMonitor;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  IB_Header, IB_Session, IB_Components;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBConnection, SQLDB;
 
 type
   TMetricValue = class(TObject)
@@ -67,7 +65,7 @@ type
 		FInitialised : Boolean;
 		FShowSystemTables : Boolean;
 		FRelationList : TRelationItems;
-		FIBConnection : TIB_Connection;
+		FIBConnection : TIBConnection;
 		FReadIdxCount : TPerformItems;
     FReadSeqCount : TPerformItems;
 
@@ -85,7 +83,7 @@ type
 		function GetReadIdxCount : TPerformItems;
 		function GetReadSeqCount : TPerformItems;
 		function GetReadCurrentMemory: Integer;
-		procedure SetIBConnection(Value : TIB_Connection);
+		procedure SetIBConnection(Value : TIBConnection);
 		procedure SetPerformItemsRetVal(ItemList : TPerformItems; RelId : String; RVal : LongInt);
 		procedure SetPerformMetricRetVal(Item : TMetricValue; RVal : LongInt);
 		function GetReadBackoutCount: TMetricValue;
@@ -126,7 +124,7 @@ type
 		procedure ResetCounters;
 	published
 		{ Published declarations }
-		property IB_Connection : TIB_Connection read FIBConnection write SetIBConnection;
+		property IB_Connection : TIBConnection read FIBConnection write SetIBConnection;
 	end;
 
 procedure Register;
@@ -416,7 +414,7 @@ begin
     Result := RVal;
 end;
 
-procedure TIBPerformanceMonitor.SetIBConnection(Value : TIB_Connection);
+procedure TIBPerformanceMonitor.SetIBConnection(Value : TIBConnection);
 begin
 	FIBConnection := Value;
 end;

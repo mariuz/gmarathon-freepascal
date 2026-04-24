@@ -19,9 +19,7 @@ unit UDFInputParam;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls;
 
 type
 	TfrmUDFAddInput = class(TForm)
@@ -45,8 +43,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-	HelpMap;
+uses HelpMap;
 
 procedure TfrmUDFAddInput.btnOKClick(Sender: TObject);
 begin

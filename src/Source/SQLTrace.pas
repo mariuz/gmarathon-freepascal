@@ -19,15 +19,7 @@ unit SQLTrace;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons,
-	IB_Components,
-	IB_Monitor,
-	SynEdit,
-  SynEditTypes,
-	SyntaxMemoWithStuff2,
-	BaseDocumentForm;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBConnection, SQLDB, IBSQLMonitor, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
 
 type
 	TfrmSQLTrace = class(TfrmBaseDocumentForm)
@@ -36,7 +28,7 @@ type
 		tsEdit: TTabSheet;
 		edTrace: TSyntaxMemoWithStuff2;
 		dlgSave: TSaveDialog;
-		trcSQL: TIB_Monitor;
+		trcSQL: TIBSQLMonitor;
 		procedure FormCreate(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure edTraceChange(Sender: TObject);
@@ -71,10 +63,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	MarathonIDE;
+uses Globals, HelpMap, MarathonIDE;
 
 {$R *.lfm}
 
@@ -283,7 +272,7 @@ Revision 1.4  2002/09/25 12:11:40  tmuetze
 Revisited the 'Load from' and 'Save as' capabilities of the editors
 
 Revision 1.3  2002/09/23 10:34:11  tmuetze
-Revised the SQL Trace functionality, e.g. TIB_Monitor options can now be customized via the Option dialog
+Revised the SQL Trace functionality, e.g. TIBSQLMonitor options can now be customized via the Option dialog
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block

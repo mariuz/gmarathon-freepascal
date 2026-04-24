@@ -19,9 +19,7 @@ unit MarathonToolsAPIDocForm;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  BaseDocumentForm, GimbalToolsAPI, GimbalToolsAPIImpl, Menus;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, GimbalToolsAPI, GimbalToolsAPIImpl, Menus;
 
 type
   TfrmMarathonToolsDocForm = class(TfrmBaseDocumentForm)
@@ -47,9 +45,7 @@ implementation
 
 {$R *.lfm}
 
-uses
-  MarathonIDE, 
-  Globals;
+uses MarathonIDE, Globals;
 
 { TForm1 }
 

@@ -19,14 +19,7 @@ unit QBuilder;
 
 interface
 
-uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  Buttons, ExtCtrls, StdCtrls, ComCtrls, ToolWin, Menus, CheckLst, Grids,
-	DB, DBTables, DBGrids, ExtDlgs,
-	QBCriteria,
-	QBAppendTo,
-	SynEdit,
-	SyntaxMemoWithStuff2;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, ExtCtrls, StdCtrls, ComCtrls, ToolWin, Menus, CheckLst, Grids, DB, DBTables, DBGrids, ExtDlgs, QBCriteria, QBAppendTo, SynEdit, SyntaxMemoWithStuff2;
 
 type
   TQBForm = class;
@@ -273,11 +266,7 @@ implementation
 {$R *.lfm}
 {$R QBBUTTON.RES}
 
-uses
-	Globals,
-	HelpMap,
-	//MarathonMain,
-	QBLnkFrm;
+uses Globals, HelpMap, //MarathonMain, QBLnkFrm;
 
 resourcestring
 	sMainCaption = 'QBuilder';

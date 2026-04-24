@@ -355,33 +355,16 @@ object frmGlobalMigrateWizard: TfrmGlobalMigrateWizard
         TabOrder = 0
         object tsObjects: TTabSheet
           Caption = 'Objects'
-          object tvObjects: TVirtualStringTree
+          object tvObjects: TTreeView
             Left = 0
             Top = 0
             Width = 443
             Height = 119
             Align = alClient
-            ButtonFillMode = fmWindowColor
-            CheckImageKind = ckDarkTick
-            DrawSelectionMode = smBlendedRectangle
-            Header.AutoSizeIndex = 0
-            Header.Font.Charset = DEFAULT_CHARSET
-            Header.Font.Color = clWindowText
-            Header.Font.Height = -11
-            Header.Font.Name = 'MS Sans Serif'
-            Header.Font.Style = []
-            Header.MainColumn = -1
-            Header.Options = [hoColumnResize, hoDblClickResize, hoDrag, hoHotTrack]
-            Header.Style = hsFlatButtons
-            HintAnimation = hatNone
             Indent = 19
             TabOrder = 0
-            TreeOptions.AnimationOptions = [toAnimatedToggle]
-            TreeOptions.MiscOptions = [toAcceptOLEDrop, toCheckSupport, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning]
-            TreeOptions.SelectionOptions = [toExtendedFocus, toMultiSelect, toRightClickSelect]
-            OnGetText = tvObjectsGetText
-            OnInitNode = tvObjectsInitNode
-            Columns = <>
+            ReadOnly = True
+            Checkboxes = True
           end
         end
         object tsOptions: TTabSheet

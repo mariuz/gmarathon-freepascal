@@ -598,32 +598,24 @@ object frmSQLForm: TfrmSQLForm
     Left = 172
     Top = 96
   end
-  object qrySQLStatement: TIBOQuery
+  object qrySQLStatement: TSQLQuery
     Params = <>
     CallbackCaption = 'Fetching data'
-    CallbackInc = 10
-    IB_Transaction = transSQLStatement
-    RecordCountAccurate = True
+    Transaction = transSQLStatement
     AfterOpen = qrySQLStatementAfterOpen
     AfterPrepare = qrySQLStatementAfterPrepare
     BeforePrepare = qrySQLStatementBeforePrepare
-    FieldOptions = []
     Left = 100
     Top = 96
   end
-  object qryUtil: TIBOQuery
+  object qryUtil: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    IB_Transaction = transSQLStatement
-    KeyLinksAutoDefine = False
+    Transaction = transSQLStatement
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 136
     Top = 96
   end
-  object transSQLStatement: TIB_Transaction
+  object transSQLStatement: TSQLTransaction
     Isolation = tiConcurrency
     Left = 65
     Top = 125
@@ -652,7 +644,7 @@ object frmSQLForm: TfrmSQLForm
     Left = 137
     Top = 165
   end
-  object qryScript: TIB_DSQL
+  object qryScript: TSQLQuery
     ParamCheck = False
     Left = 64
     Top = 200

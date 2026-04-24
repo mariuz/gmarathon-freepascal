@@ -5,14 +5,9 @@ unit SQLYacc;
 interface
 {$I compilerdefines.inc}
 
-uses
-	SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection,
-	Forms, IBDebuggerVM,
-	{$IFDEF D6_OR_HIGHER}
-	Variants,
-	{$ENDIF}
-	rmMemoryDataSet,
-  PlanUnit;
+uses SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection, Forms, IBDebuggerVM, {$IFDEF D6_OR_HIGHER}
+	Variants, {$ENDIF}
+	rmMemoryDataSet, PlanUnit;
 
 
 const _ACTION_ = 257;

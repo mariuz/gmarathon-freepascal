@@ -302,29 +302,19 @@ object frmTriggerEditor: TfrmTriggerEditor
     Left = 361
     Top = 164
   end
-  object qryTrigger: TIBOQuery
+  object qryTrigger: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 396
     Top = 96
   end
-  object qryUtil: TIBOQuery
+  object qryUtil: TSQLQuery
     Params = <>
-    CallbackInc = 0
-    FetchWholeRows = False
-    KeyLinksAutoDefine = False
     ReadOnly = True
-    RecordCountAccurate = False
-    FieldOptions = []
     Left = 396
     Top = 164
   end
-  object qryWarnings: TIB_DSQL
+  object qryWarnings: TSQLQuery
     ParamChar = '?'
     Left = 316
     Top = 116

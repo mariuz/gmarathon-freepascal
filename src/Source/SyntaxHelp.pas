@@ -35,9 +35,7 @@ unit SyntaxHelp;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ExtCtrls, Menus, Registry;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, Registry;
 
 type
 	TfrmSyntaxHelp = class(TForm)
@@ -67,12 +65,7 @@ var
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	GSSRegistry,
-  MarathonIDE{,
-	MarathonMain};
+uses Globals, HelpMap, GSSRegistry, MarathonIDE{, MarathonMain};
 
 {$R *.lfm}
 

@@ -48,22 +48,7 @@ unit DatabaseManager;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin,
-	Buttons, FileCtrl, ActnList, Registry, OleCtrls,
-	rmTreeNonView,
-	rmSplit,
-	rmPanel,
-	rmPathTreeView,
-	MarathonProjectCacheTypes,
-	Globals,
-	BaseDocumentForm,
-	MarathonIDE,
-	MarathonInternalInterfaces,
-	MetadataSearchObject,
-	GimbalToolsAPI,
-	GimbalToolsAPIImpl;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, OleCtrls, rmTreeNonView, rmSplit, rmPanel, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetadataSearchObject, GimbalToolsAPI, GimbalToolsAPIImpl;
 
 type
 	TfrmDatabaseExplorer = class(TfrmBaseDocumentForm, IMarathonBrowser, IGimbalIDEBrowserWindow)
@@ -88,7 +73,7 @@ type
 		ViewFolders: TAction;
 		ViewSearch: TAction;
 		pnlFolderSearch: TPanel;
-		tvDatabase: TrmPathTreeView;
+		tvDatabase: TTreeView;
 		sbSearch: TScrollBox;
 		Label4: TLabel;
 		edSearchString: TComboBox;
@@ -125,14 +110,14 @@ type
 		ViewRecent: TAction;
     actWindowBroswer: TAction;
 		procedure FormCreate(Sender: TObject);
-		procedure tvDatabaseGetImageIndex(Sender: TObject; Node: TrmTreeNode);
+		procedure tvDatabaseGetImageIndex(Sender: TObject; Node: TTreeNode);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure WindowListClick(Sender: TObject);
 		procedure tvDatabaseMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-		procedure tvDatabaseChange(Sender: TObject; Node: TrmTreeNode);
+		procedure tvDatabaseChange(Sender: TObject; Node: TTreeNode);
 		procedure lvDatabaseKeyPress(Sender: TObject; var Key: Char);
 		procedure tvDatabaseKeyPress(Sender: TObject; var Key: Char);
-		procedure tvDatabaseExpanding(Sender: TObject; Node: TrmTreeNode;	var AllowExpansion: Boolean);
+		procedure tvDatabaseExpanding(Sender: TObject; Node: TTreeNode;	var AllowExpansion: Boolean);
 		procedure tvDatabaseDblClick(Sender: TObject);
 		procedure lvDatabaseDblClick(Sender: TObject);
 		procedure FormResize(Sender: TObject);
@@ -249,12 +234,7 @@ var
 
 implementation
 
-uses
-	MarathonProjectCache,
-	ManageBrowserItems,
-	HelpMap,
-	MenuModule,
-	GSSRegistry;
+uses MarathonProjectCache, ManageBrowserItems, HelpMap, MenuModule, GSSRegistry;
 
 {$R *.lfm}
 
@@ -400,7 +380,7 @@ begin
 	end;
 end;
 
-procedure TfrmDatabaseExplorer.tvDatabaseGetImageIndex(Sender: TObject; Node: TrmTreeNode);
+procedure TfrmDatabaseExplorer.tvDatabaseGetImageIndex(Sender: TObject; Node: TTreeNode);
 var
 	TNV : TrmTreeNonViewNode;
 begin
@@ -438,7 +418,7 @@ end;
 
 procedure TfrmDatabaseExplorer.tvDatabaseMouseDown(Sender: TObject;	Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-	T : TrmTreeNode;
+	T : TTreeNode;
 
 begin
 	if Button = mbRight then
@@ -448,9 +428,9 @@ begin
 	end;
 end;
 
-procedure TfrmDatabaseExplorer.tvDatabaseChange(Sender: TObject; Node: TrmTreeNode);
+procedure TfrmDatabaseExplorer.tvDatabaseChange(Sender: TObject; Node: TTreeNode);
 var
-	WNode: TrmTreeNode;
+	WNode: TTreeNode;
 	WItem: TListItem;
 	tscObj: TMarathonCacheBaseNode;
 
@@ -539,11 +519,11 @@ begin
 	end;
 end;
 
-procedure TfrmDatabaseExplorer.tvDatabaseExpanding(Sender: TObject; Node: TrmTreeNode; var AllowExpansion: Boolean);
+procedure TfrmDatabaseExplorer.tvDatabaseExpanding(Sender: TObject; Node: TTreeNode; var AllowExpansion: Boolean);
 var
 	tnvNode, wtnvNode: TrmTreeNonViewNode;
 	tscObj: TMarathonCacheBaseNode;
-	WNode: TrmTreeNode;
+	WNode: TTreeNode;
 
 begin
 	Screen.Cursor := crHourGlass;
@@ -610,8 +590,8 @@ end;
 procedure TfrmDatabaseExplorer.RefreshNode(Item : TObject; PreserveFocus : Boolean);
 var
 	TNV : TrmTreeNonViewNode;
-	TN : TrmTreeNode;
-	SelNode : TrmTreeNode;
+	TN : TTreeNode;
+	SelNode : TTreeNode;
 //	AllowChange: Boolean;
 	WNExpanded : Boolean;
   wSelNodePath : string;
@@ -667,7 +647,7 @@ procedure TfrmDatabaseExplorer.ExpandNode(Item : TObject);
 var
 	TNV : TrmTreeNonViewNode;
 	Path : String;
-	TN : TrmTreeNode;
+	TN : TTreeNode;
 //	AllowChange: Boolean;
 
 begin
@@ -699,7 +679,7 @@ procedure TfrmDatabaseExplorer.RemoveNode(Item: TObject);
 var
 	TNV : TrmTreeNonViewNode;
 	Path : String;
-	TN : TrmTreeNode;
+	TN : TTreeNode;
 	Idx : Integer;
 
 begin
@@ -821,7 +801,7 @@ function TfrmDatabaseExplorer.CanDoBrowserOperation(BrowserOp : TGSSCacheOp): Bo
 var
 	tnvNode: TrmTreeNonViewNode;
 	tscObj: TMarathonCacheBaseNode;
-	WNode: TrmTreeNode;
+	WNode: TTreeNode;
 	loop: integer;
 
 begin
@@ -852,9 +832,9 @@ begin
 			else
 				if lvDatabase.SelCount = 1 then
 				begin
-					if TObject(lvDatabase.Selected.Data) is TrmTreeNode then
+					if TObject(lvDatabase.Selected.Data) is TTreeNode then
 					begin
-						WNode := TrmTreeNode(lvDatabase.Selected.Data);
+						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 						begin
 							tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -889,9 +869,9 @@ begin
 					begin
 						if lvDatabase.Items[loop].Selected then
 						begin
-							if TObject(lvDatabase.Items[loop].Data) is TrmTreeNode then
+							if TObject(lvDatabase.Items[loop].Data) is TTreeNode then
 							begin
-								WNode := TrmTreeNode(lvDatabase.Items[loop].Data);
+								WNode := TTreeNode(lvDatabase.Items[loop].Data);
 								if assigned(WNode) then
 								begin
 									tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -930,7 +910,7 @@ procedure TfrmDatabaseExplorer.DoBrowserOperation(Op: TGSSCacheOp);
 var
 	tnvNode: TrmTreeNonViewNode;
 	tscObj: TMarathonCacheBaseNode;
-	WNode: TrmTreeNode;
+	WNode: TTreeNode;
 	loop: integer;
 	ContinueFlag: boolean;
 	ParentTSCObj: TMarathonCacheBaseNode;
@@ -952,9 +932,9 @@ begin
 			begin
 				if lvDatabase.SelCount = 1 then
 				begin
-					if TObject(lvDatabase.Selected.Data) is TrmTreeNode then
+					if TObject(lvDatabase.Selected.Data) is TTreeNode then
 					begin
-						WNode := TrmTreeNode(lvDatabase.Selected.Data);
+						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 						begin
 							tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -980,9 +960,9 @@ begin
 					tnvNode := nil;
 					ParentTSCObj := nil;
 
-					if TObject(lvDatabase.Selected.Data) is TrmTreeNode then
+					if TObject(lvDatabase.Selected.Data) is TTreeNode then
 					begin
-						WNode := TrmTreeNode(lvDatabase.Selected.Data);
+						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 							tnvNode := TrmTreeNonViewNode(WNode.Data);
 						if assigned(tnvNode) and assigned(tnvNode.Parent) then
@@ -1010,9 +990,9 @@ begin
 
 						if lvDatabase.items[loop].Selected then
 						begin
-							if TObject(lvDatabase.Items[loop].Data) is TrmTreeNode then
+							if TObject(lvDatabase.Items[loop].Data) is TTreeNode then
 							begin
-								WNode := TrmTreeNode(lvDatabase.items[loop].Data);
+								WNode := TTreeNode(lvDatabase.items[loop].Data);
 								if assigned(WNode) then
 								begin
 									tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -1114,7 +1094,7 @@ end;
 
 function TfrmDatabaseExplorer.GetUpdateActiveConnection: String;
 var
-	N : TrmTreeNode;
+	N : TTreeNode;
 	tscObj: TMarathonCacheBaseNode;
 	tnvNode: TrmTreeNonViewNode;
 
@@ -1269,7 +1249,7 @@ function TfrmDatabaseExplorer.CanCopy: Boolean;
 var
 	tnvNode: TrmTreeNonViewNode;
 	tscObj: TMarathonCacheBaseNode;
-	WNode: TrmTreeNode;
+	WNode: TTreeNode;
 	loop: integer;
 
 begin
@@ -1303,9 +1283,9 @@ begin
 			else
 				if lvDatabase.SelCount = 1 then
 				begin
-					if TObject(lvDatabase.Selected.Data) is TrmTreeNode then
+					if TObject(lvDatabase.Selected.Data) is TTreeNode then
 					begin
-						WNode := TrmTreeNode(lvDatabase.Selected.Data);
+						WNode := TTreeNode(lvDatabase.Selected.Data);
 						if assigned(WNode) then
 						begin
 							tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -1344,9 +1324,9 @@ begin
 					begin
 						if lvDatabase.Items[loop].Selected then
 						begin
-							if TObject(lvDatabase.Items[loop].Data) is TrmTreeNode then
+							if TObject(lvDatabase.Items[loop].Data) is TTreeNode then
 							begin
-								WNode := TrmTreeNode(lvDatabase.Items[loop].Data);
+								WNode := TTreeNode(lvDatabase.Items[loop].Data);
 								if assigned(WNode) then
 								begin
 									tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -1849,7 +1829,7 @@ var
 	Item : TGimbalIDESelectedItem;
 	tnvNode : TrmTreeNonViewNode;
 	tscObj : TMarathonCacheBaseNode;
-	WNode : TrmTreeNode;
+	WNode : TTreeNode;
 	loop : Integer;
 
 begin
@@ -1883,9 +1863,9 @@ begin
 		begin
 			if lvDatabase.SelCount = 1 then
 			begin
-				if TObject(lvDatabase.Selected.Data) is TrmTreeNode then
+				if TObject(lvDatabase.Selected.Data) is TTreeNode then
 				begin
-					WNode := TrmTreeNode(lvDatabase.Selected.Data);
+					WNode := TTreeNode(lvDatabase.Selected.Data);
 					if assigned(WNode) then
 					begin
 						tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -1935,9 +1915,9 @@ begin
 				begin
 					if lvDatabase.items[loop].Selected then
 					begin
-						if TObject(lvDatabase.Items[loop].Data) is TrmTreeNode then
+						if TObject(lvDatabase.Items[loop].Data) is TTreeNode then
 						begin
-							WNode := TrmTreeNode(lvDatabase.items[loop].Data);
+							WNode := TTreeNode(lvDatabase.items[loop].Data);
 							if assigned(WNode) then
 							begin
 								tnvNode := TrmTreeNonViewNode(WNode.Data);
@@ -2023,7 +2003,7 @@ end;
 
 procedure TfrmDatabaseExplorer.ViewRecentExecute(Sender: TObject);
 var
-	N : TrmTreeNode;
+	N : TTreeNode;
 begin
 	inherited;
 	N := tvDatabase.FindPathNode(#2 + 'Recent');

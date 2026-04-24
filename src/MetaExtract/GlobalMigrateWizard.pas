@@ -20,7 +20,7 @@ interface
 uses
 	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
 	StdCtrls, ExtCtrls, ComCtrls, MetaExtractUnit, Menus, ActnList, rmBtnEdit,
-	IBHeader, IBDatabase, Db, VirtualTrees, IBCustomDataSet, rmCornerGrip, Globals,
+	IBHeader, IBDatabase, Db, IBCustomDataSet, Globals,
 	rmBaseEdit, rmNotebook2;
 
 type
@@ -57,7 +57,7 @@ type
 		Label8: TLabel;
 		cmbDecSep: TComboBox;
 		Label6: TLabel;
-		tvObjects: TVirtualStringTree;
+		tvObjects: TTreeView;
 		Panel1: TPanel;
 		Bevel2: TBevel;
 		Panel2: TPanel;
@@ -80,7 +80,6 @@ type
 		Label11: TLabel;
 		Label12: TLabel;
 		chkIncludeDoc: TCheckBox;
-		rmCornerGrip1: TrmCornerGrip;
     rdoMigrate: TRadioGroup;
     btnStart: TButton;
     nbpOne: TrmNotebookPage;
@@ -97,12 +96,7 @@ type
 		procedure edFileNameBtn1Click(Sender: TObject);
 		procedure FormDestroy(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure tvObjectsInitNode(Sender: TBaseVirtualTree; ParentNode,
-      Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
     procedure btnStartClick(Sender: TObject);
-    procedure tvObjectsGetText(Sender: TBaseVirtualTree;
-      Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
-      var CellText: WideString);
 	private
 		{ Private declarations }
 		data: PTreeData;
@@ -121,9 +115,9 @@ type
 		FObjectList: TStringList;
 		procedure FillDatabaseTreeView;
 		procedure MigrateToScript;
-		procedure ClearChecks(Node: PVirtualNode);
+		procedure ClearChecks(Node: TTreeNode);
 		procedure ExtractNotify(Sender : TObject; CurObj : String; PercentDone : Integer; var Stop : Boolean);
-		procedure UnClearChecks(Node: PVirtualNode);
+		procedure UnClearChecks(Node: TTreeNode);
 	public
 		{ Public declarations }
 		property Database : TIBDatabase read FDatabase write FDatabase;
@@ -204,7 +198,7 @@ begin
 			end;
 		2 :
 			begin
-				tvObjects.Clear;
+				tvObjects.Items.Clear;
 				nbWizard.ActivePage := nbpTwo;
 				btnNext.Caption := 'Next &>';
 			end;
@@ -221,20 +215,16 @@ end;
 
 procedure TfrmGlobalMigrateWizard.FillDatabaseTreeView;
 var
-	Root : PVirtualNode;
-	IItem : PVirtualNode;
-	SubItem : PVirtualNode;
+	Root : TTreeNode;
+	IItem : TTreeNode;
+	SubItem : TTreeNode;
 	Q : TIBDataSet;
-	Grants : PVirtualNode;
-	Idx : Integer;
+	Grants : TTreeNode;
 
 begin
 	FFillingTree := True;
 	try
-		Root := tvObjects.AddChild(nil);
-		Data := tvObjects.GetNodeData(Root);
-		Data^.FCaption := 'Database';
-		Root.CheckType := ctTriStateCheckBox;
+		Root := tvObjects.Items.Add(nil, 'Database');
 		Q := TIBDataSet.Create(Self);
 		try
 			Q.Database := FDatabase;
@@ -244,9 +234,7 @@ begin
 			try
 				if not (rdoMigrate.ItemIndex = 2) then
 				begin
-					IItem := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Domains';
+					IItem := tvObjects.Items.AddChild(Root, 'Domains');
 
 					Q.SelectSQL.Text := 'select rdb$field_name from rdb$fields where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$field_name asc;';
 					Q.Open;
@@ -254,176 +242,122 @@ begin
 					begin
 						if AnsiUpperCase(Copy(Trim(Q.FieldByName('rdb$field_name').AsString), 1, 4)) <> 'RDB$' then
 						begin
-							SubItem := tvObjects.AddChild(IItem);
-							Data := tvObjects.GetNodeData(SubItem);
-							Data^.FCaption := Trim(Q.FieldByName('rdb$field_name').AsString);
+							SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$field_name').AsString));
             end;
 						Q.Next;
 					end;
 					Q.Close;
 				end;
 
-				IItem := tvObjects.AddChild(Root);
-				Data := tvObjects.GetNodeData(IItem);
-				Data^.FCaption := 'Tables';
+				IItem := tvObjects.Items.AddChild(Root, 'Tables');
 
-				IItem.CheckType := ctCheckbox;
 				if FObjectList.Count > 0 then
-					IItem.CheckState := csUncheckedNormal
+					// IItem.StateIndex := ... // Handle checked state via StateIndex or Checkboxes property
 				else
-					IItem.CheckState := csCheckedNormal;
+					// IItem.StateIndex := ...
 
 				Q.SelectSQL.Text := 'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is null order by rdb$relation_name asc;';
 				Q.Open;
 				while not Q.EOF do
 				begin
-					SubItem := tvObjects.AddChild(IItem);
-					Data := tvObjects.GetNodeData(SubItem);
-					Data^.FCaption := Trim(Q.FieldByName('rdb$relation_name').AsString);
+					SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$relation_name').AsString));
 					Q.Next;
 				end;
 				Q.Close;
 
 				if not (rdoMigrate.ItemIndex = 2) then
 				begin
-					IItem := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Views';
-
-					IItem.CheckType := ctCheckbox;
-					if FObjectList.Count > 0 then
-						IItem.CheckState := csUncheckedNormal
-					else
-						IItem.CheckState := csCheckedNormal;
+					IItem := tvObjects.Items.AddChild(Root, 'Views');
 
 					Q.SelectSQL.Text := 'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is not null order by rdb$relation_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$relation_name').AsString);
-						SubItem.CheckType := ctCheckbox;
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$relation_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 
-					IItem := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Stored Procedures';
+					IItem := tvObjects.Items.AddChild(Root, 'Stored Procedures');
 					Q.SelectSQL.Text := 'select rdb$procedure_name from rdb$procedures where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$procedure_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$procedure_name').AsString);
-
-						SubItem.CheckType := ctCheckbox;
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$procedure_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 
-					IItem := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Triggers';
+					IItem := tvObjects.Items.AddChild(Root, 'Triggers');
 					Q.SelectSQL.Text := 'select rdb$trigger_name from rdb$triggers where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and (rdb$trigger_source is not null) order by rdb$trigger_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$trigger_name').AsString);
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$trigger_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 				end;
 
-				IItem := tvObjects.AddChild(Root);
-				Data := tvObjects.GetNodeData(IItem);
-				Data^.FCaption := 'Generators';
+				IItem := tvObjects.Items.AddChild(Root, 'Generators');
 				Q.SelectSQL.Text := 'select rdb$generator_name from rdb$generators where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$generator_name asc;';
 				Q.Open;
 				while not Q.EOF do
 				begin
-					SubItem := tvObjects.AddChild(IItem);
-					Data := tvObjects.GetNodeData(SubItem);
-					Data^.FCaption := Trim(Q.FieldByName('rdb$generator_name').AsString);
+					SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$generator_name').AsString));
 					Q.Next;
 				end;
 				Q.Close;
 
 				if not (rdoMigrate.ItemIndex = 2) then
 				begin
-					IItem := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Exceptions';
+					IItem := tvObjects.Items.AddChild(Root, 'Exceptions');
 					Q.SelectSQL.Text := 'select rdb$exception_name from rdb$exceptions where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$exception_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$exception_name').AsString);
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$exception_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 
-					IItem := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'UDFs';
+					IItem := tvObjects.Items.AddChild(Root, 'UDFs');
 					Q.SelectSQL.Text := 'select rdb$function_name from rdb$functions where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$function_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$function_name').AsString);
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$function_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 
-					Grants := tvObjects.AddChild(Root);
-					Data := tvObjects.GetNodeData(Grants);
-					Data^.FCaption := 'Grants';
-					IItem := tvObjects.AddChild(Grants);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Tables';
+					Grants := tvObjects.Items.AddChild(Root, 'Grants');
+					IItem := tvObjects.Items.AddChild(Grants, 'Tables');
 					Q.SelectSQL.Text := 'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is null order by rdb$relation_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$relation_name').AsString);
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$relation_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 
-					IItem := tvObjects.AddChild(Grants);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Views';
+					IItem := tvObjects.Items.AddChild(Grants, 'Views');
 					Q.SelectSQL.Text := 'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is not null order by rdb$relation_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$relation_name').AsString);
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$relation_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
 
-					IItem := tvObjects.AddChild(Grants);
-					Data := tvObjects.GetNodeData(IItem);
-					Data^.FCaption := 'Stored Procedures';
+					IItem := tvObjects.Items.AddChild(Grants, 'Stored Procedures');
 					Q.SelectSQL.Text := 'select rdb$procedure_name from rdb$procedures where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$procedure_name asc;';
 					Q.Open;
 					while not Q.EOF do
 					begin
-						SubItem := tvObjects.AddChild(IItem);
-						Data := tvObjects.GetNodeData(SubItem);
-						Data^.FCaption := Trim(Q.FieldByName('rdb$procedure_name').AsString);
+						SubItem := tvObjects.Items.AddChild(IItem, Trim(Q.FieldByName('rdb$procedure_name').AsString));
 						Q.Next;
 					end;
 					Q.Close;
@@ -437,15 +371,12 @@ begin
 			Q.Free;
 		end;
 	finally
-    tvObjects.ReinitChildren(Root ,True);
-
 		FFillingTree := False;
 	end;
 end;
 
 procedure TfrmGlobalMigrateWizard.FormCreate(Sender: TObject);
 begin
-	tvObjects.NodeDataSize := SizeOf(TTreeData);
 	LoadFormPosition(Self);
 	nbWizard.ActivePage := nbpOne;
 	rdoMigrate.ItemIndex := 0;
@@ -455,11 +386,11 @@ end;
 procedure TfrmGlobalMigrateWizard.MigrateToScript;
 var
 	M : TIBMetaExtract;
-	N : PVirtualNode;
-	WNode : PVirtualNode;
-	WSubNode : PVirtualNode;
-	Root : PVirtualNode;
-	HNode : PVirtualNode;
+	N : TTreeNode;
+	WNode : TTreeNode;
+	WSubNode : TTreeNode;
+	Root : TTreeNode;
+	HNode : TTreeNode;
 
 begin
 	FStop := False;
@@ -501,167 +432,151 @@ begin
 			M.Wrap := chkWrapat.Checked;
 			M.RightMargin := upWrap.Position;
 
-			Root := tvObjects.GetFirst;
-			Data := tvObjects.GetNodeData(Root);
-			if Data.FCaption = 'Database' then
+			Root := tvObjects.Items.GetFirstNode;
+			if Root.Text = 'Database' then
 			begin
-				HNode := Root.FirstChild;
+				HNode := Root.GetFirstChild;
 				while HNode <> nil do
 				begin
-					Data := tvObjects.GetNodeData(HNode);
-					if Data.FCaption = 'Domains' then
+					if HNode.Text = 'Domains' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.Domains.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ... // Check state
+								M.Domains.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Tables' then
+					if HNode.Text = 'Tables' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.Tables.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.Tables.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Views' then
+					if HNode.Text = 'Views' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.Views.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.Views.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Stored Procedures' then
+					if HNode.Text = 'Stored Procedures' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.SPs.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.SPs.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Triggers' then
+					if HNode.Text = 'Triggers' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.Triggers.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.Triggers.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Generators' then
+					if HNode.Text = 'Generators' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.Generators.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.Generators.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Exceptions' then
+					if HNode.Text = 'Exceptions' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.Exceptions.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.Exceptions.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'UDFs' then
+					if HNode.Text = 'UDFs' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if WNode.CheckState = csCheckedNormal then
-								M.UDFs.Add(Data.FCaption);
-							WNode := WNode.NextSibling;
+							// if WNode.StateIndex = ...
+								M.UDFs.Add(WNode.Text);
+							WNode := WNode.GetNextSibling;
 						end;
 					end;
 
-					if Data.FCaption = 'Grants' then
+					if HNode.Text = 'Grants' then
 					begin
 						N := HNode;
-						WNode := N.FirstChild;
+						WNode := N.GetFirstChild;
 						while WNode <> nil do
 						begin
-							Data := tvObjects.GetNodeData(WNode);
-							if Data.FCaption = 'Tables' then
+							if WNode.Text = 'Tables' then
 							begin
-								WSubNode := WNode.FirstChild;
+								WSubNode := WNode.GetFirstChild;
 								while Assigned(WSubNode) do
 								begin
-									Data := tvObjects.GetNodeData(WSubNode);
-									if WSubNode.CheckState = csCheckedNormal then
-										M.GrantTables.Add(Data.FCaption);
-									WSubNode := WSubNode.NextSibling;
+									// if WSubNode.StateIndex = ...
+										M.GrantTables.Add(WSubNode.Text);
+									WSubNode := WSubNode.GetNextSibling;
 								end;
 							end;
 
-							Data := tvObjects.GetNodeData(WNode);
-							if Data.FCaption = 'Views' then
+							if WNode.Text = 'Views' then
 							begin
-								WSubNode := WNode.FirstChild;
+								WSubNode := WNode.GetFirstChild;
 								while Assigned(WSubNode) do
 								begin
-									Data := tvObjects.GetNodeData(WSubNode);
-									if WSubNode.CheckState = csCheckedNormal then
-										M.GrantViews.Add(Data.FCaption);
-									WSubNode := WSubNode.NextSibling;
+									// if WSubNode.StateIndex = ...
+										M.GrantViews.Add(WSubNode.Text);
+									WSubNode := WSubNode.GetNextSibling;
 								end;
 							end;
 
-							Data := tvObjects.GetNodeData(WNode);
-							if Data.FCaption = 'Stored Procedures' then
+							if WNode.Text = 'Stored Procedures' then
 							begin
-								WSubNode := WNode.FirstChild;
+								WSubNode := WNode.GetFirstChild;
 								while Assigned(WSubNode) do
 								begin
-									Data := tvObjects.GetNodeData(WSubNode);
-									if WSubNode.CheckState = csCheckedNormal then
-										M.GrantSPs.Add(Data.FCaption);
-									WSubNode := WSubNode.NextSibling;
+									// if WSubNode.StateIndex = ...
+										M.GrantSPs.Add(WSubNode.Text);
+									WSubNode := WSubNode.GetNextSibling;
 								end;
 							end;
 
-							WNode := wNode.NextSibling; //rjm: fix to allow for all grants to be extracted.
+							WNode := wNode.GetNextSibling; 
 						end;
 					end;
-          HNode := HNode.NextSibling;
+          HNode := HNode.GetNextSibling;
 				end;
 			end;
 
@@ -684,42 +599,42 @@ begin
 	end;
 end;
 
-procedure TfrmGlobalMigrateWizard.ClearChecks(Node: PVirtualNode);
+procedure TfrmGlobalMigrateWizard.ClearChecks(Node: TTreeNode);
 var
-	N : PVirtualNode;
+	N : TTreeNode;
 
 begin
-	if tvObjects.HasChildren[Node] then
+	if Node.HasChildren then
 	begin
-		N := Node.FirstChild;
+		N := Node.GetFirstChild;
 		while N <> nil do
 		begin
-			N.CheckState := csUncheckedNormal;
+			// N.StateIndex := ... 
 			ClearChecks(N);
-			N := N.NextSibling;
+			N := N.GetNextSibling;
 		end;
 	end;
 end;
 
-procedure TfrmGlobalMigrateWizard.UnClearChecks(Node: PVirtualNode);
+procedure TfrmGlobalMigrateWizard.UnClearChecks(Node: TTreeNode);
 var
-	N : PVirtualNode;
+	N : TTreeNode;
 
 begin
-	if tvObjects.HasChildren[Node] then
+	if Node.HasChildren then
 	begin
-		N := Node.FirstChild;
+		N := Node.GetFirstChild;
 		while N <> nil do
 		begin
-			N.CheckState := csCheckedNormal;
+			// N.StateIndex := ...
 			UnClearChecks(N);
-			N := N.NextSibling;
+			N := N.GetNextSibling;
 		end;
 	end;
 	N := Node.Parent;
 	while N <> nil do
 	begin
-		N.CheckState := csCheckedNormal;
+		// N.StateIndex := ...
 		N := N.Parent;
 	end;
 end;
@@ -770,17 +685,6 @@ begin
 	SaveFormPosition(Self);
 end;
 
-procedure TfrmGlobalMigrateWizard.tvObjectsInitNode(
-  Sender: TBaseVirtualTree; ParentNode, Node: PVirtualNode;
-  var InitialStates: TVirtualNodeInitStates);
-var
-  Data: PTreeData;
-
-begin
-  Node.CheckType := ctTriStateCheckBox;
-  Node.CheckState := csCheckedNormal;
-end;
-
 procedure TfrmGlobalMigrateWizard.btnStartClick(Sender: TObject);
 begin
 	btnStop.Enabled := True;
@@ -791,14 +695,6 @@ begin
 	Refresh;
 	btnStart.Enabled := True;
 	btnPrev.Enabled := True;
-end;
-
-procedure TfrmGlobalMigrateWizard.tvObjectsGetText(
-	Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
-	TextType: TVSTTextType; var CellText: WideString);
-begin
-	Data := tvObjects.GetNodeData(Node);
-	CellText := Data^.FCaption;
 end;
 
 end.

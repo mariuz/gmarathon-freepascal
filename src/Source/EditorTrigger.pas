@@ -46,7 +46,7 @@ Revision 1.4  2002/05/27 07:10:28  tmuetze
 Fixed another compile bug and tightened the sourcecode a bit
 
 Revision 1.3  2002/04/29 15:05:58  tmuetze
-Converted from TIBGSSDataset to TIBOQuery
+Converted from TIBGSSDataset to TSQLQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -61,26 +61,7 @@ unit EditorTrigger;
 
 interface
 
-uses
-	Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-	ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd,
-	Tabs, FileCtrl, ActnList, ImgList,
-	rmPanel,
-	rmCollectionListBox,
-	IB_Components,
-	IB_Header,
-	IBODataset,
-	SynEdit,
-  SynEditTypes,
-	SyntaxMemoWithStuff2,
-	BaseDocumentDataAwareForm,
-	FrameDescription,
-	FrameDependencies,
-	FrameDRUIMatrix,
-	FramePermissions,
-	MarathonProjectCacheTypes,
-	MarathonInternalInterfaces,
-	NewTrigger;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, Tabs, FileCtrl, ActnList, ImgList, rmPanel, rmCollectionListBox, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger;
 
 type
 	TTriggerHeader = class(TObject)
@@ -100,14 +81,14 @@ type
 		pgObjectEditor: TPageControl;
 		tsObject: TTabSheet;
 		tsDocoView: TTabSheet;
-    qryTrigger: TIBOQuery;
-    qryUtil: TIBOQuery;
+    qryTrigger: TSQLQuery;
+    qryUtil: TSQLQuery;
 		edEditor: TSyntaxMemoWithStuff2;
 		tsDependencies: TTabSheet;
 		tsDRUI: TTabSheet;
 		tsDebuggerOutput: TTabSheet;
 		edErrors: TSyntaxMemoWithStuff2;
-		qryWarnings: TIB_DSQL;
+		qryWarnings: TSQLQuery;
 		framDoco: TframeDesc;
 		framDepend: TframeDepend;
 		frameDRUI: TframeDRUI;
@@ -272,17 +253,7 @@ type
 
 implementation
 
-uses
-	Globals,
-	HelpMap,
-	SQLYacc,
-	CompileDBObject,
-	DropObject,
-	SaveFileFormat,
-	MarathonIDE,
-	MarathonOptions,
-	InputDialog,
-	QBuilder;
+uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, SaveFileFormat, MarathonIDE, MarathonOptions, InputDialog, QBuilder;
 
 {$R *.lfm}
 
@@ -375,7 +346,7 @@ begin
 		edTriggerHeader.Text := FHeader.GetCreateText;
 		edEditor.Text := Temp;
 		qryTrigger.Close;
-		qryTrigger.IB_Transaction.Commit;
+		qryTrigger.Transaction.Commit;
 	finally
 		qryTrigger.EndBusy;
 	end;
@@ -1225,31 +1196,31 @@ begin
 	inherited;
 	if Value = '' then
 	begin
-		qryWarnings.IB_Connection := nil;
-		qryUtil.IB_Connection := nil;
-		qryTrigger.IB_Connection := nil;
-		framDoco.qryDoco.IB_Connection := nil;
-		framDoco.qryDoco.IB_Transaction := nil;
+		qryWarnings.Database := nil;
+		qryUtil.Database := nil;
+		qryTrigger.Database := nil;
+		framDoco.qryDoco.Database := nil;
+		framDoco.qryDoco.Transaction := nil;
 		IsInterbase6 := False;
 		SQLDialect := 0;
 		stsEditor.Panels[3].Text := 'No Connection';
 	end
 	else
 	begin
-		qryWarnings.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryWarnings.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryWarnings.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryWarnings.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryUtil.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		qryTrigger.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTrigger.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTrigger.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryTrigger.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
-		framDoco.qryDoco.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		framDoco.qryDoco.IB_Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryUtil.IB_Connection.SQLDialect;
+		SQLDialect := qryUtil.Database.Dialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -1352,7 +1323,7 @@ begin
 			CompileText := FHeader.GetAlterText + #13#10 + edEditor.Text;
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryTrigger.IB_Connection, qryTrigger.IB_Transaction, ctTrigger, CompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, qryTrigger.Database, qryTrigger.Transaction, ctTrigger, CompileText);
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
 
@@ -1374,7 +1345,7 @@ begin
 			M.ParserType := ptWarnings;
 			M.OnStatementFound := WarningsHandler;
 			M.Lexer.IsInterbase6 := FIsInterbase6;
-			M.Lexer.SQLDialect := FSQLDialect;
+			M.Lexer.Dialect := FSQLDialect;
 
 			M.Lexer.yyinput.Text := edEditor.Text;
 			if M.yyparse = 0 then
@@ -1474,7 +1445,7 @@ begin
 		F.UpDown1.Position := qryTrigger.FieldByName('RDB$TRIGGER_SEQUENCE').AsInteger;
 		F.UpDown1.Enabled := False;
 		qryTrigger.Close;
-		qryTrigger.IB_Transaction.Commit;
+		qryTrigger.Transaction.Commit;
 
 		if F.ShowModal = mrOK then
 		begin
@@ -1498,7 +1469,7 @@ begin
 						else
 							qryTrigger.SQL.Add('alter trigger ' + FObjectName + ' inactive');
 						qryTrigger.ExecSQL;
-						qryTrigger.IB_Transaction.Commit;
+						qryTrigger.Transaction.Commit;
 
 						if ShouldBeQuoted(F.cmbTables.Text) then
 							FHeader.Table := MakeQUotedIdent(F.cmbTables.Text, FIsInterbase6, FSQLDialect)
@@ -1529,7 +1500,7 @@ begin
 						else
 							qryTrigger.SQL.Add('alter trigger ' + FObjectName + ' active');
 						qryTrigger.ExecSQL;
-						qryTrigger.IB_Transaction.Commit;
+						qryTrigger.Transaction.Commit;
 
 						if ShouldBeQuoted(F.cmbTables.Text) then
 							FHeader.Table := MakeQuotedIdent(F.cmbTables.Text, FIsInterbase6, FSQLDialect)
@@ -1724,4 +1695,3 @@ begin
 end;
 
 end.
-
