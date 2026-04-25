@@ -724,8 +724,6 @@ object frmColumns: TfrmColumns
               'Type'
               'Default')
             TabIndex = 0
-            TabLocation = tlBottom
-            TabType = ttWin2k
             OnChange = tabRawDataTypeChange
           end
         end

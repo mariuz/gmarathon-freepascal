@@ -818,7 +818,6 @@ object frmDatabaseExplorer: TfrmDatabaseExplorer
       Height = 397
       Align = alRight
       Caption = 'ListContent'
-      SplitterPanel = True
       TabOrder = 0
       object Panel1: TPanel
         Left = 0

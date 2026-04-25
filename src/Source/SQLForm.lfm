@@ -127,7 +127,6 @@ object frmSQLForm: TfrmSQLForm
           Height = 111
           Align = alBottom
           Caption = 'pnlMessages'
-          SplitterPanel = True
           ParentBackground = True
           ResizeBtn = True
           TabOrder = 1
@@ -315,7 +314,6 @@ object frmSQLForm: TfrmSQLForm
             'Datasheet'
             'Form')
           TabIndex = 0
-          TabType = ttWin2k
           OnChange = tabResultsChange
         end
       end
@@ -379,8 +377,6 @@ object frmSQLForm: TfrmSQLForm
               'Statistics'
               'Indexed vs. Non Indexed Reads')
             TabIndex = 0
-            TabLocation = tlBottom
-            TabType = ttWin2k
             OnChange = rmTabSet1Change
           end
           object nbPerform: TrmNoteBookControl

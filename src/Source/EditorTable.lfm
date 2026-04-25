@@ -405,8 +405,6 @@ object frmTables: TfrmTables
           'Datasheet'
           'Form')
         TabIndex = 0
-        TabLocation = tlBottom
-        TabType = ttWin2k
         OnChange = tabResultsChange
       end
     end

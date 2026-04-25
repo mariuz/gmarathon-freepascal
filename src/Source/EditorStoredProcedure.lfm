@@ -109,7 +109,6 @@ object frmStoredProcedure: TfrmStoredProcedure
         Width = 624
         Height = 109
         Align = alBottom
-        SplitterPanel = True
         ParentBackground = True
         ResizeBtn = True
         TabOrder = 1
@@ -259,8 +258,6 @@ object frmStoredProcedure: TfrmStoredProcedure
           'Datasheet'
           'Form')
         TabIndex = 0
-        TabLocation = tlBottom
-        TabType = ttWin2k
         OnChange = tabResultsChange
       end
     end

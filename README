@@ -95,9 +95,27 @@ Modified FreePascal units("Other\xmlread.pas", "Other\xmlwrite.pas", "Other\dom.
 **UserEditor.pas / .lfm**
 *   `TrmTabSet` → `TTabControl` (in both .pas declaration and .lfm form file)
 
+## Runtime Fixes (2026-04-25)
+
+Main UI window and menu bar now appear on Linux. Fixed a cascade of `EReadError` exceptions during LFM form streaming:
+
+- `Control = cmbConnections` on `TBControlItem: TToolButton` → removed ghost placeholder
+- `BorderStyle/CloseButton/DockMode/DragHandleStyle/HideWhenInactive/MenuBar/ProcessShortCuts/ShrinkMode` on `TBToolbar1` → removed (Toolbar2000 TTBToolbar-specific properties)
+- `TBToolbar1: TToolBar` → converted to `TMainMenu`; all nested `TToolButton` menu items → `TMenuItem`; set `Menu = TBToolbar1` on form
+- `TMenuItemItem` (unregistered class) → replaced with `TMenuItem`
+- `kbgKeys.Actions/DisplayActionName` → removed (TrmKeyBindings properties not on TComponent)
+- `TBMRUList1: TMenuItem` at form level → changed to `TComponent` (TMenuItem must be inside TMenu)
+- `TStringList` objects in `MenuModule.lfm` → removed; created in `DataModuleCreate` instead
+- `TSynEditSearch` in `MenuModule.lfm` → removed (TObject subclass, not streamable as component)
+- `SplitterPanel = True` across 5 LFM files → removed (TrmPanel property)
+- `RegKey = rkHKEY_CLASSES_ROOT` on `cmbConnections` → removed (TrmComboBox property)
+- `TabLocation` / `TabType` across 6 LFM files → removed (TrmTabSet properties)
+- `Btn1Glyph.Data` / `Btn2Glyph.Data` in `MarathonMasterProperties.lfm`, `SaveFileFormat.lfm` → removed (bitmap blobs); fixed `TrmBtnEdit` constructor to pre-allocate `FBtn2Glyph`
+
 ### Roadmap
 
-- [ ] Runtime smoke-test: launch `./marathon` and verify UI appears
+- [x] Runtime smoke-test: launch `./marathon` and verify UI appears — main window + menu bar visible
+- [ ] Fix remaining EReadError dialogs on form load (click OK to continue past each)
 - [ ] Firebird connection test: connect to a local Firebird 3.0 database
 - [ ] Fix any runtime errors surfaced by the first UI/connection test
 - [ ] Restore `SearchEngine` integration (SynEditSearch) for Find/Replace in editors

@@ -58,7 +58,6 @@ object frmViewEditor: TfrmViewEditor
         Width = 624
         Height = 107
         Align = alBottom
-        SplitterPanel = True
         ParentBackground = True
         ResizeBtn = True
         TabOrder = 0
@@ -391,8 +390,6 @@ object frmViewEditor: TfrmViewEditor
           'Datasheet'
           'Form')
         TabIndex = 0
-        TabLocation = tlBottom
-        TabType = ttWin2k
         OnChange = tabResultsChange
       end
     end

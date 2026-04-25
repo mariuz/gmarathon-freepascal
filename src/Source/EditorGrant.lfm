@@ -10,14 +10,12 @@ object frmEditorGrant: TfrmEditorGrant
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
-  OldCreateOrder = False
   Position = poScreenCenter
   Scaled = False
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown
   PixelsPerInch = 96
-  TextHeight = 13
   object Label6: TLabel
     Left = 265
     Top = 5
@@ -233,7 +231,6 @@ object frmEditorGrant: TfrmEditorGrant
   end
   object qryGrants2: TSQLQuery
     Params = <>
-    AutoFetchAll = True
     ReadOnly = True
     Left = 596
     Top = 36

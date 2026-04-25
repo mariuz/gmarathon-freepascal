@@ -38,7 +38,7 @@ unit SaveFileFormat;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, CheckLst, ComCtrls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, CheckLst, ComCtrls, rmCompatControls;
 
 type
   TfrmSaveFileFormat = class(TForm)

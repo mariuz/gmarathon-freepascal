@@ -170,6 +170,7 @@ type
     Print4: TMenuItem;
     mnuiLoadFromFile: TMenuItem;
     SynEditSearch1: TSynEditSearch;
+    procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }
   public
@@ -184,6 +185,12 @@ implementation
 {uses MarathonMain;}
 
 {$R *.lfm}
+
+procedure TdmMenus.DataModuleCreate(Sender: TObject);
+begin
+  lstKeyWords := TStringList.Create;
+  lstCharSets := TStringList.Create;
+end;
 
 end.
 

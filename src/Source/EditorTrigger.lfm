@@ -157,7 +157,6 @@ object frmTriggerEditor: TfrmTriggerEditor
         Width = 624
         Height = 102
         Align = alBottom
-        SplitterPanel = True
         ResizeBtn = True
         TabOrder = 2
         OnResize = pnlMessagesResize
