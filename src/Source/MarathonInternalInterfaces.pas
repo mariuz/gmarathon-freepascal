@@ -39,7 +39,7 @@ unit MarathonInternalInterfaces;
 
 interface
 
-uses Windows, SysUtils, Classes, Forms, Menus, ComCtrls, MarathonProjectCacheTypes;
+uses SysUtils, Classes, Forms, Menus, ComCtrls, MarathonProjectCacheTypes;
 
 type
   IMarathonIDE = interface
@@ -417,5 +417,4 @@ type
 implementation
 
 end.
-
 
