@@ -17,7 +17,7 @@ unit ScriptOptions;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, StdCtrls, ComCtrls, Registry;
+uses SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, StdCtrls, ComCtrls;
 
 type
 	TfrmScriptOptions = class(TForm)

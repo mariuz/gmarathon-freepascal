@@ -19,14 +19,14 @@ unit UserEditor;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, IBConnection, SQLDB;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, IBDatabase, IBQuery;
 
 type
 	TfrmUsers = class(TForm)
 		stsUsers: TStatusBar;
 		pgUsers: TPageControl;
 		tsUserView: TTabSheet;
-    qryUser: TSQLQuery;
+    qryUser: TIBQuery;
 		ActionList1: TActionList;
 		actPrint: TAction;
 		actPrintPreview: TAction;
@@ -48,9 +48,9 @@ type
 		actClose: TAction;
 		actSaveToFile: TAction;
 		actOpenFromFile: TAction;
-		dbSecurity: TIBConnection;
-		tranSecurity: TSQLTransaction;
-    qrySecurity: TSQLQuery;
+		dbSecurity: TIBDatabase;
+		tranSecurity: TIBTransaction;
+    qrySecurity: TIBQuery;
 		Splitter1: TSplitter;
 		Panel1: TPanel;
 		tabGrants: TTabControl;
@@ -145,8 +145,8 @@ begin
 			if F.ShowModal = mrOK then
 			begin
 				dbSecurity.DatabaseName := F.edDBName.Text;
-				dbSecurity.UserName := F.edUserName.Text;
-				dbSecurity.Password := F.edPassword.Text;
+				dbSecurity.Params.Values['user_name'] := F.edUserName.Text;
+				dbSecurity.Params.Values['password'] := F.edPassword.Text;
 			end
 			else
 				Break;
@@ -244,7 +244,7 @@ Revision 1.4  2002/09/25 12:12:49  tmuetze
 Remote server support has been added, at the moment it is strict experimental
 
 Revision 1.3  2002/04/29 14:25:40  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block

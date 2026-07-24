@@ -140,12 +140,12 @@ end;}
 begin
   if frmMarathonMain.FProject.RelationsColumns.SortOrder = srtAsc then
   begin
-    Result := lstrcmp(PChar(TListItem(Item1).Caption),
+    Result := CompareStr(PChar(TListItem(Item1).Caption),
                       PChar(TListItem(Item2).Caption));
   end
   else
   begin
-    Result := -lstrcmp(PChar(TListItem(Item1).Caption),
+    Result := -CompareStr(PChar(TListItem(Item1).Caption),
                        PChar(TListItem(Item2).Caption));
   end;
 end;
@@ -156,12 +156,12 @@ begin
   begin
     if frmMarathonMain.FProject.RelationsFieldColumns.SortOrder = srtAsc then
     begin
-      Result := lstrcmp(PChar(TListItem(Item1).Caption),
+      Result := CompareStr(PChar(TListItem(Item1).Caption),
                         PChar(TListItem(Item2).Caption));
     end
     else
 		begin
-      Result := -lstrcmp(PChar(TListItem(Item1).Caption),
+      Result := -CompareStr(PChar(TListItem(Item1).Caption),
                          PChar(TListItem(Item2).Caption));
     end;
   end
@@ -182,12 +182,12 @@ begin
     begin
       if frmMarathonMain.FProject.RelationsFieldColumns.SortOrder = srtAsc then
       begin
-        Result := lstrcmp(PChar(TListItem(Item1).SubItems[frmMarathonMain.FProject.RelationsFieldColumns.SortedColumn - 1]),
+        Result := CompareStr(PChar(TListItem(Item1).SubItems[frmMarathonMain.FProject.RelationsFieldColumns.SortedColumn - 1]),
                           PChar(TListItem(Item2).SubItems[frmMarathonMain.FProject.RelationsFieldColumns.SortedColumn - 1]));
       end
       else
       begin
-        Result := -lstrcmp(PChar(TListItem(Item1).SubItems[frmMarathonMain.FProject.RelationsFieldColumns.SortedColumn - 1]),
+        Result := -CompareStr(PChar(TListItem(Item1).SubItems[frmMarathonMain.FProject.RelationsFieldColumns.SortedColumn - 1]),
                           PChar(TListItem(Item2).SubItems[frmMarathonMain.FProject.RelationsFieldColumns.SortedColumn - 1]));
       end;
     end;

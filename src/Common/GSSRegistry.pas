@@ -19,8 +19,6 @@ unit GSSRegistry;
 
 interface
 
-uses Windows, SysUtils, Classes, Registry;
-
 const
 	// Marathon
 	REG_BASE                     = '\Software\Marathon';

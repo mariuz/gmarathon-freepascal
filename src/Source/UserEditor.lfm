@@ -82,7 +82,7 @@ object frmUsers: TfrmUsers
       end
     end
   end
-  object qryUser: TSQLQuery
+  object qryUser: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 252
@@ -313,17 +313,17 @@ object frmUsers: TfrmUsers
       OnExecute = WindowListClick
     end
   end
-  object dbSecurity: TIBConnection
+  object dbSecurity: TIBDatabase
     Left = 12
     Top = 32
   end
-  object tranSecurity: TSQLTransaction
+  object tranSecurity: TIBTransaction
     Database = dbSecurity
     Isolation = tiConcurrency
     Left = 12
     Top = 64
   end
-  object qrySecurity: TSQLQuery
+  object qrySecurity: TIBQuery
     Params = <>
     Database = dbSecurity
     Transaction = tranSecurity

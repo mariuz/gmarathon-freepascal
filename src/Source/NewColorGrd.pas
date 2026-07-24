@@ -28,6 +28,7 @@ type
     FOnChange: TNotifyEvent;
     FButton: TMouseButton;
     FButtonDown: Boolean;
+    FCtl3D: Boolean;
     procedure DrawSquare(Which: Integer; ShowSelector: Boolean);
     procedure DrawFgBg;
     procedure UpdateCellSizes(DoRepaint: Boolean);
@@ -41,11 +42,10 @@ type
     procedure SetSelection(Value: Integer);
     procedure EnableForeground(Value: Boolean);
     procedure EnableBackground(Value: Boolean);
-    procedure WMSetFocus(var Message: TWMSetFocus); message WM_SETFOCUS;
-    procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
-    procedure WMGetDlgCode(var Message: TWMGetDlgCode); message WM_GETDLGCODE;
-    procedure WMSize(var Message: TWMSize); message WM_SIZE;
-    procedure CMCtl3DChanged(var Message: TMessage); message CM_CTL3DCHANGED;
+    procedure WMSetFocus(var Message: TLMSetFocus); message LM_SETFOCUS;
+    procedure WMKillFocus(var Message: TLMKillFocus); message LM_KILLFOCUS;
+    procedure WMGetDlgCode(var Message: TLMGetDlgCode); message LM_GETDLGCODE;
+    procedure WMSize(var Message: TLMSize); message LM_SIZE;
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState;
@@ -63,7 +63,7 @@ type
     property BackgroundColor: TColor read GetBackgroundColor write SetBackGroundColor;
   published
     property ClickEnablesColor: Boolean read FClickEnablesColor write FClickEnablesColor default False;
-    property Ctl3D;
+    property Ctl3D: Boolean read FCtl3D write FCtl3D default True;
     property DragCursor;
     property DragMode;
     property Enabled;
@@ -73,7 +73,6 @@ type
     property ForegroundEnabled: Boolean read FForegroundEnabled write EnableForeground default True;
     property BackgroundEnabled: Boolean read FBackgroundEnabled write EnableBackground default True;
     property Font;
-    property ParentCtl3D;
     property ParentFont;
     property ParentShowHint;
     property PopUpMenu;
@@ -101,12 +100,13 @@ procedure Register;
 
 implementation
 
-uses SysUtils, Consts, StdCtrls;
+uses SysUtils, StdCtrls;
 
 constructor TMarathonColorGrid.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle + [csOpaque];
+  FCtl3D := True;
   FGridOrdering := go4x4;
   FNumXSquares := 4;
   FNumYSquares := 4;
@@ -322,7 +322,7 @@ begin
   Invalidate;
 end;
 
-procedure TMarathonColorGrid.WMSetFocus(var Message: TWMSetFocus);
+procedure TMarathonColorGrid.WMSetFocus(var Message: TLMSetFocus);
 begin
   FHasFocus := True;
   DrawSquare(FSelection, True);
@@ -330,7 +330,7 @@ begin
   inherited;
 end;
 
-procedure TMarathonColorGrid.WMKillFocus(var Message: TWMKillFocus);
+procedure TMarathonColorGrid.WMKillFocus(var Message: TLMKillFocus);
 begin
   FHasFocus := False;
   DrawSquare(FSelection, False);
@@ -403,21 +403,15 @@ begin
     SetSelection(NewSelection);
 end;
 
-procedure TMarathonColorGrid.WMGetDlgCode(var Message: TWMGetDlgCode);
+procedure TMarathonColorGrid.WMGetDlgCode(var Message: TLMGetDlgCode);
 begin
   Message.Result := DLGC_WANTARROWS + DLGC_WANTCHARS;
 end;
 
-procedure TMarathonColorGrid.WMSize(var Message: TWMSize);
+procedure TMarathonColorGrid.WMSize(var Message: TLMSize);
 begin
   inherited;
   UpdateCellSizes(False);
-end;
-
-procedure TMarathonColorGrid.CMCtl3DChanged(var Message: TMessage);
-begin
-  inherited;
-  Invalidate;
 end;
 
 procedure TMarathonColorGrid.MouseDown(Button: TMouseButton; Shift: TShiftState;

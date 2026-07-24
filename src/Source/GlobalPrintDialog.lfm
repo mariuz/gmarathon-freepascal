@@ -102,7 +102,7 @@ object frmGlobalPrintDialog: TfrmGlobalPrintDialog
         Caption = '&Wrap long lines'
         TabOrder = 1
       end
-      object edNumCopies: TrmSpinEdit
+      object edNumCopies: TSpinEdit
         Left = 105
         Top = 20
         Width = 66

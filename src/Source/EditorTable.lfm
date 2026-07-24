@@ -459,25 +459,25 @@ object frmTables: TfrmTables
     Left = 112
     Top = 152
   end
-  object qryTable: TSQLQuery
+  object qryTable: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 50
     Top = 190
   end
-  object qryConstraints: TSQLQuery
+  object qryConstraints: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 48
     Top = 224
   end
-  object qryTriggers: TSQLQuery
+  object qryTriggers: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 48
     Top = 256
   end
-  object tblTableData: TSQLQuery
+  object tblTableData: TIBQuery
     Params = <>
     Transaction = tranTableData
     PreparedInserts = True
@@ -485,7 +485,7 @@ object frmTables: TfrmTables
     Left = 50
     Top = 152
   end
-  object tranTableData: TSQLTransaction
+  object tranTableData: TIBTransaction
     Left = 80
     Top = 152
   end

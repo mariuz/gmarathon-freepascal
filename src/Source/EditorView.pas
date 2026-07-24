@@ -50,7 +50,7 @@ Revision 1.8  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.7  2002/05/06 06:23:32  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.6  2002/04/25 12:31:54  tmuetze
 Bugfix for 509075, Syntax error while creating a new view
@@ -66,7 +66,7 @@ unit EditorView;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, ActnList, Buttons, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, ActnList, Buttons, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmCompatControls;
 
 type
 	TfrmViewEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor)
@@ -83,22 +83,22 @@ type
 		tsSQL: TTabSheet;
 		lvFieldList: TListView;
 		tsDoco: TTabSheet;
-    qryTable: TSQLQuery;
-    qryTriggers: TSQLQuery;
-    tblTableData: TSQLQuery;
+    qryTable: TIBQuery;
+    qryTriggers: TIBQuery;
+    tblTableData: TIBQuery;
     nbResults: TrmNoteBookControl;
     nbpDatasheet : TrmNotebookPage;
     nbpForm : TrmNotebookPage;
 		tabResults: TrmTabSet;
 		grdDataView: TDBGrid;
 		pnledResults: TDBPanelEdit;
-		tranTableData: TSQLTransaction;
+		tranTableData: TIBTransaction;
 		tsGrants: TTabSheet;
 		btnRefresh: TSpeedButton;
 		framDepend: TframeDepend;
 		framDoco: TframeDesc;
 		framPerms: TframePerms;
-    qryUtil: TSQLQuery;
+    qryUtil: TIBQuery;
 		pnlMessages: TPanel;
 		lstResults: TrmCollectionListBox;
 		edEditor: TSyntaxMemoWithStuff2;
@@ -136,7 +136,7 @@ type
 		FErrors: Boolean;
 		LinePos: LongInt;
 		procedure WindowListClick(Sender: TObject);
-		procedure WMMove(var Message: TMessage);message WM_MOVE;
+		{$IFDEF WINDOWS}procedure WMMove(var Message: TMessage);message WM_MOVE;{$ENDIF}
 		procedure CheckCommit;
 		procedure DoTableFieldSort(ChangeDir: Boolean);
 		procedure FillFieldList;
@@ -238,7 +238,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, MarathonOptions, DropObject, SaveFileFormat, CompileDBObject, BlobViewer, QBuilder, EditorGrant;
+uses Globals, HelpMap, MarathonIDE, MarathonOptions, DropObject, SaveFileFormat, CompileDBObject, BlobViewer, EditorGrant;
 
 {$R *.lfm}
 
@@ -341,7 +341,7 @@ var
 begin
 	try
 		tvTriggers.Items.BeginUpdate;
-		qryTriggers.BeginBusy(False);
+		{$IFNDEF FPC}qryTriggers.BeginBusy(False);{$ENDIF}
 
 		tvTriggers.Items.Clear;
 
@@ -484,7 +484,7 @@ begin
 		qryTriggers.Close;
 		qryTriggers.Transaction.Commit;
 	finally
-		qryTriggers.EndBusy;
+		{$IFNDEF FPC}qryTriggers.EndBusy;{$ENDIF}
 		tvTriggers.Items.EndUpdate;
 	end;
 	Root.Expand(True);
@@ -605,7 +605,7 @@ end;
 procedure TfrmViewEditor.pgObjectEditorChange(Sender: TObject);
 begin
 	try
-		qryTable.BeginBusy(False);
+		{$IFNDEF FPC}qryTable.BeginBusy(False);{$ENDIF}
 		case pgObjectEditor.ActivePage.PageIndex of
 			PG_STRUCT:
 				begin
@@ -702,7 +702,7 @@ begin
 				end;
 		end;
 	finally
-		qryTable.EndBusy;
+		{$IFNDEF FPC}qryTable.EndBusy;{$ENDIF}
 	end;
 end;
 
@@ -770,11 +770,13 @@ begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmViewEditor.WMMove(var Message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 procedure TfrmViewEditor.tblTableDataAfterOpen(DataSet: TDataSet);
 begin
@@ -830,16 +832,16 @@ begin
 	if MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn = 0 then
 	begin
 		if MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortOrder = srtAsc then
-			Result := lstrcmp(PChar(TListItem(Item1).Caption), PChar(TListItem(Item2).Caption))
+			Result := CompareStr(PChar(TListItem(Item1).Caption), PChar(TListItem(Item2).Caption))
 		else
-			Result := -lstrcmp(PChar(TListItem(Item1).Caption), PChar(TListItem(Item2).Caption));
+			Result := -CompareStr(PChar(TListItem(Item1).Caption), PChar(TListItem(Item2).Caption));
 	end
 	else
 		if MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortOrder = srtAsc then
-			Result := lstrcmp(PChar(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]),
+			Result := CompareStr(PChar(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]),
 				PChar(TListItem(Item2).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]))
 		else
-			Result := -lstrcmp(PChar(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]),
+			Result := -CompareStr(PChar(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]),
 				PChar(TListItem(Item2).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]));
 end;
 
@@ -968,7 +970,7 @@ begin
 	if Value = '' then
 	begin
 		tblTableData.Database := nil;
-		tranTableData.Database := nil;
+		tranTableData.DefaultDatabase := nil;
 		qryTable.Database := nil;
 		qryUtil.Database := nil;
 		qryTriggers.Database := nil;
@@ -981,7 +983,7 @@ begin
 	else
 	begin
 		tblTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		tranTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tranTableData.DefaultDatabase := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 
 		qryTable.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryTable.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
@@ -996,7 +998,7 @@ begin
 		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryTable.Database.Dialect;
+		SQLDialect := qryTable.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -1403,7 +1405,7 @@ procedure TfrmViewEditor.DoFind;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_SQL:
-			edEditor.WSFind;
+			; // FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSFind;
@@ -1414,7 +1416,7 @@ procedure TfrmViewEditor.DoFindNext;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_SQL:
-			edEditor.WSFindNext;
+			; // FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSFindNext;
@@ -1447,7 +1449,7 @@ procedure TfrmViewEditor.DoReplace;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_SQL:
-			edEditor.WSReplace;
+			; // FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSReplace;
@@ -1733,7 +1735,7 @@ var
 	Tmp: String;
 
 begin
-	edEditor.CaretXY := TBufferCoord(edEditor.PixelsToRowColumn(X, Y));
+	edEditor.CaretXY := edEditor.PixelsToRowColumn(Point(X, Y));
 	if Source is TDragQueen then
 		Tmp := TDragQueen(Source).DragText;
 
@@ -1747,7 +1749,7 @@ begin
 		stsEditor.Panels[2].Text := 'Insert'
 	else
 		stsEditor.Panels[2].Text := 'Overwrite';
-	edEditor.CaretXY := TBufferCoord(edEditor.PixelsToRowColumn(X, Y));
+	edEditor.CaretXY := edEditor.PixelsToRowColumn(Point(X, Y));
 	Accept := True;
 end;
 
@@ -1779,22 +1781,9 @@ begin
 end;
 
 procedure TfrmViewEditor.DoQueryBuilder;
-var
-	B: TQBuilderDialog;
-
 begin
-	B := TQBuilderDialog.Create(Self);
-	try
-		B.OnGetTableColumns := MarathonIDEInstance.GetTableColumnsEvent;
-		B.OnGetTables := MarathonIDEInstance.GetTablesEvent;
-		B.SystemTables := False;
-		if B.Execute then
-			edEditor.SelText := B.SQL.Text;
-		B.OnGetTableColumns := nil;
-		B.OnGetTables := nil;
-	finally
-		B.Free;
-	end;
+	// FPC: Query Builder (QBuilder.pas) relies on deep Win32 GDI/grid APIs not ported to LCL; disabled on this port.
+	MessageDlg('The Query Builder is not available in this build.', mtInformation, [mbOK], 0);
 end;
 
 procedure TfrmViewEditor.DoRevoke;
@@ -2008,7 +1997,7 @@ begin
 
 		if not ((LinePos = 0) and (CharPos = 0)) then
 		begin
-			edEditor.CaretXY := BufferCoord(CharPos, LinePos);
+			edEditor.CaretXY := Point(CharPos, LinePos);
 			edEditor.ErrorLine := LinePos;
 			if pgObjectEditor.ActivePage.PageIndex = 0 then
 				edEditor.SetFocus;

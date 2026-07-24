@@ -24,11 +24,11 @@ interface
 uses Classes, {$IFDEF FPC}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, Chart, DB, PrintersDlgs, {$IFNDEF FPC}
+  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs, {$IFNDEF FPC}
   ComObj, {$ENDIF}
   {$IFDEF D6_or_higher}
 	Variants, {$ENDIF}
-	IBConnection, SQLDB, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
+	IBDatabase, IBQuery, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
 
 type
   {$IFDEF FPC}
@@ -876,7 +876,7 @@ begin
 						Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
 						Extractor.AppHandle := Application.Handle;
 						ConnectName := TMarathonCacheObject(Item).ConnectionName;
-						Extractor.Dialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.Dialect;
+						Extractor.SQLDialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect;
 						Extractor.DatabaseHandle := Integer(FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.DBHandle);
 						Extractor.IB6 := FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6;
 						Extractor.MetaDBDatabaseName := FCurrentProject.Cache.ConnectionByName[ConnectName].DBFileName;
@@ -1513,7 +1513,7 @@ begin
 			{$IFNDEF FPC}
 			Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
 			Extractor.AppHandle := Application.Handle;
-			Extractor.Dialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.Dialect;
+			Extractor.SQLDialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect;
 			Extractor.DatabaseHandle := Integer(FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.DBHandle);
 			Extractor.IB6 := FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6;
 			Extractor.MetaDBDatabaseName := FCurrentProject.Cache.ConnectionByName[ConnectName].DBFileName;
@@ -2421,7 +2421,7 @@ end;
 procedure TMarathonIDE.GetTableColumnsEvent(Sender: TObject; TableName,
 	Connection: String; List: TCheckListBox);
 begin
-	with TSQLQuery.Create(Self) do
+	with TIBQuery.Create(Self) do
 		try
 			SQL.Add('select A.RDB$FIELD_NAME, A.RDB$FIELD_SOURCE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, ' +
 				'B.RDB$FIELD_TYPE from RDB$RELATION_FIELDS A, RDB$FIELDS B where ' +
@@ -3578,7 +3578,7 @@ Revision 1.8  2002/09/25 12:12:49  tmuetze
 Remote server support has been added, at the moment it is strict experimental
 
 Revision 1.7  2002/04/29 14:46:11  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.6  2002/04/29 06:48:50  tmuetze
 Fixed bug 538259, charsets are not saved

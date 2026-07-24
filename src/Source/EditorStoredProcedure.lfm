@@ -409,13 +409,13 @@ object frmStoredProcedure: TfrmStoredProcedure
     Left = 361
     Top = 164
   end
-  object qryStoredProc: TSQLQuery
+  object qryStoredProc: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 396
     Top = 96
   end
-  object qryResults: TSQLQuery
+  object qryResults: TIBQuery
     Params = <>
     Transaction = tranResults
     ReadOnly = True
@@ -423,13 +423,13 @@ object frmStoredProcedure: TfrmStoredProcedure
     Left = 360
     Top = 96
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 396
     Top = 164
   end
-  object tranResults: TSQLTransaction
+  object tranResults: TIBTransaction
     Isolation = tiConcurrency
     Left = 429
     Top = 129
@@ -523,7 +523,7 @@ object frmStoredProcedure: TfrmStoredProcedure
       Size = 4
     end
   end
-  object qryWarnings: TSQLQuery
+  object qryWarnings: TIBQuery
     Left = 316
     Top = 116
   end

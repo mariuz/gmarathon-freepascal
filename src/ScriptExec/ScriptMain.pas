@@ -17,7 +17,7 @@ unit ScriptMain;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, Buttons, Db, DBCtrls, Registry, ImgList, rmCollectionListBox, rmDataStorage, IBConnection, SQLDB, IB_Constants, SynEdit, SynEditTypes, SynEditHighlighter, SynHighlighterSQL, SyntaxMemoWithStuff2, GSSRegistry{, CloseUpCombo};
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, Buttons, Db, DBCtrls, Registry, ImgList, rmCollectionListBox, rmDataStorage, IBDatabase, IBQuery, ibxscript, SynEdit, SynEditTypes, SynEditHighlighter, SynHighlighterSQL, SyntaxMemoWithStuff2, GSSRegistry{, CloseUpCombo};
 
 type
   TParseInfo = record
@@ -50,9 +50,9 @@ type
 		pnlResults: TPanel;
 		lvErrors: TrmCollectionListBox;
 		lstKeyWords: TrmTextDataStorage;
-		FDatabase: TIBConnection;
-		FTransaction: TSQLTransaction;
-		FSQL: TSQLQuery;
+		FDatabase: TIBDatabase;
+		FTransaction: TIBTransaction;
+		FSQL: TIBQuery;
 		imgError: TImageList;
     btnMultiOpen: TSpeedButton;
     CBFiles: TComboBox;         // hexplorador

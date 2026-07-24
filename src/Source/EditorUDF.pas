@@ -19,14 +19,14 @@ unit EditorUDF;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, Printers, ExtCtrls, ActnList, ClipBrd, SQLDB, MarathonIDE, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameDescription, FrameMetadata;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, Printers, ExtCtrls, ActnList, ClipBrd, IBQuery, MarathonIDE, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameDescription, FrameMetadata;
 
 type
   TfrmUDFEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonUDFEditor)
     pgObjectEditor: TPageControl;
     tsObject: TTabSheet;
 		tsDocoView: TTabSheet;
-    qryUtil: TSQLQuery;
+    qryUtil: TIBQuery;
     tsDDL: TTabSheet;
     framDoco: TframeDesc;
 		stsEditor: TStatusBar;
@@ -144,7 +144,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam{$IFDEF FPC}, IBConnection{$ENDIF};
+uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam{$IFDEF FPC}, IBDatabase{$ENDIF};
 
 {$R *.lfm}
 
@@ -338,7 +338,7 @@ begin
     framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-    SQLDialect := TIBConnection(qryUtil.Database).Dialect;
+    SQLDialect := TIBDatabase(qryUtil.Database).SQLDialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -377,7 +377,7 @@ begin
 		RtnPosition := qryUtil.FieldByName('rdb$return_argument').AsInteger;
 
 		qryUtil.Close;
-		TSQLTransaction(qryUtil.Transaction).Commit;
+		TIBTransaction(qryUtil.Transaction).Commit;
 
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select * from rdb$function_arguments where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + ' order by rdb$argument_position asc;');
@@ -429,7 +429,7 @@ begin
       qryUtil.Next;
     end;
     qryUtil.Close;
-    TSQLTransaction(qryUtil.Transaction).Commit;
+    TIBTransaction(qryUtil.Transaction).Commit;
 
     InternalCaption := 'UDF - [' + FObjectName + ']';
     It.Caption := '&1 UDF - [' + FObjectName + ']';
@@ -529,7 +529,7 @@ begin
 	CompileText := '';
 
 	TmpIntf := Self;
-	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryUtil.Database), TSQLTransaction(qryUtil.Transaction), ctUDF, CompileText);
+	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBDatabase(qryUtil.Database), TIBTransaction(qryUtil.Transaction), ctUDF, CompileText);
 	FErrors := FCompile.CompileErrors;
 	FCompile.Free;
 
@@ -1003,10 +1003,10 @@ Revision 1.5  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.4  2002/04/29 10:45:38  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.3  2002/04/29 10:30:28  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block

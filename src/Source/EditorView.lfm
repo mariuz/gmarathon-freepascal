@@ -429,31 +429,31 @@ object frmViewEditor: TfrmViewEditor
     Left = 112
     Top = 152
   end
-  object qryTable: TSQLQuery
+  object qryTable: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 48
     Top = 188
   end
-  object qryTriggers: TSQLQuery
+  object qryTriggers: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 48
     Top = 256
   end
-  object tblTableData: TSQLQuery
+  object tblTableData: TIBQuery
     Params = <>
     Transaction = tranTableData
     AfterOpen = tblTableDataAfterOpen
     Left = 48
     Top = 152
   end
-  object tranTableData: TSQLTransaction
+  object tranTableData: TIBTransaction
     Isolation = tiConcurrency
     Left = 80
     Top = 152
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 48

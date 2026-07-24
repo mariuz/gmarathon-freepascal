@@ -17,7 +17,7 @@ unit BaseWizard;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls;
+uses SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls;
 
 type
   TfrmBaseWizard = class(TForm)

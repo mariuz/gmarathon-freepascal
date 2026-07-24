@@ -34,10 +34,10 @@ Revision 1.5  2002/05/15 08:58:11  tmuetze
 Removed some references to TIBGSSDataset
 
 Revision 1.4  2002/04/29 11:35:41  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.3  2002/04/29 06:47:09  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block
@@ -50,7 +50,7 @@ unit EditorConstraint;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, Grids, DBGrids, math, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes, ActnList;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, Grids, DBGrids, math, IBQuery, MarathonInternalInterfaces, MarathonProjectCacheTypes, ActnList;
 
 type
 	TfrmEditorConstraint = class(TForm, IMarathonBaseForm)
@@ -98,7 +98,7 @@ type
     cmbUniqueColumn: TComboBox;
     btnUniqueAdd: TButton;
     btnUniqueDelete: TButton;
-    qryConstraint: TSQLQuery;
+    qryConstraint: TIBQuery;
     ActionList1: TActionList;
     actFKAdd: TAction;
     actFKDelete: TAction;
@@ -474,7 +474,7 @@ begin
 	qryConstraint.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
 	FIsInterbase5 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB5;
-	FSQLDialect := qryConstraint.Database.Dialect;
+	FSQLDialect := qryConstraint.Database.SQLDialect;
 
 	if FIsInterbase5 or FIsInterbase6 then
 	begin
@@ -841,10 +841,10 @@ end;
 
 procedure TfrmEditorConstraint.cmbTablesChange(Sender: TObject);
 var
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
-	Q := TSQLQuery.Create(Self);
+	Q := TIBQuery.Create(Self);
 	try
 		Q.Database := qryConstraint.Database;
 		Q.Transaction := qryConstraint.Transaction;

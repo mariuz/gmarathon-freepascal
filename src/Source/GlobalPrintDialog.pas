@@ -19,7 +19,7 @@ unit GlobalPrintDialog;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, rmSpin, ExtCtrls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Spin, ExtCtrls;
 
 type
   TfrmGlobalPrintDialogOption = (
@@ -59,7 +59,7 @@ type
     gbOptions: TGroupBox;
     Label5: TLabel;
     chkWrap: TCheckBox;
-    edNumCopies: TrmSpinEdit;
+    edNumCopies: TSpinEdit;
     pnObjects: TPanel;
     pgPrintDialog: TPageControl;
     tsTable: TTabSheet;

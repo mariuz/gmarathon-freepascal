@@ -408,7 +408,7 @@ object frmEditorConstraint: TfrmEditorConstraint
       end
     end
   end
-  object qryConstraint: TSQLQuery
+  object qryConstraint: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 4

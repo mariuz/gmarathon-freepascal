@@ -176,7 +176,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem, ChooseFolder;
+uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem;
 
 {$R *.lfm}
 
@@ -229,7 +229,7 @@ begin
 
 	// Editor Display
 	FFonts := TStringList.Create;
-	EnumFonts(Canvas.Handle, nil, @EnumFontsProc, Pointer(FFonts));
+	FFonts.Assign(Screen.Fonts);
 	cmbEditorFont.Items := FFonts;
 	cmbEditorFont.ItemIndex := 0;
 	cmbFontSize.ItemIndex := 0;
@@ -320,16 +320,8 @@ begin
 	tbDelay.Position := gListDelay;
 
 	// Editor SQLInsight
+	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 	edSQLInsightCode.Lines.Clear;
-	edSQLInsightCode.SQLInsightList.LoadFromFile(ExtractFilePath(Application.ExeName) + 'sqlinsight.dat');
-	for Idx := 0 to edSQLInsightCode.SQLInsightList.Count - 1 do
-		with lstTemplates.Items.Add do
-		begin
-			Caption := edSQLInsightCode.SQLInsightList.Items[Idx].MatchItem;
-			SubItems.Add(edSQLInsightCode.SQLInsightList.Items[Idx].Description);
-		end;
-	if lstTemplates.Items.Count > 0 then
-		lstTemplates.Items.Item[0].Selected := True;
 
 	// SQL Trace
 	chkConnection.Checked := gTraceConnection;
@@ -347,11 +339,7 @@ end;
 
 procedure TfrmMarathonOptions.lstTemplatesChange(Sender: TObject;	Item: TListItem; Change: TItemChange);
 begin
-	if Change = ctState then
-		try
-			edSQLInsightCode.Text := edSQLInsightCode.SQLInsightList.Items[Item.Index].InsertText.Text;
-		except
-		end;
+	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 end;
 
 procedure TfrmMarathonOptions.UpdateSample;
@@ -401,7 +389,7 @@ begin
 	end;
 
 	synOptions.SaveToRegistry(HKEY_CURRENT_USER, REG_SETTINGS_HIGHLIGHTING);
-	edSQLInsightCode.SQLInsightList.SaveToFile(ExtractFilePath(Application.ExeName) + 'sqlinsight.dat');
+	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 
 	with TRegistry.Create do
 		try
@@ -757,11 +745,7 @@ begin
 			F.Caption := 'Add Code Template';
 			if F.ShowModal = mrOK then
 			begin
-				with edSQLInsightCode.SQLInsightList.Add do
-				begin
-					MatchItem := F.edShortCut.Text;
-					Description := F.edDescription.Text;
-				end;
+				// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 				with lstTemplates.Items.Add do
 				begin
 					Caption := F.edShortCut.Text;
@@ -788,8 +772,7 @@ begin
 			F.Caption := 'Edit Code Template';
 			if F.ShowModal = mrOK then
 			begin
-				edSQLInsightCode.SQLInsightList.Items[lstTemplates.Selected.Index].MatchItem := F.edShortCut.Text;
-				edSQLInsightCode.SQLInsightList.Items[lstTemplates.Selected.Index].Description := F.edDescription.Text;
+				// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 				lstTemplates.Selected.Caption := F.edShortCut.Text;
 				lstTemplates.Selected.SubItems[0] := F.edDescription.Text;
 			end;
@@ -801,8 +784,7 @@ end;
 
 procedure TfrmMarathonOptions.edSQLInsightCodeChange(Sender: TObject);
 begin
-	if lstTemplates.Selected <> nil then
-		edSQLInsightCode.SQLInsightList.Items[lstTemplates.Selected.Index].InsertText.Text := edSQLInsightCode.Text;
+	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 end;
 
 procedure TfrmMarathonOptions.btnSQLIDeleteClick(Sender: TObject);
@@ -812,7 +794,7 @@ begin
 		if MessageDlg('Are you sure you wish to delete the item "' +
 			lstTemplates.Selected.Caption + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 		begin
-			edSQLInsightCode.SQLInsightList.Items[lstTemplates.Selected.Index].Free;
+			// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 			lstTemplates.Selected.Delete;
 		end;
 	end;
@@ -820,80 +802,32 @@ end;
 
 procedure TfrmMarathonOptions.btnDefProjectDirClick(Sender: TObject);
 var
-	F: TfrmChooseFolder;
+	Dir: String;
 
 begin
-	F := TfrmChooseFolder.Create(Self);
-  try
-    if edDefProjectDir.Text <> '' then
-    begin
-      try
-        F.lstDir.Directory := edDefProjectDir.Text;
-      except
-				on E : Exception do
-				begin
-					// Do nothing
-				end;
-			end;
-		end;
-		F.Caption := 'Default Project Folder';
-		if F.ShowModal = mrOK then
-			edDefProjectDir.Text := F.lstDir.Directory;
-	finally
-		F.Free;
-	end;
+	Dir := edDefProjectDir.Text;
+	if SelectDirectory('Default Project Folder', edDefProjectDir.Text, Dir) then
+		edDefProjectDir.Text := Dir;
 end;
 
 procedure TfrmMarathonOptions.btnDefScriptDirClick(Sender: TObject);
 var
-	F: TfrmChooseFolder;
+	Dir: String;
 
 begin
-	F := TfrmChooseFolder.Create(Self);
-	try
-		if edDefScriptDir.Text <> '' then
-		begin
-			try
-				F.lstDir.Directory := edDefScriptDir.Text;
-			except
-				on E : Exception do
-				begin
-					// Do nothing
-				end;
-      end;
-    end;
-    F.Caption := 'Default Script Folder';
-    if F.ShowModal = mrOK then
-      edDefScriptDir.Text := F.lstDir.Directory;
-  finally
-    F.Free;
-  end;
+	Dir := edDefScriptDir.Text;
+	if SelectDirectory('Default Script Folder', edDefScriptDir.Text, Dir) then
+		edDefScriptDir.Text := Dir;
 end;
 
 procedure TfrmMarathonOptions.btnDefCodeSnippetsDirClick(Sender: TObject);
 var
-	F: TfrmChooseFolder;
+	Dir: String;
 
 begin
-	F := TfrmChooseFolder.Create(Self);
-	try
-		if edSnippetsFolder.Text <> '' then
-		begin
-			try
-				F.lstDir.Directory := edSnippetsFolder.Text;
-			except
-				on E : Exception do
-				begin
-					// Do nothing
-				end;
-      end;
-    end;
-    F.Caption := 'Code Snippets Folder';
-    if F.ShowModal = mrOK then
-      edSnippetsFolder.Text := F.lstDir.Directory;
-  finally
-    F.Free;
-  end;
+	Dir := edSnippetsFolder.Text;
+	if SelectDirectory('Code Snippets Folder', edSnippetsFolder.Text, Dir) then
+		edSnippetsFolder.Text := Dir;
 end;
 
 procedure TfrmMarathonOptions.FormKeyDown(Sender: TObject; var Key: Word;	Shift: TShiftState);
@@ -913,37 +847,17 @@ end;
 
 procedure TfrmMarathonOptions.btnDefExtractDDLDirClick(Sender: TObject);
 var
-	F: TfrmChooseFolder;
+	Dir: String;
 
 begin
-	F := TfrmChooseFolder.Create(Self);
-	try
-		if edExtractDDLFolder.Text <> '' then
-		begin
-			try
-				F.lstDir.Directory := edExtractDDLFolder.Text;
-			except
-				on E : Exception do
-				begin
-					// Do nothing
-				end;
-			end;
-		end;
-    F.Caption := 'Extract DDL Folder';
-    if F.ShowModal = mrOK then
-      edExtractDDLFolder.Text := F.lstDir.Directory;
-  finally
-    F.Free;
-  end;
+	Dir := edExtractDDLFolder.Text;
+	if SelectDirectory('Extract DDL Folder', edExtractDDLFolder.Text, Dir) then
+		edExtractDDLFolder.Text := Dir;
 end;
 
 procedure TfrmMarathonOptions.btnEditKeysClick(Sender: TObject);
 begin
-  if frmMarathonMain.kbgKeys.EditBindings then
-  begin
-		frmMarathonMain.kbgKeys.SaveBindingsToFile(ExtractFilePath(Application.ExeName) + 'keybind.dat', False);
-    frmMarathonMain.kbgKeys.LoadBindingsFromFile(ExtractFilePath(Application.ExeName) + 'keybind.dat', False);    
-  end;
+  // FPC: kbgKeys is a TComponent placeholder on this port; keybinding editor not available
 end;
 
 end.

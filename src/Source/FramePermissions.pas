@@ -21,7 +21,7 @@ Revision 1.5  2005/04/13 16:04:28  rjmills
 *** empty log message ***
 
 Revision 1.4  2002/04/29 11:54:53  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.3  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -34,12 +34,12 @@ unit FramePermissions;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Db, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, Db, IBDatabase, IBQuery, MarathonInternalInterfaces, MarathonProjectCacheTypes;
 
 type
 	TframePerms = class(TFrame)
 		lvGrants: TListView;
-    qryUtil: TSQLQuery;
+    qryUtil: TIBQuery;
 	private
 		{ Private declarations }
 		FForm : IMarathonBaseForm;
@@ -90,7 +90,7 @@ begin
 
 
 	if qryUtil.Transaction.Active then
-		TSQLTransaction(qryUtil.Transaction).Commit;
+		TIBTransaction(qryUtil.Transaction).Commit;
 
 	lvGrants.Items.BeginUpDate;
 	lvGrants.Items.Clear;
@@ -120,7 +120,7 @@ begin
   lvGrants.Items.EndUpDate;
 	qryUtil.Close;
 	if qryUtil.Transaction.Active then
-		TSQLTransaction(qryUtil.Transaction).Commit;
+		TIBTransaction(qryUtil.Transaction).Commit;
 end;
 
 procedure TframePerms.SetActive;

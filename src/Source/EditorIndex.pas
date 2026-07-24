@@ -39,7 +39,7 @@ Revision 1.5  2002/05/15 08:58:11  tmuetze
 Removed some references to TIBGSSDataset
 
 Revision 1.4  2002/04/29 06:47:09  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block
@@ -52,7 +52,7 @@ unit EditorIndex;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, ExtCtrls, SQLDB, MarathonInternalInterfaces, MarathonProjectCacheTypes;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, DB, ExtCtrls, IBQuery, MarathonInternalInterfaces, MarathonProjectCacheTypes;
 
 type
 	TfrmEditorIndex = class(TForm, IMarathonBaseForm)
@@ -73,7 +73,7 @@ type
 		cmbIdxColumn: TComboBox;
 		btnAdd: TButton;
 		btnDelete: TButton;
-		qryIndex: TSQLQuery;
+		qryIndex: TIBQuery;
 		procedure btnOKClick(Sender: TObject);
 		procedure FormCreate(Sender: TObject);
 		procedure btnHelpClick(Sender: TObject);
@@ -261,7 +261,7 @@ begin
 	qryIndex.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
 	FIsInterbase5 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB5;
-	FSQLDialect := qryIndex.Database.Dialect;
+	FSQLDialect := qryIndex.Database.SQLDialect;
 end;
 
 procedure TfrmEditorIndex.SetObjectModified(Value: Boolean);

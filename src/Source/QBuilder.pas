@@ -19,7 +19,7 @@ unit QBuilder;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, ExtCtrls, StdCtrls, ComCtrls, ToolWin, Menus, CheckLst, Grids, DB, DBTables, DBGrids, ExtDlgs, QBCriteria, QBAppendTo, SynEdit, SyntaxMemoWithStuff2;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Buttons, ExtCtrls, StdCtrls, ComCtrls, ToolWin, Menus, CheckLst, Grids, DB, DBGrids, ExtDlgs, QBCriteria, QBAppendTo, SynEdit, SyntaxMemoWithStuff2;
 
 type
   TQBForm = class;
@@ -52,8 +52,6 @@ type
 	private
 		FArrBold : PArr;
 		FLoading : boolean;
-		procedure CNDrawItem(var Message : TWMDrawItem); message CN_DrawItem;
-		procedure WMLButtonDown(var Message : TWMLButtonDblClk); message WM_LButtonDown;
 		function GetCheckW : Integer;
 		procedure AllocArrBold;
 		procedure SelectItemBold(Item : integer);
@@ -62,6 +60,7 @@ type
   protected
 		procedure DrawItem(Index : Integer; Rect : TRect; State : TOwnerDrawState); override;
 		procedure ClickCheck; override;
+		procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
   public
     constructor Create(AOwner : TComponent); override;
     destructor Destroy; override;
@@ -169,7 +168,6 @@ type
 		function SelectCell(ACol, ARow : integer) : boolean; override;
 		procedure DoExit; override;
 		procedure TopLeftChanged; override;
-		procedure ColumnMoved(FromIndex, ToIndex: Longint); override;
 		procedure ColWidthsChanged; Override;
 		procedure KeyDown(var Key: Word; Shift: TShiftState); override;
 		constructor Create(AOwner : TComponent); override;
@@ -266,7 +264,7 @@ implementation
 {$R *.lfm}
 {$R QBBUTTON.RES}
 
-uses Globals, HelpMap, //MarathonMain, QBLnkFrm;
+uses Globals, HelpMap; //MarathonMain, QBLnkFrm
 
 resourcestring
 	sMainCaption = 'QBuilder';
@@ -370,44 +368,29 @@ begin
 	Result := GetCheckWidth;
 end;
 
-procedure TQBLbx.CNDrawItem(var Message : TWMDrawItem);
-var
-	State : TOwnerDrawState;
-begin
-	with Message.DrawItemStruct^ do
-	begin
-		rcItem.Left := rcItem.Left + GetCheckWidth; //*** check
-//    State := TOwnerDrawState(WordRec(LongRec(itemState).Lo).Lo);
-		Canvas.Font := Font;
-		Canvas.Brush := Brush;
-		if (Integer(itemID) >= 0) and (Integer(itemID) <= Items.Count - 1) then
-		begin
-{$R-}
-			if (FArrBold <> nil) then
-				if FArrBold^[Integer(itemID)] = 1 then
-					Canvas.Font.Style := [fsBold];
-			DrawItem(itemID, rcItem, State);
-			if (FArrBold <> nil) then
-        if FArrBold^[Integer(itemID)] = 1 then
-          Canvas.Font.Style := [];
-{$R+}
-    end
-    else
-      Canvas.FillRect(rcItem);
-  end;
-end;
-
 procedure TQBLbx.DrawItem(Index : Integer; Rect : TRect; State : TOwnerDrawState);
+var
+  WasBold : Boolean;
 begin
+  WasBold := False;
+  if (FArrBold <> nil) and (Index >= 0) and (Index <= Items.Count - 1) then
+    if FArrBold^[Index] = 1 then
+    begin
+      Canvas.Font.Style := Canvas.Font.Style + [fsBold];
+      WasBold := True;
+    end;
   inherited;
+  if WasBold then
+    Canvas.Font.Style := Canvas.Font.Style - [fsBold];
   if (odFocused in State) then
     Canvas.DrawFocusRect(Rect);
 end;
 
-procedure TQBLbx.WMLButtonDown(var Message : TWMLButtonDblClk);
+procedure TQBLbx.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   inherited;
-  BeginDrag(false);
+  if Button = mbLeft then
+    BeginDrag(false);
 end;
 
 procedure TQBLbx.ClickCheck;
@@ -1596,17 +1579,6 @@ end;
 procedure TQBGrid.TopLeftChanged;
 begin
   inherited TopLeftChanged;
-  if FButton.Visible = True then
-  begin
-    FButton.Visible := False;
-    FButton.OnClick := nil;
-    SelectCell(Col, Row);
-  end;
-end;
-
-procedure TQBGrid.ColumnMoved(FromIndex, ToIndex: Longint);
-begin
-  inherited ColumnMoved(FromIndex, ToIndex);
   if FButton.Visible = True then
   begin
     FButton.Visible := False;

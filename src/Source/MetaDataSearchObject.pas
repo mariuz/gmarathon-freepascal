@@ -21,7 +21,7 @@ Revision 1.4  2005/04/13 16:04:30  rjmills
 *** empty log message ***
 
 Revision 1.3  2002/04/29 11:43:41  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -34,7 +34,7 @@ unit MetaDataSearchObject;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, IBConnection, SQLDB, Globals, MarathonProjectCache, MarathonProjectCacheTypes;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, Menus, IBDatabase, IBQuery, Globals, MarathonProjectCache, MarathonProjectCacheTypes;
 
 type
   TMDSearchItem = record
@@ -50,10 +50,10 @@ type
     FConnectionList : TStringList;
     FOptions : TSearchOptions;
     FSearch : String;
-    DB : TIBConnection;
-    Xact : TSQLTransaction;
-		Q : TSQLQuery;
-		Q1 : TSQLQuery;
+    DB : TIBDatabase;
+    Xact : TIBTransaction;
+		Q : TIBQuery;
+		Q1 : TIBQuery;
     L : TStringList;
     Line : String;
     SPos : Integer;
@@ -112,10 +112,10 @@ begin
   try
     try
       Halted := False;
-      DB := TIBConnection.Create(nil);
-      Xact := TSQLTransaction.Create(nil);
+      DB := TIBDatabase.Create(nil);
+      Xact := TIBTransaction.Create(nil);
       try
-        Xact.Database := DB;
+        Xact.DefaultDatabase := DB;
         try
           for DBCount := 0 to FConnectionList.Count - 1 do
           begin
@@ -124,8 +124,8 @@ begin
 
             DB.Connected := False;
             DB.DatabaseName := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].DBFileName;
-            DB.Username := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].UserName;
-            DB.Password := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].Password;
+            DB.Params.Values['user_name'] := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].UserName;
+            DB.Params.Values['password'] := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].Password;
             try
               DB.Connected := True;
             except
@@ -137,8 +137,8 @@ begin
               end;
             end;
             Xact.StartTransaction;
-						Q := TSQLQuery.Create(nil);
-						Q1 := TSQLQuery.Create(nil);
+						Q := TIBQuery.Create(nil);
+						Q1 := TIBQuery.Create(nil);
 						try
               Q.Database := DB;
               Q1.Database := DB;

@@ -31,7 +31,7 @@ Revision 1.4  2002/05/04 08:23:30  tmuetze
 Added the ability to show FK relations on the 'Depends On' page
 
 Revision 1.3  2002/04/29 11:54:53  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -44,7 +44,7 @@ unit FrameDependencies;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, Db, SQLDB, MarathonProjectCacheTypes, MarathonProjectCache, MarathonInternalInterfaces;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, Db, IBDatabase, IBQuery, MarathonProjectCacheTypes, MarathonProjectCache, MarathonInternalInterfaces;
 
 type
 	TframeDepend = class(TFrame)
@@ -55,7 +55,7 @@ type
 		tsDependsOn: TTabSheet;
 		lvDependsOn: TListView;
 		Panel1: TPanel;
-    qryUtil: TSQLQuery;
+    qryUtil: TIBQuery;
 		procedure pgDependenciesChange(Sender: TObject);
 		procedure lvDependsOnDeletion(Sender: TObject; Item: TListItem);
 		procedure lvDependedOnDblClick(Sender: TObject);
@@ -198,7 +198,7 @@ begin
 				end;
 
 				if qryUtil.Transaction.Active then
-					TSQLTransaction(qryUtil.Transaction).Commit;
+					TIBTransaction(qryUtil.Transaction).Commit;
 				lvDependedOn.Columns[0].Width := MarathonIDEInstance.CurrentProject.SPEDependColumns.Items[0].Width;
 				lvDependedOn.Columns[1].Width := MarathonIDEInstance.CurrentProject.SPEDependColumns.Items[1].Width;
 				lvDependedOn.Items.EndUpDate;
@@ -310,7 +310,7 @@ begin
 				lvDependsOn.Items.EndUpDate;
 
 				if qryUtil.Transaction.Active then
-					TSQLTransaction(qryUtil.Transaction).Commit;
+					TIBTransaction(qryUtil.Transaction).Commit;
 			end;
 	end;
 end;

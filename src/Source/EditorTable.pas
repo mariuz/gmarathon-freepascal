@@ -56,7 +56,7 @@ Revision 1.12  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.11  2002/05/06 06:23:32  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.10  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -69,7 +69,7 @@ unit EditorTable;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBConnection, SQLDB, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls;
 
 type
 	TfrmTables = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor, IGimbalIDETableEditorWindow)
@@ -89,17 +89,17 @@ type
 		lvConstraints: TListView;
 		tsIndexes: TTabSheet;
 		lvIndex: TListView;
-    qryTable: TSQLQuery;
-    qryConstraints: TSQLQuery;
-    qryTriggers: TSQLQuery;
-    tblTableData: TSQLQuery;
+    qryTable: TIBQuery;
+    qryConstraints: TIBQuery;
+    qryTriggers: TIBQuery;
+    tblTableData: TIBQuery;
     nbResults: TrmNoteBookControl;
     nbpForm : TrmNotebookPage;
     nbpDatasheet : TrmNotebookPage;
 		tabResults: TrmTabSet;
 		grdDataView: TDBGrid;
 		pnledResults: TDBPanelEdit;
-		tranTableData: TSQLTransaction;
+		tranTableData: TIBTransaction;
 		tsGrants: TTabSheet;
 		tsDDL: TTabSheet;
 		btnRefresh: TSpeedButton;
@@ -137,7 +137,7 @@ type
 		{ Private declarations }
 		It: TMenuItem;
 		procedure WindowListClick(Sender: TObject);
-		procedure WMMove(var message: TMessage); message WM_MOVE;
+		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		procedure NewField;
 		procedure NewConstraint;
 		procedure NewIndex;
@@ -383,7 +383,7 @@ var
 begin
 	try
 		tvTriggers.Items.BeginUpdate;
-		qryTriggers.BeginBusy(False);
+		// FPC: BeginBusy not available on TIBQuery
 
 		tvTriggers.Items.Clear;
 
@@ -527,7 +527,7 @@ begin
 		qryTriggers.Close;
 		qryTriggers.Transaction.Commit;
 	finally
-		qryTriggers.EndBusy;
+		// FPC: EndBusy not available on TIBQuery
 		tvTriggers.Items.EndUpdate;
 	end;
 	Root.Expand(True);
@@ -652,11 +652,11 @@ procedure TfrmTables.pgObjectEditorChange(Sender: TObject);
 var
 	Tmp: String;
 	L: TListItem;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	try
-		qryTable.BeginBusy(False);
+		// FPC: BeginBusy not available on TIBQuery
 		case pgObjectEditor.ActivePage.PageIndex of
 			PG_STRUCT:
 				begin
@@ -706,7 +706,7 @@ begin
 							(qryConstraints.FieldByName('rdb$constraint_type').AsString = 'PRIMARY KEY') or
 							(qryConstraints.FieldByName('rdb$constraint_type').AsString = 'UNIQUE')) then
 						begin
-							Q := TSQLQuery.Create(Self);
+							Q := TIBQuery.Create(Self);
 							try
 								Q.Database := qryTable.Database;
 								Q.SQL.Add('select * from rdb$index_segments where rdb$index_name = ''' +
@@ -725,7 +725,7 @@ begin
 								Q.Free;
 							end;
 
-							Q := TSQLQuery.Create(Self);
+							Q := TIBQuery.Create(Self);
 							try
 								Q.Database := qryTable.Database;
 								Q.SQL.Add('select rdb$relation_name from rdb$indices where rdb$index_name in ' +
@@ -756,7 +756,7 @@ begin
 
 							// IB 5.0 only
 							try
-								Q := TSQLQuery.Create(Self);
+								Q := TIBQuery.Create(Self);
 								try
 									Q.Database := qryTable.Database;
 									Q.SQL.Add('select rdb$update_rule, rdb$delete_rule from rdb$ref_constraints where rdb$constraint_name = ''' +
@@ -783,7 +783,7 @@ begin
 						begin
 							if (qryConstraints.FieldByName('rdb$constraint_type').AsString = 'CHECK') then
 							begin
-								Q := TSQLQuery.Create(Self);
+								Q := TIBQuery.Create(Self);
 								try
 									Q.Database := qryTable.Database;
 									Q.SQL.Add('select rdb$trigger_name from rdb$check_constraints where rdb$constraint_name = ''' + qryConstraints.FieldByName('rdb$constraint_name').AsString + ''';');
@@ -837,7 +837,7 @@ begin
 						L.ImageIndex := 10;
 						L.Caption := qryTable.FieldByName('rdb$index_name').AsString;
 
-						Q := TSQLQuery.Create(Self);
+						Q := TIBQuery.Create(Self);
 						try
 							Q.Database := qryTable.Database;
 							Q.SQL.Add('select * from rdb$index_segments where rdb$index_name = ''' +
@@ -987,7 +987,7 @@ begin
 
 		MarathonIDEInstance.CurrentProject.LastSelectedTableTab := pgObjectEditor.ActivePage.PageIndex;
 	finally
-		qryTable.EndBusy;
+		// FPC: EndBusy not available on TIBQuery
 	end;
 end;
 
@@ -1244,11 +1244,13 @@ begin
   inherited;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmTables.WMMove(var message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 	inherited;
 end;
+{$ENDIF}
 
 procedure TfrmTables.tblTableDataAfterOpen(DataSet: TDataSet);
 begin
@@ -1312,17 +1314,17 @@ begin
 	if MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn = 0 then
 	begin
 		if MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortOrder = srtAsc then
-			Result := lstrcmp(PChar(TListItem(Item1).Caption), PChar(TListItem(Item2).Caption))
+			Result := CompareStr(TListItem(Item1).Caption, TListItem(Item2).Caption)
 		else
-			Result := -lstrcmp(PChar(TListItem(Item1).Caption), PChar(TListItem(Item2).Caption));
+			Result := -CompareStr(TListItem(Item1).Caption, TListItem(Item2).Caption);
 	end
 	else
 		if MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortOrder = srtAsc then
-			Result := lstrcmp(PChar(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]),
-				PChar(TListItem(Item2).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]))
+			Result := CompareStr(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1],
+				TListItem(Item2).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1])
 		else
-			Result := -lstrcmp(PChar(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]),
-				PChar(TListItem(Item2).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]));
+			Result := -CompareStr(TListItem(Item1).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1],
+				TListItem(Item2).SubItems[MarathonIDEInstance.CurrentProject.TEFieldsColumns.SortedColumn - 1]);
 end;
 
 procedure TfrmTables.DoTableFieldSort(ChangeDir: Boolean);
@@ -1488,7 +1490,7 @@ begin
 	if Value = '' then
 	begin
 		tblTableData.Database := nil;
-		tranTableData.Database := nil;
+		tranTableData.DefaultDatabase := nil;
 		qryTable.Database := nil;
 		qryConstraints.Database := nil;
 		qryTriggers.Database := nil;
@@ -1501,7 +1503,7 @@ begin
 	else
 	begin
 		tblTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		tranTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tranTableData.DefaultDatabase := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 
 		qryTable.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryTable.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
@@ -1516,7 +1518,7 @@ begin
 		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryTable.Database.Dialect;
+		SQLDialect := qryTable.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -2309,12 +2311,12 @@ end;
 procedure TfrmTables.DoObjectProperties;
 var
 	ConstraintType: Byte;
-	qryFields: TSQLQuery;
+	qryFields: TIBQuery;
 	frmColumns: TfrmColumns;
 
 begin
 	try
-		qryTable.BeginBusy(False);
+		// FPC: BeginBusy not available on TIBQuery
 		case pgObjectEditor.ActivePage.PageIndex of
 			PG_STRUCT:
 				begin
@@ -2323,7 +2325,7 @@ begin
 						frmColumns := TfrmColumns.Create(Self);
 						with frmColumns do
 						begin
-							qryFields := TSQLQuery.Create(Self);
+							qryFields := TIBQuery.Create(Self);
 							try
 								qryFields.Database := qryTable.Database;
 								qryFields.Transaction := qryTable.Transaction;
@@ -2386,7 +2388,7 @@ begin
 		end;
 	finally
 		Screen.Cursor := crDefault;
-		qryTable.EndBusy;
+		// FPC: EndBusy not available on TIBQuery
 	end;
 end;
 
@@ -2413,7 +2415,7 @@ begin
 		if F.ShowModal = mrOK then
 		begin
 			try
-				qryTable.BeginBusy(False);
+				// FPC: BeginBusy not available on TIBQuery
 				Screen.Cursor := crHourGlass;
 				for Idx := 0 to F.lvColumns.Items.Count - 1 do
 				begin
@@ -2425,7 +2427,7 @@ begin
 				end;
 				qryTable.Transaction.Commit;
 			finally
-				qryTable.EndBusy;
+				// FPC: EndBusy not available on TIBQuery
 				Screen.Cursor := crDefault;
 			end;
 

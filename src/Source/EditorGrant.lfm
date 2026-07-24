@@ -176,7 +176,7 @@ object frmEditorGrant: TfrmEditorGrant
     TabOrder = 3
     OnChange = cmbPrivilegeNameChange
   end
-  object dsqlGrants: TSQLQuery
+  object dsqlGrants: TIBQuery
     Left = 540
     Top = 8
   end
@@ -223,13 +223,13 @@ object frmEditorGrant: TfrmEditorGrant
       OnClick = mnuiGrantToAllClick
     end
   end
-  object qryGrants: TSQLQuery
+  object qryGrants: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 596
     Top = 8
   end
-  object qryGrants2: TSQLQuery
+  object qryGrants2: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 596

@@ -56,7 +56,7 @@ Revision 1.7  2002/05/30 15:40:34  tmuetze
 Added a patch from Pavel Odstrcil: Added posibility to create insert statement with column names optionally surrounded by quotes, data values now enclosed in single quotes, added largeint type
 
 Revision 1.6  2002/05/21 09:59:52  tmuetze
-TSQLQuery.FetchAll instead of TSQLQuery.Last, this should also display the fetch dialog
+TIBQuery.FetchAll instead of TIBQuery.Last, this should also display the fetch dialog
 
 Revision 1.5  2002/05/15 08:54:09  tmuetze
 Fixed some IBPerformanceMonitor and SQLForm statistic related issues
@@ -65,7 +65,7 @@ Revision 1.4  2002/05/14 07:14:56  tmuetze
 Readded the PrepareTime, FetchTime performance values, but some more testing is needed
 
 Revision 1.3  2002/05/06 14:27:49  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, Series, TeeProcs, TeEngine, Chart, ActnList, ImgList, BufDataset, IBConnection, SQLDB, SQLScript, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmCompatControls, rmCollectionListBox;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmCompatControls;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -87,8 +87,8 @@ type
 		stsSQLStatement: TStatusBar;
 		dsSQLStatement: TDataSource;
 		dlgSave: TSaveDialog;
-    qrySQLStatement: TSQLQuery;
-    qryUtil: TSQLQuery;
+    qrySQLStatement: TIBQuery;
+    qryUtil: TIBQuery;
     pnlBase: TPanel;
     pgSQLStatement: TPageControl;
     tsSQLStatement: TTabSheet;
@@ -98,7 +98,7 @@ type
     tabResults: TrmTabSet;
     grdSQLStatement: TDBGrid;
     pnlResForm: TDBPanelEdit;
-    transSQLStatement: TSQLTransaction;
+    transSQLStatement: TIBTransaction;
     pnlNavigator: TPanel;
     navResults: TDBNavigator;
     pnlPerformance: TPanel;
@@ -117,13 +117,13 @@ type
 		SpeedButton1: TSpeedButton;
 		imgSuccess: TImage;
 		cmbMode: TComboBox;
-		qryScript: TSQLQuery;
+		qryScript: TIBQuery;
 		rmTabSet1: TrmTabSet;
     nbPerform: TrmNoteBookControl;
 		grdPerform: TDBGrid;
 		Panel2: TPanel;
 		chtPerform: TChart;
-		Series1: THorizBarSeries;
+		Series1: TBarSeries;
 		Panel1: TPanel;
 		Shape1: TShape;
 		Label1: TLabel;
@@ -330,7 +330,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, QBuilder;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer;
 
 {$R *.lfm}
 
@@ -723,22 +723,9 @@ begin
 end;
 
 procedure TfrmSQLForm.actQueryBuilderExecute(Sender: TObject);
-var
-	B: TQBuilderDialog;
-
 begin
-	B := TQBuilderDialog.Create(Self);
-	try
-		B.OnGetTableColumns := MarathonIDEInstance.GetTableColumnsEvent;
-		B.OnGetTables := MarathonIDEInstance.GetTablesEvent;
-		B.SystemTables := False;
-		if B.Execute then
-			edSQLStatement.SelText := B.SQL.Text;
-		B.OnGetTableColumns := nil;
-		B.OnGetTables := nil;
-	finally
-		B.Free;
-	end;
+	// FPC: Query Builder (QBuilder.pas) relies on deep Win32 GDI/grid APIs not ported to LCL; disabled on this port.
+	MessageDlg('The Query Builder is not available in this build.', mtInformation, [mbOK], 0);
 end;
 
 procedure TfrmSQLForm.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -860,7 +847,7 @@ begin
 	if Value = '' then
 	begin
 		cmbMode.Enabled := False;
-		transSQLStatement.Database := nil;
+		transSQLStatement.DefaultDatabase := nil;
 		qryScript.Database := nil;
 		qrySQLStatement.Database := nil;
 		qryUtil.Database := nil;
@@ -872,7 +859,7 @@ begin
 	else
 	begin
 		cmbMode.Enabled := True;
-		transSQLStatement.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		transSQLStatement.DefaultDatabase := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qrySQLStatement.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		perfSQL.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
@@ -881,7 +868,7 @@ begin
 		qryScript.Transaction := transSQLStatement;
 		qryUtil.Transaction := transSQLStatement;
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := TIBConnection(qrySQLStatement.Database).Dialect;
+		SQLDialect := TIBDatabase(qrySQLStatement.Database).SQLDialect;
 		stsSQLStatement.Panels[4].Text := Value;
 	end;
 end;
@@ -1139,7 +1126,7 @@ begin
 						SkipCreateConnect := True;
 						AutoDDL := True;
 						Query := edSQLStatement.Lines;
-						Database := TIBConnection(qryScript.Database);
+						Database := TIBDatabase(qryScript.Database);
 						Transaction := transSQLStatement;
 						SQLQuery := qryScript;
 						OnLineUpdate := LineUpdateHandler;
@@ -1211,8 +1198,8 @@ begin
 					end;
 				end;
 
-				case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
-					stSelect, stSelectForUpd:
+				case qrySQLStatement.StatementType of
+					SQLSelect, SQLSelectForUpdate:
 						begin
 							qrySQLStatement.Open;
 							pgSQLStatement.ActivePage := tsResultsView;
@@ -1267,8 +1254,8 @@ begin
 						// Fill the memory dataset
 						dtaPerform.Close;
 						dtaPerform.Open;
-						case qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } of
-							stSelect, stSelectForUpd:
+						case qrySQLStatement.StatementType of
+							SQLSelect, SQLSelectForUpdate:
 								begin
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Prepare Time';
@@ -1289,7 +1276,7 @@ begin
 									dtaPerform.FieldByName('value').AsString := IntToStr(qrySQLStatement.RecordCount);
 									dtaPerform.Post;
 								end;
-							stUpdate, stDelete:
+							SQLUpdate, SQLDelete:
 								begin
 									dtaPerform.Append;
 									dtaPerform.FieldByName('item').AsString := 'Prepare Time';
@@ -1422,7 +1409,7 @@ begin
 					Refresh;
 				end;
 
-				if FShowPlan and (qrySQLStatement.StatementType { TODO: StatementType not supported in TSQLQuery } in [stSelect, stSelectForUpd, stUpdate, stDelete]) then
+				if FShowPlan and (qrySQLStatement.StatementType in [SQLSelect, SQLSelectForUpdate, SQLUpdate, SQLDelete]) then
 				begin
 					{$IFNDEF FPC}edPlan.Text := qrySQLStatement.Plan;{$ENDIF}
 					PlanParser := TSQLParser.Create(Self);
@@ -1463,14 +1450,12 @@ end;
 
 procedure TfrmSQLForm.DoFind;
 begin
-	if pgSQLStatement.ActivePage = tsSQLStatement then
-		edSQLStatement.WSFind;
+	// FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
 end;
 
 procedure TfrmSQLForm.DoFindNext;
 begin
-	if pgSQLStatement.ActivePage = tsSQLStatement then
-		edSQLStatement.WSFindNext;
+	// FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
 end;
 
 procedure TfrmSQLForm.DoGotoBookmark(Index: Integer);
@@ -2109,7 +2094,7 @@ end;
 procedure TfrmSQLForm.DoReplace;
 begin
 	inherited;
-	edSQLStatement.WSReplace;
+	// FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
 end;
 
 procedure TfrmSQLForm.cmbModeChange(Sender: TObject);

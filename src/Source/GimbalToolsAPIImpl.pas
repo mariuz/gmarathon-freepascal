@@ -19,7 +19,7 @@ unit GimbalToolsAPIImpl;
 
 interface
 
-uses Windows, SysUtils, Classes, ActnList, Menus, Dialogs, Forms, GimbalToolsAPI, MarathonProjectCache, MarathonProjectCacheTypes;
+uses SysUtils, Classes, ActnList, Menus, Dialogs, Forms, GimbalToolsAPI, MarathonProjectCache, MarathonProjectCacheTypes;
 
 type
   TGimbalIDEPlugin = class(TObject)
@@ -600,12 +600,12 @@ end;
 
 function TGimbalIDEConnection.IDEGetCurrentDBHandle: Integer;
 begin
-  Result := Integer(PtrInt(FConnection.Connection.Handle));
+  Result := 0; { FPC: TIBDatabase does not expose a raw handle }
 end;
 
 function TGimbalIDEConnection.IDEGetCurrentTransHandle: Integer;
 begin
-  Result := 0; { FPC: TSQLTransaction does not expose trHandle }
+  Result := 0; { FPC: TIBTransaction does not expose trHandle }
 end;
 
 function TGimbalIDEConnection.IDEGetIsInterbaseSix: Boolean;

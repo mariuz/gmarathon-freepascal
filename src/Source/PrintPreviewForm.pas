@@ -19,7 +19,7 @@ unit PrintPreviewForm;
 
 interface
 
-uses SysUtils, WinTypes, WinProcs, Messages, Classes, Graphics, Controls, Forms, StdCtrls, Printers, Dialogs, ExtCtrls, DBCtrls, Menus, ComCtrls, ToolWin, Buttons, ActnList, PagePrnt, BaseDocumentFOrm, GlobalPrintingRoutines;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, Printers, Dialogs, ExtCtrls, DBCtrls, Menus, ComCtrls, ToolWin, Buttons, ActnList, BaseDocumentFOrm, GlobalPrintingRoutines;
 
 type
 
@@ -89,7 +89,7 @@ type
   private
     It : TMenuItem;
 		FPrintObject: TfrmGlobalPrintingRoutines;
-		procedure MinMaxInfo(var Message : TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
+		{$IFDEF WINDOWS}procedure MinMaxInfo(var Message : TWMGetMinMaxInfo); message WM_GETMINMAXINFO;{$ENDIF}
 		procedure UpdateStatus;
 	public
 		{ Public declarations }
@@ -98,13 +98,13 @@ type
 
 implementation
 
-uses Globals, HelpMap, //MarathonMain, MarathonIDE;
+uses Globals, HelpMap, MarathonIDE;
 
 {$R *.lfm}
 
+{$IFDEF WINDOWS}
 procedure TfrmPrintPreview.MinMaxInfo(var Message : TWMGetMinMaxInfo);
 var
-  wRect : TRect;
   wMonitor : TMonitor;
   wMarathonMonitor : TMonitor;
 begin
@@ -118,6 +118,7 @@ begin
      Message.MinMaxInfo.ptMaxPosition.Y := abs(wMonitor.Top - MarathonIDEInstance.MainForm.FormTop) + MarathonIDEInstance.MainForm.FormHeight;
   end;
 end;
+{$ENDIF}
 
 procedure TfrmPrintPreview.WindowListClick(Sender: TObject);
 begin
@@ -140,7 +141,6 @@ procedure TfrmPrintPreview.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   if Assigned(FPrintObject) then
   begin
-    FPrintObject.pnlBase.Parent := PrintObject;
     PrintObject.Free;
     PrintObject := nil;
   end;
@@ -151,72 +151,60 @@ end;
 
 procedure TfrmPrintPreview.btnFullPageClick(Sender: TObject);
 begin
-  PrintObject.ppPrinter.ZoomToFit;
 end;
 
 procedure TfrmPrintPreview.btnPrintClick(Sender: TObject);
 begin
-  PrintObject.ppPrinter.Print;
 end;
 
 procedure TfrmPrintPreview.btnPageWidthClick(Sender: TObject);
 begin
-  PrintObject.ppPrinter.ZoomToWidth;
 end;
 
 procedure TfrmPrintPreview.actLastExecute(Sender: TObject);
 begin
-	PrintObject.ppPrinter.PageNumber := PrintObject.ppPrinter.PageCount;
   UpdateStatus;
 end;
 
 procedure TfrmPrintPreview.actPreviousExecute(Sender: TObject);
 begin
-  if PrintObject.ppPrinter.PageNumber - 1 > 0 then
-    PrintObject.ppPrinter.PageNumber := PrintObject.ppPrinter.PageNumber - 1;
   UpdateStatus;
 end;
 
 procedure TfrmPrintPreview.actNextExecute(Sender: TObject);
 begin
-  if PrintObject.ppPrinter.PageNumber + 1 <= PrintObject.ppPrinter.PageCount then
-    PrintObject.ppPrinter.PageNumber := PrintObject.ppPrinter.PageNumber + 1;
   UpdateStatus;
 end;
 
 procedure TfrmPrintPreview.actFirstExecute(Sender: TObject);
 begin
-  PrintObject.ppPrinter.PageNumber := 1;
   UpdateStatus;
 end;
 
 procedure TfrmPrintPreview.actFirstUpdate(Sender: TObject);
 begin
-  actFirst.Enabled := PrintObject.ppPrinter.PageNumber > 1;
+  actFirst.Enabled := False;
 end;
 
 procedure TfrmPrintPreview.actPreviousUpdate(Sender: TObject);
 begin
-  actPrevious.Enabled := PrintObject.ppPrinter.PageNumber > 1;
+  actPrevious.Enabled := False;
 end;
 
 procedure TfrmPrintPreview.actNextUpdate(Sender: TObject);
 begin
-  actNext.Enabled := PrintObject.ppPrinter.PageNumber < PrintObject.ppPrinter.PageCount;
+  actNext.Enabled := False;
 end;
 
 procedure TfrmPrintPreview.actLastUpdate(Sender: TObject);
 begin
-  actLast.Enabled := PrintObject.ppPrinter.PageNumber < PrintObject.ppPrinter.PageCount;
+  actLast.Enabled := False;
 end;
 
 procedure TfrmPrintPreview.FormResize(Sender: TObject);
 begin
   if Assigned(PrintObject) then
-  begin
-    PrintObject.ppPrinter.ZoomToFit;
     UpdateStatus;
-  end;  
 end;
 
 procedure TfrmPrintPreview.FormShow(Sender: TObject);
@@ -226,13 +214,11 @@ end;
 
 procedure TfrmPrintPreview.UpdateStatus;
 begin
-  stsPreview.Panels[0].Text := 'Page ' + IntToStr(PrintObject.ppPrinter.PageNumber) +
-                               ' of ' + IntToStr(PrintObject.ppPrinter.PageCount) + ' page(s)';
+  stsPreview.Panels[0].Text := 'Printing is not available in this build.';
 end;
 
 procedure TfrmPrintPreview.actPrintExecute(Sender: TObject);
 begin
-  PrintObject.ppPrinter.Print;
 end;
 
 end.

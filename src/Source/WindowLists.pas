@@ -37,7 +37,7 @@ unit WindowLists;
 
 interface
 
-uses Windows, SysUtils, Classes, MarathonProjectCacheTypes;
+uses SysUtils, Classes, MarathonProjectCacheTypes;
 
 type
 	// TWindowListItem

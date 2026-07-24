@@ -42,7 +42,6 @@ uses
   CodeSnippets in 'CodeSnippets.pas' {frmCodeSnippets},
   SQLTrace in 'SQLTrace.pas' {frmSQLTrace},
   SQLInsightItem in 'SQLInsightItem.pas' {frmSQLInsight},
-  QBuilder in 'QBuilder.pas' {QBForm},
   {$IFDEF WINDOWS}ShlObj,{$ENDIF}
   ReorderColumns in 'ReorderColumns.pas' {frmReorderColumns},
   WindowLists in 'WindowLists.pas',
@@ -58,7 +57,6 @@ uses
   YaccLib in 'YaccLib.pas',
   EditorGrant in 'EditorGrant.pas' {frmEditorGrant},
   AddGrantee in 'AddGrantee.pas' {frmGranteeAdd},
-  ChooseFolder in '..\Common\ChooseFolder.pas' {frmChooseFolder},
   StoredProcParamWarn in 'StoredProcParamWarn.pas' {frmParameterChange},
   ArrayDialog in 'ArrayDialog.pas' {frmArrayDialog},
   SQLAssistantDragAndDrop in 'SQLAssistantDragAndDrop.pas' {frmSQLAssistant},

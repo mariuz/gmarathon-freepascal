@@ -9,7 +9,7 @@ interface
 uses {$IFDEF FPC}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList, FileCtrl, CheckLst, ImgList, IBConnection, SQLDB, SynEditHighlighter, SynHighlighterSQL, MarathonInternalInterfaces, Printers, PrintersDlgs;
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList, FileCtrl, CheckLst, ImgList, IBDatabase, IBQuery, SynEditHighlighter, SynHighlighterSQL, MarathonInternalInterfaces, Printers, PrintersDlgs, LazFileUtils;
 
 type
 	TfrmMarathonMain = class(TForm, IMarathonMainForm)

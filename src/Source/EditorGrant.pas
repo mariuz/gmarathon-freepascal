@@ -19,13 +19,13 @@ unit EditorGrant;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, CheckLst, Menus, DB, IBConnection, SQLDB;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ComCtrls, CheckLst, Menus, DB, IBDatabase, IBQuery;
 
 type
 	TGrantObjectType = (otTable, otView, otProcedure);
 
 	TfrmEditorGrant = class(TForm)
-		dsqlGrants: TSQLQuery;
+		dsqlGrants: TIBQuery;
 		cmbPrivileges: TComboBox;
 		Label6: TLabel;
 		lblObject: TLabel;
@@ -51,8 +51,8 @@ type
 		N4: TMenuItem;
 		mnuiGrant: TMenuItem;
 		mnuiRevoke: TMenuItem;
-		qryGrants: TSQLQuery;
-		qryGrants2: TSQLQuery;
+		qryGrants: TIBQuery;
+		qryGrants2: TIBQuery;
 		procedure FormCreate(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure cmbObjectsChange(Sender: TObject);
@@ -761,18 +761,26 @@ procedure TfrmEditorGrant.lvObjectsMouseDown(Sender: TObject;	Button: TMouseButt
 	Shift: TShiftState; X, Y: Integer);
 var
 	Item: TListItem;
-	HitTestInfo: TLVHitTestInfo;
+	LV: TListView;
+	ColLeft, ColIdx: Integer;
 
 begin
 	Item := (Sender as TListView).GetItemAt(X, Y);
+	FClickedOnSubItem := -1;
 	if Assigned(Item) then
 	begin
-		HitTestInfo.pt := Point(X, Y);
-		ListView_SubItemHitTest((Sender as TListView).Handle, @HitTestInfo);
-		FClickedOnSubItem := HitTestInfo.iSubItem - 1;
-	end
-	else
-		FClickedOnSubItem := -1;
+		LV := Sender as TListView;
+		ColLeft := 0;
+		for ColIdx := 0 to LV.Columns.Count - 1 do
+		begin
+			if (X >= ColLeft) and (X < ColLeft + LV.Column[ColIdx].Width) then
+			begin
+				FClickedOnSubItem := ColIdx - 1;
+				Break;
+			end;
+			Inc(ColLeft, LV.Column[ColIdx].Width);
+		end;
+	end;
 end;
 
 procedure TfrmEditorGrant.lvColumnsDblClick(Sender: TObject);
@@ -848,7 +856,7 @@ Revision 1.5  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.4  2002/04/29 06:47:09  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

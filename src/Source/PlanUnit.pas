@@ -31,7 +31,7 @@ unit PlanUnit;
 
 interface
 
-uses Classes, SysUtils, Windows, ParseCollection, Dialogs, DiagramTree, InterbaseExplainPlan;
+uses Classes, SysUtils, ParseCollection, Dialogs, DiagramTree, InterbaseExplainPlan;
 
 type
   TPlanType = (pptNone, pptJoin, pptSortMerge, pptMerge, pptSort);

@@ -7,15 +7,15 @@ interface
 uses {$IFDEF FPC}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  Controls, Classes, SQLDB;
+  Controls, Classes, IBQuery;
 
 // String Operation
 function AddBackslash(sPath: String): String;
 // Components
 procedure ChangeEnables(const aControls: array of TControl; bValue: Boolean);
 // Database
-function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery; overload;
-function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery; overload;
+function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TIBQuery; overload;
+function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TIBQuery; overload;
 // System
 procedure ExecuteWin32Program(sPath: String);
 function GetBuildInfo(const sFilename: String; var wVer1, wVer2, wVer3, wVer4: Word): Boolean;
@@ -47,11 +47,11 @@ begin
 end;
 
 // Database
-function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery;
+function CreateQuery(sSQL, sDatabaseName: String; bIsReadOnly, bOpenIt: Boolean): TIBQuery;
 var
 	sSubStr: String;
 begin
-	Result := TSQLQuery.Create(nil);
+	Result := TIBQuery.Create(nil);
 	with Result do
 		try
 			// DatabaseName := sDatabaseName; // IBX uses Database property, not DatabaseName string
@@ -65,14 +65,14 @@ begin
 		end;
 end;
 
-function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TSQLQuery;
+function CreateQuery(sSQL, sDatabaseName: String; sKeyLinks: array of String; bIsReadOnly, bOpenIt: Boolean): TIBQuery;
 var
 	I: Integer;
 begin
 	Result := CreateQuery(sSQL, sDatabaseName, bIsReadOnly, False);
 	with Result do
 	begin
-    // KeyLinks not in TSQLQuery
+    // KeyLinks not in TIBQuery
 		{ KeyLinks.Clear;
 		for I := Low(sKeyLinks) to High(sKeyLinks) do
 			KeyLinks.Add(sKeyLinks[I]); }

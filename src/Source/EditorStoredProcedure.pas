@@ -23,7 +23,7 @@ interface
 
 uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
 	Variants, {$ENDIF}
-	  BufDataset, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmCollectionListBox;
+	  BufDataset, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmCompatControls;
 
 type
 	TfrmStoredProcedure = class(TfrmBaseDocumentDataAwareForm, IMarathonStoredProcEditor, IGimbalIDESQLTextEditor)
@@ -34,9 +34,9 @@ type
 		tsStoredProc: TTabSheet;
 		tsDocoView: TTabSheet;
 		tsExecute: TTabSheet;
-    qryStoredProc: TSQLQuery;
-    qryResults: TSQLQuery;
-    qryUtil: TSQLQuery;
+    qryStoredProc: TIBQuery;
+    qryResults: TIBQuery;
+    qryUtil: TIBQuery;
 		edEditor: TSyntaxMemoWithStuff2;
 		tsDependencies: TTabSheet;
     nbResults: TPageControl;
@@ -47,7 +47,7 @@ type
     nbpForm : TTabSheet;
     nbpDataSheet : TTabSheet;
 		tabResults: TTabControl;
-		tranResults: TSQLTransaction;
+		tranResults: TIBTransaction;
 		tsDRUI: TTabSheet;
 		tsGrants: TTabSheet;
 		tsDebuggerOutput: TTabSheet;
@@ -61,7 +61,7 @@ type
 		txtParametersmatch: TStringField;
 		txtParametersnull: TStringField;
 		edErrors: TSyntaxMemoWithStuff2;
-		qryWarnings: TSQLQuery;
+		qryWarnings: TIBQuery;
 		framDepend: TframeDepend;
 		frameDRUI: TframeDRUI;
 		framePerms: TframePerms;
@@ -109,9 +109,9 @@ type
 		LinePos: LongInt;
 		It: TMenuItem;
 		{$IFDEF WINDOWS}
-		procedure WMMove(var Message: TMessage); message WM_MOVE;
-		procedure WMNCLButtonDown(var Message: TMessage); message WM_NCLBUTTONDOWN;
-		procedure WMNCRButtonDown(var Message: TMessage); message WM_NCRBUTTONDOWN;
+		{$IFDEF WINDOWS}procedure WMMove(var Message: TMessage); message WM_MOVE;{$ENDIF}
+		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var Message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
+		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var Message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
     {$ENDIF}
 		function GetParameters(Force: Boolean; var Params: String): Boolean;
 		function NeedParameters: Boolean;
@@ -278,7 +278,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, StoredProcedureParams, SaveFileFormat, MarathonIDE, MarathonOptions, BlobViewer, InputDialog, QBuilder, EditorGrant, StoredProcParamWarn, IBDebuggerVM;
+uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, StoredProcedureParams, SaveFileFormat, MarathonIDE, MarathonOptions, BlobViewer, InputDialog, EditorGrant, StoredProcParamWarn, IBDebuggerVM;
 
 {$R *.lfm}
 
@@ -365,7 +365,7 @@ begin
 	end;
 	qryStoredProc.Close;
 	if qryStoredProc.Transaction.Active then
-		TSQLTransaction(qryStoredProc.Transaction).Commit;
+		TIBTransaction(qryStoredProc.Transaction).Commit;
 	qryStoredProc.SQL.Clear;
 	if FIsInterbase6 {and (FSQLDialect = 3)} then
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
@@ -425,7 +425,7 @@ begin
 
 	qryStoredProc.Close;
 	if qryStoredProc.Transaction.Active then
-		TSQLTransaction(qryStoredProc.Transaction).Commit;
+		TIBTransaction(qryStoredProc.Transaction).Commit;
 
 	P := TStringList.Create;
 	try
@@ -441,7 +441,7 @@ begin
 		end;
 		qryStoredProc.Close;
 		if qryStoredProc.Transaction.Active then
-			TSQLTransaction(qryStoredProc.Transaction).Commit;
+			TIBTransaction(qryStoredProc.Transaction).Commit;
 		qryStoredProc.SQL.Clear;
 		Tmp := tmp + P.Text;
 
@@ -631,7 +631,7 @@ begin
 		end;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			 TSQLTransaction(qryUtil.Transaction).Commit;
+			 TIBTransaction(qryUtil.Transaction).Commit;
 		FAppendFlag := False;
 
 		// Ok we now have our input paramters check to see if we have any matching
@@ -945,7 +945,7 @@ begin
 		end;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			 TSQLTransaction(qryUtil.Transaction).Commit;
+			 TIBTransaction(qryUtil.Transaction).Commit;
 		FAppendFlag := False;
 
 		// Ok we now have our input paramters check to see if we have any matching
@@ -1201,7 +1201,7 @@ begin
 			Result := False;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			TSQLTransaction(qryUtil.Transaction).Commit;
+			TIBTransaction(qryUtil.Transaction).Commit;
 	finally
 		{$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
 	end;
@@ -1211,7 +1211,7 @@ function TfrmStoredProcedure.HasParameters: Boolean;
 begin
 	try
 		if qryUtil.Transaction.Active then
-			TSQLTransaction(qryUtil.Transaction).Commit;
+			TIBTransaction(qryUtil.Transaction).Commit;
 		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
@@ -1224,7 +1224,7 @@ begin
 			Result := False;
 		qryUtil.Close;
 		if qryUtil.Transaction.Active then
-			TSQLTransaction(qryUtil.Transaction).Commit;
+			TIBTransaction(qryUtil.Transaction).Commit;
 	finally
 		{$IFNDEF FPC}qryUtil.EndBusy;{$ENDIF}
 	end;
@@ -1617,7 +1617,7 @@ begin
 			finally
 				qryStoredProc.Close;
 				if qryStoredProc.Transaction.Active then
-					TSQLTransaction(qryStoredProc.Transaction).Commit;
+					TIBTransaction(qryStoredProc.Transaction).Commit;
 			end;
 
 			// Assume there is a difference
@@ -1667,7 +1667,7 @@ begin
 
 				qryStoredProc.Close;
 				if qryStoredProc.Transaction.Active then
-					TSQLTransaction(qryStoredProc.Transaction).Commit;
+					TIBTransaction(qryStoredProc.Transaction).Commit;
 
 				if not ((ParseList.Count = 0) and (ProcList.Count = 0)) then
 				begin
@@ -2292,7 +2292,7 @@ procedure TfrmStoredProcedure.DoFind;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_EDIT:
-			edEditor.WSFind;
+			; // FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSFind;
@@ -2303,7 +2303,7 @@ procedure TfrmStoredProcedure.DoFindNext;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_EDIT:
-			edEditor.WSFindNext;
+			; // FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSFindNext;
@@ -2563,7 +2563,7 @@ begin
 	inherited;
 	if Value = '' then
 	begin
-		tranResults.Database := nil;
+		tranResults.DefaultDatabase := nil;
 		qryWarnings.Database := nil;
 		qryResults.Database := nil;
 		qryUtil.Database := nil;
@@ -2576,7 +2576,7 @@ begin
 	end
 	else
 	begin
-		tranResults.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tranResults.DefaultDatabase := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryResults.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryResults.Transaction := tranResults;
 
@@ -2593,7 +2593,7 @@ begin
 		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := TIBConnection(qryUtil.Database).Dialect;
+		SQLDialect := TIBDatabase(qryUtil.Database).SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -2646,7 +2646,7 @@ begin
 		end;
 
 		for Idx := 0 to edEditor.Lines.Count - 1 do
-			edEditor.RemoveQuestGlyph(ilExecutedOK, Idx + 1);
+			; // FPC: RemoveQuestGlyph not available on this port's TSyntaxMemoWithStuff2
 
 		// Check the impact of changing input params
 		if not CheckInputParamsImpact then
@@ -2668,7 +2668,7 @@ begin
 		end;
 
 		TmpIntf := Self;
-		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryStoredProc.Database), TSQLTransaction(qryStoredProc.Transaction), ctSP, CompileText);
+		FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBDatabase(qryStoredProc.Database), TIBTransaction(qryStoredProc.Transaction), ctSP, CompileText);
 
 		FErrors := FCompile.CompileErrors;
 		FCompile.Free;
@@ -2712,7 +2712,7 @@ begin
 		if MarathonIDEInstance.IsDebuggerEnabled and MarathonIDEInstance.CanDebuggerEnabled then
 		begin
 			MarathonIDEInstance.DebuggerVM.DatabaseName := FDatabaseName;
-			MarathonIDEInstance.DebuggerVM.Database := TIBConnection(qryResults.Database);
+			MarathonIDEInstance.DebuggerVM.Database := TIBDatabase(qryResults.Database);
 			if not MarathonIDEInstance.DebuggerVM.Compile(FObjectName, edEditor.Text) then
 			begin
 				MessageDlg('Marathon was unable to compile the source in the editor.', mtError, [mbOK], 0);
@@ -2727,7 +2727,7 @@ begin
 				Module := MarathonIDEInstance.DebuggerVM.ModuleByName[FObjectName];
 				if Assigned(Module) then
 					for Idx := 0 to Module.AllowBreakList.Count - 1 do
-						edEditor.AddQuestGlyph(ilExecutedOK, StrToInt(Module.AllowBreakList[Idx]));
+						; // FPC: AddQuestGlyph not available on this port's TSyntaxMemoWithStuff2
 			end;
 		end;
 
@@ -2810,7 +2810,7 @@ procedure TfrmStoredProcedure.DoReplace;
 begin
 	case pgObjectEditor.ActivePageIndex of
 		PG_EDIT:
-			edEditor.WSReplace;
+			; // FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSReplace;
@@ -2876,22 +2876,9 @@ begin
 end;
 
 procedure TfrmStoredProcedure.DoQueryBuilder;
-var
-	B: TQBuilderDialog;
-
 begin
-	B := TQBuilderDialog.Create(Self);
-	try
-		B.OnGetTableColumns := MarathonIDEInstance.GetTableColumnsEvent;
-		B.OnGetTables := MarathonIDEInstance.GetTablesEvent;
-		B.SystemTables := False;
-		if B.Execute then
-			edEditor.SelText := B.SQL.Text;
-		B.OnGetTableColumns := nil;
-		B.OnGetTables := nil;
-	finally
-		B.Free;
-	end;
+	// FPC: Query Builder (QBuilder.pas) relies on deep Win32 GDI/grid APIs not ported to LCL; disabled on this port.
+	MessageDlg('The Query Builder is not available in this build.', mtInformation, [mbOK], 0);
 end;
 
 procedure TfrmStoredProcedure.OpenMessages;
@@ -3137,7 +3124,7 @@ begin
 	Module := MarathonIDEInstance.DebuggerVM.ModuleByName[FObjectName];
 	if Assigned(Module) then
 		for Idx := 0 to Module.AllowBreakList.Count - 1 do
-			edEditor.AddQuestGlyph(ilExecutedOK, StrToInt(Module.AllowBreakList[Idx]));
+			; // FPC: AddQuestGlyph not available on this port's TSyntaxMemoWithStuff2
 end;
 
 end.
@@ -3188,7 +3175,7 @@ Revision 1.5  2002/05/25 10:24:21  tmuetze
 Fixed SP update bug #556457
 
 Revision 1.4  2002/05/06 06:23:32  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.3  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

@@ -1,0 +1,6 @@
+[submodule "lib/ibx4lazarus"]
+	path = lib/ibx4lazarus
+	url = https://github.com/MWASoftware/ibx4lazarus.git
+[submodule "lib/fbintf"]
+	path = lib/fbintf
+	url = https://github.com/MWASoftware/fbintf.git

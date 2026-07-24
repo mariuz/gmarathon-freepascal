@@ -7,12 +7,12 @@ interface
 uses {$IFDEF FPC} 
   LCLIntf, LCLType, LMessages, {$ELSE} 
   Windows, Messages, {$ENDIF} 
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, SQLDB, IBConnection, MarathonInternalInterfaces, LazUTF8, FileUtil;
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, MarathonProjectCacheTypes, Db, ComCtrls, Clipbrd, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, IBQuery, IBDatabase, MarathonInternalInterfaces, LazUTF8, FileUtil;
 
 type
 	TframeDesc = class(TFrame)
 		edDoco: TSyntaxMemoWithStuff2;
-    qryDoco: TSQLQuery;
+    qryDoco: TIBQuery;
 		procedure edDocoChange(Sender: TObject);
 		procedure edDocoDragOver(Sender, Source: TObject; X, Y: Integer; State: TDragState; var Accept: Boolean);
 		procedure edDocoDragDrop(Sender, Source: TObject; X, Y: Integer);
@@ -47,11 +47,13 @@ type
     function CanCut : Boolean;
 		function CanFind : Boolean;
 		function CanFindNext : Boolean;
+		function CanReplace : Boolean;
 		function CanPaste : Boolean;
 		function CanRedo : Boolean;
 		function CanUndo : Boolean;
 		function CanSelectAll : Boolean;
 		function CanCaptureSnippet : Boolean;
+		function CanSaveDoco : Boolean;
 	end;
 
 implementation
@@ -87,8 +89,8 @@ begin
 	try
 		// qryDoco.BeginBusy(False);
 		Screen.Cursor := crHourGlass;
-		qryDoco.Database := TIBConnection(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
-		qryDoco.Transaction := TSQLTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
+		qryDoco.Database := TIBDatabase(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
+		qryDoco.Transaction := TIBTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
 		qryDoco.Close;
 		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
@@ -111,7 +113,7 @@ begin
 		SetDoco(qryDoco.FieldByName('rdb$description').AsString);
 		qryDoco.Close;
 		if qryDoco.Transaction.Active then
-			TSQLTransaction(qryDoco.Transaction).Commit;
+			TIBTransaction(qryDoco.Transaction).Commit;
 		// qryDoco.// // // // RequestLive := False;
 		edDoco.Modified := False;
 		FDocoModified := False;
@@ -126,8 +128,8 @@ begin
 	try
 		// qryDoco.BeginBusy(False);
 		Screen.Cursor := crHourGlass;
-		qryDoco.Database := TIBConnection(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
-		qryDoco.Transaction := TSQLTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
+		qryDoco.Database := TIBDatabase(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection);
+		qryDoco.Transaction := TIBTransaction(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction);
 		qryDoco.Close;
 		// qryDoco.// // // // RequestLive := True;
 		qryDoco.SQL.Clear;
@@ -156,7 +158,7 @@ begin
 		end;
 		qryDoco.Close;
 		if qryDoco.Transaction.Active then
-			TSQLTransaction(qryDoco.Transaction).Commit;
+			TIBTransaction(qryDoco.Transaction).Commit;
 		// qryDoco.// // // // RequestLive := False;
 		edDoco.Modified := False;
 		FDocoModified := False;
@@ -276,6 +278,16 @@ end;
 function TframeDesc.CanFind: Boolean;
 begin
 	Result := edDoco.Lines.Count > 0;
+end;
+
+function TframeDesc.CanReplace: Boolean;
+begin
+	Result := edDoco.Lines.Count > 0;
+end;
+
+function TframeDesc.CanSaveDoco: Boolean;
+begin
+	Result := True;
 end;
 
 function TframeDesc.CanFindNext: Boolean;

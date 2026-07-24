@@ -109,7 +109,7 @@ object frameDepend: TframeDepend
       end
     end
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 44

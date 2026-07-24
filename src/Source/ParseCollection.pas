@@ -21,7 +21,7 @@ interface
 {$I compilerdefines.inc}
 
 uses Classes, SysUtils, Dialogs, ComCtrls, DB, {$IFDEF D6_OR_HIGHER}
-	Variants, {$ENDIF} IBConnection, SQLDB;
+	Variants, {$ENDIF} IBDatabase, IBQuery;
 	 
 const
   ty_blr_text                         = 14;
@@ -215,7 +215,7 @@ type
 
   TForSelectStatement = class(TStatement)
   private
-    Q : TSQLQuery;
+    Q : TIBQuery;
     S : TStringList;
   public
     SQLStatement : TStatement;
@@ -645,10 +645,10 @@ end;
 
 function TOperatorStatement.GetGenIDValue(Generator : String; Increment : String) : Integer;
 var
-  Q : TSQLQuery;
+  Q : TIBQuery;
 
 begin
-  Q := TSQLQuery.Create(nil);
+  Q := TIBQuery.Create(nil);
   try
     Q.Database := TProcModule(Module).DebuggerVM.Database;
     Q.SQL.Text := 'select gen_id(' + Generator + ', ' + Increment + ') as genid from rdb$database';
@@ -1188,7 +1188,7 @@ end;
 
 function TSingletonSelectStatement.Execute : Variant;
 var
-  Q : TSQLQuery;
+  Q : TIBQuery;
   S : TStringList;
   Tmp : String;
   Idx : Integer;
@@ -1212,7 +1212,7 @@ begin
       Tmp := Trim(ParseSection(VariableList.SQLStatement, Idx, ','));
     end;
 
-    Q := TSQLQuery.Create(nil);
+    Q := TIBQuery.Create(nil);
     try
       Q.Database := TProcModule(Module).DebuggerVM.Database;
       Q.SQL.Text := SQLStatement.SQLStatement;
@@ -1320,7 +1320,7 @@ var
 begin
   if Not Assigned(Q) then
   begin
-    Q := TSQLQuery.Create(nil);
+    Q := TIBQuery.Create(nil);
     Q.Database := TProcModule(Module).DebuggerVM.Database;
     S := TStringList.Create;
 
@@ -1475,14 +1475,14 @@ end;
 
 function TDMLStatement.Execute : Variant;
 var
-  Q : TSQLQuery;
+  Q : TIBQuery;
   Idx : Integer;
   VarName : Variant;
   VarValue : Variant;
 
 
 begin
-  Q := TSQLQuery.Create(nil);
+  Q := TIBQuery.Create(nil);
   try
     Q.Database := TProcModule(Module).DebuggerVM.Database;
     Q.SQL.Text := SQLStatement;

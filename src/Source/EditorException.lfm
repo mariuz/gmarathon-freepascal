@@ -124,7 +124,7 @@ object frmExceptions: TfrmExceptions
       end>
     SimplePanel = False
   end
-  object qryException: TSQLQuery
+  object qryException: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 28

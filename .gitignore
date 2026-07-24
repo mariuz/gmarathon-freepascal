@@ -1,0 +1,17 @@
+# FPC/Lazarus build artifacts
+*.o
+*.ppu
+*.or
+*.compiled
+*.res
+lib/x86_64-linux/
+lib/i386-linux/
+backup/
+
+# lazbuild package registration (machine-local paths)
+packagefiles.xml
+
+# Build outputs
+src/Source/marathon
+test/ibx_smoke_test
+test/lib/

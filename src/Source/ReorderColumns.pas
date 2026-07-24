@@ -112,24 +112,7 @@ begin
   else
     Accept := False;
 
-  if Accept and (ItemHeight > 0) then
-  begin
-    if (Y < 6) and (lvColumns.TopItem.Index > 0) then
-    begin
-      //scroll upwards..
-      lvColumns.Scroll(0, -ItemHeight);
-      lvColumns.Refresh;
-    end
-    else
-    begin
-      if (Y >= (lvColumns.ClientHeight - 6)) and ((lvColumns.TopItem.Index + lvColumns.ClientHeight div ItemHeight) <= lvColumns.Items.Count) then
-      begin
-        //scroll downwards..
-        lvColumns.Scroll(0, ItemHeight);
-        lvColumns.Refresh;
-			end;
-    end;
-  end;
+  // FPC: TListView has no Scroll method on this port; auto-scroll-while-dragging is not available.
 end;
 
 procedure TfrmReorderColumns.FormCreate(Sender: TObject);

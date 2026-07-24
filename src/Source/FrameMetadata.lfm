@@ -45,7 +45,7 @@ object framDisplayDDL: TframDisplayDDL
       end>
     AddedKeystrokes = <>
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 36

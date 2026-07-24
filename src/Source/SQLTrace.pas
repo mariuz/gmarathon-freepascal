@@ -19,7 +19,7 @@ unit SQLTrace;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBConnection, SQLDB, IBSQLMonitor, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBDatabase, IBQuery, MarathonSQLMonitor, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
 
 type
 	TfrmSQLTrace = class(TfrmBaseDocumentForm)
@@ -94,7 +94,7 @@ end;
 
 procedure TfrmSQLTrace.DoFind;
 begin
-	edTrace.WSFind;
+	// FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
 end;
 
 function TfrmSQLTrace.CanFindNext: Boolean;
@@ -104,7 +104,7 @@ end;
 
 procedure TfrmSQLTrace.DoFindNext;
 begin
-	edTrace.WSFindNext;
+	// FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
 end;
 
 function TfrmSQLTrace.CanSelectAll: Boolean;

@@ -64,6 +64,9 @@ type
   TOnHyperlinkClickEvent = procedure(Sender: TObject; XY: TPoint; Token: string;
     Shift: TShiftState) of object;
 
+  THintType = (htInformation);
+  TGetHintText = procedure(Sender : TObject; Token : string; var HintText : string; HintType : THintType) of object;
+
 	TDotLookupEvent = procedure(Sender : TObject; var List : TStringList;
 		Buffer : String) of object;
 
@@ -91,6 +94,7 @@ type
     FLinking: boolean;
     FGetHyperlinkToken : TGetHyperlinkTokenEvent;
     FOnHyperLinkClick : TOnHyperlinkClickEvent;
+    FOnGetHintText : TGetHintText;
     FOnDotLookup: TDotLookupEvent;
     FWordList: TWordList;
     FSQLInsightList: TSQLInsightList;
@@ -128,6 +132,7 @@ type
     property GetHyperlinkToken: TGetHyperlinkTokenEvent read FGetHyperlinkToken write FGetHyperlinkToken;
     property OnHyperlinkClick: TOnHyperlinkClickEvent read FOnHyperLinkClick write FOnHyperLinkClick;
     property OnDotLookup: TDotLookupEvent read FOnDotLookup write FOnDotLookup;
+    property OnGetHintText: TGetHintText read FOnGetHintText write FOnGetHintText;
 	end;
 
   TEdPersistent = class(TComponent)

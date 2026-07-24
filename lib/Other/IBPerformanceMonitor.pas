@@ -4,7 +4,7 @@ unit IBPerformanceMonitor;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBConnection, SQLDB;
+uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBDatabase, IBQuery;
 
 type
   TMetricValue = class(TObject)
@@ -65,7 +65,7 @@ type
 		FInitialised : Boolean;
 		FShowSystemTables : Boolean;
 		FRelationList : TRelationItems;
-		FIBConnection : TIBConnection;
+		FIBConnection : TIBDatabase;
 		FReadIdxCount : TPerformItems;
     FReadSeqCount : TPerformItems;
 
@@ -83,7 +83,7 @@ type
 		function GetReadIdxCount : TPerformItems;
 		function GetReadSeqCount : TPerformItems;
 		function GetReadCurrentMemory: Integer;
-		procedure SetIBConnection(Value : TIBConnection);
+		procedure SetIBConnection(Value : TIBDatabase);
 		procedure SetPerformItemsRetVal(ItemList : TPerformItems; RelId : String; RVal : LongInt);
 		procedure SetPerformMetricRetVal(Item : TMetricValue; RVal : LongInt);
 		function GetReadBackoutCount: TMetricValue;
@@ -124,7 +124,7 @@ type
 		procedure ResetCounters;
 	published
 		{ Published declarations }
-		property IB_Connection : TIBConnection read FIBConnection write SetIBConnection;
+		property IB_Connection : TIBDatabase read FIBConnection write SetIBConnection;
 	end;
 
 procedure Register;
@@ -272,13 +272,13 @@ end;
 
 procedure TIBPerformanceMonitor.Initialise;
 {var
-	Q : TSQLQuery;
+	Q : TIBQuery;
 }
 begin
-  // TODO: Implement using IBX TSQLQuery or TSQLQuery
+  // TODO: Implement using IBX TIBQuery or TIBQuery
 	FRelationList.Clear;
   {
-	Q := TSQLQuery.Create(Self);
+	Q := TIBQuery.Create(Self);
 	try
 		Q.Database := FIBConnection;
 		Q.SQL.Text := 'select rdb$relation_id, rdb$relation_name from rdb$relations';
@@ -423,7 +423,7 @@ begin
   }
 end;
 
-procedure TIBPerformanceMonitor.SetIBConnection(Value : TIBConnection);
+procedure TIBPerformanceMonitor.SetIBConnection(Value : TIBDatabase);
 begin
 	FIBConnection := Value;
 end;

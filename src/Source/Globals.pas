@@ -19,7 +19,7 @@ unit Globals;
 
 interface
 
-uses Classes, SysUtils, Messages, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Windows, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBConnection, SQLDB, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
+uses Classes, SysUtils, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
 
 const
   WM_USER = 1024;
@@ -599,14 +599,7 @@ begin
 		end;
 	end;}
 
-	try
-		Editor.SQLInsightList.LoadFromFile(gAppPath + 'sqlinsight.dat');
-	except
-		on E : Exception do
-		begin
-			MessageDlg('Unable to load SQLInsight Data file.', mtError, [mbOK], 0);
-		end;
-	end;
+	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
 end;
 
 procedure SetupNonSyntaxEditor(Editor : TSyntaxMemoWithStuff2);
@@ -785,14 +778,14 @@ end;
 function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String): Boolean;
 var
 	DB : TMarathonCacheConnection;
-	Q : TSQLQuery;
+	Q : TIBQuery;
 
 begin
 	Result := False;
 	DB := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[DatabaseName];
 	if Assigned(DB) then
 	begin
-		Q := TSQLQuery.Create(nil);
+		Q := TIBQuery.Create(nil);
 		try
 			Q.Database := DB.Connection;
 			Q.Transaction := DB.Transaction;
@@ -2334,7 +2327,7 @@ function TDragQueenPearl.GetText: String;
   Tmp: String;
   Idx: Integer;
   Alias: String;
-	qryUtil : TSQLQuery;
+	qryUtil : TIBQuery;
  } 
 begin
 (*  frmSQLAssistant := TfrmSQLAssistant.Create(nil);
@@ -2363,7 +2356,7 @@ begin
       if FDragItemType = dbntStoredProc then
       begin
         //add arguments...
-				qryUtil := TSQLQuery.Create(nil);
+				qryUtil := TIBQuery.Create(nil);
         try
 //          qryUtil.Database := frmMarathonMain.IBObjDatabase;
 //          qryUtil.Transaction := frmMarathonMain.IBObjTransaction;
@@ -2436,7 +2429,7 @@ function TDragQueenFiFi.GetText: String;
   Tmp: String;
   Idx: Integer;
   Alias: String;
-	qryUtil : TSQLQuery;
+	qryUtil : TIBQuery;
   Cnt: Integer;
   Wrap: Boolean;
   ColsPerLine: Integer;

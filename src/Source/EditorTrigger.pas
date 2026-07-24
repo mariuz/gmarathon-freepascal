@@ -46,7 +46,7 @@ Revision 1.4  2002/05/27 07:10:28  tmuetze
 Fixed another compile bug and tightened the sourcecode a bit
 
 Revision 1.3  2002/04/29 15:05:58  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -61,7 +61,7 @@ unit EditorTrigger;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, FileCtrl, ActnList, ImgList, IBConnection, SQLDB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, FileCtrl, ActnList, ImgList, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger, rmCompatControls, LazFileUtils;
 
 type
 	TTriggerHeader = class(TObject)
@@ -81,14 +81,14 @@ type
 		pgObjectEditor: TPageControl;
 		tsObject: TTabSheet;
 		tsDocoView: TTabSheet;
-    qryTrigger: TSQLQuery;
-    qryUtil: TSQLQuery;
+    qryTrigger: TIBQuery;
+    qryUtil: TIBQuery;
 		edEditor: TSyntaxMemoWithStuff2;
 		tsDependencies: TTabSheet;
 		tsDRUI: TTabSheet;
 		tsDebuggerOutput: TTabSheet;
 		edErrors: TSyntaxMemoWithStuff2;
-		qryWarnings: TSQLQuery;
+		qryWarnings: TIBQuery;
 		framDoco: TframeDesc;
 		framDepend: TframeDepend;
 		frameDRUI: TframeDRUI;
@@ -130,9 +130,9 @@ type
 		FNewTriggerProperties: TfrmNewTrigger;
 		FTableName: String;
 		FHeader: TTriggerHeader;
-		procedure WMMove(var message: TMessage); message WM_MOVE;
-		procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;
-		procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;
+		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
+		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
+		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
 		procedure LoadTriggerSource;
 		procedure UpdateEncoding;
 		procedure WarningsHandler(Sender: TObject; Line: Integer; Column: Integer; Statement: String);
@@ -253,7 +253,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, SaveFileFormat, MarathonIDE, MarathonOptions, InputDialog, QBuilder;
+uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, SaveFileFormat, MarathonIDE, MarathonOptions, InputDialog;
 
 {$R *.lfm}
 
@@ -290,7 +290,7 @@ begin
 	InternalCaption := 'Trigger - [' + FObjectName + ']';
 	IT.Caption := Caption;
 
-	qryTrigger.BeginBusy(False);
+	{$IFNDEF FPC}qryTrigger.BeginBusy(False);{$ENDIF}
 	try
 		FNewObject := False;
 		if ShouldbeQuoted(FObjectName) then
@@ -348,7 +348,7 @@ begin
 		qryTrigger.Close;
 		qryTrigger.Transaction.Commit;
 	finally
-		qryTrigger.EndBusy;
+		{$IFNDEF FPC}qryTrigger.EndBusy;{$ENDIF}
 	end;
 end;
 
@@ -430,7 +430,7 @@ begin
 		if not ((LinePos = 0) and (CharPos = 0)) then
 		begin
 			edEditor.ErrorLine := LinePos;
-			edEditor.CaretXY := BufferCoord(CharPos, LinePos);
+			edEditor.CaretXY := Point(CharPos, LinePos);
 			if pgObjectEditor.ActivePage.PageIndex = 0 then
 				edEditor.SetFocus;
 		end;
@@ -552,7 +552,7 @@ begin
 		stsEditor.Panels[2].Text := 'Insert'
 	else
 		stsEditor.Panels[2].Text := 'Overwrite';
-	edEditor.CaretXY := TBufferCoord(edEditor.PixelsToRowColumn(X, Y));
+	edEditor.CaretXY := edEditor.PixelsToRowColumn(Point(X, Y));
 	Accept := True;
 end;
 
@@ -561,7 +561,7 @@ var
 	Tmp: String;
 
 begin
-	edEditor.CaretXY := TBufferCoord(edEditor.PixelsToRowColumn(X, Y));
+	edEditor.CaretXY := edEditor.PixelsToRowColumn(Point(X, Y));
 	if Source is TDragQueen then
 		Tmp := TDragQueen(Source).DragText;
 
@@ -598,7 +598,9 @@ begin
 	begin
 		if edEditor.Highlighter.IsKeyword(edEditor.SelText) then
 		begin
+			{$IFDEF WINDOWS}
 			WinHelp(Handle, PChar(ExtractFilePath(Application.ExeName) + 'Help\SQLRef.hlp'), HELP_PARTIALKEY, Integer(PChar(edEditor.SelText)));
+			{$ENDIF}
 			CallHelp := False;
 		end
 		else
@@ -674,7 +676,7 @@ begin
 	except
 		on E: Exception do
 	end;
-	Plan := qryWarnings.StatementPlan;
+	Plan := qryWarnings.GetPlan;
 	if Pos('NATURAL', AnsiUpperCase(Plan)) > 0 then
 		AddInfo('Warning: SubOptimal Query Line ' + IntToStr(Line) + ' Column ' + IntToStr(Column) + ' -  May not use Index (' + Plan + ')');
 end;
@@ -689,6 +691,7 @@ begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
 end;
 
+{$IFDEF WINDOWS}
 procedure TfrmTriggerEditor.WMMove(var message: TMessage);
 begin
 	MarathonIDEInstance.CurrentProject.Modified := True;
@@ -706,6 +709,7 @@ begin
 	inherited;
 	edEditor.CloseUpLists;
 end;
+{$ENDIF}
 
 procedure TfrmTriggerEditor.FormKeyDown(Sender: TObject; var Key: Word;	Shift: TShiftState);
 begin
@@ -963,7 +967,7 @@ procedure TfrmTriggerEditor.DoFind;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_EDIT:
-			edEditor.WSFind;
+			; // FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSFind;
@@ -974,7 +978,7 @@ procedure TfrmTriggerEditor.DoFindNext;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_EDIT:
-			edEditor.WSFindNext;
+			; // FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSFindNext;
@@ -1172,11 +1176,11 @@ end;
 procedure TfrmTriggerEditor.LoadTrigger(TriggerName: String);
 begin
 	FObjectName := TriggerName;
-	qryTrigger.BeginBusy(False);
+	{$IFNDEF FPC}qryTrigger.BeginBusy(False);{$ENDIF}
 	try
 		LoadTriggerSource;
 	finally
-		qryTrigger.EndBusy;
+		{$IFNDEF FPC}qryTrigger.EndBusy;{$ENDIF}
 	end;
 
 	Refresh;
@@ -1220,7 +1224,7 @@ begin
 		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
 		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := qryUtil.Database.Dialect;
+		SQLDialect := qryUtil.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
 end;
@@ -1345,7 +1349,7 @@ begin
 			M.ParserType := ptWarnings;
 			M.OnStatementFound := WarningsHandler;
 			M.Lexer.IsInterbase6 := FIsInterbase6;
-			M.Lexer.Dialect := FSQLDialect;
+			M.Lexer.SQLDialect := FSQLDialect;
 
 			M.Lexer.yyinput.Text := edEditor.Text;
 			if M.yyparse = 0 then
@@ -1405,7 +1409,7 @@ var
 begin
 	F := TfrmNewTrigger.Create(Self);
 	try
-		qryTrigger.BeginBusy(False);
+		{$IFNDEF FPC}qryTrigger.BeginBusy(False);{$ENDIF}
 		F.Caption := 'Properties for ' + FObjectName;
 
 		qryTrigger.Close;
@@ -1520,7 +1524,7 @@ begin
 			end;
 		end;
 	finally
-		qryTrigger.EndBusy;
+		{$IFNDEF FPC}qryTrigger.EndBusy;{$ENDIF}
 		F.Free;
 	end;
 end;
@@ -1546,7 +1550,7 @@ procedure TfrmTriggerEditor.DoReplace;
 begin
 	case pgObjectEditor.ActivePageIndex of
 		PG_EDIT:
-			edEditor.WSReplace;
+			; // FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
 
 		PG_DOCO:
 			framDoco.WSReplace;
@@ -1585,22 +1589,9 @@ begin
 end;
 
 procedure TfrmTriggerEditor.DoQueryBuilder;
-var
-	B: TQBuilderDialog;
-
 begin
-	B := TQBuilderDialog.Create(Self);
-	try
-		B.OnGetTableColumns := MarathonIDEInstance.GetTableColumnsEvent;
-		B.OnGetTables := MarathonIDEInstance.GetTablesEvent;
-		B.SystemTables := False;
-		if B.Execute then
-			edEditor.SelText := B.SQL.Text;
-		B.OnGetTableColumns := nil;
-		B.OnGetTables := nil;
-	finally
-		B.Free;
-	end;
+	// FPC: Query Builder (QBuilder.pas) relies on deep Win32 GDI/grid APIs not ported to LCL; disabled on this port.
+	MessageDlg('The Query Builder is not available in this build.', mtInformation, [mbOK], 0);
 end;
 
 procedure TfrmTriggerEditor.OpenMessages;

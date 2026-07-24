@@ -448,41 +448,19 @@ object frmSQLForm: TfrmSQLForm
                   Top = 0
                   Width = 631
                   Height = 325
-                  BackWall.Brush.Color = clWhite
-                  BackWall.Brush.Style = bsClear
-                  LeftWall.Color = clGray
                   Title.Text.Strings = (
                     'Query Performance Analysis'
                     ' (Indexed Reads vs. Non-Indexed Reads)')
-                  BottomAxis.LabelsAngle = 90
-                  BottomAxis.LabelStyle = talValue
-                  BottomAxis.MinorTickCount = 1
-                  BottomAxis.MinorTickLength = 1
-                  BottomAxis.TickLength = 1
-                  Chart3DPercent = 70
-                  LeftAxis.LabelStyle = talText
-                  LeftAxis.MinorTickCount = 1
-                  LeftAxis.MinorTickLength = 1
-                  LeftAxis.TickLength = 1
+                  Title.Visible = True
                   Legend.Visible = False
                   Align = alClient
                   BevelOuter = bvNone
                   BorderStyle = bsSingle
                   Color = clWindow
                   TabOrder = 0
-                  object Series1: THorizBarSeries
-                    Marks.ArrowLength = 20
-                    Marks.Style = smsLabelValue
+                  object Series1: TBarSeries
+                    IsRotated = True
                     Marks.Visible = False
-                    SeriesColor = clRed
-                    XValues.DateTime = False
-                    XValues.Name = 'Bar'
-                    XValues.Multiplier = 1.000000000000000000
-                    XValues.Order = loNone
-                    YValues.DateTime = False
-                    YValues.Name = 'Y'
-                    YValues.Multiplier = 1.000000000000000000
-                    YValues.Order = loAscending
                   end
                 end
                 object Panel1: TPanel
@@ -594,7 +572,7 @@ object frmSQLForm: TfrmSQLForm
     Left = 172
     Top = 96
   end
-  object qrySQLStatement: TSQLQuery
+  object qrySQLStatement: TIBQuery
     Params = <>
     CallbackCaption = 'Fetching data'
     Transaction = transSQLStatement
@@ -604,14 +582,14 @@ object frmSQLForm: TfrmSQLForm
     Left = 100
     Top = 96
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     Transaction = transSQLStatement
     ReadOnly = True
     Left = 136
     Top = 96
   end
-  object transSQLStatement: TSQLTransaction
+  object transSQLStatement: TIBTransaction
     Isolation = tiConcurrency
     Left = 65
     Top = 125
@@ -640,7 +618,7 @@ object frmSQLForm: TfrmSQLForm
     Left = 137
     Top = 165
   end
-  object qryScript: TSQLQuery
+  object qryScript: TIBQuery
     ParamCheck = False
     Left = 64
     Top = 200

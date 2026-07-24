@@ -19,7 +19,7 @@ unit EditorGenerator;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, SQLDB, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameMetadata;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, IBQuery, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameMetadata;
 
 type
   TfrmGenerators = class(TfrmBaseDocumentDataAwareForm)
@@ -29,7 +29,7 @@ type
     edGeneratorName: TEdit;
     Label2: TLabel;
     udGenerator: TSpinEdit;
-    qryGenerator: TSQLQuery;
+    qryGenerator: TIBQuery;
     tsDDLView: TTabSheet;
     Button1: TButton;
     btnSave: TButton;
@@ -109,7 +109,7 @@ const
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, DropObject, CompileDBObject{$IFDEF FPC}, IBConnection{$ENDIF};
+uses Globals, HelpMap, MarathonIDE, DropObject, CompileDBObject{$IFDEF FPC}, IBDatabase{$ENDIF};
 
 {$R *.lfm}
 
@@ -251,7 +251,7 @@ begin
     qryGenerator.Open;
     edGeneratorName.Text := qryGenerator.FieldByName('rdb$generator_name').AsString;
     qryGenerator.Close;
-    TSQLTransaction(qryGenerator.Transaction).Commit;
+    TIBTransaction(qryGenerator.Transaction).Commit;
 
     //get current value....
     qryGenerator.SQL.Clear;
@@ -259,7 +259,7 @@ begin
     qryGenerator.Open;
     udGenerator.Value := qryGenerator.Fields[0].AsInteger;
     qryGenerator.Close;
-    TSQLTransaction(qryGenerator.Transaction).Commit;
+    TIBTransaction(qryGenerator.Transaction).Commit;
 
     FObjectName := GeneratorName;
     InternalCaption := 'Generator - [' + FObjectName + ']';
@@ -297,7 +297,7 @@ begin
     qryGenerator.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-    SQLDialect := TIBConnection(qryGenerator.Database).Dialect;
+    SQLDialect := TIBDatabase(qryGenerator.Database).SQLDialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -349,7 +349,7 @@ begin
     Exit;
   end;
   TmpIntf := Self;
-  FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryGenerator.Database), TSQLTransaction(qryGenerator.Transaction), ctGenerator, edGeneratorName.Text);
+  FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBDatabase(qryGenerator.Database), TIBTransaction(qryGenerator.Transaction), ctGenerator, edGeneratorName.Text);
   FCompile.Free;
 
   if FNewObject then
@@ -392,14 +392,14 @@ begin
     qryGenerator.SQL.Add('set generator ' + FObjectName + ' to ' + IntToStr(udGenerator.Value) + ';');
     try
       qryGenerator.ExecSQL;
-      TSQLTransaction(qryGenerator.Transaction).Commit;
+      TIBTransaction(qryGenerator.Transaction).Commit;
       //write to script system
       MarathonIDEInstance.RecordToScript(qryGenerator.SQL.Text, GetActiveConnectionName);
       FObjectModified := False;
     except
 			On E : Exception do
       begin
-        TSQLTransaction(qryGenerator.Transaction).Rollback;
+        TIBTransaction(qryGenerator.Transaction).Rollback;
         MessageDlg(E.Message, mtError, [mbOK], 0);
       end;
     end;
@@ -652,7 +652,7 @@ Revision 1.4  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.3  2002/04/29 11:43:41  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

@@ -26,7 +26,7 @@
           <Version Value="12"/>
           <SearchPaths>
             <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;/home/mariuz/work/gmarathon-freepascal/lib/SyntaxMemoWithStuff2"/>
+            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -59,7 +59,7 @@
           <Version Value="12"/>
           <SearchPaths>
             <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;/home/mariuz/work/gmarathon-freepascal/lib/SyntaxMemoWithStuff2"/>
+            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -101,7 +101,7 @@
         <LaunchingApplication PathPlusParams="/usr/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="4">
+    <RequiredPackages Count="6">
       <Item1>
         <PackageName Value="SynEdit"/>
       </Item1>
@@ -114,6 +114,12 @@
       <Item4>
         <PackageName Value="TAChartLazarusPkg"/>
       </Item4>
+      <Item5>
+        <PackageName Value="ibexpress"/>
+      </Item5>
+      <Item6>
+        <PackageName Value="fbintf"/>
+      </Item6>
     </RequiredPackages>
     <Units Count="98">
       <Unit0>
@@ -728,9 +734,9 @@
         <UnitName Value="AboutBox"/>
       </Unit107>
       <Unit108>
-        <Filename Value="IBSQLMonitor.pas"/>
+        <Filename Value="MarathonSQLMonitor.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="IBSQLMonitor"/>
+        <UnitName Value="MarathonSQLMonitor"/>
       </Unit108>
     </Units>
   </ProjectOptions>

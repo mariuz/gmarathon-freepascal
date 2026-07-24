@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FIREBIRD_SYSDBA_PASSWORD: masterkey
+
 jobs:
   build:
     name: Build (Lazarus x86_64 Linux)
@@ -17,14 +20,36 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Real Firebird server + client dev headers, so the app builds against
+      # the real fbclient and the smoke test below can exercise the IBX
+      # database layer end to end, the same spirit as FlameRobin's own CI.
+      - name: Install Firebird server
+        run: |
+          echo "firebird3.0-server shared/firebird/sysdba_password/first_install password ${FIREBIRD_SYSDBA_PASSWORD}" | sudo debconf-set-selections
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y firebird3.0-server firebird3.0-utils firebird-dev
 
       - name: Setup Lazarus / FPC
         uses: gcarreno/setup-lazarus@v3.4.1
         with:
           lazarus-version: stable
 
+      - name: Register IBX packages with lazbuild
+        run: |
+          lazbuild --add-package-link lib/fbintf/fbintf.lpk
+          lazbuild --add-package-link lib/ibx4lazarus/ibexpress.lpk
+
       - name: Build Debug
         run: lazbuild --build-mode=Debug src/Source/marathon.lpi
 
       - name: Build Release
         run: lazbuild --build-mode=Release src/Source/marathon.lpi
+
+      - name: Build IBX smoke test
+        run: lazbuild test/ibx_smoke_test.lpi
+
+      - name: Run IBX smoke test against live Firebird
+        run: ./test/ibx_smoke_test "localhost:/tmp/ibx_smoke_test.fdb" SYSDBA "${FIREBIRD_SYSDBA_PASSWORD}"

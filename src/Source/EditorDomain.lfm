@@ -817,7 +817,7 @@ object frmDomains: TfrmDomains
       TabOrder = 0
     end
   end
-  object qryDomain: TSQLQuery
+  object qryDomain: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 8

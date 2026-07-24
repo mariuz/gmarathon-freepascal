@@ -1,4 +1,4 @@
-unit IBSQLMonitor;
+unit MarathonSQLMonitor;
 
 { Stub unit - IBO IBSQLMonitor/TIB_Monitor not available for FPC/SQLDB }
 

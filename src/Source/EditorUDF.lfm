@@ -216,7 +216,7 @@ object frmUDFEditor: TfrmUDFEditor
       end>
     SimplePanel = False
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 272

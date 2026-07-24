@@ -122,7 +122,7 @@ object frmGenerators: TfrmGenerators
       end>
     SimplePanel = False
   end
-  object qryGenerator: TSQLQuery
+  object qryGenerator: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 28

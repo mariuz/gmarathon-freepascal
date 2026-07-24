@@ -39,7 +39,7 @@ object framePerms: TframePerms
     TabOrder = 0
     ViewStyle = vsReport
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 44

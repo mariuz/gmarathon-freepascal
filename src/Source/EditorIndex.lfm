@@ -173,7 +173,7 @@ object frmEditorIndex: TfrmEditorIndex
       end
     end
   end
-  object qryIndex: TSQLQuery
+  object qryIndex: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 4

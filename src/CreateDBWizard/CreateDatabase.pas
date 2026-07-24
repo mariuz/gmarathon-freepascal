@@ -17,7 +17,7 @@ unit CreateDatabase;
 
 interface
 
-uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, StdCtrls, Buttons, IBConnection, SQLDB, SQLScript, IB_Script;
+uses SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ComCtrls, StdCtrls, Buttons, IBDatabase, IBQuery, ibxscript;
 
 type
   TfrmCreateDatabase = class(TForm)
@@ -52,16 +52,16 @@ type
     edResults: TMemo;
     Label10: TLabel;
 		Label12: TLabel;
-    dbCreateDatabase: TIBConnection;
-		tranCreateConnection: TSQLTransaction;
-    qryConnection: TSQLQuery;
+    dbCreateDatabase: TIBDatabase;
+		tranCreateConnection: TIBTransaction;
+    qryConnection: TIBQuery;
     dlgOpen: TOpenDialog;
     Bevel1: TBevel;
     Panel2: TPanel;
     Bevel2: TBevel;
     Label8: TLabel;
     Label13: TLabel;
-    ibScript: TSQLScript;
+    ibScript: TIBXScript;
     cmbDialect: TComboBox;
     Label14: TLabel;
 		pnlMarathon: TPanel;
@@ -277,10 +277,7 @@ end;
 
 procedure TfrmCreateDatabase.btnFinishClick(Sender: TObject);
 var
-  dbHandle: isc_db_handle;
-  trHandle: isc_tr_handle;
   CreateString: string;
-  SaveCW: word;
   Idx : Integer;
 
 
@@ -446,37 +443,9 @@ begin
 							CreateString := CreateString + Format( ' default character set %s', [ cmbCharSet.Text ] );
 						end;
 
-					dbHandle := nil;
-					trHandle := nil;
-					asm
-						fstcw [SaveCW]
-					end;
-					with dbCreateDatabase.IBDatabase do
-					begin
-						errcode := isc_dsql_execute_immediate( @Status,
-																								 @dbHandle,
-																								 @trHandle,
-																								 null_terminated,
-																								 PChar(CreateString),
-																								 StrToInt(cmbDialect.Text),
-																								 nil );
-						asm
-							fldcw [SaveCW]
-						end;
-						if errcode = 0 then
-						begin
-							asm
-								fstcw [SaveCW]
-							end;
-							//set the dialect here....
-							{ TODO -oPatrick -cTODO : Add in code to set the dialect.... }
-							errCode := isc_detach_database( @Status, @dbHandle );
-							asm
-								fldcw [SaveCW]
-              end;
-            end;
-            if errcode <> 0 then
-              HandleException( Self );
+					dbCreateDatabase.SQLDialect := StrToInt(cmbDialect.Text);
+					dbCreateDatabase.CreateDatabase(CreateString);
+					dbCreateDatabase.Connected := False;
 
             edResults.Lines.Add('Database "' + edDBName.Text + '" created successfully.');
 
@@ -487,8 +456,8 @@ begin
                 edResults.Lines.Add('Running Script...');
 
                 dbCreateDatabase.DatabaseName := edDBName.Text;
-                dbCreateDatabase.Username := edUser.Text;
-								dbCreateDatabase.Password := edPassword.Text;
+                dbCreateDatabase.Params.Values['user_name'] := edUser.Text;
+								dbCreateDatabase.Params.Values['password'] := edPassword.Text;
                 dbCreateDatabase.Connected := True;
 
                 ibScript.SQL.LoadFromFile(edScriptName.Text);

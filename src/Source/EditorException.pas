@@ -19,7 +19,7 @@ unit EditorException;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, Printers, ExtCtrls, ClipBrd, ActnList, SQLDB, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, FrameMetadata;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, Printers, ExtCtrls, ClipBrd, ActnList, IBQuery, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDescription, FrameMetadata;
 
 type
   TfrmExceptions = class(TfrmBaseDocumentDataAwareForm)
@@ -30,7 +30,7 @@ type
     edExceptionName: TEdit;
     Label2: TLabel;
     edExceptionText: TEdit;
-    qryException: TSQLQuery;
+    qryException: TIBQuery;
     tsDDL: TTabSheet;
     framDoco: TframeDesc;
     stsEditor: TStatusBar;
@@ -117,7 +117,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject{$IFDEF FPC}, IBConnection{$ENDIF};
+uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject{$IFDEF FPC}, IBDatabase{$ENDIF};
 
 {$R *.lfm}
 
@@ -326,7 +326,7 @@ begin
     framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
 
     IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-		SQLDialect := TIBConnection(qryException.Database).Dialect;
+		SQLDialect := TIBDatabase(qryException.Database).SQLDialect;
     stsEditor.Panels[3].Text := Value;
   end;
 end;
@@ -355,7 +355,7 @@ begin
     edExceptionName.Text := qryException.FieldByName('rdb$exception_name').AsString;
     edExceptionText.Text := qryException.FieldByName('rdb$message').AsString;
     qryException.Close;
-    TSQLTransaction(qryException.Transaction).Commit;
+    TIBTransaction(qryException.Transaction).Commit;
 
     FObjectName := ExceptionName;
     InternalCaption := 'Exception - [' + FObjectName + ']';
@@ -465,7 +465,7 @@ begin
 	CompileText := 'create exception ' + edExceptionName.Text + ' ''' + edExceptionText.Text + ''';';
 
 	TmpIntf := Self;
-	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBConnection(qryException.Database), TSQLTransaction(qryException.Transaction), ctException, CompileText);
+	FCompile := TfrmCompileDBObject.CreateCompile(Self, TmpIntf, TIBDatabase(qryException.Database), TIBTransaction(qryException.Transaction), ctException, CompileText);
 	FErrors := FCompile.CompileErrors;
 	FCompile.Free;
 
@@ -962,7 +962,7 @@ Revision 1.4  2002/09/23 10:31:16  tmuetze
 FormOnKeyDown now works with Shift+Tab to cycle backwards through the pages
 
 Revision 1.3  2002/04/29 11:54:53  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.2  2002/04/25 07:21:29  tmuetze
 New CVS powered comment block

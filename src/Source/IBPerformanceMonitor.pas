@@ -4,7 +4,7 @@ unit IBPerformanceMonitor;
 
 interface
 
-uses SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBConnection, SQLDB;
+uses SysUtils, Classes, Graphics, Controls, Forms, Dialogs, IBDatabase, IBQuery;
 
 type
   TMetricValue = class(TObject)
@@ -64,7 +64,7 @@ type
     FInitialised : Boolean;
     FShowSystemTables : Boolean;
     FRelationList : TRelationItems;
-    FIBConnection : TIBConnection;
+    FIBConnection : TIBDatabase;
     FReadIdxCount : TPerformItems;
     FReadSeqCount : TPerformItems;
     FReadBackoutCount: TMetricValue;
@@ -80,7 +80,7 @@ type
     function GetReadIdxCount : TPerformItems;
     function GetReadSeqCount : TPerformItems;
     function GetReadCurrentMemory: Integer;
-    procedure SetIBConnection(Value : TIBConnection);
+    procedure SetIBConnection(Value : TIBDatabase);
     procedure SetPerformItemsRetVal(ItemList : TPerformItems; RelId : String; RVal : LongInt);
     procedure SetPerformMetricRetVal(Item : TMetricValue; RVal : LongInt);
     function GetReadBackoutCount: TMetricValue;
@@ -118,7 +118,7 @@ type
     procedure Initialise;
     procedure ResetCounters;
   published
-    property IB_Connection : TIBConnection read FIBConnection write SetIBConnection;
+    property IB_Connection : TIBDatabase read FIBConnection write SetIBConnection;
   end;
 
 procedure Register;
@@ -261,31 +261,23 @@ begin
 end;
 
 function TIBPerformanceMonitor.DoDBInfo(InfoCmd: Byte; out Buf: array of Char): Boolean;
-var
-  Status: array[0..19] of ISC_STATUS;
-  DBHandle: isc_db_handle;
-  Cmd: Char;
 begin
+  // FPC: this port's IBX (fbintf-based) does not expose a raw legacy isc_db_handle,
+  // so the legacy isc_database_info() call this used to make is not available.
   Result := False;
-  if not Assigned(FIBConnection) or not FIBConnection.Connected then
-    Exit;
-  DBHandle := isc_db_handle(FIBConnection.Handle);
-  Cmd := Char(InfoCmd);
-  if isc_database_info(@Status[0], @DBHandle, 1, @Cmd, SizeOf(Buf), @Buf[0]) = 0 then
-    Result := True;
 end;
 
 procedure TIBPerformanceMonitor.Initialise;
 var
-  Q: TSQLQuery;
+  Q: TIBQuery;
 begin
   FRelationList.Clear;
   if not Assigned(FIBConnection) or not FIBConnection.Connected then
     Exit;
-  Q := TSQLQuery.Create(nil);
+  Q := TIBQuery.Create(nil);
   try
     Q.Database := FIBConnection;
-    Q.Transaction := FIBConnection.Transaction;
+    Q.Transaction := FIBConnection.DefaultTransaction;
     Q.SQL.Text := 'select rdb$relation_id, rdb$relation_name from rdb$relations';
     Q.Open;
     while not Q.EOF do
@@ -409,7 +401,7 @@ begin
   Result := isc_vax_integer(@local_buffer[3], Len);
 end;
 
-procedure TIBPerformanceMonitor.SetIBConnection(Value : TIBConnection);
+procedure TIBPerformanceMonitor.SetIBConnection(Value : TIBDatabase);
 begin
   FIBConnection := Value;
 end;

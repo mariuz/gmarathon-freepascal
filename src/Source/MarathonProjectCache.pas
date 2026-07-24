@@ -48,7 +48,7 @@ Revision 1.7  2002/09/25 12:12:49  tmuetze
 Remote server support has been added, at the moment it is strict experimental
 
 Revision 1.6  2002/05/04 08:48:12  tmuetze
-Converted from TIBGSSDataset to TSQLQuery
+Converted from TIBGSSDataset to TIBQuery
 
 Revision 1.5  2002/04/25 07:21:30  tmuetze
 New CVS powered comment block
@@ -62,9 +62,9 @@ unit MarathonProjectCache;
 interface
 {$I compilerdefines.inc}
 
-uses SysUtils, Windows, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
+uses SysUtils, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	IBConnection, SQLDB, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, WindowLists, ScriptRecorder, GimbalToolsAPI;
+	IBDatabase, IBQuery, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, WindowLists, ScriptRecorder, GimbalToolsAPI;
 
 const
    cSepChar = #2;
@@ -231,8 +231,8 @@ type
 		FDBFileName: String;
 		FUserName: String;
 		FServerName: String;
-		FConnection: TIBConnection;
-		FTransaction: TSQLTransaction;
+		FConnection: TIBDatabase;
+		FTransaction: TIBTransaction;
 		FPassword: String;
 		FRememberPassword: Boolean;
 		FSQLRole: String;
@@ -275,8 +275,8 @@ type
 		procedure GetCharSetNames(S: TStrings);
 		procedure GetCollationNames(S: TStrings);
 		property Connected: Boolean read GetConnected;
-		property Connection: TIBConnection read FConnection write FConnection;
-		property Transaction: TSQLTransaction read FTransaction write FTransaction;
+		property Connection: TIBDatabase read FConnection write FConnection;
+		property Transaction: TIBTransaction read FTransaction write FTransaction;
 		property DBFileName: String read FDBFileName write SetDBFileName;
 		property ServerName: String read FServerName write SetServerName;
 		property UserName: String read FUserName write SetUserName;
@@ -1633,24 +1633,24 @@ begin
 	if FErrorOnConnection then
 		Exit;
 
-	FConnection.DatabaseName := FDBFileName;
-
 	Server := MarathonIDEInstance.CurrentProject.Cache.ServerByName[FServerName];
 	if not Server.Local then
-		FConnection.HostName := Server.HostName;
+		FConnection.DatabaseName := Server.HostName + ':' + FDBFileName
+	else
+		FConnection.DatabaseName := FDBFileName;
 
-	FConnection.UserName := FUserName;
-	FConnection.Password := FPassword;
-	FConnection.Params.Add('role=' + FSQLRole);
+	FConnection.Params.Values['user_name'] := FUserName;
+	FConnection.Params.Values['password'] := FPassword;
+	FConnection.Params.Values['sql_role_name'] := FSQLRole;
 	if FSQLDialect = 0 then
 		FSQLDialect := 1;
 	try
-    FConnection.Dialect := FSQLDialect;
+    FConnection.SQLDialect := FSQLDialect;
 		FConnection.Connected := True;
 		if IsIB6 then
 		begin
 			FConnection.Connected := False;
-			FConnection.Dialect := FSQLDialect;
+			FConnection.SQLDialect := FSQLDialect;
 			FConnection.Connected := True;
 		end;
 		Result := True;
@@ -1687,16 +1687,16 @@ begin
 				fSQLDialect := cmbDialect.ItemIndex + 1;
 				fSQLRole := edRole.Text;
 
-				FConnection.Username := FUserName;
-				FConnection.Password := FPassword;
-				FConnection.Role := FSQLRole;
-				FConnection.Dialect := FSQLDialect;
+				FConnection.Params.Values['user_name'] := FUserName;
+				FConnection.Params.Values['password'] := FPassword;
+				FConnection.Params.Values['sql_role_name'] := FSQLRole;
+				FConnection.SQLDialect := FSQLDialect;
 				try
 					FConnection.Connected := True;
 					if IsIB6 then
 					begin
 						FConnection.Connected := False;
-						FConnection.Dialect := FSQLDialect;
+						FConnection.SQLDialect := FSQLDialect;
 						FConnection.Connected := True;
 					end;
 					Result := True;
@@ -1719,10 +1719,9 @@ begin
 	inherited;
 	FImageIndex := 0;
 	FStatic := True;
-	FConnection := TIBConnection.Create(nil);
-	FTransaction := TSQLTransaction.Create(nil);
-	FTransaction.Database := FConnection;
-	FConnection.Transaction := FTransaction;
+	FConnection := TIBDatabase.Create(nil);
+	FTransaction := TIBTransaction.Create(nil);
+	FTransaction.DefaultDatabase := FConnection;
 	FCacheType := ctConnection;
 	FTableList := TStringList.Create;
   FViewList := TStringList.Create;
@@ -1883,16 +1882,16 @@ end;
 
 procedure TMarathonCacheConnection.GetCharSetNames(S: TStrings);
 var
-  Q: TSQLQuery;
-  TmpTrans: TSQLTransaction;
+  Q: TIBQuery;
+  TmpTrans: TIBTransaction;
 
 begin
   S.Clear;
   S.Add('');
-  Q := TSQLQuery.Create(nil);
-  TmpTrans := TSQLTransaction.Create(nil);
+  Q := TIBQuery.Create(nil);
+  TmpTrans := TIBTransaction.Create(nil);
   try
-    TmpTrans.DataBase := FConnection;
+    TmpTrans.DefaultDatabase := FConnection;
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
@@ -1915,15 +1914,15 @@ end;
 
 function TMarathonCacheConnection.GetDBCharSetName(CharSetID: Integer): String;
 var
-  Q: TSQLQuery;
-  TmpTrans: TSQLTransaction;
+  Q: TIBQuery;
+  TmpTrans: TIBTransaction;
   CharSet: String;
 
 begin
-  Q := TSQLQuery.Create(nil);
-  TmpTrans := TSQLTransaction.Create(nil);
+  Q := TIBQuery.Create(nil);
+  TmpTrans := TIBTransaction.Create(nil);
   try
-    TmpTrans.DataBase := FConnection;
+    TmpTrans.DefaultDatabase := FConnection;
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
@@ -1950,16 +1949,16 @@ end;
 
 procedure TMarathonCacheConnection.GetCollationNames(S: TStrings);
 var
-  Q: TSQLQuery;
-  TmpTrans: TSQLTransaction;
+  Q: TIBQuery;
+  TmpTrans: TIBTransaction;
 
 begin
   S.Clear;
   S.Add('');
-  Q := TSQLQuery.Create(nil);
-  TmpTrans := TSQLTransaction.Create(nil);
+  Q := TIBQuery.Create(nil);
+  TmpTrans := TIBTransaction.Create(nil);
   try
-    TmpTrans.DataBase := FConnection;
+    TmpTrans.DefaultDatabase := FConnection;
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
@@ -1982,15 +1981,15 @@ end;
 
 function TMarathonCacheConnection.GetDBCollationName(CollationID: Integer; CharSetID: Integer): String;
 var
-	Q: TSQLQuery;
-	TmpTrans: TSQLTransaction;
+	Q: TIBQuery;
+	TmpTrans: TIBTransaction;
   CharSet: String;
 
 begin
-  Q := TSQLQuery.Create(nil);
-  TmpTrans := TSQLTransaction.Create(nil);
+  Q := TIBQuery.Create(nil);
+  TmpTrans := TIBTransaction.Create(nil);
   try
-    TmpTrans.DataBase := FConnection;
+    TmpTrans.DefaultDatabase := FConnection;
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
@@ -2024,8 +2023,8 @@ function TMarathonCacheConnection.GetSQLDialect: Integer;
 begin
 	if FConnection.Connected then
 	begin
-		Result := FConnection.Dialect;
-		FSQLDialect := FConnection.Dialect;
+		Result := FConnection.SQLDialect;
+		FSQLDialect := FConnection.SQLDialect;
 	end
 	else
 		Result := FSQLDialect;
@@ -2033,17 +2032,17 @@ end;
 
 function TMarathonCacheConnection.GetTableList: TStringList;
 var
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FTableList.Clear;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
     Q.DataBase := Connection;
     Q.Transaction := Transaction;
-    if TSQLTransaction(Q.Transaction).Active then
-      TSQLTransaction(Q.Transaction).Commit;
-    TSQLTransaction(Q.Transaction).StartTransaction;
+    if TIBTransaction(Q.Transaction).Active then
+      TIBTransaction(Q.Transaction).Commit;
+    TIBTransaction(Q.Transaction).StartTransaction;
     try
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
 			Q.Open;
@@ -2058,7 +2057,7 @@ begin
 				Q.Next;
 			end;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -2068,17 +2067,17 @@ end;
 
 function TMarathonCacheConnection.GetViewList: TStringList;
 var
-  Q: TSQLQuery;
+  Q: TIBQuery;
 
 begin
   FViewList.Clear;
-  Q := TSQLQuery.Create(nil);
+  Q := TIBQuery.Create(nil);
   try
     Q.DataBase := Connection;
     Q.Transaction := Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc');
 			Q.Open;
@@ -2093,7 +2092,7 @@ begin
 				Q.Next;
 			end;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -2103,17 +2102,17 @@ end;
 
 function TMarathonCacheConnection.GetDomainList: TStringList;
 var
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FDomainList.Clear;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
     Q.DataBase := Connection;
     Q.Transaction := Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc');
 			Q.Open;
@@ -2123,7 +2122,7 @@ begin
 				Q.Next;
 			end;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -3705,17 +3704,17 @@ procedure TMarathonCacheDomainsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheDomain;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc;');
 			Q.Open;
@@ -3737,7 +3736,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -3755,11 +3754,11 @@ procedure TMarathonCacheUserDomainsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheDomain;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
@@ -3799,17 +3798,17 @@ procedure TMarathonCacheUDFsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheFunction;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FUNCTION_NAME asc;');
@@ -3829,7 +3828,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -3847,17 +3846,17 @@ procedure TMarathonCacheExceptionsHeader.Expand(Recursive: Boolean);
 var
   wNode: TMarathonCacheException;
   NV: TMarathonTreeNode;
-  Q: TSQLQuery;
+  Q: TIBQuery;
 
 begin
   FContainerNode.DeleteChildren;
-  Q := TSQLQuery.Create(nil);
+  Q := TIBQuery.Create(nil);
   try
     Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
     Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if TSQLTransaction(Q.Transaction).Active then
-      TSQLTransaction(Q.Transaction).Commit;
-    TSQLTransaction(Q.Transaction).StartTransaction;
+    if TIBTransaction(Q.Transaction).Active then
+      TIBTransaction(Q.Transaction).Commit;
+    TIBTransaction(Q.Transaction).StartTransaction;
     try
 
 			Q.SQL.Add('select RDB$EXCEPTION_NAME from RDB$EXCEPTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$EXCEPTION_NAME asc;');
@@ -3877,7 +3876,7 @@ begin
       end;
 			FExpanded := True;
 		finally
-      TSQLTransaction(Q.Transaction).Commit;
+      TIBTransaction(Q.Transaction).Commit;
     end;
   finally
     Q.Free;
@@ -3895,17 +3894,17 @@ procedure TMarathonCacheGeneratorsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheGenerator;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
   FContainerNode.DeleteChildren;
-  Q := TSQLQuery.Create(nil);
+  Q := TIBQuery.Create(nil);
   try
     Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
     Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if TSQLTransaction(Q.Transaction).Active then
-      TSQLTransaction(Q.Transaction).Commit;
-    TSQLTransaction(Q.Transaction).StartTransaction;
+    if TIBTransaction(Q.Transaction).Active then
+      TIBTransaction(Q.Transaction).Commit;
+    TIBTransaction(Q.Transaction).StartTransaction;
     try
 
 			Q.SQL.Add('select RDB$GENERATOR_NAME from RDB$GENERATORS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$GENERATOR_NAME asc;');
@@ -3925,7 +3924,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -3943,17 +3942,17 @@ procedure TMarathonCacheTriggersHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTrigger;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$TRIGGER_NAME, RDB$TRIGGER_INACTIVE from RDB$TRIGGERS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$TRIGGER_SOURCE is not null) order by RDB$TRIGGER_NAME asc;');
@@ -3977,7 +3976,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -3995,17 +3994,17 @@ procedure TMarathonCacheSystemTriggersHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTrigger;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$TRIGGER_NAME from RDB$TRIGGERS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$TRIGGER_SOURCE is not null) order by RDB$TRIGGER_NAME asc;');
@@ -4028,7 +4027,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -4046,17 +4045,17 @@ procedure TMarathonCacheStoredProceduresHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheProcedure;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
     Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if TSQLTransaction(Q.Transaction).Active then
-      TSQLTransaction(Q.Transaction).Commit;
-    TSQLTransaction(Q.Transaction).StartTransaction;
+    if TIBTransaction(Q.Transaction).Active then
+      TIBTransaction(Q.Transaction).Commit;
+    TIBTransaction(Q.Transaction).StartTransaction;
     try
 
 			Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PROCEDURE_NAME asc;');
@@ -4076,7 +4075,7 @@ begin
       end;
       FExpanded := True;
     finally
-      TSQLTransaction(Q.Transaction).Commit;
+      TIBTransaction(Q.Transaction).Commit;
     end;
   finally
     Q.Free;
@@ -4095,17 +4094,17 @@ procedure TMarathonCacheViewsHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheView;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc;');
@@ -4125,7 +4124,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -4143,17 +4142,17 @@ procedure TMarathonCacheTablesHeader.Expand(Recursive: Boolean);
 var
 	wNode: TMarathonCacheTable;
 	NV: TMarathonTreeNode;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
@@ -4179,7 +4178,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;
@@ -4671,17 +4670,17 @@ procedure TMarathonCacheSysTablesHeader.Expand(Recursive: Boolean);
 var
 	NV: TMarathonTreeNode;
 	wNode: TMarathonCacheTable;
-	Q: TSQLQuery;
+	Q: TIBQuery;
 
 begin
 	FContainerNode.DeleteChildren;
-	Q := TSQLQuery.Create(nil);
+	Q := TIBQuery.Create(nil);
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TSQLTransaction(Q.Transaction).Active then
-			TSQLTransaction(Q.Transaction).Commit;
-		TSQLTransaction(Q.Transaction).StartTransaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where (RDB$SYSTEM_FLAG = 1) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
 			Q.Open;
@@ -4703,7 +4702,7 @@ begin
 			end;
 			FExpanded := True;
 		finally
-			TSQLTransaction(Q.Transaction).Commit;
+			TIBTransaction(Q.Transaction).Commit;
 		end;
 	finally
 		Q.Free;

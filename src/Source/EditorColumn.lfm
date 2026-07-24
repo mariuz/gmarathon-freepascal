@@ -1148,7 +1148,7 @@ object frmColumns: TfrmColumns
       TabOrder = 1
     end
   end
-  object qryUtil: TSQLQuery
+  object qryUtil: TIBQuery
     Params = <>
     ReadOnly = True
     Left = 12
