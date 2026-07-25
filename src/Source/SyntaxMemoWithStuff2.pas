@@ -5,7 +5,7 @@ interface
 {$I CompilerDefines.inc}
 
 uses {$IFDEF FPC}
-  LCLIntf, LCLType, LMessages, Types, {$ELSE}
+  LCLIntf, LCLType, LMessages, Messages, Types, {$ELSE}
   Windows, Messages, {$ENDIF}
   SynEdit, Classes, dialogs, Graphics, SysUtils, Controls, ImgList, ExtCtrls, StdCtrls, Forms, SynEditTypes, SynEditMarks, SynEditMiscClasses, SynEditDecorator;
 

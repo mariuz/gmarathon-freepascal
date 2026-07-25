@@ -38,7 +38,7 @@ unit BaseDocumentDataAwareForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus;
 
 type
 	TfrmBaseDocumentDataAwareForm = class(TfrmBaseDocumentForm)

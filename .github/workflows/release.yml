@@ -228,8 +228,19 @@ jobs:
       # Same TargetOS override as Windows, plus --ws=cocoa: GitHub's macOS
       # runners only support the Cocoa widgetset (see setup-lazarus's own
       # README), and the .lpi doesn't pin a widgetset itself.
+      #
+      # -ld_classic works around a toolchain incompatibility, not anything in
+      # this codebase: Apple's new linker (Xcode 15+) rejects the *prebuilt*
+      # LCL Cocoa objects shipped in the Lazarus 4.8 binary distribution with
+      # "malformed method list atom 'ltmp5' ... fixups found beyond the number
+      # of method entries" - FPC 3.2.x emits Objective-C method-list metadata
+      # the new linker will not accept. Every unit compiles fine; only the
+      # final link fails. Selecting the classic linker avoids it.
       - name: Build Release
-        run: lazbuild --lazarusdir="$LAZARUS_DIR" --os=darwin --cpu=aarch64 --ws=cocoa --build-mode=Release src/Source/marathon.lpi
+        run: |
+          lazbuild --lazarusdir="$LAZARUS_DIR" --os=darwin --cpu=aarch64 --ws=cocoa \
+            --opt="-k-ld_classic" \
+            --build-mode=Release src/Source/marathon.lpi
 
       - name: Determine release version
         run: |
