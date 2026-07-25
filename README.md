@@ -74,12 +74,21 @@ smoke test against a live Firebird server on every push and pull request to
 ## Releases
 
 Pushing a `v*` tag (e.g. `v1.0.0`) triggers `.github/workflows/release.yml`,
-which builds a Release binary, runs the IBX smoke test against it, packages
-`marathon` plus `README.md`/`ROADMAP.md` into
-`marathon-<version>-linux-x86_64.tar.gz`, and attaches it to a GitHub
-release for that tag (creating one if it doesn't already exist) — the same
-tag-push-triggered pattern [FlameRobin's release workflow](https://github.com/mariuz/flamerobin/blob/master/.github/workflows/release.yml)
-uses, scaled down to this project's single Linux build target.
+which builds Release binaries for Linux, Windows, and macOS and attaches
+them to a GitHub release for that tag (creating one if it doesn't already
+exist) — the same tag-push-triggered, per-platform-job pattern
+[FlameRobin's release workflow](https://github.com/mariuz/flamerobin/blob/master/.github/workflows/release.yml)
+uses.
+
+- **Linux** (`marathon-<version>-linux-x86_64.tar.gz`) also runs the IBX
+  smoke test against the build before packaging it, since a live Firebird
+  server is easy to stand up on the Linux runner (same as `build.yml`).
+- **Windows** (`marathon-<version>-windows-x86_64.zip`) and **macOS**
+  (`marathon-<version>-macos-x86_64.zip`) build only — this port has only
+  ever been built and tested on Linux, so these jobs are best-effort and
+  may need follow-up fixes (widgetset/package differences, `marathon.lpi`
+  hardcoding `TargetOS=linux`, worked around in the workflow via
+  `lazbuild --os=... --cpu=...`) once they've actually run.
 
 ## Architecture
 

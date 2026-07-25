@@ -75,3 +75,106 @@ jobs:
         with:
           files: ${{ env.MARATHON_ASSET }}
           generate_release_notes: true
+
+  build-windows:
+    name: Build & Package (Windows x86_64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Lazarus / FPC
+        uses: gcarreno/setup-lazarus@v3.4.1
+        with:
+          lazarus-version: stable
+
+      - name: Register IBX packages with lazbuild
+        run: |
+          lazbuild --add-package-link lib/fbintf/fbintf.lpk
+          lazbuild --add-package-link lib/ibx4lazarus/ibexpress.lpk
+
+      # marathon.lpi hardcodes TargetOS=linux (this port's only build target
+      # to date), so a native Windows build needs --os/--cpu passed on the
+      # command line to override it - otherwise lazbuild tries to
+      # cross-compile for Linux from a Windows host, which the runner has no
+      # toolchain for.
+      - name: Build Release
+        run: lazbuild --os=win64 --cpu=x86_64 --build-mode=Release src/Source/marathon.lpi
+
+      - name: Determine release version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $version = $env:GITHUB_REF_NAME
+          } else {
+            $version = "${{ github.event.release.tag_name }}"
+          }
+          if ([string]::IsNullOrEmpty($version)) { $version = "dev" }
+          Add-Content -Path $env:GITHUB_ENV -Value "MARATHON_VERSION=$version"
+
+      - name: Package release archive
+        shell: pwsh
+        run: |
+          $stage = "marathon-$env:MARATHON_VERSION-windows-x86_64"
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item -Path "src\Source\marathon.exe" -Destination "$stage\"
+          Copy-Item -Path "README.md","ROADMAP.md" -Destination "$stage\"
+          Compress-Archive -Path $stage -DestinationPath "$stage.zip" -Force
+          Add-Content -Path $env:GITHUB_ENV -Value "MARATHON_ASSET=$stage.zip"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.MARATHON_ASSET }}
+
+  build-macos:
+    name: Build & Package (macOS x86_64)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Lazarus / FPC
+        uses: gcarreno/setup-lazarus@v3.4.1
+        with:
+          lazarus-version: stable
+
+      - name: Register IBX packages with lazbuild
+        run: |
+          lazbuild --add-package-link lib/fbintf/fbintf.lpk
+          lazbuild --add-package-link lib/ibx4lazarus/ibexpress.lpk
+
+      # Same TargetOS override as Windows, plus --ws=cocoa: GitHub's macOS
+      # runners only support the Cocoa widgetset (see setup-lazarus's own
+      # README), and the .lpi doesn't pin a widgetset itself.
+      - name: Build Release
+        run: lazbuild --os=darwin --cpu=x86_64 --ws=cocoa --build-mode=Release src/Source/marathon.lpi
+
+      - name: Determine release version
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+          echo "MARATHON_VERSION=${VERSION:-dev}" >> "$GITHUB_ENV"
+
+      - name: Package release archive
+        run: |
+          STAGE="marathon-${MARATHON_VERSION}-macos-x86_64"
+          mkdir -p "$STAGE"
+          cp src/Source/marathon "$STAGE/"
+          cp README.md ROADMAP.md "$STAGE/"
+          zip -r "${STAGE}.zip" "$STAGE"
+          echo "MARATHON_ASSET=${STAGE}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.MARATHON_ASSET }}
