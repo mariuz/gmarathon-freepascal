@@ -217,6 +217,9 @@ type
     function CanScriptCreate: Boolean;
     procedure DoScriptCreate;
 
+    function CanScriptExecute: Boolean;
+    procedure DoScriptExecute;
+
     function CanCreateFolder: Boolean;
     procedure DoCreateFolder;
 

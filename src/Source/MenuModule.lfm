@@ -437,6 +437,9 @@ object dmMenus: TdmMenus
       object ObjectScriptDelete1: TMenuItem
         Action = frmMarathonMain.ObjectScriptDelete
       end
+      object ObjectScriptExecute1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptExecute
+      end
     end
     object N17: TMenuItem
       Caption = '-'

@@ -26,7 +26,7 @@ its `uses` clauses and wiring it directly to the new IBX types.
 - [x] **Script as CREATE from the object tree** — right-click a table/view/procedure in `DatabaseManager.pas`'s tree ("Script As" submenu) opens a new SQL editor pre-filled with its DDL, via `DDLExtractor` (Phase 1).
 - [x] **Script as SELECT** — right-click a table/view → new SQL editor with `select first 100 <columns> from <table>`. Column list comes from a small `RDB$RELATION_FIELDS` query (`ScriptAsColumnNames` in `MarathonIDE.pas`).
 - [x] **Script as INSERT / UPDATE / DELETE** — same column list drives `insert into t (...) values (:params)`, `update t set col = :col, ... where /* TODO */ 1 = 0`, and `delete from t where /* TODO */ 1 = 0` (no attempt at PK-based WHERE detection yet — the `1 = 0` placeholder is a deliberately inert default so a generated script can't accidentally run as an unqualified mass update/delete).
-- [ ] **Script as EXECUTE PROCEDURE** — for stored procedures, generate an `EXECUTE PROCEDURE name(...)` template with one placeholder per input parameter (types from `RDB$PROCEDURE_PARAMETERS`). Not done yet — `opScriptCreate` already covers SPs (scripts their `CREATE PROCEDURE`), this would be a separate "call it" template.
+- [x] **Script as EXECUTE PROCEDURE** — one placeholder per input parameter (`RDB$PROCEDURE_PARAMETERS` where `rdb$parameter_type = 0`); if the procedure also has output parameters (`rdb$parameter_type = 1`) it generates `select * from proc(:params)` (selectable procedure) instead of `execute procedure proc(:params)`, verified against a live server for both param directions.
 
 Implementation notes for future "Script as ..." additions: `TGSSCacheOp` (`MarathonProjectCacheTypes.pas`) has `opScriptSelect/Insert/Update/Delete/Create`; gating by object type is in `TMarathonCacheObject.CanDoOperation` (`MarathonProjectCache.pas`); the tree wiring is `TfrmDatabaseExplorer.CanScriptXxx`/`DoScriptXxx` (`DatabaseManager.pas`) → `IMarathonForm` (`MarathonInternalInterfaces.pas`, default no-op bodies in `BaseDocumentForm.pas`) → `TAction`s on `frmMarathonMain` (`MarathonMain.pas`/`.lfm`) → the "Script As" submenu in `mnuTree` (`MenuModule.lfm`/`.pas`) → `TMarathonIDE.CacheEventHandler`'s `opScriptXxx` case (`MarathonIDE.pas`), which calls the `ScriptAsXxx` generator functions and `ScriptAsOpenEditor` (all free functions just above `CacheEventHandler` in `MarathonIDE.pas`).
 
@@ -78,7 +78,7 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 | 1 | DDL extraction test coverage | Not started |
 | 2 | Script as CREATE (tree) | **Done** |
 | 2 | Script as SELECT/INSERT/UPDATE/DELETE | **Done** |
-| 2 | Script as EXECUTE PROCEDURE | Not started |
+| 2 | Script as EXECUTE PROCEDURE | **Done** |
 | 3 | Live Session Monitor | Not started |
 | 3 | Query performance stats via MON$ | Not started |
 | 4 | JSON/Markdown/TSV export | Not started |

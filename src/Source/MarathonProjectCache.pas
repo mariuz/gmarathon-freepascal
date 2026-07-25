@@ -3680,6 +3680,8 @@ begin
         Result := CacheType in [ctTable, ctView];
       opScriptCreate:
         Result := CacheType in [ctTable, ctView, ctSP];
+      opScriptExecute:
+        Result := CacheType = ctSP;
 		else
 			Result := False;
 		end;

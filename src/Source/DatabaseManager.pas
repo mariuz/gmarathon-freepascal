@@ -232,6 +232,9 @@ type
 		function CanScriptCreate : Boolean; override;
 		procedure DoScriptCreate; override;
 
+		function CanScriptExecute : Boolean; override;
+		procedure DoScriptExecute; override;
+
 		function CanDoFolderMode : Boolean; override;
 		function IsFolderMode : Boolean; override;
 		procedure DoFolderMode; override;
@@ -1109,6 +1112,16 @@ end;
 procedure TfrmDatabaseExplorer.DoScriptCreate;
 begin
 	DoBrowserOperation(opScriptCreate);
+end;
+
+function TfrmDatabaseExplorer.CanScriptExecute: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptExecute);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptExecute;
+begin
+	DoBrowserOperation(opScriptExecute);
 end;
 
 function TfrmDatabaseExplorer.CanAddToProject: Boolean;

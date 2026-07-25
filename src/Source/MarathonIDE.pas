@@ -618,6 +618,60 @@ begin
 	end;
 end;
 
+function ScriptAsExecute(Conn: TMarathonCacheConnection; ObjectName: String): String;
+var
+	Q: TIBQuery;
+	InParams: TStringList;
+	HasOutput: Boolean;
+	Idx: Integer;
+	ParamList: String;
+begin
+	InParams := TStringList.Create;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.Database := Conn.Connection;
+		Q.Transaction := Conn.Transaction;
+
+		Q.SQL.Text := 'select rdb$parameter_name from rdb$procedure_parameters where rdb$procedure_name = ' +
+			AnsiQuotedStr(ObjectName, '''') + ' and rdb$parameter_type = 0 order by rdb$parameter_number asc';
+		Q.Open;
+		while not Q.EOF do
+		begin
+			InParams.Add(Trim(Q.FieldByName('rdb$parameter_name').AsString));
+			Q.Next;
+		end;
+		Q.Close;
+
+		Q.SQL.Text := 'select rdb$parameter_name from rdb$procedure_parameters where rdb$procedure_name = ' +
+			AnsiQuotedStr(ObjectName, '''') + ' and rdb$parameter_type = 1';
+		Q.Open;
+		HasOutput := not Q.EOF;
+		Q.Close;
+
+		if Assigned(Q.Transaction) and Q.Transaction.Active then
+			Q.Transaction.Commit;
+
+		ParamList := '';
+		for Idx := 0 to InParams.Count - 1 do
+		begin
+			if Idx > 0 then
+				ParamList := ParamList + ', ';
+			ParamList := ParamList + ':' + InParams[Idx];
+		end;
+	finally
+		Q.Free;
+		InParams.Free;
+	end;
+
+	if HasOutput then
+		Result := 'select *' + #13#10 + 'from ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect)
+	else
+		Result := 'execute procedure ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect);
+	if ParamList <> '' then
+		Result := Result + '(' + ParamList + ')';
+	Result := Result + ';';
+end;
+
 procedure ScriptAsOpenEditor(ConnName, SQLText: String);
 var
 	F: TfrmSQLForm;
@@ -1057,7 +1111,7 @@ begin
 				end;
 			end;
 
-		opScriptSelect, opScriptInsert, opScriptUpdate, opScriptDelete, opScriptCreate:
+		opScriptSelect, opScriptInsert, opScriptUpdate, opScriptDelete, opScriptCreate, opScriptExecute:
 			begin
 				ConnectName := TMarathonCacheObject(Item).ConnectionName;
 				if not CheckConnected(ConnectName) then
@@ -1075,6 +1129,8 @@ begin
 							ScriptAsOpenEditor(ConnectName, ScriptAsDelete(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
 						opScriptCreate:
 							ScriptAsOpenEditor(ConnectName, ScriptAsCreate(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+						opScriptExecute:
+							ScriptAsOpenEditor(ConnectName, ScriptAsExecute(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
 					end;
 				finally
 					Screen.Cursor := crDefault;

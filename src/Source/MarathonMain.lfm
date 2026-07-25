@@ -2354,6 +2354,12 @@ object frmMarathonMain: TfrmMarathonMain
       OnExecute = ObjectScriptDeleteExecute
       OnUpdate = ObjectScriptDeleteUpdate
     end
+    object ObjectScriptExecute: TAction
+      Category = 'Object'
+      Caption = 'Script as &EXECUTE'
+      OnExecute = ObjectScriptExecuteExecute
+      OnUpdate = ObjectScriptExecuteUpdate
+    end
     object ProjectCreateFolder: TAction
       Category = 'Project'
       Caption = '&Create Folder...'

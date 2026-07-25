@@ -140,6 +140,7 @@ type
     ObjectScriptInsert: TAction;
     ObjectScriptUpdate: TAction;
     ObjectScriptDelete: TAction;
+    ObjectScriptExecute: TAction;
     ProjectCreateFolder: TAction;
     ProjectAddToProject: TAction;
     EditEncANSI: TAction;
@@ -539,6 +540,8 @@ type
     procedure ObjectScriptUpdateUpdate(Sender: TObject);
     procedure ObjectScriptDeleteExecute(Sender: TObject);
     procedure ObjectScriptDeleteUpdate(Sender: TObject);
+    procedure ObjectScriptExecuteExecute(Sender: TObject);
+    procedure ObjectScriptExecuteUpdate(Sender: TObject);
 		procedure ProjectCreateFolderExecute(Sender: TObject);
     procedure ProjectCreateFolderUpdate(Sender: TObject);
     procedure ProjectAddToProjectExecute(Sender: TObject);
@@ -2014,6 +2017,28 @@ begin
 		ObjectScriptDelete.Enabled := F.CanScriptDelete
 	else
 		ObjectScriptDelete.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptExecuteExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptExecute;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptExecuteUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptExecute.Enabled := F.CanScriptExecute
+	else
+		ObjectScriptExecute.Enabled := False;
 end;
 
 procedure TfrmMarathonMain.ProjectCreateFolderExecute(Sender: TObject);

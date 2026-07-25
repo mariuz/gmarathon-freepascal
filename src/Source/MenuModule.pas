@@ -122,6 +122,7 @@ type
     ObjectScriptInsert1: TMenuItem;
     ObjectScriptUpdate1: TMenuItem;
     ObjectScriptDelete1: TMenuItem;
+    ObjectScriptExecute1: TMenuItem;
     N4: TMenuItem;
     Print1: TMenuItem;
     PrintPreview1: TMenuItem;

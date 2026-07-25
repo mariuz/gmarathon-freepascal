@@ -55,7 +55,8 @@ type
     opScriptInsert,
     opScriptUpdate,
     opScriptDelete,
-    opScriptCreate);
+    opScriptCreate,
+    opScriptExecute);
 
   TGSSCacheType = (
     ctDontCare,

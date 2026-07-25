@@ -99,6 +99,9 @@ type
     function CanScriptCreate: Boolean; virtual;
     procedure DoScriptCreate; virtual;
 
+    function CanScriptExecute: Boolean; virtual;
+    procedure DoScriptExecute; virtual;
+
     function CanCreateFolder: Boolean; virtual;
     procedure DoCreateFolder; virtual;
 
@@ -417,6 +420,11 @@ begin
   Result := False;
 end;
 
+function TfrmBaseDocumentForm.CanScriptExecute: Boolean;
+begin
+  Result := False;
+end;
+
 function TfrmBaseDocumentForm.CanInternalClose: Boolean;
 begin
   Result := False;
@@ -572,6 +580,11 @@ begin
 end;
 
 procedure TfrmBaseDocumentForm.DoScriptCreate;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptExecute;
 begin
   //
 end;
