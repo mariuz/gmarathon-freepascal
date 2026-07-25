@@ -86,7 +86,12 @@ type
     ctExceptionHeader,
     ctException,
     ctUDFHeader,
-    ctUDF);
+    ctUDF,
+    { Appended: TGSSCacheType is persisted to the project XML by *name*
+      (GetEnumName/GetEnumValue), not ordinal, so adding values here does not
+      invalidate saved projects. }
+    ctPackageHeader,
+    ctPackage);
 
   TSortOrder = (srtAsc, srtDesc);
 

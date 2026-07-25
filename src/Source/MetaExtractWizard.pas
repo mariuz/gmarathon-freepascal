@@ -370,6 +370,7 @@ begin
 		ctGenerator: Result := lstGenerators;
 		ctException: Result := lstExceptions;
 		ctUDF: Result := lstUDFs;
+		ctPackage: Result := lstPackages;
 	else
 		Result := nil;
 	end;

@@ -505,6 +505,21 @@ type
     constructor Create; override;
   end;
 
+  TMarathonCachePackagesHeader = class(TMarathonCacheHeader)
+  private
+
+  public
+    procedure Expand(Recursive: Boolean); override;
+    constructor Create; override;
+  end;
+
+  TMarathonCachePackage = class(TMarathonCacheObject)
+  private
+
+  public
+    constructor Create; override;
+  end;
+
   TMarathonCacheProjectHeader = class(TMarathonCacheBaseNode)
   private
 
@@ -940,6 +955,12 @@ begin
 			Result := 0;
 
 		ctUDF:
+			Result := 9;
+
+		ctPackageHeader:
+			Result := 0;
+
+		ctPackage:
 			Result := 9;
 	else
 		Result := 0;
@@ -1448,6 +1469,9 @@ var
 
 			ctUDF:
 				Result := 'User Defined Functions';
+
+			ctPackage:
+				Result := 'Packages';
 		end;
 	end;
 
@@ -1914,6 +1938,14 @@ begin
 	wNode.Caption := NV.Text;
 	wNode.ConnectionName := FCaption;
   NV.Data := wNode;
+
+	NV := FRootItem.FCache.AddPathNode(fContainerNode, 'Packages');
+	wNode := TMarathonCachePackagesHeader.Create;
+	wNode.ContainerNode := NV;
+	wNode.RootItem := FRootItem;
+	wNode.Caption := NV.Text;
+	wNode.ConnectionName := FCaption;
+	NV.Data := wNode;
 
   FExpanded := True;
 end;
@@ -4462,6 +4494,66 @@ begin
 end;
 
 { TMarathonCacheFunction }
+constructor TMarathonCachePackagesHeader.Create;
+begin
+	inherited;
+	FCacheType := ctPackageHeader;
+end;
+
+procedure TMarathonCachePackagesHeader.Expand(Recursive: Boolean);
+var
+	wNode: TMarathonCachePackage;
+	NV: TMarathonTreeNode;
+	Q: TIBQuery;
+
+begin
+	FContainerNode.DeleteChildren;
+	{ Packages are Firebird 3 (ODS 12). RDB$PACKAGES does not exist earlier and
+	  querying a missing table is a hard error, so leave the branch empty. }
+	if not FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
+	begin
+		FExpanded := True;
+		Exit;
+	end;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
+		try
+			Q.SQL.Add('select RDB$PACKAGE_NAME from RDB$PACKAGES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PACKAGE_NAME asc;');
+			Q.Open;
+			while not Q.EOF do
+			begin
+				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$PACKAGE_NAME').AsString);
+				wNode := TMarathonCachePackage.Create;
+				wNode.ContainerNode := NV;
+				wNode.RootItem := FRootItem;
+				wNode.Caption := Q.FieldByName('RDB$PACKAGE_NAME').AsString;
+				wNode.ObjectName := Q.FieldByName('RDB$PACKAGE_NAME').AsString;
+				wNode.ConnectionName := FConnectionName;
+				wNode.System := False;
+				NV.Data := wNode;
+				Q.Next;
+			end;
+			FExpanded := True;
+		finally
+			TIBTransaction(Q.Transaction).Commit;
+		end;
+	finally
+		Q.Free;
+	end;
+end;
+
+constructor TMarathonCachePackage.Create;
+begin
+	inherited;
+	FImageIndex := 9;
+	FCacheType := ctPackage;
+end;
+
 constructor TMarathonCacheFunction.Create;
 begin
 	inherited;

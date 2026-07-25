@@ -236,6 +236,13 @@ begin
 
       ctUDF:
         edDDL.Text := Extractor.Extract(ddlUDF, ddlstNone, FForm.GetObjectName);
+
+      ctPackage:
+        { Header and body together - that is what recreating the package
+          actually takes, and a package may have a header with no body. }
+        edDDL.Text := Extractor.Extract(ddlPackage, ddlstHeader, FForm.GetObjectName) +
+                      #13#10 +
+                      Extractor.Extract(ddlPackage, ddlstProc, FForm.GetObjectName);
     end;
   finally
     Extractor.Free;

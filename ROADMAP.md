@@ -147,7 +147,8 @@ confirmed to exist rather than taken from release notes.
   `IsIB5`/`IsIB6` are deliberately left returning `True`: despite the names they are not version detection but "does this server use InterBase 6 semantics", which callers pass to `MakeQuotedIdent`/`ConvertFieldType` for quoted identifiers and dialect-3 types. Every Firebird release Marathon can connect to answers yes, so `True` is correct rather than a placeholder — they are now commented to say so, since they read like stubs.
 - [ ] **System-table column audit** — the `MON$`/`RDB$` queries in `MarathonProjectCache.pas` and `DDLExtractor.pas` were written for IB6-era schemas; several have gained useful columns since (e.g. `RDB$RELATIONS.RDB$SQL_SECURITY` in FB4). Audit and widen them where the ODS allows, using `FindField` for version-conditional columns as the partial-index fix does.
 - [x] **Packages (FB3) — DDL extraction and bulk export** — `TDDLExtractor` gained `ddlPackage`, reusing the same header/body subtype split as stored procedures (`ddlstHeader` → `CREATE OR ALTER PACKAGE ... AS <header>`, `ddlstProc` → `RECREATE PACKAGE BODY ... AS <body>`), ODS-12 gated. `TIBMetaExtract.WritePackages` writes all headers before any body, since a body may reference routines declared in another package's header — the same two-pass ordering stored procedures already use — and the bulk wizard has a Packages tab. A package may legitimately have a header and no body, so an empty body emits nothing rather than being treated as an error. Verified by round-trip: a package recreated from the generated script returns the same value from its packaged function.
-- [ ] **Packages (FB3) — object tree node** — still not shown in the Database Explorer. Unlike the extraction work above this needs a new `TGSSCacheType` value plus cache/header node classes, and that enum's ordinals are persisted in the project XML, so it wants care rather than an append-and-hope.
+- [x] **Packages (FB3) — object tree node** — a *Packages* branch now appears under each connection, listing `RDB$PACKAGES` and gated on ODS 12 (the branch is simply empty on older servers, since querying a missing table is a hard error). Selecting a package shows its DDL — header followed by body, which together are what recreating it actually takes — and the tree's "Extract Metadata" pre-selects it on the wizard's Packages tab. The persistence worry recorded here previously turned out to be unfounded: `TGSSCacheType` is serialised to the project XML by *name* via `GetEnumName`/`GetEnumValue`, not by ordinal, so appending values cannot invalidate saved projects.
+- [ ] **Package editor** — packages are read-only for now: the tree shows them and the DDL tab renders them, but there is no editor form, so double-clicking does not open one the way it does for tables or procedures.
 
 ## Phase 8 — Remaining FlameRobin IDE Parity
 
@@ -207,7 +208,8 @@ because the original reasoning no longer holds:
 | 7 | Multi-action + database-level trigger DDL | **Done** |
 | 7 | SQL SECURITY across all four object types | **Done** |
 | 7 | FB3 packages: DDL extraction + bulk export | **Done** |
-| 7 | FB3 packages: object tree node | Not started |
+| 7 | FB3 packages: object tree node | **Done** |
+| 7 | FB3 packages: editor form | Not started |
 | 7 | Modern-type / index CI coverage | **Done** |
 | 7 | FB4 long identifiers (audited, already OK) | **Done** |
 | 7 | Real server-version detection + ODS gating | **Done** |
