@@ -135,7 +135,8 @@ confirmed to exist rather than taken from release notes.
 
 ### Cross-cutting
 
-- [ ] **Server version detection** — Marathon has `IsIB5`/`IsIB6` on `TMarathonCacheConnection`, and both are hard-coded `Result := True` stubs. Nothing anywhere reads the real engine version, so no feature can currently be gated on it. Replace with a real `ENGINE_VERSION` / ODS read plus named constants (`ODS_FB4 = 13.0`, …) — a prerequisite for most items above, and for selecting keyword sets per connection instead of pinning `sqlFirebird40` globally.
+- [x] **Server version detection** — `TMarathonCacheConnection` now reads and caches the real engine version and ODS on connect, exposed as `ServerVersion`/`ServerMajorVersion`/`ODSMajor`/`ODSMinor` plus two predicates: `IsFirebirdAtLeast(major)` for SQL-level features and `IsODSAtLeast(major, minor)` for anything depending on the on-disk schema. Both are needed because they can disagree — a database created by an older engine keeps its older ODS when opened by a newer server, and it is the ODS that decides which `RDB$` columns exist. Named constants (`FB_VERSION_4..6`, `ODS_FB3_MAJOR`, `ODS_FB4_MAJOR`, `ODS_FB5_MINOR`, `ODS_FB6_MAJOR`) replace scattered magic numbers; note FB4 and FB5 share ODS major 13 and differ only in the minor. Engine version comes from `RDB$GET_CONTEXT('SYSTEM','ENGINE_VERSION')` with an ODS-based fallback (that context variable only exists from FB2 on), and ODS from IBX's `IAttachment.GetODSMajorVersion`/`GetODSMinorVersion` — no query needed. Verified against the live FB6 server: engine 6.0.0, ODS 14.0, all predicates correct. Surfaced in the connection properties dialog next to the Phase 3 auth/protocol fields.
+  `IsIB5`/`IsIB6` are deliberately left returning `True`: despite the names they are not version detection but "does this server use InterBase 6 semantics", which callers pass to `MakeQuotedIdent`/`ConvertFieldType` for quoted identifiers and dialect-3 types. Every Firebird release Marathon can connect to answers yes, so `True` is correct rather than a placeholder — they are now commented to say so, since they read like stubs.
 - [ ] **System-table column audit** — the `MON$`/`RDB$` queries in `MarathonProjectCache.pas` and `DDLExtractor.pas` were written for IB6-era schemas; several have gained useful columns since (e.g. `RDB$RELATIONS.RDB$SQL_SECURITY` in FB4). Audit and widen them where the ODS allows, using `FindField` for version-conditional columns as the partial-index fix does.
 - [ ] **`SQL SECURITY` clause** — FB4 added `SQL SECURITY DEFINER|INVOKER` on tables, procedures, functions and triggers; neither read nor emitted in DDL.
 
@@ -194,7 +195,7 @@ because the original reasoning no longer holds:
 | 7 | Expression + FB5 partial index DDL | **Done** |
 | 7 | Modern-type / index CI coverage | **Done** |
 | 7 | FB4 long identifiers (audited, already OK) | **Done** |
-| 7 | Real server-version detection (`IsIB5`/`IsIB6` are `True` stubs) | Not started |
+| 7 | Real server-version detection + ODS gating | **Done** |
 | 7 | FB4 named time zones / replication / encryption status | Not started |
 | 7 | FB5 profiler, `MON$COMPILED_STATEMENTS`, parallel workers | Not started |
 | 7 | FB5/FB6 keywords (blocked: SynEdit stops at `sqlFirebird40`) | Not started |

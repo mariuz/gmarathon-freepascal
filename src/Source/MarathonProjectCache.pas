@@ -69,6 +69,25 @@ uses SysUtils, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
 const
    cSepChar = #2;
 
+const
+  { Firebird feature gating. Prefer the engine (ENGINE_VERSION) major number
+    for SQL-level features, and ODS for anything that depends on the on-disk
+    schema - a database created by an older engine keeps its older ODS even
+    when opened by a newer server, so the two can disagree, and the ODS is
+    what says which RDB$ columns actually exist.
+      FB 2.5 -> ODS 11.1   FB 3.0 -> ODS 12.0   FB 4.0 -> ODS 13.0
+      FB 5.0 -> ODS 13.1   FB 6.0 -> ODS 14.x }
+  FB_VERSION_3 = 3;
+  FB_VERSION_4 = 4;
+  FB_VERSION_5 = 5;
+  FB_VERSION_6 = 6;
+
+  ODS_FB3_MAJOR = 12;
+  ODS_FB4_MAJOR = 13;
+  ODS_FB4_MINOR = 0;
+  ODS_FB5_MINOR = 1;   // FB5 is ODS 13.1 - same major as FB4
+  ODS_FB6_MAJOR = 14;
+
 type
 	TMarathonProjectDatabaseCache = class;
 
@@ -243,6 +262,16 @@ type
 		FDomainList: TStringList;
 		FErrorOnConnection: Boolean;
 		FRecorder: TfrmScriptRecorder;
+		FServerVersion: String;
+		FServerMajorVersion: Integer;
+		FODSMajor: Integer;
+		FODSMinor: Integer;
+		FVersionRead: Boolean;
+		procedure ReadServerVersion;
+		function GetServerVersion: String;
+		function GetServerMajorVersion: Integer;
+		function GetODSMajor: Integer;
+		function GetODSMinor: Integer;
 		function GetEncPassword: String;
 		procedure SetDBFileName(const Value: String);
 		procedure SetServerName(const Value: String);
@@ -270,6 +299,13 @@ type
 		procedure Disconnect;
 		function IsIB5: Boolean;
 		function IsIB6: Boolean;
+		{ True when the connected engine is at least the given major version.
+		  Returns False while disconnected rather than guessing. }
+		function IsFirebirdAtLeast(MajorVersion: Integer): Boolean;
+		{ True when the database's on-disk structure is at least the given ODS.
+		  Use this for "does this RDB$ column exist", since an old database on a
+		  new server keeps its old ODS. }
+		function IsODSAtLeast(Major, Minor: Integer): Boolean;
 		function GetDBCharSetName(CharSetID: Integer): String;
 		function GetDBCollationName(CollationID, CharSetID: Integer): String;
 		procedure GetCharSetNames(S: TStrings);
@@ -287,6 +323,11 @@ type
 		property LangDriver: String read FLangDriver write SetLangDriver;
 		property RememberPassword: Boolean read FRememberPassword write SetRememberPassword;
 		property ErrorOnConnection: Boolean read FErrorOnConnection write SetErrorOnConnection;
+		// Server/database version, read once per connection and cached
+		property ServerVersion: String read GetServerVersion;
+		property ServerMajorVersion: Integer read GetServerMajorVersion;
+		property ODSMajor: Integer read GetODSMajor;
+		property ODSMinor: Integer read GetODSMinor;
 		property ScriptRecorder: TfrmScriptRecorder read FRecorder write FRecorder;
 		// ObjectLists
 		property TableList: TStringList read GetTableList;
@@ -1628,6 +1669,7 @@ begin
 		Exit;
 	end;
 
+	FVersionRead := False;
 	Result := False;
 
 	if FErrorOnConnection then
@@ -1748,6 +1790,7 @@ begin
 		mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
 		FConnection.Connected := False;
+		FVersionRead := False;
 		FContainerNode.DeleteChildren;
 		FExpanded := False;
 		FRootItem.DatabaseDisconnecting(Caption);
@@ -2130,14 +2173,146 @@ begin
 	Result := FDomainList;
 end;
 
+{ IsIB5/IsIB6 are not version detection - they are "does this server use
+  InterBase 6 semantics", which callers pass to MakeQuotedIdent and
+  ConvertFieldType to decide on quoted identifiers and dialect-3 types. Every
+  Firebird release Marathon can connect to answers yes, so True is correct
+  rather than a placeholder. Use IsFirebirdAtLeast/IsODSAtLeast to gate
+  version-specific features. }
 function TMarathonCacheConnection.IsIB5: Boolean;
 begin
-  Result := True; // Assume Firebird/IB5+ compatible
+  Result := True;
 end;
 
 function TMarathonCacheConnection.IsIB6: Boolean;
 begin
-  Result := True; // Assume Firebird/IB6+ compatible
+  Result := True;
+end;
+
+procedure TMarathonCacheConnection.ReadServerVersion;
+var
+  Q: TIBQuery;
+  Tr: TIBTransaction;
+  Dot: Integer;
+  Ver: String;
+begin
+  FVersionRead := True;
+  FServerVersion := '';
+  FServerMajorVersion := 0;
+  FODSMajor := 0;
+  FODSMinor := 0;
+
+  if (not Assigned(FConnection)) or (not FConnection.Connected) then
+    Exit;
+
+  { ODS comes straight off the attachment - no query needed. }
+  try
+    FODSMajor := FConnection.Attachment.GetODSMajorVersion;
+    FODSMinor := FConnection.Attachment.GetODSMinorVersion;
+  except
+    FODSMajor := 0;
+    FODSMinor := 0;
+  end;
+
+  { ENGINE_VERSION is a context variable, so it needs a transaction. Use a
+    private one: this runs during connect, when the shared transaction may be
+    mid-use by the caller. }
+  Tr := TIBTransaction.Create(nil);
+  Q := TIBQuery.Create(nil);
+  try
+    try
+      Tr.DefaultDatabase := FConnection;
+      Q.Database := FConnection;
+      Q.Transaction := Tr;
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text := 'select rdb$get_context(''SYSTEM'', ''ENGINE_VERSION'') from rdb$database';
+        Q.Open;
+        if not Q.EOF then
+          FServerVersion := Trim(Q.Fields[0].AsString);
+        Q.Close;
+        Tr.Commit;
+      except
+        if Tr.Active then
+          Tr.Rollback;
+        raise;
+      end;
+    except
+      { RDB$GET_CONTEXT arrived in Firebird 2.0; on anything older, or if the
+        query fails for any other reason, fall back to inferring the engine
+        from the ODS rather than failing the connection. }
+      FServerVersion := '';
+    end;
+  finally
+    Q.Free;
+    Tr.Free;
+  end;
+
+  Ver := FServerVersion;
+  if Ver <> '' then
+  begin
+    Dot := Pos('.', Ver);
+    if Dot > 0 then
+      Ver := Copy(Ver, 1, Dot - 1);
+    FServerMajorVersion := StrToIntDef(Ver, 0);
+  end;
+
+  if FServerMajorVersion = 0 then
+  begin
+    { Infer from ODS. FB4 and FB5 share ODS major 13 and differ only in the
+      minor, so this can only ever be a lower bound - which is the safe
+      direction for feature gating. }
+    if FODSMajor >= ODS_FB6_MAJOR then
+      FServerMajorVersion := FB_VERSION_6
+    else if FODSMajor = ODS_FB4_MAJOR then
+    begin
+      if FODSMinor >= ODS_FB5_MINOR then
+        FServerMajorVersion := FB_VERSION_5
+      else
+        FServerMajorVersion := FB_VERSION_4;
+    end
+    else if FODSMajor = ODS_FB3_MAJOR then
+      FServerMajorVersion := FB_VERSION_3;
+  end;
+end;
+
+function TMarathonCacheConnection.GetServerVersion: String;
+begin
+  if not FVersionRead then
+    ReadServerVersion;
+  Result := FServerVersion;
+end;
+
+function TMarathonCacheConnection.GetServerMajorVersion: Integer;
+begin
+  if not FVersionRead then
+    ReadServerVersion;
+  Result := FServerMajorVersion;
+end;
+
+function TMarathonCacheConnection.GetODSMajor: Integer;
+begin
+  if not FVersionRead then
+    ReadServerVersion;
+  Result := FODSMajor;
+end;
+
+function TMarathonCacheConnection.GetODSMinor: Integer;
+begin
+  if not FVersionRead then
+    ReadServerVersion;
+  Result := FODSMinor;
+end;
+
+function TMarathonCacheConnection.IsFirebirdAtLeast(MajorVersion: Integer): Boolean;
+begin
+  Result := Connected and (ServerMajorVersion >= MajorVersion);
+end;
+
+function TMarathonCacheConnection.IsODSAtLeast(Major, Minor: Integer): Boolean;
+begin
+  Result := Connected and
+    ((ODSMajor > Major) or ((ODSMajor = Major) and (ODSMinor >= Minor)));
 end;
 
 procedure TMarathonCacheConnection.ResetCaption(Value: String);

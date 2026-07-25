@@ -4,7 +4,7 @@ object frmMasterProperties: TfrmMasterProperties
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'Master Properties'
-  ClientHeight = 393
+  ClientHeight = 421
   ClientWidth = 422
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -21,7 +21,7 @@ object frmMasterProperties: TfrmMasterProperties
     Left = 4
     Top = 4
     Width = 415
-    Height = 355
+    Height = 383
     ActivePage = tsConnection
     TabIndex = 0
     TabOrder = 0
@@ -240,6 +240,23 @@ object frmMasterProperties: TfrmMasterProperties
         ReadOnly = True
         TabStop = False
         TabOrder = 10
+      end
+      object Label21: TLabel
+        Left = 8
+        Top = 330
+        Width = 76
+        Height = 13
+        Caption = 'Server &Version:'
+        FocusControl = edServerVersion
+      end
+      object edServerVersion: TEdit
+        Left = 100
+        Top = 326
+        Width = 295
+        Height = 21
+        ReadOnly = True
+        TabStop = False
+        TabOrder = 11
       end
     end
     object tsProject: TTabSheet
@@ -541,7 +558,7 @@ object frmMasterProperties: TfrmMasterProperties
   end
   object btnHelp: TButton
     Left = 344
-    Top = 364
+    Top = 392
     Width = 75
     Height = 25
     Caption = 'Help'
@@ -549,7 +566,7 @@ object frmMasterProperties: TfrmMasterProperties
   end
   object btnCancel: TButton
     Left = 264
-    Top = 364
+    Top = 392
     Width = 75
     Height = 25
     Cancel = True
@@ -559,7 +576,7 @@ object frmMasterProperties: TfrmMasterProperties
   end
   object btnOK: TButton
     Left = 184
-    Top = 364
+    Top = 392
     Width = 75
     Height = 25
     Caption = 'OK'

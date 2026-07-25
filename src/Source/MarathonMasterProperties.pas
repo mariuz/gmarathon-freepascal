@@ -95,6 +95,8 @@ type
     edAuthMethod: TEdit;
     Label20: TLabel;
     edRemoteProtocol: TEdit;
+    Label21: TLabel;
+    edServerVersion: TEdit;
 		procedure btnOKClick(Sender: TObject);
 		procedure edDatabaseNameChange(Sender: TObject);
 		procedure edDatabaseNameBtn1Click(Sender: TObject);
@@ -202,15 +204,26 @@ begin
 		try
 			edAuthMethod.Text := Connection.Connection.AuthenticationMethod;
 			edRemoteProtocol.Text := Connection.Connection.RemoteProtocol;
+			{ Engine version and ODS both matter and can disagree: a database
+			  created by an older Firebird keeps its older ODS when opened by a
+			  newer server, and it is the ODS that decides which RDB$ columns
+			  exist. Show both rather than picking one. }
+			edServerVersion.Text := Connection.ServerVersion;
+			if edServerVersion.Text = '' then
+				edServerVersion.Text := '(unknown)';
+			edServerVersion.Text := edServerVersion.Text +
+				'   (ODS ' + IntToStr(Connection.ODSMajor) + '.' + IntToStr(Connection.ODSMinor) + ')';
 		except
 			edAuthMethod.Text := '(unavailable)';
 			edRemoteProtocol.Text := '(unavailable)';
+			edServerVersion.Text := '(unavailable)';
 		end;
 	end
 	else
 	begin
 		edAuthMethod.Text := '(not connected)';
 		edRemoteProtocol.Text := '(not connected)';
+		edServerVersion.Text := '(not connected)';
 	end;
 end;
 
