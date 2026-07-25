@@ -1279,6 +1279,18 @@ var
         Result := StringReplace(FormatFloat('##########0.000000', AFld.AsFloat), ',', '.', [rfReplaceAll]);
       ftCurrency:
         Result := StringReplace(FormatFloat('##########0.00', AFld.AsFloat), ',', '.', [rfReplaceAll]);
+      { Firebird's DECFLOAT, INT128 and NUMERIC/DECIMAL all arrive as BCD
+        fields. They are numbers, so emit them unquoted - going through
+        AsFloat instead would silently lose precision, which is the entire
+        point of DECFLOAT and INT128, so use AsString and only normalise the
+        decimal separator, which is locale-dependent whereas JSON is not. }
+      ftBCD, ftFMTBcd:
+        Result := StringReplace(Trim(AFld.AsString), ',', '.', [rfReplaceAll]);
+      ftBoolean:
+        if AFld.AsBoolean then
+          Result := 'true'
+        else
+          Result := 'false';
     else
       Result := '"' + JSONEscape(PlainFieldValue(AFld)) + '"';
     end;

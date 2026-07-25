@@ -114,7 +114,8 @@ feature work.
 
 - [x] **Long identifiers (63 chars)** — audited: no hard-coded 31-char truncation anywhere in the port; identifiers flow through dynamic strings, so this already works.
 - [x] **FB4 keyword highlighting** — `SQLDialect = sqlFirebird40` (Phase 6).
-- [ ] **Named time zone display** — the DDL side is done (`WITH TIME ZONE` above), but grids/property panes show the UTC offset rather than the IANA name (`Europe/Berlin`). `RDB$TIME_ZONES` is available for the lookup.
+- [ ] **Named time zone display** — the DDL side is done (`WITH TIME ZONE` above). Checked what actually reaches the grid: IBX surfaces these as `ftDateTime`/`ftTime` rendering as e.g. `25-7-26 14:30:00 +02:00`, so the *value* is right and only the zone name is missing — an IANA name (`Europe/Berlin`) would be more informative than the offset. `RDB$TIME_ZONES` is available for the lookup. Lower priority than it first looked, since nothing is wrong, only less readable.
+- [x] **FB3/FB4 values in the result grid and JSON export** — verified what these types look like once IBX has them: `DECFLOAT`, `INT128` and `NUMERIC(38,x)` all arrive as BCD fields and `BOOLEAN` as `ftBoolean`, with correct values including the full 128-bit range. That exposed a bug in the Phase 4 JSON exporter, which handled only the plain integer and float types and so emitted every one of these as a *quoted string* (`"1.5"`, `"True"`) instead of a JSON number or boolean. Now emitted unquoted, via `AsString` rather than `AsFloat` — routing a `DECFLOAT` or `INT128` through a float would silently destroy exactly the precision those types exist to provide. Confirmed by exporting 2^127-1 and parsing it back as an exact integer.
 - [ ] **Replication monitoring** — `RDB$PUBLICATIONS` / `RDB$PUBLICATION_TABLES` (confirmed present on FB4+) are not surfaced anywhere. Wants a *Replication* branch in `DatabaseManager.pas`'s tree, following the existing header-node `Expand()` pattern.
 - [ ] **Database encryption status** — surface whether the database is encrypted in the connection properties dialog, alongside the auth-method/protocol fields added in Phase 3. Note `IAttachment` exposes no encryption accessor; this needs the raw `fb_info_wire_crypt` / `isc_info_db_encrypted` info item.
 - [ ] **`SCROLL` attribute on cursors** — show it in procedure/trigger DDL where present.
@@ -210,6 +211,7 @@ because the original reasoning no longer holds:
 | 7 | FB3 packages: DDL extraction + bulk export | **Done** |
 | 7 | FB3 packages: object tree node | **Done** |
 | 7 | FB3 packages: editor form | Not started |
+| 4 | JSON export of DECFLOAT/INT128/BOOLEAN | **Done** |
 | 7 | Modern-type / index CI coverage | **Done** |
 | 7 | FB4 long identifiers (audited, already OK) | **Done** |
 | 7 | Real server-version detection + ODS gating | **Done** |
