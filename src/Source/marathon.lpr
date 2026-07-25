@@ -29,6 +29,7 @@ uses
   NewTrigger in 'NewTrigger.pas' {frmNewTrigger},
   StatementHistory in 'StatementHistory.pas' {frmStatementHistory},
   SessionMonitor in 'SessionMonitor.pas' {frmSessionMonitor},
+  MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},
   WindowList in 'WindowList.pas' {frmWindowList},
   UDFInputParam in 'UDFInputParam.pas' {frmUDFAddInput},

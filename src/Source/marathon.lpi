@@ -744,6 +744,12 @@
         <HasResources Value="True"/>
         <UnitName Value="SessionMonitor"/>
       </Unit109>
+      <Unit110>
+        <Filename Value="MaintenanceDialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="MaintenanceDialog"/>
+      </Unit110>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

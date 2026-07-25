@@ -51,8 +51,8 @@ no new library dependencies.
 MWASoftware's IBX ships a full Services API binding (`IBXServices.pas`, already
 vendored in `lib/ibx4lazarus`) that nothing in Marathon currently uses.
 
-- [ ] **Maintenance dialog** — sweep, `SET STATISTICS INDEX` (index selectivity recalculation), and validate/repair, driven through `TIBXServices` components instead of shelling out to `gfix`/`gstat`.
-- [ ] **Backup/Restore via Services API** — check whether Marathon's current backup/restore path already uses IBX services or still shells out; if the latter, migrating to `IBXServices.pas` gets progress callbacks for free.
+- [x] **Maintenance dialog** — `MaintenanceDialog.pas`/`.lfm` (`TfrmMaintenance`), opened via Tools > Database Maintenance. Sweep and Validate/Repair (full validation, ignore checksums, mend, kill shadows, read-only check) run through `TIBXValidationService`/`TIBXServicesConnection` (`ConnectUsing` + `SetDBParams` reusing the existing `TIBDatabase`'s connection and credentials, no separate login UI). `SET STATISTICS INDEX` turned out **not** to be a Services API operation at all (confirmed by grepping the whole `IBXServices.pas` for it) — it's plain DSQL, so the Index Statistics tab lists indexes from `RDB$INDICES` and runs it as ordinary `TIBQuery.ExecSQL`, one index at a time. Verified live: Sweep, `SET STATISTICS INDEX`, and Backup/Restore (below) all succeed against a running server; Validate correctly raises Firebird's own "secondary server attachments cannot validate databases" error when the app's own connection is still attached (expected — Firebird requires exclusive access for validate/repair) and is caught and reported in the dialog's log/message box rather than crashing.
+- [x] **Backup/Restore via Services API** — Marathon had no backup/restore at all before this (only a dead, always-disabled "Backup" tree node stub in `MarathonProjectCache.pas`). Backup uses `TIBXClientSideBackupService.BackupToFile` (streams over the wire to a local file, optionally metadata-only). Restore uses `TIBXClientSideRestoreService.RestoreFromFile`, deliberately **restore-to-new-file only** (`Options := [CreateNewDB]`, hard-blocked if the target path already exists) rather than exposing a "replace the live database in place" option — replacing a database Marathon has open elsewhere is a much bigger, riskier change to the app's connection lifecycle than this pass was scoped for.
 
 ## Phase 6 — SQL Editor Modernization
 
@@ -85,5 +85,6 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 | 3 | Query performance stats via MON$ | Not started |
 | 4 | JSON/Markdown/TSV export | **Done** |
 | 4 | Client-side result filter | **Done** |
-| 5 | Maintenance dialog (IBX Services) | Not started |
+| 5 | Maintenance dialog (IBX Services) | **Done** |
+| 5 | Backup/Restore via Services API | **Done** |
 | 6 | Keyword highlighting refresh | Not started |

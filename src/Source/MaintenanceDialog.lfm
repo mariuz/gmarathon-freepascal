@@ -1,0 +1,326 @@
+object frmMaintenance: TfrmMaintenance
+  Left = 200
+  Top = 120
+  Width = 700
+  Height = 560
+  Caption = 'Database Maintenance'
+  Color = clBtnFace
+  Constraints.MinHeight = 420
+  Constraints.MinWidth = 560
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poScreenCenter
+  OnClose = FormClose
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pnlTop: TPanel
+    Left = 0
+    Top = 0
+    Width = 692
+    Height = 26
+    Align = alTop
+    BevelOuter = bvNone
+    TabOrder = 0
+    object lblConnection: TLabel
+      Left = 8
+      Top = 6
+      Width = 68
+      Height = 13
+      Caption = 'Connection:'
+    end
+  end
+  object pgMaint: TPageControl
+    Left = 0
+    Top = 26
+    Width = 692
+    Height = 344
+    ActivePage = tsSweepValidate
+    Align = alClient
+    TabOrder = 1
+    object tsSweepValidate: TTabSheet
+      Caption = 'Sweep / Validate'
+      object btnSweep: TButton
+        Left = 8
+        Top = 8
+        Width = 100
+        Height = 25
+        Caption = '&Sweep'
+        TabOrder = 0
+        OnClick = btnSweepClick
+      end
+      object lblValidateOptions: TLabel
+        Left = 8
+        Top = 48
+        Width = 122
+        Height = 13
+        Caption = 'Validate / Repair options:'
+      end
+      object chkFullValidation: TCheckBox
+        Left = 8
+        Top = 68
+        Width = 250
+        Height = 17
+        Caption = 'Full validation (check record fragments)'
+        TabOrder = 1
+      end
+      object chkIgnoreChecksums: TCheckBox
+        Left = 8
+        Top = 90
+        Width = 200
+        Height = 17
+        Caption = 'Ignore checksums'
+        TabOrder = 2
+      end
+      object chkMendDatabase: TCheckBox
+        Left = 8
+        Top = 112
+        Width = 200
+        Height = 17
+        Caption = 'Mend database (repair)'
+        TabOrder = 3
+      end
+      object chkKillShadows: TCheckBox
+        Left = 8
+        Top = 134
+        Width = 200
+        Height = 17
+        Caption = 'Kill unavailable shadows'
+        TabOrder = 4
+      end
+      object chkReadOnlyValidation: TCheckBox
+        Left = 8
+        Top = 156
+        Width = 250
+        Height = 17
+        Caption = 'Read-only check (do not fix anything)'
+        TabOrder = 5
+      end
+      object btnValidate: TButton
+        Left = 8
+        Top = 184
+        Width = 130
+        Height = 25
+        Caption = '&Validate / Repair'
+        TabOrder = 6
+        OnClick = btnValidateClick
+      end
+    end
+    object tsStatistics: TTabSheet
+      Caption = 'Index Statistics'
+      object lstIndexes: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 684
+        Height = 275
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+      object pnlStatsBottom: TPanel
+        Left = 0
+        Top = 275
+        Width = 684
+        Height = 33
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 1
+        object btnRefreshIndexes: TButton
+          Left = 8
+          Top = 4
+          Width = 100
+          Height = 25
+          Caption = '&Refresh'
+          TabOrder = 0
+          OnClick = btnRefreshIndexesClick
+        end
+        object btnRecomputeSelectivity: TButton
+          Left = 116
+          Top = 4
+          Width = 200
+          Height = 25
+          Caption = 'Recompute &Selectivity'
+          TabOrder = 1
+          OnClick = btnRecomputeSelectivityClick
+        end
+      end
+    end
+    object tsBackup: TTabSheet
+      Caption = 'Backup'
+      object lblBackupFile: TLabel
+        Left = 8
+        Top = 12
+        Width = 55
+        Height = 13
+        Caption = 'Backup to:'
+      end
+      object edBackupFile: TEdit
+        Left = 8
+        Top = 30
+        Width = 500
+        Height = 21
+        TabOrder = 0
+      end
+      object btnBrowseBackup: TButton
+        Left = 514
+        Top = 29
+        Width = 75
+        Height = 23
+        Caption = 'Browse...'
+        TabOrder = 1
+        OnClick = btnBrowseBackupClick
+      end
+      object chkBackupMetadataOnly: TCheckBox
+        Left = 8
+        Top = 60
+        Width = 200
+        Height = 17
+        Caption = 'Metadata only (no data)'
+        TabOrder = 2
+      end
+      object btnBackup: TButton
+        Left = 8
+        Top = 88
+        Width = 100
+        Height = 25
+        Caption = '&Backup'
+        TabOrder = 3
+        OnClick = btnBackupClick
+      end
+    end
+    object tsRestore: TTabSheet
+      Caption = 'Restore'
+      object lblRestoreSource: TLabel
+        Left = 8
+        Top = 12
+        Width = 87
+        Height = 13
+        Caption = 'Restore from file:'
+      end
+      object edRestoreSource: TEdit
+        Left = 8
+        Top = 30
+        Width = 500
+        Height = 21
+        TabOrder = 0
+      end
+      object btnBrowseRestoreSource: TButton
+        Left = 514
+        Top = 29
+        Width = 75
+        Height = 23
+        Caption = 'Browse...'
+        TabOrder = 1
+        OnClick = btnBrowseRestoreSourceClick
+      end
+      object lblRestoreTarget: TLabel
+        Left = 8
+        Top = 60
+        Width = 141
+        Height = 13
+        Caption = 'To new database file:'
+      end
+      object edRestoreTarget: TEdit
+        Left = 8
+        Top = 78
+        Width = 500
+        Height = 21
+        TabOrder = 2
+      end
+      object btnBrowseRestoreTarget: TButton
+        Left = 514
+        Top = 77
+        Width = 75
+        Height = 23
+        Caption = 'Browse...'
+        TabOrder = 3
+        OnClick = btnBrowseRestoreTargetClick
+      end
+      object btnRestore: TButton
+        Left = 8
+        Top = 108
+        Width = 100
+        Height = 25
+        Caption = 'R&estore'
+        TabOrder = 4
+        OnClick = btnRestoreClick
+      end
+    end
+  end
+  object pnlLog: TPanel
+    Left = 0
+    Top = 370
+    Width = 692
+    Height = 152
+    Align = alBottom
+    BevelOuter = bvNone
+    TabOrder = 2
+    object lblLog: TLabel
+      Left = 8
+      Top = 4
+      Width = 21
+      Height = 13
+      Caption = 'Log:'
+    end
+    object mmoLog: TMemo
+      Left = 8
+      Top = 20
+      Width = 676
+      Height = 128
+      Anchors = [akLeft, akTop, akRight, akBottom]
+      ReadOnly = True
+      ScrollBars = ssVertical
+      TabOrder = 0
+    end
+  end
+  object dlgSaveBackup: TSaveDialog
+    DefaultExt = '*.fbk'
+    Filter = 'Firebird Backup Files (*.fbk)|*.fbk|All Files (*.*)|*.*'
+    Options = [ofOverwritePrompt, ofHideReadOnly]
+    Title = 'Backup To File'
+    Left = 40
+    Top = 400
+  end
+  object dlgOpenRestoreSource: TOpenDialog
+    DefaultExt = '*.fbk'
+    Filter = 'Firebird Backup Files (*.fbk)|*.fbk|All Files (*.*)|*.*'
+    Options = [ofFileMustExist, ofHideReadOnly]
+    Title = 'Restore From File'
+    Left = 80
+    Top = 400
+  end
+  object dlgSaveRestoreTarget: TSaveDialog
+    DefaultExt = '*.fdb'
+    Filter = 'Firebird Database Files (*.fdb)|*.fdb|All Files (*.*)|*.*'
+    Options = [ofHideReadOnly]
+    Title = 'New Database File'
+    Left = 120
+    Top = 400
+  end
+  object svcConn: TIBXServicesConnection
+    LoginPrompt = False
+    Left = 40
+    Top = 440
+  end
+  object svcValidate: TIBXValidationService
+    ServicesConnection = svcConn
+    OnGetNextLine = ServiceGetNextLine
+    Left = 80
+    Top = 440
+  end
+  object svcBackup: TIBXClientSideBackupService
+    ServicesConnection = svcConn
+    OnGetNextLine = ServiceGetNextLine
+    Left = 120
+    Top = 440
+  end
+  object svcRestore: TIBXClientSideRestoreService
+    ServicesConnection = svcConn
+    OnGetNextLine = ServiceGetNextLine
+    Left = 160
+    Top = 440
+  end
+end

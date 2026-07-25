@@ -890,6 +890,9 @@ object frmMarathonMain: TfrmMarathonMain
         object ToolsSessionMonitor1: TMenuItem
           Action = ToolsSessionMonitor
         end
+        object ToolsMaintenance1: TMenuItem
+          Action = ToolsMaintenance
+        end
         object UserEditor1: TMenuItem
           Action = ToolsUserEditor
         end
@@ -1803,6 +1806,12 @@ object frmMarathonMain: TfrmMarathonMain
       Caption = 'Session &Monitor...'
       Hint = 'Session Monitor'
       OnExecute = ToolsSessionMonitorExecute
+    end
+    object ToolsMaintenance: TAction
+      Category = 'Tools'
+      Caption = 'Database &Maintenance...'
+      Hint = 'Database Maintenance (sweep, validate, statistics, backup/restore)'
+      OnExecute = ToolsMaintenanceExecute
     end
     object ProjectProjectOptions: TAction
       Category = 'Project'
