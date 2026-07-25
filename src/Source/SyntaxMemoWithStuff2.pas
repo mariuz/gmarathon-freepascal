@@ -118,6 +118,12 @@ type
 		procedure SetExecutionHighlighting(const ExecutelineBegin: integer;
 			const ExecuteLineEnd: integer);
     procedure ClearExecutionHighlighting;
+    { No-op here. In the full editor wrapper (lib/SyntaxMemoWithStuff2) this
+      hides the code-completion and hint popup windows; this reduced stub has
+      neither, so there is nothing to close. Kept because editor forms call it
+      from mouse/move handlers, and dropping it would mean scattering
+      conditionals through every one of those call sites. }
+    procedure CloseUpLists;
     function DoOnSpecialLineColors(Line: integer; var Foreground, Background: TColor): boolean;
 
     property SelLength: integer read GetSelLength write SetSelLength;
@@ -268,6 +274,11 @@ begin
 	FExecutelineBegin := ExecutelineBegin;
 	FExecuteLineEnd := ExecuteLineEnd;
 	Invalidate;
+end;
+
+procedure TSyntaxMemoWithStuff2.CloseUpLists;
+begin
+  { see declaration - no popups exist in this stub }
 end;
 
 procedure TSyntaxMemoWithStuff2.ClearExecutionHighlighting;
