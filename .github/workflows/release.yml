@@ -86,10 +86,36 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Lazarus / FPC
-        uses: gcarreno/setup-lazarus@v3.4.1
-        with:
-          lazarus-version: stable
+      # Installed directly from the official Lazarus SourceForge project
+      # rather than the gcarreno/setup-lazarus action - that action's own
+      # README says it's unmaintained, and it failed outright on the macOS
+      # job in this workflow's first test run.
+      - name: Download Lazarus/FPC installer
+        shell: pwsh
+        run: |
+          $url = "https://sourceforge.net/projects/lazarus/files/Lazarus%20Windows%2064%20bits/Lazarus%204.8/lazarus-4.8-fpc-3.2.2-win64.exe/download"
+          Invoke-WebRequest -Uri $url -OutFile "lazarus-setup.exe" -UserAgent "Mozilla/5.0"
+
+      - name: Install Lazarus/FPC (silent)
+        shell: pwsh
+        run: |
+          $installDir = "C:\lazarus"
+          # The Lazarus Windows installer is built with Inno Setup - these
+          # are its standard unattended-install switches.
+          Start-Process -FilePath ".\lazarus-setup.exe" `
+            -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-","/DIR=$installDir" `
+            -Wait -NoNewWindow
+
+          Add-Content -Path $env:GITHUB_PATH -Value $installDir
+
+          $fpcExe = Get-ChildItem -Path "$installDir\fpc" -Filter "fpc.exe" -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*bin*" } | Select-Object -First 1
+          if ($fpcExe) {
+            Add-Content -Path $env:GITHUB_PATH -Value $fpcExe.DirectoryName
+          } else {
+            Write-Error "fpc.exe not found under $installDir\fpc after install"
+            exit 1
+          }
 
       - name: Register IBX packages with lazbuild
         run: |
@@ -140,10 +166,42 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Lazarus / FPC
-        uses: gcarreno/setup-lazarus@v3.4.1
-        with:
-          lazarus-version: stable
+      # Same rationale as the Windows job: install FPC + Lazarus directly
+      # from the official SourceForge project instead of the unmaintained
+      # gcarreno/setup-lazarus action, which failed to even install on
+      # macOS in this workflow's first test run. Lazarus 4.8's macOS folder
+      # only ships an FPC 3.2.4rc1a build (not the 3.2.2 Linux/Windows use)
+      # - that's simply what's available for this Lazarus version here.
+      - name: Download and install FPC
+        run: |
+          curl -sL -A "Mozilla/5.0" \
+            "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg/download" \
+            -o fpc.dmg
+          hdiutil attach fpc.dmg -nobrowse -mountpoint /Volumes/fpc-installer
+          FPC_PKG=$(find /Volumes/fpc-installer -maxdepth 2 -name "*.pkg" | head -1)
+          if [ -z "$FPC_PKG" ]; then
+            echo "No .pkg found in FPC dmg" >&2
+            find /Volumes/fpc-installer
+            exit 1
+          fi
+          sudo installer -pkg "$FPC_PKG" -target /
+          hdiutil detach /Volumes/fpc-installer
+
+      - name: Download and install Lazarus IDE
+        run: |
+          curl -sL -A "Mozilla/5.0" \
+            "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/lazarus-darwin-x86_64-4.8.zip/download" \
+            -o lazarus.zip
+          sudo mkdir -p /Applications/Lazarus
+          sudo unzip -q lazarus.zip -d /Applications/Lazarus
+
+          LAZBUILD=$(find /Applications/Lazarus -maxdepth 3 -name "lazbuild" | head -1)
+          if [ -z "$LAZBUILD" ]; then
+            echo "lazbuild not found after unzip" >&2
+            find /Applications/Lazarus
+            exit 1
+          fi
+          echo "$(dirname "$LAZBUILD")" >> "$GITHUB_PATH"
 
       - name: Register IBX packages with lazbuild
         run: |
