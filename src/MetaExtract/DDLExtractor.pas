@@ -68,9 +68,20 @@ type
     FDecimals: Integer;
     FDecSeparator: String;
     FIsIB6: Boolean;
+    FODSMajor: Integer;
+    FODSMinor: Integer;
+    FODSRead: Boolean;
     FSQLDIalect: Integer;
     FOnStatus: TOnStatusEvent;
     FIncludeDoc: Boolean;
+    procedure ReadODS;
+    { True when the attached database's on-disk structure is at least this
+      ODS. Used to decide whether a system column exists before selecting it -
+      naming a column that predates the database is a hard query error, not a
+      NULL. }
+    function ODSAtLeast(Major, Minor: Integer): Boolean;
+    function IdentityOptions(const GeneratorName: String): String;
+    function TableSQLSecurity(const ObjectName: String): String;
     function ExtractGenerator(ObjectName : String) : String;
     function ExtractGeneratorValue(ObjectName : String) : String;
     function ExtractDomain(ObjectName : String) : String;
@@ -1196,12 +1207,115 @@ begin
 end;
 
 
+procedure TDDLExtractor.ReadODS;
+begin
+  FODSRead := True;
+  FODSMajor := 0;
+  FODSMinor := 0;
+  if not Assigned(FDatabase) or not FDatabase.Connected then
+    Exit;
+  try
+    FODSMajor := FDatabase.Attachment.GetODSMajorVersion;
+    FODSMinor := FDatabase.Attachment.GetODSMinorVersion;
+  except
+    FODSMajor := 0;
+    FODSMinor := 0;
+  end;
+end;
+
+function TDDLExtractor.ODSAtLeast(Major, Minor: Integer): Boolean;
+begin
+  if not FODSRead then
+    ReadODS;
+  Result := (FODSMajor > Major) or ((FODSMajor = Major) and (FODSMinor >= Minor));
+end;
+
+function TDDLExtractor.IdentityOptions(const GeneratorName: String): String;
+var
+  Q : TIBDataSet;
+  InitVal : Int64;
+  Incr : Integer;
+begin
+  { Only emit the clause when it differs from Firebird's defaults of
+    START WITH 1 INCREMENT BY 1, to keep ordinary identity columns terse. }
+  Result := '';
+  if Trim(GeneratorName) = '' then
+    Exit;
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$initial_value, rdb$generator_increment from rdb$generators ' +
+               'where rdb$generator_name = ' + AnsiQuotedStr(Trim(GeneratorName), ''''));
+    try
+      Q.Open;
+      if not Q.EOF then
+      begin
+        InitVal := Q.FieldByName('rdb$initial_value').AsLargeInt;
+        Incr := Q.FieldByName('rdb$generator_increment').AsInteger;
+        if (InitVal <> 1) or (Incr <> 1) then
+          Result := ' (start with ' + IntToStr(InitVal) + ' increment by ' + IntToStr(Incr) + ')';
+      end;
+      Q.Close;
+    except
+      { RDB$INITIAL_VALUE/RDB$GENERATOR_INCREMENT are themselves Firebird 3+;
+        if they are missing just omit the options rather than fail the whole
+        table extraction. }
+      Result := '';
+    end;
+  finally
+    Q.Free;
+  end;
+end;
+
+function TDDLExtractor.TableSQLSecurity(const ObjectName: String): String;
+var
+  Q : TIBDataSet;
+  Fld : TField;
+begin
+  { Firebird 4 SQL SECURITY DEFINER|INVOKER. RDB$SQL_SECURITY is nullable:
+    NULL means the table just inherits the database default, so emit nothing
+    in that case rather than guessing a value. The column itself only exists
+    from ODS 13 on. }
+  Result := '';
+  if not ODSAtLeast(13, 0) then
+    Exit;
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$sql_security from rdb$relations where rdb$relation_name = ' +
+               AnsiQuotedStr(ObjectName, ''''));
+    try
+      Q.Open;
+      if not Q.EOF then
+      begin
+        Fld := Q.FindField('rdb$sql_security');
+        if Assigned(Fld) and not Fld.IsNull then
+        begin
+          if Fld.AsBoolean then
+            Result := ' sql security definer'
+          else
+            Result := ' sql security invoker';
+        end;
+      end;
+      Q.Close;
+    except
+      Result := '';
+    end;
+  finally
+    Q.Free;
+  end;
+end;
+
 function TDDLExtractor.ExtractTable(ObjectName: String): String;
 var
   Q1 : TIBDataSet;
   Q2 : TIBDataSet;
   First : Boolean;
   Line : String;
+  IdentityCols : String;
+  IdentityClause : String;
   Output : TStringList;
   CharSet : String;
   Collation : String;
@@ -1227,9 +1341,17 @@ begin
       Q2.Database := FDatabase;
       Q2.Transaction := FTransaction;
 
+      { Identity columns arrived in Firebird 3 (ODS 12). Naming these columns
+        against an older database is a hard query error rather than a NULL, so
+        select them only when the ODS actually has them. }
+      if ODSAtLeast(12, 0) then
+        IdentityCols := 'a.rdb$identity_type as identity_type, a.rdb$generator_name as identity_gen, '
+      else
+        IdentityCols := '';
+
       if FIsIB6 and (FSQLDialect = 3) then
       begin
-        Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
+        Q1.SelectSQL.Add('select ' + IdentityCols + 'a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
                    'b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, ' +
                    'b.rdb$character_set_id, b.rdb$collation_id as fcollate, a.rdb$collation_id as tcollate, ' +
                    'b.rdb$computed_source, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, ' +
@@ -1240,7 +1362,7 @@ begin
       end
       else
       begin
-        Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
+        Q1.SelectSQL.Add('select ' + IdentityCols + 'a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
                    'b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, ' +
                    'b.rdb$character_set_id, b.rdb$collation_id as fcollate, a.rdb$collation_id as tcollate, ' +
                    'b.rdb$computed_source, b.rdb$field_length, b.rdb$field_scale, ' +
@@ -1260,6 +1382,22 @@ begin
         else
           Line := Line + ',' + #13#10 + '     ';
         First := False;
+        { Firebird 3 identity columns. RDB$IDENTITY_TYPE is 0 for GENERATED
+          ALWAYS and 1 for GENERATED BY DEFAULT; START WITH / INCREMENT BY live
+          on the backing generator named by RDB$GENERATOR_NAME. Losing this on
+          extraction is not cosmetic - the restored column silently stops
+          auto-generating. }
+        IdentityClause := '';
+        if Assigned(Q1.FindField('identity_type')) and
+           not Q1.FieldByName('identity_type').IsNull then
+        begin
+          if Q1.FieldByName('identity_type').AsInteger = 0 then
+            IdentityClause := ' generated always as identity'
+          else
+            IdentityClause := ' generated by default as identity';
+          IdentityClause := IdentityClause + IdentityOptions(Q1.FieldByName('identity_gen').AsString);
+        end;
+
         Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$field_name').AsString), FIsIb6, FSQLDialect) + ' ';
         if Trim(Q1.FieldByName('rdb$computed_source').AsString) <> '' then
         begin
@@ -1325,6 +1463,8 @@ begin
             if Trim(Q1.FieldByName('rdb$default_source').AsString) <> '' then
               Line := Line + ' ' + Trim(Q1.FieldByName('rdb$default_source').AsString);
 
+            Line := Line + IdentityClause;
+
             if Not (Q1.FieldByName('tnull_flag').IsNull and Q1.FieldByName('fnull_flag').IsNull) then
               Line := Line + ' not null';
 
@@ -1341,6 +1481,8 @@ begin
 
             if Trim(Q1.FieldByName('rdb$default_source').AsString) <> '' then
               Line := Line + ' ' + Trim(Q1.FieldByName('rdb$default_source').AsString);
+
+            Line := Line + IdentityClause;
 
             if Not (Q1.FieldByName('tnull_flag').IsNull) then
               Line := Line + ' not null';
@@ -1359,7 +1501,7 @@ begin
       Q2.Free;
     end;
 
-    Line := Line + ');';
+    Line := Line + ')' + TableSQLSecurity(ObjectName) + ';';
     OutPut.Text := Line;
 
     //check constraints

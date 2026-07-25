@@ -100,6 +100,9 @@ feature work.
 - [x] **`BIGINT` round-trip fidelity** — `blr_int64` sub_type 0 emitted `decimal(18, 0)`. Both store as int64 scale 0, but re-running that DDL changed `RDB$FIELD_SUB_TYPE` from 0 to 2, so a backup/restore-by-script silently altered metadata. Now emits `bigint`.
 - [x] **Expression indexes emitted invalid SQL** — an expression index (`COMPUTED BY`, FB1.5+) has no `RDB$INDEX_SEGMENTS` rows, so the column-list loop produced nothing and the extractor wrote `create index IX on TBL();` — a syntax error. Now reads `RDB$EXPRESSION_SOURCE` and emits `computed by (...)`.
 - [x] **FB5 partial (conditional) indexes lost their `WHERE`** — `RDB$CONDITION_SOURCE` was never read, so `create index IX on T(C) where C is not null` extracted as an unconditional index over the whole table: a *different* index, not a cosmetic difference. Now appended, read via `FindField` since the column does not exist before FB5.
+- [x] **Identity columns (FB3) lost on extraction** — a column declared `GENERATED ALWAYS|BY DEFAULT AS IDENTITY` extracted as a plain `integer`, so a table restored from the generated script silently stopped auto-generating values. `RDB$RELATION_FIELDS.RDB$IDENTITY_TYPE` (0 = ALWAYS, 1 = BY DEFAULT) is now read, along with `START WITH`/`INCREMENT BY` from the backing generator named by `RDB$GENERATOR_NAME`, emitted only when they differ from Firebird's 1/1 defaults. Verified round-trip: identity type, initial value and increment all match after re-executing.
+- [x] **`SQL SECURITY` (FB4) lost on extraction** — `RDB$RELATIONS.RDB$SQL_SECURITY` is now emitted as `sql security definer|invoker`. It is nullable, meaning "inherit the database default", so a NULL emits nothing rather than guessing.
+- [x] **ODS gating inside `DDLExtractor`** — the above need columns that do not exist on older servers, and naming a missing column is a hard query error rather than a NULL, so the extractor reads the attachment's ODS itself (`ODSAtLeast`) and only selects them when present. This keeps it self-contained: callers do not have to pass version information in.
 - [x] **CI regression coverage for all of the above** — `test/ibx_smoke_test.lpr` now creates and extracts modern-type columns and both index kinds, gated on `RDB$GET_CONTEXT('SYSTEM','ENGINE_VERSION')` so it exercises what the connected server actually supports (CI runs FB3.0 → `BOOLEAN` path; a local FB6 exercises everything). It also fails outright if any extracted DDL contains an `RDB$` domain name, which is the generic signature of an unmapped type.
 
 ### Firebird 4 (ODS 13.0)
@@ -193,6 +196,7 @@ because the original reasoning no longer holds:
 | 7 | FB3/FB4 modern column types in DDL | **Done** |
 | 7 | BIGINT round-trip fidelity | **Done** |
 | 7 | Expression + FB5 partial index DDL | **Done** |
+| 7 | FB3 identity columns + FB4 SQL SECURITY in DDL | **Done** |
 | 7 | Modern-type / index CI coverage | **Done** |
 | 7 | FB4 long identifiers (audited, already OK) | **Done** |
 | 7 | Real server-version detection + ODS gating | **Done** |
