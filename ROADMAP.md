@@ -1,5 +1,13 @@
 # Marathon Roadmap
 
+**Status: all planned phases below are done.** Every item across Phases 1–6
+is implemented, built clean in both Debug and Release, and verified against
+a live Firebird server. See [Explicitly out of scope](#explicitly-out-of-scope)
+for what was deliberately left out, and `CLAUDE.md`'s "Remaining Porting
+Tasks" section for other, unrelated Win32-only features (printing, the query
+builder, SQL Insight templates, the keybinding editor) that are still
+stubbed on this port and are candidates for a future roadmap.
+
 This roadmap adapts ideas from [FlameRobin's roadmap](https://github.com/mariuz/flamerobin/blob/master/ROADMAP.md) —
 another Firebird admin/IDE tool — to what's realistic for Marathon: a Lazarus/FreePascal
 codebase, now on IBX (`lib/ibx4lazarus` + `lib/fbintf`), with no unit test framework
