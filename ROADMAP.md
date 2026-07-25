@@ -43,8 +43,8 @@ no new library dependencies.
 
 ## Phase 4 — Result Grid Export
 
-- [ ] **JSON / Markdown / TSV export** — `Globals.pas`'s `ExportGrid` (`TExportType`) already does CSV/HTML/INSERT-statement export from a populated `TDataSet`; add sibling formats following the same pattern rather than a new export engine.
-- [ ] **Client-side result filter** — an in-memory filter/search box above the results `TDBGrid` in `SQLForm.pas`, filtering the already-fetched `TBufDataset`/`TIBQuery` results without re-querying.
+- [x] **JSON / Markdown / TSV export** — `Globals.pas`'s `ExportGrid` gained `ExType.ExType` values 2 (JSON array-of-objects, NULLs emitted as `null`, numeric fields unquoted), 3 (Markdown pipe table), and 4 (Tab Separated Values), alongside the existing 0 (separated values) and 1 (insert statement). `SaveFileFormat.pas`/`.lfm`'s format combo grew matching entries ('JSON', 'Markdown Table', 'Tab Separated Values') plus a blank `nbpNone` options page for formats with no separator/qualifier/table-name settings to configure — `SQLForm.pas`'s and `EditorStoredProcedure.pas`'s `DoExport` needed no changes since they already pass `cmbFormat.ItemIndex` straight through as `ExType.ExType`.
+- [x] **Client-side result filter** — a `Filter:` `TEdit` next to the results grid's navigator/refresh panel in `SQLForm.pas` (`tsResultsView` → `pnlNavigator`), wired to `qrySQLStatement.Filtered`/`OnFilterRecord` (case-insensitive substring match across all non-BLOB fields). Confirmed via `IBQuery.pas`/`IBCustomDataSet.pas` that `TIBQuery` does not override `SetFiltered` to re-query (unlike sibling `TIBDataSet`), so this is genuinely in-memory — no round trip to Firebird. Filter box and `Filtered` both reset in `qrySQLStatementAfterOpen` so a fresh query run always starts unfiltered.
 
 ## Phase 5 — Database Maintenance
 
@@ -83,6 +83,7 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 | 3 | Live Session Monitor | **Done** |
 | 3 | Cancel Statement / Disconnect Attachment | **Done** |
 | 3 | Query performance stats via MON$ | Not started |
-| 4 | JSON/Markdown/TSV export | Not started |
+| 4 | JSON/Markdown/TSV export | **Done** |
+| 4 | Client-side result filter | **Done** |
 | 5 | Maintenance dialog (IBX Services) | Not started |
 | 6 | Keyword highlighting refresh | Not started |

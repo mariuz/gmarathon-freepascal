@@ -1146,6 +1146,7 @@ var
 	FCnt: Integer;
   FirstBit: String;
   Fld : TField;
+  IsFirstRow: Boolean;
 
 
   function AddSepChar(S: String): String;
@@ -1156,6 +1157,88 @@ var
     end
     else
       Result := S;
+  end;
+
+  function PlainFieldValue(AFld: TField): String;
+  begin
+    if AFld.IsNull then
+    begin
+      Result := '';
+      Exit;
+    end;
+    case AFld.DataType of
+      ftFloat:
+        Result := FormatFloat('##########0.000000', AFld.AsFloat);
+      ftCurrency:
+        Result := FormatFloat('##########0.00', AFld.AsFloat);
+      ftDate, ftTime, ftDateTime:
+        Result := DateTimeToStr(AFld.AsDateTime);
+      ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftTypedBinary:
+        Result := '(BLOB)';
+    else
+      Result := AFld.AsString;
+    end;
+  end;
+
+  function JSONEscape(S: String): String;
+  var
+    i: Integer;
+    C: Char;
+  begin
+    Result := '';
+    for i := 1 to Length(S) do
+    begin
+      C := S[i];
+      case C of
+        '"': Result := Result + '\"';
+        '\': Result := Result + '\\';
+        #8: Result := Result + '\b';
+        #9: Result := Result + '\t';
+        #10: Result := Result + '\n';
+        #12: Result := Result + '\f';
+        #13: Result := Result + '\r';
+      else
+        if Ord(C) < 32 then
+          Result := Result + '\u' + IntToHex(Ord(C), 4)
+        else
+          Result := Result + C;
+      end;
+    end;
+  end;
+
+  function JSONFieldValue(AFld: TField): String;
+  begin
+    if AFld.IsNull then
+    begin
+      Result := 'null';
+      Exit;
+    end;
+    case AFld.DataType of
+      ftSmallint, ftInteger, ftLargeint, ftWord:
+        Result := AFld.AsString;
+      ftFloat:
+        Result := StringReplace(FormatFloat('##########0.000000', AFld.AsFloat), ',', '.', [rfReplaceAll]);
+      ftCurrency:
+        Result := StringReplace(FormatFloat('##########0.00', AFld.AsFloat), ',', '.', [rfReplaceAll]);
+    else
+      Result := '"' + JSONEscape(PlainFieldValue(AFld)) + '"';
+    end;
+  end;
+
+  function MDEscape(S: String): String;
+  begin
+    Result := StringReplace(S, '|', '\|', [rfReplaceAll]);
+    Result := StringReplace(Result, #13#10, ' ', [rfReplaceAll]);
+    Result := StringReplace(Result, #10, ' ', [rfReplaceAll]);
+    Result := StringReplace(Result, #13, ' ', [rfReplaceAll]);
+  end;
+
+  function TSVEscape(S: String): String;
+  begin
+    Result := StringReplace(S, #9, ' ', [rfReplaceAll]);
+    Result := StringReplace(Result, #13#10, ' ', [rfReplaceAll]);
+    Result := StringReplace(Result, #10, ' ', [rfReplaceAll]);
+    Result := StringReplace(Result, #13, ' ', [rfReplaceAll]);
   end;
 
 begin
@@ -1470,6 +1553,161 @@ begin
           CloseFile(F);
         end;
 			end;
+    2:  //JSON
+      begin
+        AssignFile(F, FileName);
+        Rewrite(F);
+        try
+          Q.DisableControls;
+          try
+            WriteLn(F, '[');
+            Q.First;
+            IsFirstRow := True;
+            While not Q.EOF do
+            begin
+              if IsFirstRow then
+                IsFirstRow := False
+              else
+                WriteLn(F, ',');
+
+              Rec := '  {';
+              FCnt := 0;
+              for idx := 0 to Q.Fields.Count - 1 do
+              begin
+                Found := False;
+                for idy := 0 to FieldList.Count - 1 do
+                begin
+                  if Q.Fields[idx].FieldName = FieldList[idy] then
+                  begin
+                    Found := True;
+                    Break;
+                  end;
+                end;
+
+                if Found then
+                begin
+                  if FCnt > 0 then
+                    Rec := Rec + ', ';
+                  Rec := Rec + '"' + JSONEscape(Q.Fields[idx].FieldName) + '": ' + JSONFieldValue(Q.Fields[idx]);
+                  FCnt := FCnt + 1;
+                end;
+              end;
+              Rec := Rec + '}';
+              Write(F, Rec);
+              Q.Next;
+            end;
+            if not IsFirstRow then
+              WriteLn(F, '');
+            WriteLn(F, ']');
+          finally
+            Q.First;
+            Q.EnableControls;
+          end;
+        finally
+          CloseFile(F);
+        end;
+      end;
+    3:  //Markdown table
+      begin
+        AssignFile(F, FileName);
+        Rewrite(F);
+        try
+          Q.DisableControls;
+          try
+            Rec := '|';
+            for idx := 0 to FieldList.Count - 1 do
+              Rec := Rec + ' ' + MDEscape(FieldList[idx]) + ' |';
+            WriteLn(F, Rec);
+
+            Rec := '|';
+            for idx := 0 to FieldList.Count - 1 do
+              Rec := Rec + ' --- |';
+            WriteLn(F, Rec);
+
+            Q.First;
+            While not Q.EOF do
+            begin
+              Rec := '|';
+              for idx := 0 to Q.Fields.Count - 1 do
+              begin
+                Found := False;
+                for idy := 0 to FieldList.Count - 1 do
+                begin
+                  if Q.Fields[idx].FieldName = FieldList[idy] then
+                  begin
+                    Found := True;
+                    Break;
+                  end;
+                end;
+
+                if Found then
+                  Rec := Rec + ' ' + MDEscape(PlainFieldValue(Q.Fields[idx])) + ' |';
+              end;
+              WriteLn(F, Rec);
+              Q.Next;
+            end;
+          finally
+            Q.First;
+            Q.EnableControls;
+          end;
+        finally
+          CloseFile(F);
+        end;
+      end;
+    4:  //Tab Separated Values
+      begin
+        AssignFile(F, FileName);
+        Rewrite(F);
+        try
+          Q.DisableControls;
+          try
+            Rec := '';
+            FCnt := 0;
+            for idx := 0 to FieldList.Count - 1 do
+            begin
+              Rec := Rec + TSVEscape(FieldList[idx]);
+              FCnt := FCnt + 1;
+              If FCnt < FieldList.Count then
+                Rec := Rec + #9;
+            end;
+            WriteLn(F, Rec);
+
+            Q.First;
+            While not Q.EOF do
+            begin
+              Rec := '';
+              FCnt := 0;
+              for idx := 0 to Q.Fields.Count - 1 do
+              begin
+                Found := False;
+                for idy := 0 to FieldList.Count - 1 do
+                begin
+                  if Q.Fields[idx].FieldName = FieldList[idy] then
+                  begin
+                    Found := True;
+                    Break;
+                  end;
+                end;
+
+                if Found then
+                begin
+                  Rec := Rec + TSVEscape(PlainFieldValue(Q.Fields[idx]));
+                  FCnt := FCnt + 1;
+                  If FCnt < FieldList.Count then
+                    Rec := Rec + #9;
+                end;
+              end;
+              WriteLn(F, Rec);
+              Q.Next;
+            end;
+          finally
+            Q.First;
+            Q.EnableControls;
+          end;
+        finally
+          CloseFile(F);
+        end;
+      end;
   end;
 end;
 

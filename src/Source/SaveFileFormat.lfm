@@ -197,6 +197,23 @@ object frmSaveFileFormat: TfrmSaveFileFormat
             TabOrder = 2
           end
         end
+        object nbpNone: TrmNotebookPage
+          Left = 0
+          Top = 0
+          Width = 337
+          Height = 89
+          Caption = 'fmtNone'
+          Data = 0
+          Visible = False
+          ImageIndex = -1
+          object Label6: TLabel
+            Left = 48
+            Top = 8
+            Width = 217
+            Height = 13
+            Caption = 'No additional options for this format.'
+          end
+        end
       end
       object cmbFormat: TComboBox
         Left = 48
@@ -210,7 +227,10 @@ object frmSaveFileFormat: TfrmSaveFileFormat
         OnChange = cmbFormatChange
         Items.Strings = (
           'Separated Values'
-          'Insert Statement')
+          'Insert Statement'
+          'JSON'
+          'Markdown Table'
+          'Tab Separated Values')
       end
       object edFileName: TrmBtnEdit
         Left = 48
@@ -272,9 +292,10 @@ object frmSaveFileFormat: TfrmSaveFileFormat
   end
   object dlgSave: TSaveDialog
     DefaultExt = '*.sql'
-    Filter = 
-      'SQL Files (*.sql)|*.sql|Text Files (*.txt)|*.txt|All Files (*.*)' +
-      '|*.*'
+    Filter =
+      'SQL Files (*.sql)|*.sql|Text Files (*.txt)|*.txt|JSON Files (*' +
+      '.json)|*.json|Markdown Files (*.md)|*.md|Tab Separated Values (' +
+      '*.tsv)|*.tsv|All Files (*.*)|*.*'
     Options = [ofOverwritePrompt, ofHideReadOnly]
     Title = 'Save File'
     Left = 12

@@ -69,6 +69,8 @@ type
     btnSelectNone: TButton;
     nbpSV: TrmNotebookPage;
     nbpInsert: TrmNotebookPage;
+    nbpNone: TrmNotebookPage;
+    Label6: TLabel;
     procedure cmbFormatChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnOKClick(Sender: TObject);
@@ -92,7 +94,12 @@ uses Globals, HelpMap;
 
 procedure TfrmSaveFileFormat.cmbFormatChange(Sender: TObject);
 begin
-  nbFormat.ActivePageIndex := TComboBox(Sender).ItemIndex;
+  case TComboBox(Sender).ItemIndex of
+    0: nbFormat.ActivePage := nbpSV;
+    1: nbFormat.ActivePage := nbpInsert;
+  else
+    nbFormat.ActivePage := nbpNone;
+  end;
 end;
 
 procedure TfrmSaveFileFormat.FormCreate(Sender: TObject);

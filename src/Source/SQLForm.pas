@@ -101,6 +101,8 @@ type
     transSQLStatement: TIBTransaction;
     pnlNavigator: TPanel;
     navResults: TDBNavigator;
+    lblFilter: TLabel;
+    edFilter: TEdit;
     pnlPerformance: TPanel;
     DBNavigator1: TDBNavigator;
     dtaPerform: TBufDataset;
@@ -166,6 +168,8 @@ type
 		procedure qrySQLStatementAfterPrepare(Sender: TObject);
 		procedure qrySQLStatementBeforePrepare(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure edFilterChange(Sender: TObject);
+    procedure qrySQLStatementFilterRecord(DataSet: TDataSet; var Accept: Boolean);
 	private
 		{ Private declarations }
 		LinePos: LongInt;
@@ -707,6 +711,39 @@ end;
 procedure TfrmSQLForm.qrySQLStatementAfterOpen(DataSet: TDataSet);
 begin
 	GlobalFormatFields(DataSet);
+	edFilter.Text := '';
+	qrySQLStatement.Filtered := False;
+end;
+
+procedure TfrmSQLForm.edFilterChange(Sender: TObject);
+begin
+	qrySQLStatement.Filtered := (Trim(edFilter.Text) <> '');
+	qrySQLStatement.First;
+end;
+
+procedure TfrmSQLForm.qrySQLStatementFilterRecord(DataSet: TDataSet; var Accept: Boolean);
+var
+	Idx: Integer;
+	Needle: String;
+begin
+	Needle := UpperCase(Trim(edFilter.Text));
+	if Needle = '' then
+	begin
+		Accept := True;
+		Exit;
+	end;
+
+	Accept := False;
+	for Idx := 0 to DataSet.Fields.Count - 1 do
+	begin
+		if DataSet.Fields[Idx].DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftTypedBinary] then
+			Continue;
+		if Pos(Needle, UpperCase(DataSet.Fields[Idx].AsString)) > 0 then
+		begin
+			Accept := True;
+			Break;
+		end;
+	end;
 end;
 
 procedure TfrmSQLForm.qrySQLStatementAfterPrepare(Sender: TObject);

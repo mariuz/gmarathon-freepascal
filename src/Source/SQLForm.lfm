@@ -224,6 +224,23 @@ object frmSQLForm: TfrmSQLForm
                 ShowHint = True
                 TabOrder = 0
               end
+              object lblFilter: TLabel
+                Left = 310
+                Top = 6
+                Width = 30
+                Height = 13
+                Caption = 'Filter:'
+                FocusControl = edFilter
+              end
+              object edFilter: TEdit
+                Left = 344
+                Top = 2
+                Width = 280
+                Height = 21
+                Anchors = [akLeft, akTop, akRight]
+                TabOrder = 1
+                OnChange = edFilterChange
+              end
             end
           end
           object nbpForm: TrmNotebookPage
@@ -579,6 +596,7 @@ object frmSQLForm: TfrmSQLForm
     AfterOpen = qrySQLStatementAfterOpen
     AfterPrepare = qrySQLStatementAfterPrepare
     BeforePrepare = qrySQLStatementBeforePrepare
+    OnFilterRecord = qrySQLStatementFilterRecord
     Left = 100
     Top = 96
   end
