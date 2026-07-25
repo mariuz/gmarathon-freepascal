@@ -141,6 +141,7 @@ type
     ObjectScriptUpdate: TAction;
     ObjectScriptDelete: TAction;
     ObjectScriptExecute: TAction;
+    ToolsSessionMonitor: TAction;
     ProjectCreateFolder: TAction;
     ProjectAddToProject: TAction;
     EditEncANSI: TAction;
@@ -432,6 +433,7 @@ type
     Stop1: TMenuItem;
     Tools1: TMenuItem;
     SQLEditor1: TMenuItem;
+    ToolsSessionMonitor1: TMenuItem;
     UserEditor1: TMenuItem;
     N16: TMenuItem;
     MetadataExtract1: TMenuItem;
@@ -542,6 +544,7 @@ type
     procedure ObjectScriptDeleteUpdate(Sender: TObject);
     procedure ObjectScriptExecuteExecute(Sender: TObject);
     procedure ObjectScriptExecuteUpdate(Sender: TObject);
+    procedure ToolsSessionMonitorExecute(Sender: TObject);
 		procedure ProjectCreateFolderExecute(Sender: TObject);
     procedure ProjectCreateFolderUpdate(Sender: TObject);
     procedure ProjectAddToProjectExecute(Sender: TObject);
@@ -1300,6 +1303,11 @@ end;
 procedure TfrmMarathonMain.ToolsSQLEditorExecute(Sender: TObject);
 begin
 	MarathonIDEInstance.ToolsSQLEditor;
+end;
+
+procedure TfrmMarathonMain.ToolsSessionMonitorExecute(Sender: TObject);
+begin
+	MarathonIDEInstance.ToolsSessionMonitor;
 end;
 
 procedure TfrmMarathonMain.ProjectProjectOptionsExecute(Sender: TObject);

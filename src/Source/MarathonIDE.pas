@@ -164,6 +164,7 @@ type
     procedure ViewViewNextWindow;
     procedure ProjectProjectOptions;
     procedure ToolsSQLEditor;
+    procedure ToolsSessionMonitor;
 		procedure ToolsMetadataExtract;
     procedure ToolsSearchMetadata;
     procedure ToolsSyntaxHelp;
@@ -228,7 +229,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -1701,6 +1702,47 @@ begin
 		F.NewFile;
 		F.Show;
 	end;
+end;
+
+procedure TMarathonIDE.ToolsSessionMonitor;
+var
+	ConnectName: String;
+	F: TfrmSessionMonitor;
+	SC: TfrmSelectConnection;
+
+begin
+	if not FCurrentProject.Open or (FCurrentProject.Cache.ConnectionCount = 0) then
+	begin
+		MessageDlg('Open a project with at least one connection first.', mtInformation, [mbOK], 0);
+		Exit;
+	end;
+
+	if FCurrentProject.Cache.ConnectionCount = 1 then
+		ConnectName := FCurrentProject.Cache.Connections[0].Caption
+	else
+	begin
+		ConnectName := '';
+		SC := TfrmSelectConnection.Create(Self);
+		try
+			SC.cmbConnections.ItemIndex := SC.cmbConnections.Items.IndexOf(FCurrentProject.Cache.ActiveConnection);
+			if SC.ShowModal = mrOK then
+			begin
+				if SC.cmbConnections.ItemIndex > 0 then
+					ConnectName := SC.cmbConnections.Text;
+			end;
+		finally
+			SC.Free;
+		end;
+		if ConnectName = '' then
+			Exit;
+	end;
+
+	if not CheckConnected(ConnectName) then
+		Exit;
+
+	F := TfrmSessionMonitor.Create(nil);
+	F.ConnectionName := ConnectName;
+	F.Show;
 end;
 
 procedure TMarathonIDE.ToolsMetadataExtract;

@@ -887,6 +887,9 @@ object frmMarathonMain: TfrmMarathonMain
           Tag = -2
           Action = ToolsSQLEditor
         end
+        object ToolsSessionMonitor1: TMenuItem
+          Action = ToolsSessionMonitor
+        end
         object UserEditor1: TMenuItem
           Action = ToolsUserEditor
         end
@@ -1794,6 +1797,12 @@ object frmMarathonMain: TfrmMarathonMain
       ImageIndex = 6
       ShortCut = 49235
       OnExecute = ToolsSQLEditorExecute
+    end
+    object ToolsSessionMonitor: TAction
+      Category = 'Tools'
+      Caption = 'Session &Monitor...'
+      Hint = 'Session Monitor'
+      OnExecute = ToolsSessionMonitorExecute
     end
     object ProjectProjectOptions: TAction
       Category = 'Project'

@@ -36,7 +36,8 @@ Firebird's `MON$*` monitoring tables are just ordinary read-only system tables �
 this is plain SQL against `MON$ATTACHMENTS` / `MON$STATEMENTS` / `MON$TRANSACTIONS`,
 no new library dependencies.
 
-- [ ] **Live Session Monitor** — new form listing active attachments/statements/transactions per connection, with a manual refresh and a "Cancel Statement" action (`DELETE FROM MON$ATTACHMENTS WHERE MON$ATTACHMENT_ID = ?` / the services-API equivalent).
+- [x] **Live Session Monitor** — `SessionMonitor.pas`/`.lfm`, opened via Tools > Session Monitor. Three tabs (Attachments/Statements/Transactions) backed by plain `MON$*` queries, manual "Refresh" button (each refresh commits and starts a new transaction, since Firebird only takes a fresh `MON$` snapshot on a transaction's first access to the monitoring tables). Verified all three queries against a live server, including catching that `MON$STATEMENTS` has no `MON$USER` column (it's `MON$TRANSACTION_ID` instead — user is on the attachment, not the statement).
+- [ ] **Cancel Statement / Disconnect Attachment** — not done in this pass; the monitor above is read-only. Would need `DELETE FROM MON$ATTACHMENTS WHERE MON$ATTACHMENT_ID = ?` (or the equivalent service-API call) wired to a button, with real care taken before shipping anything that can kill another session's connection from a background-refreshed grid.
 - [ ] **Query performance stats, take 2** — `IBPerformanceMonitor.pas`'s per-relation indexed/non-indexed read counters are stubbed out (see CLAUDE.md) because they relied on a raw `isc_db_handle` IBX doesn't expose. `MON$RECORD_STATS` / `MON$IO_STATS` (joined to `MON$STATEMENTS`) may be able to drive `SQLForm.pas`'s existing (currently-empty) "Query Performance Analysis" chart through ordinary SQL instead — worth checking before writing new UI.
 - [ ] **Wire encryption / auth plugin status** — `TIBDatabase`/IBX's `Attachment` interface exposes `AuthenticationMethod` and `RemoteProtocol` (confirmed present in `IBDatabase.pas`); surface these in the connection properties dialog.
 
@@ -79,7 +80,8 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 | 2 | Script as CREATE (tree) | **Done** |
 | 2 | Script as SELECT/INSERT/UPDATE/DELETE | **Done** |
 | 2 | Script as EXECUTE PROCEDURE | **Done** |
-| 3 | Live Session Monitor | Not started |
+| 3 | Live Session Monitor (read-only) | **Done** |
+| 3 | Cancel Statement / Disconnect Attachment | Not started |
 | 3 | Query performance stats via MON$ | Not started |
 | 4 | JSON/Markdown/TSV export | Not started |
 | 5 | Maintenance dialog (IBX Services) | Not started |

@@ -1,0 +1,144 @@
+object frmSessionMonitor: TfrmSessionMonitor
+  Left = 200
+  Top = 150
+  Width = 760
+  Height = 480
+  Caption = 'Session Monitor'
+  Color = clBtnFace
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 500
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poScreenCenter
+  OnClose = FormClose
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pnlTop: TPanel
+    Left = 0
+    Top = 0
+    Width = 752
+    Height = 33
+    Align = alTop
+    BevelOuter = bvNone
+    TabOrder = 0
+    object lblConnection: TLabel
+      Left = 8
+      Top = 9
+      Width = 68
+      Height = 13
+      Caption = 'Connection:'
+    end
+    object btnRefresh: TButton
+      Left = 664
+      Top = 4
+      Width = 80
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = '&Refresh'
+      TabOrder = 0
+      OnClick = btnRefreshClick
+    end
+  end
+  object pgMonitor: TPageControl
+    Left = 0
+    Top = 33
+    Width = 752
+    Height = 419
+    ActivePage = tsAttachments
+    Align = alClient
+    TabOrder = 1
+    object tsAttachments: TTabSheet
+      Caption = 'Attachments'
+      object grdAttachments: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 744
+        Height = 391
+        Align = alClient
+        DataSource = dsAttachments
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
+    object tsStatements: TTabSheet
+      Caption = 'Statements'
+      object grdStatements: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 744
+        Height = 391
+        Align = alClient
+        DataSource = dsStatements
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
+    object tsTransactions: TTabSheet
+      Caption = 'Transactions'
+      object grdTransactions: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 744
+        Height = 391
+        Align = alClient
+        DataSource = dsTransactions
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
+  end
+  object dsAttachments: TDataSource
+    DataSet = qryAttachments
+    Left = 40
+    Top = 80
+  end
+  object dsStatements: TDataSource
+    DataSet = qryStatements
+    Left = 80
+    Top = 80
+  end
+  object dsTransactions: TDataSource
+    DataSet = qryTransactions
+    Left = 120
+    Top = 80
+  end
+  object qryAttachments: TIBQuery
+    Params = <>
+    ReadOnly = True
+    Left = 40
+    Top = 120
+  end
+  object qryStatements: TIBQuery
+    Params = <>
+    ReadOnly = True
+    Left = 80
+    Top = 120
+  end
+  object qryTransactions: TIBQuery
+    Params = <>
+    ReadOnly = True
+    Left = 120
+    Top = 120
+  end
+  object tranMonitor: TIBTransaction
+    Left = 160
+    Top = 120
+  end
+end

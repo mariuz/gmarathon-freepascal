@@ -28,6 +28,7 @@ uses
   InputDialog in 'InputDialog.pas' {frmInputDialog},
   NewTrigger in 'NewTrigger.pas' {frmNewTrigger},
   StatementHistory in 'StatementHistory.pas' {frmStatementHistory},
+  SessionMonitor in 'SessionMonitor.pas' {frmSessionMonitor},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},
   WindowList in 'WindowList.pas' {frmWindowList},
   UDFInputParam in 'UDFInputParam.pas' {frmUDFAddInput},

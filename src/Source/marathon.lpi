@@ -121,7 +121,7 @@
         <PackageName Value="fbintf"/>
       </Item6>
     </RequiredPackages>
-    <Units Count="98">
+    <Units Count="99">
       <Unit0>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -738,6 +738,12 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="MarathonSQLMonitor"/>
       </Unit108>
+      <Unit109>
+        <Filename Value="SessionMonitor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="SessionMonitor"/>
+      </Unit109>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
