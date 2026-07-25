@@ -90,10 +90,16 @@ jobs:
       # rather than the gcarreno/setup-lazarus action - that action's own
       # README says it's unmaintained, and it failed outright on the macOS
       # job in this workflow's first test run.
+      # sourceforge.net/projects/.../files/.../download serves a Cloudflare
+      # JS challenge ("Just a moment...") to non-browser clients like
+      # Invoke-WebRequest/curl, which obviously can't solve it - going
+      # straight to downloads.sourceforge.net/project/... (the actual file
+      # host, one hop further down the same redirect chain) skips that
+      # challenge entirely and hits a real 302-to-mirror instead.
       - name: Download Lazarus/FPC installer
         shell: pwsh
         run: |
-          $url = "https://sourceforge.net/projects/lazarus/files/Lazarus%20Windows%2064%20bits/Lazarus%204.8/lazarus-4.8-fpc-3.2.2-win64.exe/download"
+          $url = "https://downloads.sourceforge.net/project/lazarus/Lazarus%20Windows%2064%20bits/Lazarus%204.8/lazarus-4.8-fpc-3.2.2-win64.exe"
           Invoke-WebRequest -Uri $url -OutFile "lazarus-setup.exe" -UserAgent "Mozilla/5.0"
 
       - name: Install Lazarus/FPC (silent)
@@ -175,7 +181,7 @@ jobs:
       - name: Download and install FPC
         run: |
           curl -sL -A "Mozilla/5.0" \
-            "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg/download" \
+            "https://downloads.sourceforge.net/project/lazarus/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg" \
             -o fpc.dmg
           hdiutil attach fpc.dmg -nobrowse -mountpoint /Volumes/fpc-installer
           FPC_PKG=$(find /Volumes/fpc-installer -maxdepth 2 -name "*.pkg" | head -1)
@@ -190,7 +196,7 @@ jobs:
       - name: Download and install Lazarus IDE
         run: |
           curl -sL -A "Mozilla/5.0" \
-            "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/lazarus-darwin-x86_64-4.8.zip/download" \
+            "https://downloads.sourceforge.net/project/lazarus/Lazarus%20macOS%20x86-64/Lazarus%204.8/lazarus-darwin-x86_64-4.8.zip" \
             -o lazarus.zip
           sudo mkdir -p /Applications/Lazarus
           sudo unzip -q lazarus.zip -d /Applications/Lazarus

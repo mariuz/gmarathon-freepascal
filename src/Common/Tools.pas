@@ -24,7 +24,7 @@ procedure EnumNetResources(List: TStrings);
 
 implementation
 
-uses {$IFNDEF FPC}
+uses {$IFDEF MSWINDOWS}
   ShellAPI, Windows, {$ENDIF}
   Forms, Dialogs, SysUtils;
 
