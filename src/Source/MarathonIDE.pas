@@ -3346,7 +3346,12 @@ var
 begin
 	P := TfrmGlobalPrintingRoutines.Create(nil);
 	try
-		{$IFDEF WINDOWS}P.PrintQueryPlan(Preview, Query, Plan, GPlan);{$ENDIF}
+		// TfrmGlobalPrintingRoutines.PrintQueryPlan is Delphi-only: it takes a
+		// real VCL TMetafile, whereas under FPC TMetafile is only the TGraphic
+		// alias declared at the top of this unit. Both callers in SQLForm are
+		// guarded the same way, so under FPC this is a no-op like the rest of
+		// the stubbed printing subsystem.
+		{$IFNDEF FPC}P.PrintQueryPlan(Preview, Query, Plan, GPlan);{$ENDIF}
 	finally
 		if not Preview then
 			P.Free;
