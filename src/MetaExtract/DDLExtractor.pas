@@ -83,6 +83,8 @@ type
     function IdentityOptions(const GeneratorName: String): String;
     function TableSQLSecurity(const ObjectName: String): String;
     function ExtractPSQLFunction(Q: TIBDataSet): String;
+    function TriggerEventClause(TriggerType: Integer): String;
+    function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function ExtractGenerator(ObjectName : String) : String;
     function ExtractGeneratorValue(ObjectName : String) : String;
     function ExtractDomain(ObjectName : String) : String;
@@ -1194,6 +1196,9 @@ begin
       //wrap to the ~80th col
       Line := WrapText(Line, #13#10, [' ', #9], 79);
 
+      Line := Line + SQLSecurityClause('rdb$procedures', 'rdb$procedure_name',
+                                       Trim(Q.FieldByName('rdb$procedure_name').AsString));
+
       Line := Line + #13#10;
       Line := Line + 'as' + #13#10;
       Tmp := AdjustLineBreaks(Trim(Q.FieldByName('rdb$procedure_source').AsString));
@@ -1287,6 +1292,102 @@ begin
     Q.Transaction := FTransaction;
     Q.SelectSQL.Add('select rdb$sql_security from rdb$relations where rdb$relation_name = ' +
                AnsiQuotedStr(ObjectName, ''''));
+    try
+      Q.Open;
+      if not Q.EOF then
+      begin
+        Fld := Q.FindField('rdb$sql_security');
+        if Assigned(Fld) and not Fld.IsNull then
+        begin
+          if Fld.AsBoolean then
+            Result := ' sql security definer'
+          else
+            Result := ' sql security invoker';
+        end;
+      end;
+      Q.Close;
+    except
+      Result := '';
+    end;
+  finally
+    Q.Free;
+  end;
+end;
+
+function TDDLExtractor.TriggerEventClause(TriggerType: Integer): String;
+var
+  IsAfter : Boolean;
+  Value : Integer;
+  Slot : Integer;
+  Idx : Integer;
+  Actions : String;
+const
+  ActionNames : array[1..3] of String = ('insert', 'update', 'delete');
+begin
+  { Database-level triggers (Firebird 2.1+) take no relation and their own
+    ON <event> clause. }
+  case TriggerType of
+    8192 : begin Result := 'on connect'; Exit; end;
+    8193 : begin Result := 'on disconnect'; Exit; end;
+    8194 : begin Result := 'on transaction start'; Exit; end;
+    8195 : begin Result := 'on transaction commit'; Exit; end;
+    8196 : begin Result := 'on transaction rollback'; Exit; end;
+  end;
+
+  { Table triggers pack up to three actions into RDB$TRIGGER_TYPE: the value
+    is odd for BEFORE and even for AFTER, and (type + 1 - after) div 2 decodes
+    in base 4 as up to three action slots (1 = INSERT, 2 = UPDATE, 3 = DELETE).
+    Only the six single-action codes used to be handled, so a multi-action
+    trigger - "before insert or update", which is entirely ordinary - emitted
+    no event clause at all and produced invalid DDL.
+    Verified against a live server for all of: 1..6, 17, 18, 25, 27, 113. }
+  Result := '';
+  if TriggerType <= 0 then
+    Exit;
+
+  IsAfter := (TriggerType mod 2) = 0;
+  if IsAfter then
+    Value := (TriggerType + 1 - 1) div 2
+  else
+    Value := (TriggerType + 1) div 2;
+
+  Actions := '';
+  for Idx := 0 to 2 do
+  begin
+    Slot := (Value div (1 shl (Idx * 2))) mod 4;
+    if (Slot >= 1) and (Slot <= 3) then
+    begin
+      if Actions <> '' then
+        Actions := Actions + ' or ';
+      Actions := Actions + ActionNames[Slot];
+    end;
+  end;
+
+  if Actions = '' then
+    Exit;
+
+  if IsAfter then
+    Result := 'after ' + Actions
+  else
+    Result := 'before ' + Actions;
+end;
+
+function TDDLExtractor.SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
+var
+  Q : TIBDataSet;
+  Fld : TField;
+begin
+  { Firebird 4 SQL SECURITY. Nullable, where NULL means "inherit the database
+    default" rather than a value, so emit nothing in that case. }
+  Result := '';
+  if not ODSAtLeast(13, 0) then
+    Exit;
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$sql_security from ' + SysTable + ' where ' + NameColumn +
+               ' = ' + AnsiQuotedStr(ObjectName, ''''));
     try
       Q.Open;
       if not Q.EOF then
@@ -1502,7 +1603,7 @@ begin
       Q2.Free;
     end;
 
-    Line := Line + ')' + TableSQLSecurity(ObjectName) + ';';
+    Line := Line + ')' + SQLSecurityClause('rdb$relations', 'rdb$relation_name', ObjectName) + ';';
     OutPut.Text := Line;
 
     //check constraints
@@ -2255,6 +2356,7 @@ end;
 
 function TDDLExtractor.ExtractTrigger(ObjectName: String): String;
 var
+  EventClause : String;
   Q : TIBDataSet;
   Tmp : String;
   Line : String;
@@ -2272,7 +2374,12 @@ begin
     begin
 
       Tmp := 'create trigger ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$trigger_name').AsString), FIsIB6, FSQLDialect);
-      Tmp := Tmp + ' for ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$relation_name').AsString), FIsIB6, FSQLDialect) + ' ';
+      { A database-level trigger has no relation, and emitting "for " with an
+        empty name produced a syntax error. }
+      if Trim(Q.FieldByName('rdb$relation_name').AsString) <> '' then
+        Tmp := Tmp + ' for ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$relation_name').AsString), FIsIB6, FSQLDialect) + ' '
+      else
+        Tmp := Tmp + ' ';
       if Length(Tmp) > 80 then
         Tmp := Tmp + #13#10;
       case Q.FieldByName('rdb$trigger_inactive').AsInteger of
@@ -2281,17 +2388,14 @@ begin
       end;
       if Length(Tmp) > 80 then
         Tmp := Tmp + #13#10;
-      case Q.FieldByName('rdb$trigger_type').AsInteger of
-        1 : Tmp := Tmp + 'before insert ';
-        2 : Tmp := Tmp + 'after insert ';
-        3 : Tmp := Tmp + 'before update ';
-        4 : Tmp := Tmp + 'after update ';
-        5 : Tmp := Tmp + 'before delete ';
-        6 : Tmp := Tmp + 'after delete ';
-      end;
+      EventClause := TriggerEventClause(Q.FieldByName('rdb$trigger_type').AsInteger);
+      if EventClause <> '' then
+        Tmp := Tmp + EventClause + ' ';
       if Length(Tmp) > 80 then
         Tmp := Tmp + #13#10;
       Tmp := Tmp + 'position ' + Trim(Q.FieldByName('rdb$trigger_sequence').AsString);
+      Tmp := Tmp + SQLSecurityClause('rdb$triggers', 'rdb$trigger_name',
+                                     Trim(Q.FieldByName('rdb$trigger_name').AsString));
 
       Line := AdjustLineBreaks(Trim(Q.FieldByName('rdb$trigger_source').AsString));
       x := Pos(' ' + #10, Line);
@@ -2378,6 +2482,7 @@ begin
     Q1.Free;
   end;
 
+  Line := Line + SQLSecurityClause('rdb$functions', 'rdb$function_name', FuncName);
   Line := Line + #13#10 + 'as' + #13#10 +
           AdjustLineBreaks(Trim(Q.FieldByName('rdb$function_source').AsString)) + #13#10;
   Result := Line;

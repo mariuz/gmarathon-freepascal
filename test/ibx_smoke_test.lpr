@@ -115,6 +115,16 @@ begin
       Q.ExecSQL;
     except
     end;
+    try
+      Q.SQL.Text := 'drop trigger ibx_smoke_trg_multi';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop trigger ibx_smoke_trg_conn';
+      Q.ExecSQL;
+    except
+    end;
     Tr.Commit;
 
     Tr.StartTransaction;
@@ -453,6 +463,83 @@ begin
         WriteLn('DDL extraction OK (identity columns):');
         WriteLn(DDL);
       end;
+
+      { Trigger forms beyond the six single-action table triggers. A multi-action
+        trigger ("before insert or update") emitted no event clause at all, and
+        a database-level trigger emitted "for " with an empty relation name -
+        both invalid SQL. RDB$TRIGGER_TYPE is odd for BEFORE / even for AFTER,
+        and decodes in base 4 as up to three action slots. }
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text := 'create or alter trigger ibx_smoke_trg_multi for ibx_smoke_test ' +
+                      'active before insert or update or delete position 0 as begin end';
+        Q.ExecSQL;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: could not create multi-action trigger: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlTrigger, ddlstNone, 'IBX_SMOKE_TRG_MULTI');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: multi-action trigger DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      RequireInDDL(DDL, 'before insert or update or delete', 'multi-action trigger event clause');
+      WriteLn('DDL extraction OK (multi-action trigger):');
+      WriteLn(DDL);
+
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text := 'create or alter trigger ibx_smoke_trg_conn active on connect ' +
+                      'position 0 as begin end';
+        Q.ExecSQL;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: could not create database-level trigger: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlTrigger, ddlstNone, 'IBX_SMOKE_TRG_CONN');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: database-level trigger DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      RequireInDDL(DDL, 'on connect', 'ON CONNECT event clause');
+      if Pos(' FOR ', UpperCase(DDL)) > 0 then
+      begin
+        WriteLn('FAIL: database-level trigger emitted a FOR <relation> clause:');
+        WriteLn(DDL);
+        Halt(1);
+      end;
+      WriteLn('DDL extraction OK (database-level trigger):');
+      WriteLn(DDL);
 
       { PSQL functions (Firebird 3). These share RDB$FUNCTIONS with legacy
         external UDFs but are a different object entirely, and running one
