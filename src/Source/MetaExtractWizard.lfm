@@ -1,0 +1,375 @@
+object frmMetaExtractWizard: TfrmMetaExtractWizard
+  Left = 220
+  Top = 120
+  Width = 640
+  Height = 560
+  Caption = 'Extract Metadata'
+  Color = clBtnFace
+  Constraints.MinHeight = 420
+  Constraints.MinWidth = 500
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poScreenCenter
+  OnCloseQuery = FormCloseQuery
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pnlTop: TPanel
+    Left = 0
+    Top = 0
+    Width = 632
+    Height = 62
+    Align = alTop
+    BevelOuter = bvNone
+    TabOrder = 0
+    object lblConnection: TLabel
+      Left = 8
+      Top = 6
+      Width = 68
+      Height = 13
+      Caption = 'Connection:'
+    end
+    object lblOutputFile: TLabel
+      Left = 8
+      Top = 30
+      Width = 61
+      Height = 13
+      Caption = 'Output File:'
+    end
+    object edOutputFile: TEdit
+      Left = 96
+      Top = 26
+      Width = 440
+      Height = 21
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 0
+    end
+    object btnBrowseOutput: TButton
+      Left = 542
+      Top = 25
+      Width = 82
+      Height = 23
+      Anchors = [akTop, akRight]
+      Caption = 'Browse...'
+      TabOrder = 1
+      OnClick = btnBrowseOutputClick
+    end
+  end
+  object pgMain: TPageControl
+    Left = 0
+    Top = 62
+    Width = 632
+    Height = 373
+    ActivePage = tsTables
+    Align = alClient
+    TabOrder = 1
+    object tsDomains: TTabSheet
+      Caption = 'Domains'
+      object lstDomains: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsTables: TTabSheet
+      Caption = 'Tables'
+      object lstTables: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsViews: TTabSheet
+      Caption = 'Views'
+      object lstViews: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsProcedures: TTabSheet
+      Caption = 'Procedures'
+      object lstProcedures: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsTriggers: TTabSheet
+      Caption = 'Triggers'
+      object lstTriggers: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsGenerators: TTabSheet
+      Caption = 'Generators'
+      object lstGenerators: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsExceptions: TTabSheet
+      Caption = 'Exceptions'
+      object lstExceptions: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsUDFs: TTabSheet
+      Caption = 'UDFs'
+      object lstUDFs: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
+    object tsOptions: TTabSheet
+      Caption = 'Options'
+      object rdoExtractType: TRadioGroup
+        Left = 8
+        Top = 8
+        Width = 300
+        Height = 90
+        Caption = 'Extract'
+        ItemIndex = 0
+        Items.Strings = (
+          'Metadata Only'
+          'Metadata and Data'
+          'Data Only')
+        TabOrder = 0
+      end
+      object chkCreateDatabase: TCheckBox
+        Left = 8
+        Top = 106
+        Width = 280
+        Height = 17
+        Caption = 'Include CREATE DATABASE statement'
+        TabOrder = 1
+      end
+      object chkIncludePassword: TCheckBox
+        Left = 8
+        Top = 128
+        Width = 280
+        Height = 17
+        Caption = 'Include password in CREATE/CONNECT'
+        TabOrder = 2
+      end
+      object chkIncludeDependents: TCheckBox
+        Left = 8
+        Top = 150
+        Width = 280
+        Height = 17
+        Caption = 'Include dependent objects'
+        TabOrder = 3
+      end
+      object chkIncludeDoc: TCheckBox
+        Left = 8
+        Top = 172
+        Width = 280
+        Height = 17
+        Caption = 'Include documentation comments'
+        TabOrder = 4
+      end
+      object chkWrap: TCheckBox
+        Left = 8
+        Top = 200
+        Width = 100
+        Height = 17
+        Caption = 'Wrap lines at'
+        TabOrder = 5
+        OnClick = chkWrapClick
+      end
+      object edWrapAt: TEdit
+        Left = 112
+        Top = 196
+        Width = 45
+        Height = 21
+        Enabled = False
+        TabOrder = 6
+        Text = '80'
+      end
+      object udWrapAt: TUpDown
+        Left = 157
+        Top = 196
+        Width = 15
+        Height = 21
+        Associate = edWrapAt
+        Min = 20
+        Max = 500
+        Position = 80
+        Enabled = False
+        TabOrder = 7
+      end
+      object lblDecimalPlaces: TLabel
+        Left = 8
+        Top = 230
+        Width = 71
+        Height = 13
+        Caption = 'Decimal Places:'
+      end
+      object edDecimalPlaces: TEdit
+        Left = 112
+        Top = 226
+        Width = 45
+        Height = 21
+        TabOrder = 8
+        Text = '2'
+      end
+      object udDecimalPlaces: TUpDown
+        Left = 157
+        Top = 226
+        Width = 15
+        Height = 21
+        Associate = edDecimalPlaces
+        Min = 0
+        Max = 15
+        Position = 2
+        TabOrder = 9
+      end
+      object lblDecimalSeparator: TLabel
+        Left = 8
+        Top = 258
+        Width = 88
+        Height = 13
+        Caption = 'Decimal Separator:'
+      end
+      object cmbDecimalSeparator: TComboBox
+        Left = 112
+        Top = 254
+        Width = 60
+        Height = 21
+        Style = csDropDownList
+        ItemHeight = 13
+        ItemIndex = 0
+        TabOrder = 10
+        Items.Strings = (
+          '.'
+          ',')
+        Text = '.'
+      end
+    end
+  end
+  object pnlBottom: TPanel
+    Left = 0
+    Top = 435
+    Width = 632
+    Height = 90
+    Align = alBottom
+    BevelOuter = bvNone
+    TabOrder = 2
+    object btnSelectAll: TButton
+      Left = 8
+      Top = 8
+      Width = 100
+      Height = 25
+      Caption = 'Select &All'
+      TabOrder = 0
+      OnClick = btnSelectAllClick
+    end
+    object btnSelectNone: TButton
+      Left = 116
+      Top = 8
+      Width = 100
+      Height = 25
+      Caption = 'Select &None'
+      TabOrder = 1
+      OnClick = btnSelectNoneClick
+    end
+    object lblProgress: TLabel
+      Left = 8
+      Top = 42
+      Width = 616
+      Height = 13
+      Anchors = [akLeft, akTop, akRight]
+      AutoSize = False
+    end
+    object pbProgress: TProgressBar
+      Left = 8
+      Top = 58
+      Width = 616
+      Height = 16
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 2
+    end
+    object btnExtract: TButton
+      Left = 380
+      Top = 8
+      Width = 80
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = '&Extract'
+      Default = True
+      TabOrder = 3
+      OnClick = btnExtractClick
+    end
+    object btnStop: TButton
+      Left = 464
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'S&top'
+      Enabled = False
+      TabOrder = 4
+      OnClick = btnStopClick
+    end
+    object btnClose: TButton
+      Left = 549
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akTop, akRight]
+      Cancel = True
+      Caption = 'Close'
+      ModalResult = 2
+      TabOrder = 5
+    end
+  end
+  object dlgSaveScript: TSaveDialog
+    DefaultExt = '*.sql'
+    Filter = 'SQL Script Files (*.sql)|*.sql|All Files (*.*)|*.*'
+    Options = [ofOverwritePrompt, ofHideReadOnly]
+    Title = 'Extract Metadata To File'
+    Left = 40
+    Top = 470
+  end
+end

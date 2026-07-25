@@ -750,6 +750,12 @@
         <HasResources Value="True"/>
         <UnitName Value="MaintenanceDialog"/>
       </Unit110>
+      <Unit111>
+        <Filename Value="MetaExtractWizard.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="MetaExtractWizard"/>
+      </Unit111>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

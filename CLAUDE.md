@@ -45,7 +45,7 @@ The application is structured in layers:
 
 **SQL Processing** — `SQLParser.pas` / `SQLLex.pas` / `SQLYacc.pas` handle SQL tokenization and parsing. `ScriptExecutive.pas` implements an ISQL-compatible multi-statement script engine on top of IBX.
 
-**Metadata/DDL** — `src/MetaExtract/DDLExtractor.pas`'s `TDDLExtractor` reverse-engineers Firebird objects (tables, views, procedures, triggers, domains, generators, exceptions, UDFs, plus PK/FK/index/grant sub-scripts) to DDL text, driven directly against `TIBDatabase`/`TIBTransaction`; it's used by `FrameMetadata.pas`'s "DDL" tab in the object editors. `MetaExtractUnit.pas` (the bulk multi-object export wizard) and `GlobalMigrateWizard.pas` (schema migration assistant) are still only reachable through the dead `{$IFNDEF FPC}` COM automation path (`GSSDDLExtractorServer.pas`/`gssscript_TLB.pas`) — see ROADMAP.md Phase 1.
+**Metadata/DDL** — `src/MetaExtract/DDLExtractor.pas`'s `TDDLExtractor` reverse-engineers Firebird objects (tables, views, procedures, triggers, domains, generators, exceptions, UDFs, plus PK/FK/index/grant sub-scripts) to DDL text, driven directly against `TIBDatabase`/`TIBTransaction`; it's used by `FrameMetadata.pas`'s "DDL" tab in the object editors and by `MetaExtractUnit.pas`'s `TIBMetaExtract` (the bulk multi-object export engine, one file covering however many selected tables/views/procedures/etc.), which in turn is driven by `MetaExtractWizard.pas`'s `TfrmMetaExtractWizard` — a from-scratch Lazarus dialog (Tools > Metadata Extract, or right-click "Extract Metadata..." on any tree object/header) since the original `GlobalMigrateWizard.pas`/`TfrmGlobalMigrateWizard` had no `.lfm` and relied on LCL's `TTreeView` having Delphi-style tri-state node checkboxes, which it doesn't. `GlobalMigrateWizard.pas` itself (the old dialog `.pas`, never given an `.lfm`) is now dead/unused code, superseded by `MetaExtractWizard.pas`.
 
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.
 
@@ -105,7 +105,6 @@ Legacy components that have been replaced (useful when reading old code or `.lfm
 
 - Fix specific API mismatches from `TrmTabSet` → `TTabControl` differences
 - Tri-state checkbox handling (previously via VirtualTreeView)
-- Port the bulk "Extract Metadata" wizard (`MetaExtractUnit.pas`) off its dead COM path onto `DDLExtractor.pas` directly — see ROADMAP.md Phase 1
 
 The following features are intentionally stubbed/disabled on this FPC/Lazarus port (they show a "not available" message or silently no-op) because they depend on deep Win32-only APIs or on report-writer/editor units that were never ported. Each is a candidate for a real follow-up port:
 - **Printing / print preview** (`GlobalPrintingRoutines.pas`, `PrintPreviewForm.pas`) — depended on the missing `PagePrnt`/`DSprint` report-writer units.

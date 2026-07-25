@@ -230,7 +230,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -697,6 +697,7 @@ var
 	{$ENDIF}
 	ConnectName: String;
 	N: TMarathonTreeNode;
+	WizardForm: TfrmMetaExtractWizard;
 
 begin
 	case Event of
@@ -1105,7 +1106,47 @@ begin
             CurrentProject.MetaDecimalSeparator := Extractor.MetaDecimalSeperator;
             CurrentProject.MetaWrapAt := Extractor.MetaWrapOutputAt;
 						{$ELSE}
-						MessageDlg('Not implemented for FPC', mtInformation, [mbOK], 0);
+						ConnectName := TMarathonCacheObject(Item).ConnectionName;
+						if not CheckConnected(ConnectName) then
+							Exit;
+
+						WizardForm := TfrmMetaExtractWizard.Create(nil);
+						try
+							WizardForm.SetConnection(ConnectName,
+								FCurrentProject.Cache.ConnectionByName[ConnectName].Connection,
+								FCurrentProject.Cache.ConnectionByName[ConnectName].Transaction,
+								FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6,
+								FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect);
+
+							for Idx := 0 to L.Count - 1 do
+								WizardForm.PreSelectObject(TMarathonCacheBaseNode(L.Objects[Idx]).CacheType, L[Idx]);
+
+							// Load the properties
+							WizardForm.ExtractType := Ord(CurrentProject.MetaExtractType);
+							WizardForm.CreateDatabase := CurrentProject.MetaCreateDatabase;
+							WizardForm.IncludePassword := CurrentProject.MetaIncludePassword;
+							WizardForm.IncludeDependents := CurrentProject.MetaIncludeDependents;
+							WizardForm.IncludeDoc := CurrentProject.MetaIncludeDoc;
+							WizardForm.WrapOutput := CurrentProject.MetaWrap;
+							WizardForm.DecimalPlaces := CurrentProject.MetaDecimalPlaces;
+							WizardForm.DecimalSeparator := CurrentProject.MetaDecimalSeparator;
+							WizardForm.WrapAt := CurrentProject.MetaWrapAt;
+
+							WizardForm.ShowModal;
+
+							// Save the properties
+							CurrentProject.MetaExtractType := TExtractType(WizardForm.ExtractType);
+							CurrentProject.MetaCreateDatabase := WizardForm.CreateDatabase;
+							CurrentProject.MetaIncludePassword := WizardForm.IncludePassword;
+							CurrentProject.MetaIncludeDependents := WizardForm.IncludeDependents;
+							CurrentProject.MetaIncludeDoc := WizardForm.IncludeDoc;
+							CurrentProject.MetaWrap := WizardForm.WrapOutput;
+							CurrentProject.MetaDecimalPlaces := WizardForm.DecimalPlaces;
+							CurrentProject.MetaDecimalSeparator := WizardForm.DecimalSeparator;
+							CurrentProject.MetaWrapAt := WizardForm.WrapAt;
+						finally
+							WizardForm.Free;
+						end;
 						{$ENDIF}
 					end;
 				finally
@@ -1794,6 +1835,7 @@ var
 	Extractor: IGSSDDLExtractor;
 	{$ENDIF}
 	SC: TfrmSelectConnection;
+	WizardForm: TfrmMetaExtractWizard;
 
 begin
 	SC := TfrmSelectConnection.Create(Self);
@@ -1850,7 +1892,40 @@ begin
 				CurrentProject.MetaWrapAt := Extractor.MetaWrapOutputAt;
 			end;
 			{$ELSE}
-			MessageDlg('Not implemented for FPC', mtInformation, [mbOK], 0);
+			WizardForm := TfrmMetaExtractWizard.Create(nil);
+			try
+				WizardForm.SetConnection(ConnectName,
+					FCurrentProject.Cache.ConnectionByName[ConnectName].Connection,
+					FCurrentProject.Cache.ConnectionByName[ConnectName].Transaction,
+					FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6,
+					FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect);
+
+				// Load the properties
+				WizardForm.ExtractType := Ord(CurrentProject.MetaExtractType);
+				WizardForm.CreateDatabase := CurrentProject.MetaCreateDatabase;
+				WizardForm.IncludePassword := CurrentProject.MetaIncludePassword;
+				WizardForm.IncludeDependents := CurrentProject.MetaIncludeDependents;
+				WizardForm.IncludeDoc := CurrentProject.MetaIncludeDoc;
+				WizardForm.WrapOutput := CurrentProject.MetaWrap;
+				WizardForm.DecimalPlaces := CurrentProject.MetaDecimalPlaces;
+				WizardForm.DecimalSeparator := CurrentProject.MetaDecimalSeparator;
+				WizardForm.WrapAt := CurrentProject.MetaWrapAt;
+
+				WizardForm.ShowModal;
+
+				// Save the properties
+				CurrentProject.MetaExtractType := TExtractType(WizardForm.ExtractType);
+				CurrentProject.MetaCreateDatabase := WizardForm.CreateDatabase;
+				CurrentProject.MetaIncludePassword := WizardForm.IncludePassword;
+				CurrentProject.MetaIncludeDependents := WizardForm.IncludeDependents;
+				CurrentProject.MetaIncludeDoc := WizardForm.IncludeDoc;
+				CurrentProject.MetaWrap := WizardForm.WrapOutput;
+				CurrentProject.MetaDecimalPlaces := WizardForm.DecimalPlaces;
+				CurrentProject.MetaDecimalSeparator := WizardForm.DecimalSeparator;
+				CurrentProject.MetaWrapAt := WizardForm.WrapAt;
+			finally
+				WizardForm.Free;
+			end;
 			{$ENDIF}
 		end;
 	finally
