@@ -84,10 +84,10 @@ uses.
   smoke test against the build before packaging it, since a live Firebird
   server is easy to stand up on the Linux runner (same as `build.yml`).
 - **Windows** (`marathon-<version>-windows-x86_64.zip`) and **macOS**
-  (`marathon-<version>-macos-x86_64.zip`) build only — this port has only
-  ever been built and tested on Linux, so these jobs are best-effort and
-  may need follow-up fixes (widgetset/package differences, `marathon.lpi`
-  hardcoding `TargetOS=linux`, worked around in the workflow via
+  (`marathon-<version>-macos-arm64.zip`, native Apple Silicon) build only —
+  this port has only ever been built and tested on Linux, so these jobs are
+  best-effort and may need follow-up fixes (widgetset/package differences,
+  `marathon.lpi` hardcoding `TargetOS=linux`, worked around in the workflow via
   `lazbuild --os=... --cpu=...`) once they've actually run.
 
 ## Architecture
