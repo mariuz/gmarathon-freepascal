@@ -3673,6 +3673,13 @@ begin
       opExtractDDL,
 			opAddToProject:
 				Result := True;
+      opScriptSelect,
+      opScriptInsert,
+      opScriptUpdate,
+      opScriptDelete:
+        Result := CacheType in [ctTable, ctView];
+      opScriptCreate:
+        Result := CacheType in [ctTable, ctView, ctSP];
 		else
 			Result := False;
 		end;

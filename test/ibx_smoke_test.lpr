@@ -2,20 +2,24 @@ program ibx_smoke_test;
 
 { Standalone smoke test for the IBX (MWASoftware ibx4lazarus) database layer.
   Connects to a real Firebird server, creates a table, writes and reads a row,
-  and verifies the round trip. Used by CI to prove the IBX conversion actually
-  talks to Firebird, not just that the app compiles. }
+  and verifies the round trip, then exercises DDLExtractor (Marathon's DDL
+  scripting engine) against the live table. Used by CI to prove the IBX
+  conversion and DDL extraction actually work against Firebird, not just
+  that the app compiles. }
 
 {$MODE Delphi}
 
 uses
-  SysUtils, Classes, IBDatabase, IBQuery;
+  SysUtils, Classes, IBDatabase, IBQuery, DDLExtractor;
 
 var
   DB: TIBDatabase;
   Tr: TIBTransaction;
   Q: TIBQuery;
+  Extractor: TDDLExtractor;
   DatabaseName, UserName, Password: String;
   Value: String;
+  DDL: String;
 
 begin
   if ParamCount < 3 then
@@ -97,6 +101,37 @@ begin
     begin
       WriteLn('FAIL: expected ''ibx works'', got ''', Value, '''');
       Halt(1);
+    end;
+
+    Extractor := TDDLExtractor.Create(nil);
+    try
+      Extractor.Database := DB;
+      Extractor.Transaction := Tr;
+      Extractor.SQLDialect := DB.SQLDialect;
+      Extractor.IsInterbase6 := True;
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlTable, ddlstNone, 'IBX_SMOKE_TEST');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      if (Pos('CREATE TABLE', UpperCase(DDL)) = 0) or (Pos('NOTE', UpperCase(DDL)) = 0) then
+      begin
+        WriteLn('FAIL: extracted DDL does not look right:');
+        WriteLn(DDL);
+        Halt(1);
+      end;
+      WriteLn('DDL extraction OK:');
+      WriteLn(DDL);
+    finally
+      Extractor.Free;
     end;
 
     DB.Connected := False;

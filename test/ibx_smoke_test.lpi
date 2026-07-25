@@ -43,6 +43,7 @@
       <Filename Value="ibx_smoke_test"/>
     </Target>
     <SearchPaths>
+      <OtherUnitFiles Value="../src/MetaExtract;../src/Source"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

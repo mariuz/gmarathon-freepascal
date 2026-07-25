@@ -13,12 +13,12 @@
 {******************************************************************} 
 // $Id: Globals.pas,v 1.2 2002/04/25 07:16:24 tmuetze Exp $
 
-unit Globals;
+unit MetaExtractGlobals;
 
 interface
 
 uses
-	Classes, SysUtils, Windows, IBHeader, Forms, Registry;
+	Classes, SysUtils, {$IFDEF MSWINDOWS} Windows, {$ENDIF} IBHeader;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision : Integer; IsInterbase6 : Boolean) : String;
 function GetDBCharSetNameByID(ID : Integer) : String;
@@ -31,57 +31,7 @@ function ShouldBeQuoted(S : String) : Boolean;
 function EscapeQuotes(I : String) : String;
 function NoLangFormatDateTime(const Format: string; DateTime: TDateTime): string;
 
-procedure LoadFormPosition(F : TForm);
-procedure SaveFormPosition(F : TForm);
-
 implementation
-
-uses
-	GSSRegistry;
-
-procedure LoadFormPosition(F : TForm);
-var
-  R : TRegistry;
-
-begin
-  R := TRegistry.Create;
-  try
-		if R.OpenKey(REG_SETTINGS_FORMS + '\' + F.ClassName, False) then
-    begin
-      if R.ValueExists('Top') then
-        F.Top := R.ReadInteger('Top');
-      if R.ValueExists('Left') then
-        F.Left := R.ReadInteger('Left');
-      if R.ValueExists('Width') then
-        F.Width := R.ReadInteger('Width');
-      if R.ValueExists('Height') then
-        F.Height := R.ReadInteger('Height');
-      R.CloseKey;
-    end;
-  finally
-    R.Free;
-  end;
-end;
-
-procedure SaveFormPosition(F : TForm);
-var
-  R : TRegistry;
-
-begin
-  R := TRegistry.Create;
-  try
-		if R.OpenKey(REG_SETTINGS_FORMS + '\' + F.ClassName, True) then
-		begin
-			R.WriteInteger('Top', F.Top);
-			R.WriteInteger('Left', F.Left);
-			R.WriteInteger('Width', F.Width);
-			R.WriteInteger('Height', F.Height);
-			R.CloseKey;
-		end;
-	finally
-		R.Free;
-	end;
-end;
 
 function EscapeQuotes(I : String) : String;
 var
@@ -196,14 +146,21 @@ const
       end;
     end;
 
+    { Alternate-calendar (era) string, e.g. Japanese/Chinese calendars. Only
+      reachable via the 'G'/'E' format tokens, which no caller in this
+      codebase uses; there is no portable equivalent of Windows'
+      GetDateFormat/DATE_USE_ALT_CALENDAR, so this is a no-op elsewhere. }
     function ConvertEraString(const Count: Integer) : string;
+    {$IFDEF MSWINDOWS}
     var
       FormatStr: string;
       SystemTime: TSystemTime;
       Buffer: array[Byte] of Char;
 			P: PChar;
+    {$ENDIF}
     begin
       Result := '';
+      {$IFDEF MSWINDOWS}
       with SystemTime do
       begin
         wYear  := Year;
@@ -231,15 +188,19 @@ const
           end;
         end;
       end;
+      {$ENDIF}
     end;
 
     function ConvertYearString(const Count: Integer): string;
+    {$IFDEF MSWINDOWS}
     var
       FormatStr: string;
       SystemTime: TSystemTime;
       Buffer: array[Byte] of Char;
+    {$ENDIF}
     begin
       Result := '';
+      {$IFDEF MSWINDOWS}
 			with SystemTime do
       begin
         wYear  := Year;
@@ -259,6 +220,7 @@ const
         if (Count = 1) and (Result[1] = '0') then
           Result := Copy(Result, 2, Length(Result)-1);
       end;
+      {$ENDIF}
     end;
 
   begin

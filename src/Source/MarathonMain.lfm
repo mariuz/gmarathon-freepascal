@@ -2324,6 +2324,36 @@ object frmMarathonMain: TfrmMarathonMain
       OnExecute = ProjectExtractMetadataExecute
       OnUpdate = ProjectExtractMetadataUpdate
     end
+    object ObjectScriptCreate: TAction
+      Category = 'Object'
+      Caption = 'Script as &CREATE'
+      OnExecute = ObjectScriptCreateExecute
+      OnUpdate = ObjectScriptCreateUpdate
+    end
+    object ObjectScriptSelect: TAction
+      Category = 'Object'
+      Caption = 'Script as &SELECT'
+      OnExecute = ObjectScriptSelectExecute
+      OnUpdate = ObjectScriptSelectUpdate
+    end
+    object ObjectScriptInsert: TAction
+      Category = 'Object'
+      Caption = 'Script as &INSERT'
+      OnExecute = ObjectScriptInsertExecute
+      OnUpdate = ObjectScriptInsertUpdate
+    end
+    object ObjectScriptUpdate: TAction
+      Category = 'Object'
+      Caption = 'Script as &UPDATE'
+      OnExecute = ObjectScriptUpdateExecute
+      OnUpdate = ObjectScriptUpdateUpdate
+    end
+    object ObjectScriptDelete: TAction
+      Category = 'Object'
+      Caption = 'Script as &DELETE'
+      OnExecute = ObjectScriptDeleteExecute
+      OnUpdate = ObjectScriptDeleteUpdate
+    end
     object ProjectCreateFolder: TAction
       Category = 'Project'
       Caption = '&Create Folder...'

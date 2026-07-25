@@ -202,6 +202,21 @@ type
     function CanExtractMetadata: Boolean;
     procedure DoExtractMetadata;
 
+    function CanScriptSelect: Boolean;
+    procedure DoScriptSelect;
+
+    function CanScriptInsert: Boolean;
+    procedure DoScriptInsert;
+
+    function CanScriptUpdate: Boolean;
+    procedure DoScriptUpdate;
+
+    function CanScriptDelete: Boolean;
+    procedure DoScriptDelete;
+
+    function CanScriptCreate: Boolean;
+    procedure DoScriptCreate;
+
     function CanCreateFolder: Boolean;
     procedure DoCreateFolder;
 

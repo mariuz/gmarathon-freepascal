@@ -135,6 +135,11 @@ type
     ProjectItemDrop: TAction;
     ViewRefresh: TAction;
     ProjectExtractMetadata: TAction;
+    ObjectScriptCreate: TAction;
+    ObjectScriptSelect: TAction;
+    ObjectScriptInsert: TAction;
+    ObjectScriptUpdate: TAction;
+    ObjectScriptDelete: TAction;
     ProjectCreateFolder: TAction;
     ProjectAddToProject: TAction;
     EditEncANSI: TAction;
@@ -524,6 +529,16 @@ type
 		procedure ViewRefreshExecute(Sender: TObject);
 		procedure ProjectExtractMetadataExecute(Sender: TObject);
     procedure ProjectExtractMetadataUpdate(Sender: TObject);
+    procedure ObjectScriptCreateExecute(Sender: TObject);
+    procedure ObjectScriptCreateUpdate(Sender: TObject);
+    procedure ObjectScriptSelectExecute(Sender: TObject);
+    procedure ObjectScriptSelectUpdate(Sender: TObject);
+    procedure ObjectScriptInsertExecute(Sender: TObject);
+    procedure ObjectScriptInsertUpdate(Sender: TObject);
+    procedure ObjectScriptUpdateExecute(Sender: TObject);
+    procedure ObjectScriptUpdateUpdate(Sender: TObject);
+    procedure ObjectScriptDeleteExecute(Sender: TObject);
+    procedure ObjectScriptDeleteUpdate(Sender: TObject);
 		procedure ProjectCreateFolderExecute(Sender: TObject);
     procedure ProjectCreateFolderUpdate(Sender: TObject);
     procedure ProjectAddToProjectExecute(Sender: TObject);
@@ -1889,6 +1904,116 @@ begin
 		ProjectExtractMetadata.Enabled := F.CanExtractMetadata
 	else
 		ProjectExtractMetadata.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptCreateExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptCreate;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptCreateUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptCreate.Enabled := F.CanScriptCreate
+	else
+		ObjectScriptCreate.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptSelectExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptSelect;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptSelectUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptSelect.Enabled := F.CanScriptSelect
+	else
+		ObjectScriptSelect.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptInsertExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptInsert;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptInsertUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptInsert.Enabled := F.CanScriptInsert
+	else
+		ObjectScriptInsert.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptUpdateExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptUpdate;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptUpdateUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptUpdate.Enabled := F.CanScriptUpdate
+	else
+		ObjectScriptUpdate.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptDeleteExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptDelete;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptDeleteUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptDelete.Enabled := F.CanScriptDelete
+	else
+		ObjectScriptDelete.Enabled := False;
 end;
 
 procedure TfrmMarathonMain.ProjectCreateFolderExecute(Sender: TObject);

@@ -84,6 +84,21 @@ type
     function CanExtractMetadata: Boolean; virtual;
     procedure DoExtractMetadata; virtual;
 
+    function CanScriptSelect: Boolean; virtual;
+    procedure DoScriptSelect; virtual;
+
+    function CanScriptInsert: Boolean; virtual;
+    procedure DoScriptInsert; virtual;
+
+    function CanScriptUpdate: Boolean; virtual;
+    procedure DoScriptUpdate; virtual;
+
+    function CanScriptDelete: Boolean; virtual;
+    procedure DoScriptDelete; virtual;
+
+    function CanScriptCreate: Boolean; virtual;
+    procedure DoScriptCreate; virtual;
+
     function CanCreateFolder: Boolean; virtual;
     procedure DoCreateFolder; virtual;
 
@@ -377,6 +392,31 @@ begin
   Result := False;
 end;
 
+function TfrmBaseDocumentForm.CanScriptSelect: Boolean;
+begin
+  Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanScriptInsert: Boolean;
+begin
+  Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanScriptUpdate: Boolean;
+begin
+  Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanScriptDelete: Boolean;
+begin
+  Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanScriptCreate: Boolean;
+begin
+  Result := False;
+end;
+
 function TfrmBaseDocumentForm.CanInternalClose: Boolean;
 begin
   Result := False;
@@ -507,6 +547,31 @@ begin
 end;
 
 procedure TfrmBaseDocumentForm.DoExtractMetadata;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptSelect;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptInsert;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptUpdate;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptDelete;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptCreate;
 begin
   //
 end;

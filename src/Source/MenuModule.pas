@@ -115,6 +115,13 @@ type
     ProjectItemDrop1: TMenuItem;
     MenuItem3: TMenuItem;
     ProjectItemProperties1: TMenuItem;
+    N32: TMenuItem;
+    ScriptAs1: TMenuItem;
+    ObjectScriptCreate1: TMenuItem;
+    ObjectScriptSelect1: TMenuItem;
+    ObjectScriptInsert1: TMenuItem;
+    ObjectScriptUpdate1: TMenuItem;
+    ObjectScriptDelete1: TMenuItem;
     N4: TMenuItem;
     Print1: TMenuItem;
     PrintPreview1: TMenuItem;

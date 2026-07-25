@@ -27,7 +27,11 @@ Required Lazarus packages: `SynEdit`, `LCL`, `Printer4Lazarus`, `TAChartLazarusP
 
 ## Tests
 
-No unit test suite exists. Manual testing only via Lazarus IDE. `test/ibx_smoke_test.lpr` is a standalone smoke test that connects to a real Firebird server via IBX (create table / insert / select round trip) — build with `lazbuild test/ibx_smoke_test.lpi` and run as `./test/ibx_smoke_test <database> <user> <password>`. CI runs the full app build plus this smoke test against a live Firebird server via `.github/workflows/build.yml` on push/PR to master.
+No unit test suite exists. Manual testing only via Lazarus IDE. `test/ibx_smoke_test.lpr` is a standalone smoke test that connects to a real Firebird server via IBX (create table / insert / select round trip, then extracts and sanity-checks its DDL via `DDLExtractor`) — build with `lazbuild test/ibx_smoke_test.lpi` and run as `./test/ibx_smoke_test <database> <user> <password>`. CI runs the full app build plus this smoke test against a live Firebird server via `.github/workflows/build.yml` on push/PR to master.
+
+## Roadmap
+
+See `ROADMAP.md` for planned features (adapted from FlameRobin's roadmap where realistic for this codebase) and their status.
 
 ## Architecture
 
@@ -41,7 +45,7 @@ The application is structured in layers:
 
 **SQL Processing** — `SQLParser.pas` / `SQLLex.pas` / `SQLYacc.pas` handle SQL tokenization and parsing. `ScriptExecutive.pas` implements an ISQL-compatible multi-statement script engine on top of IBX.
 
-**Metadata/DDL** — `src/MetaExtract/`: `MetaExtractUnit.pas` and `DDLExtractor.pas` handle reverse-engineering Firebird objects to DDL, but are only compiled under `{$IFNDEF FPC}` (Delphi + COM automation, via `GSSDDLExtractorServer.pas`/`gssscript_TLB.pas`) — dead code on this Lazarus/FPC port. `GlobalMigrateWizard.pas` (schema migration assistant) is similarly COM-only and unreachable under FPC.
+**Metadata/DDL** — `src/MetaExtract/DDLExtractor.pas`'s `TDDLExtractor` reverse-engineers Firebird objects (tables, views, procedures, triggers, domains, generators, exceptions, UDFs, plus PK/FK/index/grant sub-scripts) to DDL text, driven directly against `TIBDatabase`/`TIBTransaction`; it's used by `FrameMetadata.pas`'s "DDL" tab in the object editors. `MetaExtractUnit.pas` (the bulk multi-object export wizard) and `GlobalMigrateWizard.pas` (schema migration assistant) are still only reachable through the dead `{$IFNDEF FPC}` COM automation path (`GSSDDLExtractorServer.pas`/`gssscript_TLB.pas`) — see ROADMAP.md Phase 1.
 
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.
 
@@ -101,7 +105,7 @@ Legacy components that have been replaced (useful when reading old code or `.lfm
 
 - Fix specific API mismatches from `TrmTabSet` → `TTabControl` differences
 - Tri-state checkbox handling (previously via VirtualTreeView)
-- Verify low-level Firebird metadata extraction now that IBX is wired up (`src/MetaExtract/` is currently dead code under FPC — see Architecture)
+- Port the bulk "Extract Metadata" wizard (`MetaExtractUnit.pas`) off its dead COM path onto `DDLExtractor.pas` directly — see ROADMAP.md Phase 1
 
 The following features are intentionally stubbed/disabled on this FPC/Lazarus port (they show a "not available" message or silently no-op) because they depend on deep Win32-only APIs or on report-writer/editor units that were never ported. Each is a candidate for a real follow-up port:
 - **Printing / print preview** (`GlobalPrintingRoutines.pas`, `PrintPreviewForm.pas`) — depended on the missing `PagePrnt`/`DSprint` report-writer units.

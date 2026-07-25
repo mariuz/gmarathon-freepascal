@@ -34,7 +34,7 @@ unit FrameMetadata;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, {$IFDEF WINDOWS}ComObj, {$ENDIF} Clipbrd, IBDatabase, IBQuery, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes{$IFDEF WINDOWS}, gssscript_TLB{$ENDIF};
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Globals, Db, ComCtrls, Clipbrd, IBDatabase, IBQuery, SynEdit, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCacheTypes, MarathonProjectCache, DDLExtractor;
 
 type
 	TframDisplayDDL = class(TFrame)
@@ -67,26 +67,6 @@ type
 implementation
 
 uses MarathonIDE;
-
-const
-	ddlDomain         = 0;
-	ddlTable          = 1;
-	ddlView           = 2;
-	ddlTableData      = 3;
-	ddlGenerator      = 4;
-	ddlException      = 5;
-	ddlUDF            = 6;
-	ddlStoredProc     = 7;
-	ddlTrigger        = 8;
-
-	ddlstNone         = 0;
-	ddlstPrimaryKey   = 1;
-	ddlstForeignKey   = 2;
-	ddlstIndex        = 3;
-	ddlstGenerator    = 4;
-	ddlstGeneratorVal = 5;
-	ddlstProc         = 6;
-	ddlstGrants       = 7;
 
 {$R *.lfm}
 
@@ -142,53 +122,50 @@ begin
 end;
 
 procedure TframDisplayDDL.GetDDL;
-{$IFNDEF FPC}
 var
-  Extractor : IGSSDDLExtractor;
+  Extractor : TDDLExtractor;
+  Conn : TMarathonCacheConnection;
   TriggerList : TStringList;
   Idx : Integer;
-{$ENDIF}
 begin
-{$IFNDEF FPC}
-  case FForm.GetActiveObjectType of
-    ctDomain:
-      begin
-				Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
-        Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
-        Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-        edDDL.Text := Extractor.Extract(ddlDomain, ddlstNone, FForm.GetObjectName);
-			end;
-    ctTable:
-      begin
-        Screen.Cursor := crHourGlass;
-        try
-          Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-          Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
-          Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
-          Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-          edDDL.Text := Extractor.Extract(ddlTable, ddlstNone, FForm.GetObjectName);
-          edDDL.Lines.Add('');
-          edDDL.Lines.Add('');
-					edDDL.Lines.Add('/* Primary Key */');
-          edDDL.Lines.Add('');
-          edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstPrimaryKey, FForm.GetObjectName);
-          edDDL.Lines.Add('');
-          edDDL.Lines.Add('');
-          edDDL.Lines.Add('/* Foreign Key */');
-          edDDL.Lines.Add('');
-          edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstForeignKey, FForm.GetObjectName);
-          edDDL.Lines.Add('');
-          edDDL.Lines.Add('');
-          edDDL.Lines.Add('/* Indexes */');
-          edDDL.Lines.Add('');
-          edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstIndex, FForm.GetObjectName);
+  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName];
 
-					TriggerList := TStringList.Create;
+  Extractor := TDDLExtractor.Create(nil);
+  try
+    Extractor.Database := Conn.Connection;
+    Extractor.Transaction := Conn.Transaction;
+    Extractor.SQLDialect := Conn.SQLDialect;
+    Extractor.IsInterbase6 := Conn.IsIB6;
+
+    case FForm.GetActiveObjectType of
+      ctDomain:
+        edDDL.Text := Extractor.Extract(ddlDomain, ddlstNone, FForm.GetObjectName);
+
+      ctTable:
+        begin
+          Screen.Cursor := crHourGlass;
           try
+            edDDL.Text := Extractor.Extract(ddlTable, ddlstNone, FForm.GetObjectName);
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('/* Primary Key */');
+            edDDL.Lines.Add('');
+            edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstPrimaryKey, FForm.GetObjectName);
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('/* Foreign Key */');
+            edDDL.Lines.Add('');
+            edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstForeignKey, FForm.GetObjectName);
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('/* Indexes */');
+            edDDL.Lines.Add('');
+            edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstIndex, FForm.GetObjectName);
+
+            TriggerList := TStringList.Create;
             try
-              qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection;
-              qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
+              qryUtil.Database := Conn.Connection;
+              qryUtil.Transaction := Conn.Transaction;
               qryUtil.SQL.Clear;
               qryUtil.SQL.Add('select rdb$trigger_name, rdb$trigger_type from rdb$triggers where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints);');
               qryUtil.Open;
@@ -196,68 +173,73 @@ begin
               begin
                 TriggerList.Add(qryUtil.FieldByName('rdb$trigger_name').AsString);
                 qryUtil.Next;
-							end;
+              end;
               qryUtil.Close;
               if Assigned(qryUtil.Transaction) and qryUtil.Transaction.Active then
-                TIBTransaction(qryUtil.Transaction).Commit;
-            finally
-            end;
+                qryUtil.Transaction.Commit;
 
-            if TriggerList.Count > 0 then
-            begin
-              edDDL.Lines.Add('');
-              edDDL.Lines.Add('');
-              edDDL.Lines.Add('/* Triggers */');
-							edDDL.Lines.Add('');
-              for Idx := 0 to TriggerList.Count - 1 do
+              if TriggerList.Count > 0 then
               begin
-                edDDL.Text := edDDL.Text + Extractor.Extract(ddlTrigger, ddlstNone, TriggerList[Idx]);
                 edDDL.Lines.Add('');
                 edDDL.Lines.Add('');
+                edDDL.Lines.Add('/* Triggers */');
                 edDDL.Lines.Add('');
+                for Idx := 0 to TriggerList.Count - 1 do
+                begin
+                  edDDL.Text := edDDL.Text + Extractor.Extract(ddlTrigger, ddlstNone, TriggerList[Idx]);
+                  edDDL.Lines.Add('');
+                  edDDL.Lines.Add('');
+                  edDDL.Lines.Add('');
+                end;
               end;
+            finally
+              TriggerList.Free;
             end;
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('');
+            edDDL.Lines.Add('/* Grants */');
+            edDDL.Lines.Add('');
+            edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstGrants, FForm.GetObjectName);
           finally
-            TriggerList.Free;
+            Screen.Cursor := crDefault;
           end;
-          edDDL.Lines.Add('');
-          edDDL.Lines.Add('');
-					edDDL.Lines.Add('/* Grants */');
-          edDDL.Lines.Add('');
-          edDDL.Text := edDDL.Text + Extractor.Extract(ddlTable, ddlstGrants, FForm.GetObjectName);
-        finally
-          Screen.Cursor := crDefault;
-        end;    
-      end;
-    ctGenerator:
-      begin
-        Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
-        Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
-        Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-				edDDL.Text := Extractor.Extract(ddlGenerator, ddlstNone, FForm.GetObjectName);
-      end;
-    ctException:
-      begin
-        Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
-        Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
-        Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-        edDDL.Text := Extractor.Extract(ddlException, ddlstNone, FForm.GetObjectName);
-      end;
-    ctUDF:
-      begin
-				Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-        Extractor.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].SQLDialect;
-        Extractor.DatabaseHandle := Integer(MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Connection.dbHandle);
-        Extractor.IB6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].IsIB6;
-        edDDL.Text := Extractor.Extract(ddlUDF, ddlstNone, FForm.GetObjectName);
-      end;
+        end;
 
+      ctView:
+        begin
+          edDDL.Text := Extractor.Extract(ddlView, ddlstNone, FForm.GetObjectName);
+          edDDL.Lines.Add('');
+          edDDL.Lines.Add('');
+          edDDL.Lines.Add('/* Grants */');
+          edDDL.Lines.Add('');
+          edDDL.Text := edDDL.Text + Extractor.Extract(ddlView, ddlstGrants, FForm.GetObjectName);
+        end;
+
+      ctSP:
+        begin
+          edDDL.Text := Extractor.Extract(ddlStoredProc, ddlstNone, FForm.GetObjectName);
+          edDDL.Lines.Add('');
+          edDDL.Lines.Add('');
+          edDDL.Lines.Add('/* Grants */');
+          edDDL.Lines.Add('');
+          edDDL.Text := edDDL.Text + Extractor.Extract(ddlStoredProc, ddlstGrants, FForm.GetObjectName);
+        end;
+
+      ctTrigger:
+        edDDL.Text := Extractor.Extract(ddlTrigger, ddlstNone, FForm.GetObjectName);
+
+      ctGenerator:
+        edDDL.Text := Extractor.Extract(ddlGenerator, ddlstNone, FForm.GetObjectName);
+
+      ctException:
+        edDDL.Text := Extractor.Extract(ddlException, ddlstNone, FForm.GetObjectName);
+
+      ctUDF:
+        edDDL.Text := Extractor.Extract(ddlUDF, ddlstNone, FForm.GetObjectName);
+    end;
+  finally
+    Extractor.Free;
   end;
-{$ELSE}
-  edDDL.Text := 'DDL Extraction not available in FPC yet.';
-{$ENDIF}
 end;
 
 function TframDisplayDDL.CanCaptureSnippet: Boolean;

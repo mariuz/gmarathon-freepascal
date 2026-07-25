@@ -217,6 +217,21 @@ type
 		function CanExtractMetadata : Boolean; override;
 		procedure DoExtractMetadata; override;
 
+		function CanScriptSelect : Boolean; override;
+		procedure DoScriptSelect; override;
+
+		function CanScriptInsert : Boolean; override;
+		procedure DoScriptInsert; override;
+
+		function CanScriptUpdate : Boolean; override;
+		procedure DoScriptUpdate; override;
+
+		function CanScriptDelete : Boolean; override;
+		procedure DoScriptDelete; override;
+
+		function CanScriptCreate : Boolean; override;
+		procedure DoScriptCreate; override;
+
 		function CanDoFolderMode : Boolean; override;
 		function IsFolderMode : Boolean; override;
 		procedure DoFolderMode; override;
@@ -1044,6 +1059,56 @@ end;
 procedure TfrmDatabaseExplorer.DoExtractMetadata;
 begin
 	DoBrowserOperation(opExtractDDL);
+end;
+
+function TfrmDatabaseExplorer.CanScriptSelect: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptSelect);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptSelect;
+begin
+	DoBrowserOperation(opScriptSelect);
+end;
+
+function TfrmDatabaseExplorer.CanScriptInsert: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptInsert);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptInsert;
+begin
+	DoBrowserOperation(opScriptInsert);
+end;
+
+function TfrmDatabaseExplorer.CanScriptUpdate: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptUpdate);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptUpdate;
+begin
+	DoBrowserOperation(opScriptUpdate);
+end;
+
+function TfrmDatabaseExplorer.CanScriptDelete: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptDelete);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptDelete;
+begin
+	DoBrowserOperation(opScriptDelete);
+end;
+
+function TfrmDatabaseExplorer.CanScriptCreate: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptCreate);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptCreate;
+begin
+	DoBrowserOperation(opScriptCreate);
 end;
 
 function TfrmDatabaseExplorer.CanAddToProject: Boolean;

@@ -50,7 +50,12 @@ type
     opRemoveNode,
     opExtractDDL,
     opAddToProject,
-    opCreateFolder);
+    opCreateFolder,
+    opScriptSelect,
+    opScriptInsert,
+    opScriptUpdate,
+    opScriptDelete,
+    opScriptCreate);
 
   TGSSCacheType = (
     ctDontCare,

@@ -417,6 +417,27 @@ object dmMenus: TdmMenus
     object ProjectItemProperties1: TMenuItem
       Action = frmMarathonMain.ProjectItemProperties
     end
+    object N32: TMenuItem
+      Caption = '-'
+    end
+    object ScriptAs1: TMenuItem
+      Caption = 'Script As'
+      object ObjectScriptCreate1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptCreate
+      end
+      object ObjectScriptSelect1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptSelect
+      end
+      object ObjectScriptInsert1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptInsert
+      end
+      object ObjectScriptUpdate1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptUpdate
+      end
+      object ObjectScriptDelete1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptDelete
+      end
+    end
     object N17: TMenuItem
       Caption = '-'
     end

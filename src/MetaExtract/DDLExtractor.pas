@@ -18,8 +18,8 @@ unit DDLExtractor;
 interface
 
 uses
-  Windows, Forms, Controls, SysUtils, Classes, IBDatabase, IBCustomDataSet,
-  IBQuery, IBSQL, IBHeader, DB, Globals, DOM, xmlread, xmlwrite,
+  {$IFDEF MSWINDOWS} Windows, {$ENDIF} SysUtils, Classes, IBDatabase, IBCustomDataSet,
+  IBQuery, IBSQL, IBHeader, IB, DB, MetaExtractGlobals, DOM, xmlread, xmlwrite,
   MarathonProjectCacheTypes, StrUtils;
 
 type
@@ -268,8 +268,6 @@ end;
 function TDDLExtractor.Extract(ObjectType: TDDLObjectType; ObjectSubType : TDDLSubType;
   ObjectName: String): String;
 begin
-  Screen.Cursor := crHourglass;
-  try
     Result := '';
     case ObjectType of
       ddlDomain :
@@ -341,9 +339,6 @@ begin
           end;
         end;
     end;
-  finally
-    Screen.Cursor := crDefault;
-  end;    
 end;
 
 
@@ -1723,7 +1718,7 @@ begin
                     List := TStringList.Create;
                     Stream := TMemoryStream.Create;
                     try
-                      Q1.Fields[Idy].SaveToStream(Stream);
+                      TBlobField(Q1.Fields[Idy]).SaveToStream(Stream);
                       Stream.Position := 0;
                       if Assigned(FOnStatus) then
                         FOnStatus(Self, 'Writing Row (' + IntToStr(RowCount) + ')' + #13#10 + 'Converting blob data...');
