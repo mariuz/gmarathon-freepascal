@@ -829,7 +829,9 @@ begin
 		B.Free;
 	end;
 
-  {$IFDEF WINDOWS}TBRegLoadPositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);{$ENDIF}
+  // Toolbar2000 dock-position persistence; that library was replaced by LCL
+  // TToolBar and is no longer in the tree, so this is Delphi-only.
+  {$IFNDEF FPC}TBRegLoadPositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);{$ENDIF}
 	dckTopResize(dckTop);
 
 	Caption := 'Marathon';
@@ -910,7 +912,7 @@ begin
 		ReOpen1.Items[Idx].Free;
   {$ENDIF}
 
-	{$IFDEF WINDOWS}TBRegSavePositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);{$ENDIF}
+	{$IFNDEF FPC}TBRegSavePositions(Self, HKEY_CURRENT_USER, REG_SETTINGS_TOOLBARS);{$ENDIF}
   SaveFormPosition(self);
 	MarathonIDEInstance.MainForm := nil;
 	MarathonIDEInstance.UnloadPlugins;
