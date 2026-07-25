@@ -32,7 +32,10 @@ type
     ddlException,
     ddlUDF,
     ddlStoredProc,
-    ddlTrigger
+    ddlTrigger,
+    { Appended deliberately: callers pass this enum by value, so adding in the
+      middle would silently renumber the existing ones. }
+    ddlPackage
     );
 
   TDDLSubType = (
@@ -83,6 +86,8 @@ type
     function IdentityOptions(const GeneratorName: String): String;
     function TableSQLSecurity(const ObjectName: String): String;
     function ExtractPSQLFunction(Q: TIBDataSet): String;
+    function ExtractPackageHeader(ObjectName : String) : String;
+    function ExtractPackageBody(ObjectName : String) : String;
     function TriggerEventClause(TriggerType: Integer): String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function ExtractGenerator(ObjectName : String) : String;
@@ -350,6 +355,17 @@ begin
               Result := ExtractTrigger(ObjectName);
             ddlstDoco :
               Result := ExtractTriggerDoco(ObjectName);
+          end;
+        end;
+      ddlPackage:
+        begin
+          { Same header/body split as stored procedures: ddlstHeader gives the
+            package interface, ddlstProc the body. }
+          case ObjectSubType of
+            ddlstNone, ddlstHeader :
+              Result := ExtractPackageHeader(ObjectName);
+            ddlstProc :
+              Result := ExtractPackageBody(ObjectName);
           end;
         end;
     end;
@@ -1405,6 +1421,66 @@ begin
     except
       Result := '';
     end;
+  finally
+    Q.Free;
+  end;
+end;
+
+function TDDLExtractor.ExtractPackageHeader(ObjectName: String): String;
+var
+  Q : TIBDataSet;
+  Src : String;
+begin
+  { Packages are Firebird 3 (ODS 12). }
+  Result := '';
+  if not ODSAtLeast(12, 0) then
+    Exit;
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$package_header_source from rdb$packages where rdb$package_name = ' +
+               AnsiQuotedStr(ObjectName, ''''));
+    Q.Open;
+    if not Q.EOF then
+    begin
+      Src := AdjustLineBreaks(Trim(Q.FieldByName('rdb$package_header_source').AsString));
+      if Src <> '' then
+        Result := 'create or alter package ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) +
+                  SQLSecurityClause('rdb$packages', 'rdb$package_name', ObjectName) +
+                  #13#10 + 'as' + #13#10 + Src + #13#10;
+    end;
+    Q.Close;
+  finally
+    Q.Free;
+  end;
+end;
+
+function TDDLExtractor.ExtractPackageBody(ObjectName: String): String;
+var
+  Q : TIBDataSet;
+  Src : String;
+begin
+  Result := '';
+  if not ODSAtLeast(12, 0) then
+    Exit;
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$package_body_source from rdb$packages where rdb$package_name = ' +
+               AnsiQuotedStr(ObjectName, ''''));
+    Q.Open;
+    if not Q.EOF then
+    begin
+      { A package can exist with a header and no body, so an empty body is a
+        legitimate state rather than an error - emit nothing. }
+      Src := AdjustLineBreaks(Trim(Q.FieldByName('rdb$package_body_source').AsString));
+      if Src <> '' then
+        Result := 'recreate package body ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) +
+                  #13#10 + 'as' + #13#10 + Src + #13#10;
+    end;
+    Q.Close;
   finally
     Q.Free;
   end;

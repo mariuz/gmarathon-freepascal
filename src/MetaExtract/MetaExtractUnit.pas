@@ -58,6 +58,7 @@ type
     FExceptions : TStringList;
     FTableDependencyOrder : TStringList;
     FUDFs : TStringList;
+    FPackages : TStringList;
     FExtractType : TExtractType;
     FCreateDatabase : Boolean;
     FIncludePassword : Boolean;
@@ -96,6 +97,7 @@ type
     procedure WriteGenerators;
     procedure WriteExceptions;
     procedure WriteUDFs;
+    procedure WritePackages;
     procedure OnDataHandler(Sender : TObject; Line : String; NoWrap : Boolean; var Stop : Boolean);
     procedure OnStatusHandler(Sender : TObject; Line : String);
     procedure BuildObjectDependencies;
@@ -129,6 +131,7 @@ type
     property Generators : TStringList read FGenerators write FGenerators;
     property Exceptions : TStringList read FExceptions write FExceptions;
     property UDFs : TStringList read FUDFs write FUDFs;
+    property Packages : TStringList read FPackages write FPackages;
     property ExtractType : TExtractType read FExtractType write FExtractType;
     property CreateDatabase : Boolean read FCreateDatabase write FCreateDatabase;
     property IncludePassword : Boolean read FIncludePassword write FIncludePassword;
@@ -195,6 +198,7 @@ begin
   FGenerators := TStringList.Create;
   FExceptions := TStringList.Create;
   FUDFs := TStringList.Create;
+  FPackages := TStringList.Create;
   FGrantSPs := TStringList.Create;
   FGrantViews := TStringList.Create;
   FGrantTables := TStringList.Create;
@@ -212,6 +216,7 @@ begin
   FGenerators.Free;
   FExceptions.Free;
   FUDFs.Free;
+  FPackages.Free;
   FGrantSPs.Free;
   FGrantViews.Free;
   FGrantTables.Free;
@@ -539,6 +544,78 @@ begin
         WriteLn(FFile, '');
       end;
       WriteLn(FFile, '');
+      WriteLn(FFile, 'commit work^');
+      WriteLn(FFile, 'set autoddl on^');
+      WriteLn(FFile, 'set term ;^');
+      WriteLn(FFile, '');
+    end;
+  end;
+end;
+
+procedure TIBMetaExtract.WritePackages;
+var
+  Line : String;
+  Idx : Integer;
+
+begin
+  { Header and body are written as two passes, like stored procedures: every
+    header must exist before any body, since a body may reference routines
+    declared in another package's header. }
+  if FPackages.Count > 0 then
+  begin
+    if FExtractType in [exMetaOnly, exMetaAndData] then
+    begin
+      WriteLn(FFile, '');
+      WriteLn(FFile, '');
+      WriteLn(FFile, '/*===========================================================================*/');
+      WriteLn(FFile, '/*Package Definitions                                                        */');
+      WriteLn(FFile, '/*===========================================================================*/');
+
+      WriteLn(FFile, 'commit work;');
+      WriteLn(FFile, 'set autoddl off;');
+      WriteLn(FFile, 'set term ^;');
+      WriteLn(FFile, '');
+
+      for Idx := 0 to FPackages.Count - 1 do
+      begin
+        FCurrentObject := FCurrentObject + 1;
+        ExtractNotify('Extracting Package Header "' + FPackages[Idx] + '"...');
+        if FStop then
+          Exit;
+
+        Line := FExtractor.Extract(ddlPackage, ddlstHeader, FPackages[Idx]);
+        if Trim(Line) <> '' then
+        begin
+          Line := Line + '^';
+          if FWrap then
+            Line := WrapText(Line, #13#10, [' ', #9], FRightMargin);
+          WriteLn(FFile, Line);
+          WriteLn(FFile, '');
+        end;
+      end;
+
+      WriteLn(FFile, 'commit work^');
+      WriteLn(FFile, '');
+
+      for Idx := 0 to FPackages.Count - 1 do
+      begin
+        FCurrentObject := FCurrentObject + 1;
+        ExtractNotify('Extracting Package Body "' + FPackages[Idx] + '"...');
+        if FStop then
+          Exit;
+
+        { A package may legitimately have a header and no body. }
+        Line := FExtractor.Extract(ddlPackage, ddlstProc, FPackages[Idx]);
+        if Trim(Line) <> '' then
+        begin
+          Line := Line + '^';
+          if FWrap then
+            Line := WrapText(Line, #13#10, [' ', #9], FRightMargin);
+          WriteLn(FFile, Line);
+          WriteLn(FFile, '');
+        end;
+      end;
+
       WriteLn(FFile, 'commit work^');
       WriteLn(FFile, 'set autoddl on^');
       WriteLn(FFile, 'set term ;^');
@@ -899,6 +976,7 @@ begin
 
           if Not FStop then
             WriteStoredProcedures;
+      WritePackages;
 
           if Not FStop then
             WriteTriggers;

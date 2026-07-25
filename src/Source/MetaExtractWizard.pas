@@ -33,6 +33,8 @@ type
 		lstExceptions: TCheckListBox;
 		tsUDFs: TTabSheet;
 		lstUDFs: TCheckListBox;
+		tsPackages: TTabSheet;
+		lstPackages: TCheckListBox;
 		tsOptions: TTabSheet;
 		rdoExtractType: TRadioGroup;
 		chkCreateDatabase: TCheckBox;
@@ -91,6 +93,7 @@ type
 		procedure SetWrapAt(Value: Integer);
 		procedure RunObjectQuery(LB: TCheckListBox; const SQL, FieldName, ExcludePrefix: String);
 		function FunctionListSQL: String;
+		function PackagesSupported: Boolean;
 		procedure PopulateObjectLists;
 		function GetChecklistFor(CacheType: TGSSCacheType): TCheckListBox;
 		function CurrentChecklist: TCheckListBox;
@@ -280,6 +283,19 @@ begin
 	end;
 end;
 
+function TfrmMetaExtractWizard.PackagesSupported: Boolean;
+begin
+  Result := False;
+  if Assigned(FDatabase) and FDatabase.Connected then
+  begin
+    try
+      Result := FDatabase.Attachment.GetODSMajorVersion >= 12;
+    except
+      Result := False;
+    end;
+  end;
+end;
+
 function TfrmMetaExtractWizard.FunctionListSQL: String;
 var
   ODSMajor: Integer;
@@ -333,6 +349,14 @@ begin
 	RunObjectQuery(lstUDFs,
 		FunctionListSQL,
 		'rdb$function_name', '');
+	{ Packages are Firebird 3 (ODS 12); RDB$PACKAGES does not exist earlier, and
+	  querying a missing table is a hard error, so skip it entirely there. }
+	if PackagesSupported then
+		RunObjectQuery(lstPackages,
+			'select rdb$package_name from rdb$packages where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$package_name asc',
+			'rdb$package_name', '')
+	else
+		lstPackages.Items.Clear;
 end;
 
 function TfrmMetaExtractWizard.GetChecklistFor(CacheType: TGSSCacheType): TCheckListBox;
@@ -374,6 +398,7 @@ begin
 	else if pgMain.ActivePage = tsGenerators then Result := lstGenerators
 	else if pgMain.ActivePage = tsExceptions then Result := lstExceptions
 	else if pgMain.ActivePage = tsUDFs then Result := lstUDFs
+	else if pgMain.ActivePage = tsPackages then Result := lstPackages
 	else Result := nil;
 end;
 
@@ -448,7 +473,8 @@ begin
 
 	if (lstDomains.Items.Count = 0) and (lstTables.Items.Count = 0) and (lstViews.Items.Count = 0) and
 		(lstProcedures.Items.Count = 0) and (lstTriggers.Items.Count = 0) and (lstGenerators.Items.Count = 0) and
-		(lstExceptions.Items.Count = 0) and (lstUDFs.Items.Count = 0) then
+		(lstExceptions.Items.Count = 0) and (lstUDFs.Items.Count = 0) and
+		(lstPackages.Items.Count = 0) then
 	begin
 		MessageDlg('There are no objects to extract - is the connection open?', mtError, [mbOK], 0);
 		Exit;
@@ -492,6 +518,7 @@ begin
 		CollectChecked(lstGenerators, M.Generators);
 		CollectChecked(lstExceptions, M.Exceptions);
 		CollectChecked(lstUDFs, M.UDFs);
+		CollectChecked(lstPackages, M.Packages);
 
 		{ Grants are extracted for whatever tables/views/procedures were
 		  selected above - there's no separate grant-object picker here. }

@@ -125,6 +125,11 @@ begin
       Q.ExecSQL;
     except
     end;
+    try
+      Q.SQL.Text := 'drop package ibx_smoke_pkg';
+      Q.ExecSQL;
+    except
+    end;
     Tr.Commit;
 
     Tr.StartTransaction;
@@ -461,6 +466,79 @@ begin
           RequireInDDL(DDL, 'start with 100 increment by 5', 'START WITH / INCREMENT BY');
         end;
         WriteLn('DDL extraction OK (identity columns):');
+        WriteLn(DDL);
+      end;
+
+      { Packages (Firebird 3). Header and body are separate objects and a
+        package may legitimately have a header and no body. }
+      if EngineMajor >= 3 then
+      begin
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'create or alter package ibx_smoke_pkg as begin ' +
+                        'function pf(a integer) returns integer; end';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not create package header: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'recreate package body ibx_smoke_pkg as begin ' +
+                        'function pf(a integer) returns integer as begin return a + 1; end end';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not create package body: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        Tr.StartTransaction;
+        try
+          DDL := Extractor.Extract(ddlPackage, ddlstHeader, 'IBX_SMOKE_PKG');
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: package header DDL extraction raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+        RequireInDDL(DDL, 'create or alter package', 'package header statement');
+        RequireInDDL(DDL, 'returns integer', 'declared routine in the header');
+        WriteLn('DDL extraction OK (package header):');
+        WriteLn(DDL);
+
+        Tr.StartTransaction;
+        try
+          DDL := Extractor.Extract(ddlPackage, ddlstProc, 'IBX_SMOKE_PKG');
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: package body DDL extraction raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+        RequireInDDL(DDL, 'package body', 'package body statement');
+        RequireInDDL(DDL, 'return a + 1', 'package body source');
+        WriteLn('DDL extraction OK (package body):');
         WriteLn(DDL);
       end;
 

@@ -162,6 +162,18 @@ object frmMetaExtractWizard: TfrmMetaExtractWizard
         TabOrder = 0
       end
     end
+    object tsPackages: TTabSheet
+      Caption = 'Packages'
+      object lstPackages: TCheckListBox
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 345
+        Align = alClient
+        ItemHeight = 13
+        TabOrder = 0
+      end
+    end
     object tsOptions: TTabSheet
       Caption = 'Options'
       object rdoExtractType: TRadioGroup
