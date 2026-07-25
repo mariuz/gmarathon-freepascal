@@ -90,6 +90,7 @@ type
 		function GetWrapAt: Integer;
 		procedure SetWrapAt(Value: Integer);
 		procedure RunObjectQuery(LB: TCheckListBox; const SQL, FieldName, ExcludePrefix: String);
+		function FunctionListSQL: String;
 		procedure PopulateObjectLists;
 		function GetChecklistFor(CacheType: TGSSCacheType): TCheckListBox;
 		function CurrentChecklist: TCheckListBox;
@@ -279,6 +280,29 @@ begin
 	end;
 end;
 
+function TfrmMetaExtractWizard.FunctionListSQL: String;
+var
+  ODSMajor: Integer;
+begin
+  { Mirrors the object tree's UDF node: packaged functions are not standalone
+    objects, but RDB$PACKAGE_NAME only exists from Firebird 3 (ODS 12) on, and
+    naming a missing column is a hard query error. }
+  ODSMajor := 0;
+  if Assigned(FDatabase) and FDatabase.Connected then
+  begin
+    try
+      ODSMajor := FDatabase.Attachment.GetODSMajorVersion;
+    except
+      ODSMajor := 0;
+    end;
+  end;
+  Result := 'select rdb$function_name from rdb$functions where ' +
+            '((rdb$system_flag = 0) or (rdb$system_flag is null))';
+  if ODSMajor >= 12 then
+    Result := Result + ' and rdb$package_name is null';
+  Result := Result + ' order by rdb$function_name asc';
+end;
+
 procedure TfrmMetaExtractWizard.PopulateObjectLists;
 begin
 	{ Same RDB$*/CHECK_* filtering as DatabaseManager.pas's tree "header" node
@@ -307,7 +331,7 @@ begin
 		'select rdb$exception_name from rdb$exceptions where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$exception_name asc',
 		'rdb$exception_name', '');
 	RunObjectQuery(lstUDFs,
-		'select rdb$function_name from rdb$functions where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$function_name asc',
+		FunctionListSQL,
 		'rdb$function_name', '');
 end;
 

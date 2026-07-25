@@ -82,6 +82,7 @@ type
     function ODSAtLeast(Major, Minor: Integer): Boolean;
     function IdentityOptions(const GeneratorName: String): String;
     function TableSQLSecurity(const ObjectName: String): String;
+    function ExtractPSQLFunction(Q: TIBDataSet): String;
     function ExtractGenerator(ObjectName : String) : String;
     function ExtractGeneratorValue(ObjectName : String) : String;
     function ExtractDomain(ObjectName : String) : String;
@@ -2309,6 +2310,79 @@ begin
 
 end;
 
+function TDDLExtractor.ExtractPSQLFunction(Q: TIBDataSet): String;
+var
+  Q1 : TIBDataSet;
+  Line : String;
+  FuncName : String;
+  RetArg : Integer;
+  First : Boolean;
+begin
+  FuncName := Trim(Q.FieldByName('rdb$function_name').AsString);
+  RetArg := Q.FieldByName('rdb$return_argument').AsInteger;
+  Line := 'create or alter function ' + MakeQuotedIdent(FuncName, FIsIB6, FSQLDialect);
+
+  Q1 := TIBDataSet.Create(Self);
+  try
+    Q1.Database := FDatabase;
+    Q1.Transaction := FTransaction;
+    { Argument types live on the linked domain, not inline. }
+    Q1.SelectSQL.Add('select a.rdb$argument_name, a.rdb$argument_position, ' +
+               'f.rdb$field_type, f.rdb$field_length, f.rdb$field_scale, ' +
+               'f.rdb$field_sub_type, f.rdb$field_precision ' +
+               'from rdb$function_arguments a join rdb$fields f ' +
+               'on f.rdb$field_name = a.rdb$field_source ' +
+               'where a.rdb$function_name = ' + AnsiQuotedStr(FuncName, '''') +
+               ' and a.rdb$argument_position <> ' + IntToStr(RetArg) +
+               ' order by a.rdb$argument_position asc');
+    Q1.Open;
+    First := True;
+    while not Q1.EOF do
+    begin
+      if First then
+        Line := Line + ' ('
+      else
+        Line := Line + ', ';
+      First := False;
+      Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$argument_name').AsString), FIsIB6, FSQLDialect) +
+              ' ' + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
+                                     Q1.FieldByName('rdb$field_length').AsInteger,
+                                     Q1.FieldByName('rdb$field_scale').AsInteger,
+                                     Q1.FieldByName('rdb$field_sub_type').AsInteger,
+                                     Q1.FieldByName('rdb$field_precision').AsInteger,
+                                     True);
+      Q1.Next;
+    end;
+    if not First then
+      Line := Line + ')';
+    Q1.Close;
+
+    Q1.SelectSQL.Clear;
+    Q1.SelectSQL.Add('select f.rdb$field_type, f.rdb$field_length, f.rdb$field_scale, ' +
+               'f.rdb$field_sub_type, f.rdb$field_precision ' +
+               'from rdb$function_arguments a join rdb$fields f ' +
+               'on f.rdb$field_name = a.rdb$field_source ' +
+               'where a.rdb$function_name = ' + AnsiQuotedStr(FuncName, '''') +
+               ' and a.rdb$argument_position = ' + IntToStr(RetArg));
+    Q1.Open;
+    if not Q1.EOF then
+      Line := Line + #13#10 + 'returns ' +
+              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
+                               Q1.FieldByName('rdb$field_length').AsInteger,
+                               Q1.FieldByName('rdb$field_scale').AsInteger,
+                               Q1.FieldByName('rdb$field_sub_type').AsInteger,
+                               Q1.FieldByName('rdb$field_precision').AsInteger,
+                               True);
+    Q1.Close;
+  finally
+    Q1.Free;
+  end;
+
+  Line := Line + #13#10 + 'as' + #13#10 +
+          AdjustLineBreaks(Trim(Q.FieldByName('rdb$function_source').AsString)) + #13#10;
+  Result := Line;
+end;
+
 function TDDLExtractor.ExtractUDF(ObjectName: String): String;
 var
   Q : TIBDataSet;
@@ -2332,6 +2406,22 @@ begin
     Q.Transaction := FTransaction;
     Q.SelectSQL.Add('select * from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(ObjectName, ''''));
     Q.Open;
+
+    { Firebird 3 replaced external UDFs with PSQL functions, and the two share
+      RDB$FUNCTIONS but have nothing else in common: a PSQL function has a body
+      in RDB$FUNCTION_SOURCE, NULL ENTRYPOINT/MODULE_NAME, and arguments typed
+      through RDB$FIELD_SOURCE rather than RDB$FIELD_TYPE. Running one through
+      the DECLARE EXTERNAL FUNCTION path below produced nonsense. On Firebird 4
+      and later external UDFs are deprecated and off by default, so in practice
+      almost everything here is now a PSQL function. }
+    if (not Q.EOF) and Assigned(Q.FindField('rdb$legacy_flag')) and
+       (not Q.FieldByName('rdb$legacy_flag').IsNull) and
+       (Q.FieldByName('rdb$legacy_flag').AsInteger = 0) then
+    begin
+      Result := ExtractPSQLFunction(Q);
+      Exit;
+    end;
+
     if Not Q.EOF and Q.BOF then
     begin
       Line := 'declare external function ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$function_name').AsString), FIsIB6, FSQLDIalect) + ' ';

@@ -110,6 +110,11 @@ begin
       Q.ExecSQL;
     except
     end;
+    try
+      Q.SQL.Text := 'drop function ibx_smoke_fn';
+      Q.ExecSQL;
+    except
+    end;
     Tr.Commit;
 
     Tr.StartTransaction;
@@ -446,6 +451,62 @@ begin
           RequireInDDL(DDL, 'start with 100 increment by 5', 'START WITH / INCREMENT BY');
         end;
         WriteLn('DDL extraction OK (identity columns):');
+        WriteLn(DDL);
+      end;
+
+      { PSQL functions (Firebird 3). These share RDB$FUNCTIONS with legacy
+        external UDFs but are a different object entirely, and running one
+        through the DECLARE EXTERNAL FUNCTION path produced nonsense - the
+        arguments are typed via RDB$FIELD_SOURCE, not RDB$FIELD_TYPE, so
+        ConvertFieldType saw a NULL type and (before it initialised its result)
+        returned arbitrary memory. }
+      if EngineMajor >= 3 then
+      begin
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'create or alter function ibx_smoke_fn(x integer) returns integer ' +
+                        'as begin return x * 2; end';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not create PSQL function: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        Tr.StartTransaction;
+        try
+          DDL := Extractor.Extract(ddlUDF, ddlstNone, 'IBX_SMOKE_FN');
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: PSQL function DDL extraction raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+        if Pos('DECLARE EXTERNAL FUNCTION', UpperCase(DDL)) > 0 then
+        begin
+          WriteLn('FAIL: PSQL function extracted as an external UDF:');
+          WriteLn(DDL);
+          Halt(1);
+        end;
+        if Pos('SELECT ', UpperCase(DDL)) > 0 then
+        begin
+          WriteLn('FAIL: a SQL query leaked into the generated DDL:');
+          WriteLn(DDL);
+          Halt(1);
+        end;
+        RequireInDDL(DDL, 'function', 'CREATE FUNCTION');
+        RequireInDDL(DDL, 'returns integer', 'return type');
+        RequireInDDL(DDL, 'return x * 2', 'function body');
+        WriteLn('DDL extraction OK (PSQL function):');
         WriteLn(DDL);
       end;
 

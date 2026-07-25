@@ -981,6 +981,10 @@ end;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision: Integer; IsInterbase6: Boolean; Dialect: Integer): String;
 begin
+	{ Must be initialised - see the note on the MetaExtractGlobals copy: an
+	  unrecognised ftype matches no branch and an uninitialised string result
+	  returns arbitrary memory. }
+	Result := '';
 	fScale := Abs(fscale);
 	Case ftype of
 		blr_short :

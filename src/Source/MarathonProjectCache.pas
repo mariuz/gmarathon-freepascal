@@ -3995,7 +3995,13 @@ begin
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
-			Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FUNCTION_NAME asc;');
+			{ Exclude packaged functions: they belong to their package and cannot
+			  be created or dropped standalone, so listing them at top level is
+			  wrong. RDB$PACKAGE_NAME only exists from Firebird 3 (ODS 12) on. }
+			if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
+				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null order by RDB$FUNCTION_NAME asc;')
+			else
+				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FUNCTION_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin

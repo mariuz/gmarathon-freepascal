@@ -618,6 +618,12 @@ end;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision : Integer; IsInterbase6 : Boolean) : String;
 begin
+  { Must be initialised: an unrecognised ftype (notably NULL, which arrives as
+    0 - PSQL function arguments carry their type in RDB$FIELD_SOURCE rather
+    than RDB$FIELD_TYPE) matches no case branch below, and an uninitialised
+    string result returns whatever happened to be in memory. That leaked a
+    previously-built SQL statement into generated DDL. }
+  Result := '';
   fscale := Abs(fscale);
   Case ftype of
     blr_short :
