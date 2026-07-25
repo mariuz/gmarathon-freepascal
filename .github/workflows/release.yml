@@ -196,32 +196,40 @@ jobs:
           sudo installer -pkg "$FPC_PKG" -target /
           hdiutil detach /Volumes/fpc-installer
 
+      # Extracted under $HOME rather than /Applications so no sudo is needed
+      # (this archive is ~365MB of many small files; per-file sudo made it
+      # markedly slower).
       - name: Download and install Lazarus IDE
         run: |
           curl -sL -A "Mozilla/5.0" \
             "https://download.lazarus-ide.org/Lazarus%20macOS%20aarch64/Lazarus%204.8/lazarus-darwin-aarch64-4.8.zip" \
             -o lazarus.zip
-          sudo mkdir -p /Applications/Lazarus
-          sudo unzip -q lazarus.zip -d /Applications/Lazarus
+          mkdir -p "$HOME/lazarus-ide"
+          unzip -q lazarus.zip -d "$HOME/lazarus-ide"
 
-          LAZBUILD=$(find /Applications/Lazarus -maxdepth 3 -name "lazbuild" | head -1)
+          LAZBUILD=$(find "$HOME/lazarus-ide" -maxdepth 3 -name "lazbuild" -type f | head -1)
           if [ -z "$LAZBUILD" ]; then
             echo "lazbuild not found after unzip" >&2
-            find /Applications/Lazarus
+            find "$HOME/lazarus-ide" -maxdepth 3
             exit 1
           fi
-          echo "$(dirname "$LAZBUILD")" >> "$GITHUB_PATH"
+          LAZDIR=$(dirname "$LAZBUILD")
+          echo "$LAZDIR" >> "$GITHUB_PATH"
+          # The macOS build ships a config pointing at the historical
+          # /Developer/lazarus/ install path, so lazbuild aborts with
+          # "Invalid Lazarus directory" unless --lazarusdir overrides it.
+          echo "LAZARUS_DIR=$LAZDIR" >> "$GITHUB_ENV"
 
       - name: Register IBX packages with lazbuild
         run: |
-          lazbuild --add-package-link lib/fbintf/fbintf.lpk
-          lazbuild --add-package-link lib/ibx4lazarus/ibexpress.lpk
+          lazbuild --lazarusdir="$LAZARUS_DIR" --add-package-link lib/fbintf/fbintf.lpk
+          lazbuild --lazarusdir="$LAZARUS_DIR" --add-package-link lib/ibx4lazarus/ibexpress.lpk
 
       # Same TargetOS override as Windows, plus --ws=cocoa: GitHub's macOS
       # runners only support the Cocoa widgetset (see setup-lazarus's own
       # README), and the .lpi doesn't pin a widgetset itself.
       - name: Build Release
-        run: lazbuild --os=darwin --cpu=aarch64 --ws=cocoa --build-mode=Release src/Source/marathon.lpi
+        run: lazbuild --lazarusdir="$LAZARUS_DIR" --os=darwin --cpu=aarch64 --ws=cocoa --build-mode=Release src/Source/marathon.lpi
 
       - name: Determine release version
         run: |

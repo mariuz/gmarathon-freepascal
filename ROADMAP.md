@@ -1,21 +1,36 @@
 # Marathon Roadmap
 
-**Status: all planned phases below are done.** Every item across Phases 1–6
-is implemented, built clean in both Debug and Release, and verified against
-a live Firebird server. See [Explicitly out of scope](#explicitly-out-of-scope)
-for what was deliberately left out, and `CLAUDE.md`'s "Remaining Porting
-Tasks" section for other, unrelated Win32-only features (printing, the query
-builder, SQL Insight templates, the keybinding editor) that are still
-stubbed on this port and are candidates for a future roadmap.
+**Status:** Phases 1–6 (the original IDE/productivity roadmap) are complete.
+Phase 7 — **Firebird 3/4/5/6 engine feature support** — is newly opened after
+auditing this codebase against [FlameRobin's roadmap](https://github.com/mariuz/flamerobin/blob/master/ROADMAP.md),
+the Firebird release notes, and a live Firebird 6 server. That audit found the
+port had **no support at all** for any column type added since Firebird 2.5,
+which was producing unrunnable DDL — now fixed — plus a long tail of
+genuinely-missing FB4/5/6 features tracked below.
 
-This roadmap adapts ideas from [FlameRobin's roadmap](https://github.com/mariuz/flamerobin/blob/master/ROADMAP.md) —
-another Firebird admin/IDE tool — to what's realistic for Marathon: a Lazarus/FreePascal
-codebase, now on IBX (`lib/ibx4lazarus` + `lib/fbintf`), with no unit test framework
-beyond the `test/ibx_smoke_test.lpr` integration check. Items are picked for being
-genuinely valuable *and* buildable without a rewrite — FlameRobin's C++/wxWidgets-specific
-items (MCP servers, vector/AI embeddings, its own DAL abstraction) are left out.
+This roadmap adapts ideas from FlameRobin — another Firebird admin/IDE tool —
+to what's realistic for Marathon: a Lazarus/FreePascal codebase on IBX
+(`lib/ibx4lazarus` + `lib/fbintf`), with no unit test framework beyond the
+`test/ibx_smoke_test.lpr` integration check. Items are picked for being
+genuinely valuable *and* buildable without a rewrite — FlameRobin's
+C++/wxWidgets-specific items (MCP servers, its own DAL abstraction) are left out.
+
+Two structural differences from FlameRobin shape what is and isn't cheap here,
+and are worth stating up front because they explain several deferrals below:
+
+- **Syntax highlighting is not ours.** FlameRobin maintains its own
+  `firebird_keyword_sets.hpp` with per-version keyword lists. Marathon uses
+  Lazarus's shipped `SynHighlighterSQL`, whose `TSQLDialect` enum stops at
+  `sqlFirebird40` — there is no FB5/FB6 keyword set to select. Anything past
+  FB4 keywords means adding keywords locally or upstreaming to Lazarus.
+- **The Services API layer is vendored, not ours.** FB5 features like parallel
+  backup/restore workers need SPB parameters that this IBX version's
+  `IBXServices.pas` does not expose, so they need a submodule patch (or an
+  upstream contribution) rather than app-level code.
 
 Status legend: `[x]` done, `[~]` in progress, `[ ]` not started.
+Firebird ODS mapping used below: FB 2.5 → ODS 11.1, FB 3.0 → ODS 12.0,
+FB 4.0 → ODS 13.0, FB 5.0 → ODS 13.1, FB 6.0 → ODS 14.x.
 
 ## Phase 1 — Metadata & DDL Scripting
 
@@ -69,14 +84,88 @@ vendored in `lib/ibx4lazarus`) that nothing in Marathon currently uses.
   - **Bug**: the plan text fetch in `SQLForm.pas`'s `DoExecute` was `{$IFNDEF FPC}edPlan.Text := qrySQLStatement.Plan;{$ENDIF}` - on this FPC port the fetch was skipped entirely (`TIBQuery` has no `Plan` property, only a `GetPlan` method), so the plan tab showed nothing. Fixed to `edPlan.Text := qrySQLStatement.GetPlan;` (unconditional, no method to gate on FPC).
   - **Format gap**: fixing the fetch revealed the existing tree-builder (`PlanUnit.pas`'s `TPlanObject.FillTree`, fed by `SQLYacc.pas`'s `ptPlan` grammar) parses the *classic* single-line `PLAN (T INDEX (IX))` format - but this vendored IBX/fbintf's `TIBQuery.GetPlan` (via `IStatement.getPlan(status, detailed=True)`, hardcoded in `fbintf`'s `FB30Statement.GetPlan`) only ever returns Firebird 3+'s newer indentation-structured "explained" format (`Select Expression / -> Filter / -> Table ... Full Scan`), which the yacc grammar can't parse at all - so the tree stayed empty even after the fetch fix. Added `PlanUnit.FillTreeFromExplainedPlan`, a small indentation-depth tree builder for this actual format (no grammar needed - it's already whitespace-structured), wired in place of the yacc path in `SQLForm.pas`. `Table ... Full Scan` nodes get a red/pink `TDiagramNode.Color`, `Access By ID`/`Index "..."` nodes get green - `DiagramTree.pas`'s `DrawNode` previously ignored `Color` entirely (hardcoded `clWindow` fill) so this also required making it actually honor the property. Verified against a live server: single-table natural scan, indexed join, and a plain non-indexed filter all produce correctly-nested, correctly-colored trees.
 
+## Phase 7 — Firebird 3/4/5/6 Engine Feature Support
+
+Everything above this point was about IDE features. This phase is about the
+*engine*: Marathon's metadata layer was written against InterBase 6 / Firebird
+1.x and had never been taught about anything newer. An audit against a live
+Firebird 6 server found that the entire post-FB2.5 type system was unmapped —
+not merely unsupported in the UI, but actively generating **DDL that will not
+execute**. Those correctness bugs are fixed; the remaining items are real
+feature work.
+
+### Correctness fixes (done)
+
+- [x] **Modern column types in DDL generation (FB3 `BOOLEAN`, FB4 `DECFLOAT`, `INT128`, `WITH TIME ZONE`)** — `ConvertFieldType` (which exists in two copies: `src/Source/Globals.pas` for the editors, `src/MetaExtract/MetaExtractGlobals.pas` for `DDLExtractor`/the bulk wizard) knew only the 12 InterBase-era `blr_*` codes. Every newer type fell through leaving `Result` empty, so callers emitted the *internal domain name* in its place — a table with a `BOOLEAN` column extracted as `create table T(C_BOOL RDB$29, ...)`, which is unrunnable. Verified against a live server before/after; all types now round-trip byte-identically (`RDB$FIELD_TYPE` + `RDB$FIELD_SUB_TYPE` match after re-executing the generated DDL). Type codes were confirmed empirically rather than copied from a header, which caught a genuine trap: **`INT128` is field type 26** (historically `blr_dec_fixed`), sharing its code with `NUMERIC(38,x)`/`DECIMAL(38,x)` via `RDB$FIELD_SUB_TYPE` 0/1/2 exactly like `blr_short`/`blr_long`/`blr_int64` — *not* the `blr_int128` value of 32 used in the wire/BLR layer, which is what a header-driven implementation would have picked.
+- [x] **`BIGINT` round-trip fidelity** — `blr_int64` sub_type 0 emitted `decimal(18, 0)`. Both store as int64 scale 0, but re-running that DDL changed `RDB$FIELD_SUB_TYPE` from 0 to 2, so a backup/restore-by-script silently altered metadata. Now emits `bigint`.
+- [x] **Expression indexes emitted invalid SQL** — an expression index (`COMPUTED BY`, FB1.5+) has no `RDB$INDEX_SEGMENTS` rows, so the column-list loop produced nothing and the extractor wrote `create index IX on TBL();` — a syntax error. Now reads `RDB$EXPRESSION_SOURCE` and emits `computed by (...)`.
+- [x] **FB5 partial (conditional) indexes lost their `WHERE`** — `RDB$CONDITION_SOURCE` was never read, so `create index IX on T(C) where C is not null` extracted as an unconditional index over the whole table: a *different* index, not a cosmetic difference. Now appended, read via `FindField` since the column does not exist before FB5.
+- [x] **CI regression coverage for all of the above** — `test/ibx_smoke_test.lpr` now creates and extracts modern-type columns and both index kinds, gated on `RDB$GET_CONTEXT('SYSTEM','ENGINE_VERSION')` so it exercises what the connected server actually supports (CI runs FB3.0 → `BOOLEAN` path; a local FB6 exercises everything). It also fails outright if any extracted DDL contains an `RDB$` domain name, which is the generic signature of an unmapped type.
+
+### Firebird 4 (ODS 13.0)
+
+- [x] **Long identifiers (63 chars)** — audited: no hard-coded 31-char truncation anywhere in the port; identifiers flow through dynamic strings, so this already works.
+- [x] **FB4 keyword highlighting** — `SQLDialect = sqlFirebird40` (Phase 6).
+- [ ] **Named time zone display** — the DDL side is done (`WITH TIME ZONE` above), but grids/property panes show the UTC offset rather than the IANA name (`Europe/Berlin`). `RDB$TIME_ZONES` is available for the lookup.
+- [ ] **Replication monitoring** — `RDB$PUBLICATIONS` / `RDB$PUBLICATION_TABLES` (confirmed present on FB4+) are not surfaced anywhere. Wants a *Replication* branch in `DatabaseManager.pas`'s tree, following the existing header-node `Expand()` pattern.
+- [ ] **Database encryption status** — surface whether the database is encrypted in the connection properties dialog, alongside the auth-method/protocol fields added in Phase 3. Note `IAttachment` exposes no encryption accessor; this needs the raw `fb_info_wire_crypt` / `isc_info_db_encrypted` info item.
+- [ ] **`SCROLL` attribute on cursors** — show it in procedure/trigger DDL where present.
+- [ ] **Read-committed read-consistency isolation** — display the FB4 isolation level in the Session Monitor's transaction tab.
+
+### Firebird 5 (ODS 13.1)
+
+- [x] **Partial index DDL** — see correctness fixes above.
+- [ ] **`SKIP LOCKED` keyword highlighting** — blocked on the SynEdit ceiling described at the top; needs locally-added keywords or an upstream Lazarus patch.
+- [ ] **Parallel workers in Backup / Restore / Sweep** — blocked: this IBX version's `IBXServices.pas` exposes no `ParallelWorkers` SPB parameter (verified by grep), so it needs a vendored-submodule patch rather than a dialog change. The Maintenance dialog from Phase 5 is where the option would live.
+- [ ] **SQL / PSQL profiler** — `RDB$PROFILER` package confirmed present on the FB6 test server; a UI panel driving `START_SESSION`/`FINISH_SESSION` and reading the profiler tables would complement the Phase 3 performance work.
+- [ ] **`MON$COMPILED_STATEMENTS` visibility** — a fourth Session Monitor tab, or cache hit/miss stats in the performance view.
+- [ ] **Multi-row `RETURNING`** — FB5 allows `INSERT ... RETURNING` to yield multiple rows; confirm `SQLForm.pas`'s execution path shows them all rather than only the first.
+- [ ] **Inline ODS upgrade** — expose FB5's upgrade-without-backup/restore in the Maintenance dialog.
+
+### Firebird 6 (ODS 14.x)
+
+The test server for this audit is Firebird 6.0.0, so all of the following were
+confirmed to exist rather than taken from release notes.
+
+- [ ] **SQL schemas** — the largest item here by far. `RDB$SCHEMAS` exists, and FB6 already returns schema-qualified names (`"PUBLIC"."IBX_SMOKE_TEST"` shows up in FB6 error messages and `MON$TABLE_STATS.MON$SCHEMA_NAME`). Full support means a schema container level in the object tree, schema-qualified DDL generation, and `CREATE`/`ALTER`/`DROP SCHEMA` dialogs. Marathon's DDL is currently unqualified, which is still valid but ignores schemas entirely.
+- [ ] **JSON functions** — keyword/completion support for `JSON_VALUE`, `JSON_QUERY`, `JSON_OBJECT`, `JSON_ARRAY`, `JSON_EXISTS`. Same SynEdit constraint as `SKIP LOCKED`.
+- [ ] **`EXPLAIN` statement** — distinct from the `PLAN` clause. Phase 6's plan tree already parses Firebird 3+'s indentation-structured explained-plan format, so this is mostly wiring a new statement type through `SQLForm.pas` rather than new parsing.
+- [ ] **Tablespaces** — show tablespace assignment in table/index properties and DDL.
+- [ ] **Newer SQL:2023 surface** — `GREATEST`/`LEAST`, `UNLIST`, `ANY_VALUE`, named procedure arguments (`proc(arg => val)`), `ROW` types, underscores in numeric literals (`1_000_000`). Mostly keyword/completion work, same SynEdit constraint.
+
+### Cross-cutting
+
+- [ ] **Server version detection** — Marathon has `IsIB5`/`IsIB6` on `TMarathonCacheConnection`, and both are hard-coded `Result := True` stubs. Nothing anywhere reads the real engine version, so no feature can currently be gated on it. Replace with a real `ENGINE_VERSION` / ODS read plus named constants (`ODS_FB4 = 13.0`, …) — a prerequisite for most items above, and for selecting keyword sets per connection instead of pinning `sqlFirebird40` globally.
+- [ ] **System-table column audit** — the `MON$`/`RDB$` queries in `MarathonProjectCache.pas` and `DDLExtractor.pas` were written for IB6-era schemas; several have gained useful columns since (e.g. `RDB$RELATIONS.RDB$SQL_SECURITY` in FB4). Audit and widen them where the ODS allows, using `FindField` for version-conditional columns as the partial-index fix does.
+- [ ] **`SQL SECURITY` clause** — FB4 added `SQL SECURITY DEFINER|INVOKER` on tables, procedures, functions and triggers; neither read nor emitted in DDL.
+
+## Phase 8 — Remaining FlameRobin IDE Parity
+
+Items FlameRobin lists that Marathon has not done. Ordered roughly by
+value-for-effort; none are blocked on engine or library limits.
+
+- [ ] **`Script as ALTER` / `DROP` / `MERGE`** — Phase 2 covers CREATE/SELECT/INSERT/UPDATE/DELETE/EXECUTE. FlameRobin also scripts `ALTER`, `DROP`, and `MERGE`. `DROP` is trivial; `MERGE` reuses the existing column-list helper; `ALTER` is the real work.
+- [ ] **Environment color coding / connection profiles** — tag connections as Production/Staging/Development and color-code window headers. Cheap, and genuinely protective against running DDL on the wrong database.
+- [ ] **Quick connection switcher in the SQL editor** — a dropdown to repoint an open script at another connection without reopening the tab.
+- [ ] **XLSX result export** — Phase 4 added JSON/Markdown/TSV to the existing CSV/INSERT formats. XLSX needs a zip+XML writer (FPC's `fpspreadsheet`, or hand-rolled OOXML).
+- [ ] **Interactive parameterized routine executor** — a dialog to fill a procedure's input parameters with per-type validation and show results in a grid, rather than hand-editing the generated `EXECUTE PROCEDURE`.
+- [ ] **PSQL routine parameter helper** — call-signature tooltips/completion for procedures and packaged functions. Related to the SQL Insight templates that are stubbed on this port (see `CLAUDE.md`).
+- [ ] **Schema comparison & migration generator** — compare two databases (or a database against a DDL script) and emit a migration script. Was listed as out of scope below on grounds of size; FlameRobin has since shipped it, so it is recorded here as a real gap rather than a rejection. Still the single largest item on this list.
+- [ ] **HiDPI / scalable icons** — FlameRobin moved from XPM to SVG with `wxBitmapBundle`. The LCL equivalent would be replacing the `.RES`-embedded bitmap strips with scalable images for 4K displays.
+
 ---
 
 ## Explicitly out of scope
 
 Adapted-but-rejected FlameRobin roadmap items, and why:
 - **MCP server tools** (`explain_query`, `list_active_sessions`, etc.) — FlameRobin's MCP integration is a C++ process feature; there's no equivalent infrastructure here and it's a separate, large undertaking.
-- **Vector/AI embedding support**, **temporal tables**, **SQL schemas (FB6)** — tied to Firebird 6 engine features not yet in general use; revisit once Firebird 6 is closer to release and there's a concrete need.
-- **Schema comparison/migration generator** — valuable, but a substantially larger feature (needs a full schema-diff engine) than anything else on this list; worth its own future roadmap entry once Phases 1–2 are done.
+- **Vector / AI embedding support** — still unimplemented in FlameRobin too, and tied to Firebird extensions that do not exist yet. Nothing to target.
+- **Temporal tables** (`PERIOD FOR SYSTEM_TIME`) — SQL-standard temporal support is not in a released Firebird; revisit when it lands.
+
+Previously listed here but **moved into the active roadmap** by this audit,
+because the original reasoning no longer holds:
+- **SQL schemas (FB6)** → Phase 7. Was deferred as "not yet in general use", but Firebird 6 ships them, `RDB$SCHEMAS` exists, and FB6 already *returns* schema-qualified names in errors and `MON$` tables — so this affects Marathon today, not hypothetically.
+- **Schema comparison / migration generator** → Phase 8. Still the largest single item, but FlameRobin has since shipped it, so it belongs on the list as a real gap rather than a rejection.
 
 ---
 
@@ -100,3 +189,21 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 | 5 | Backup/Restore via Services API | **Done** |
 | 6 | Keyword highlighting refresh | **Done** |
 | 6 | Execution plan tree view | **Done** |
+| 7 | FB3/FB4 modern column types in DDL | **Done** |
+| 7 | BIGINT round-trip fidelity | **Done** |
+| 7 | Expression + FB5 partial index DDL | **Done** |
+| 7 | Modern-type / index CI coverage | **Done** |
+| 7 | FB4 long identifiers (audited, already OK) | **Done** |
+| 7 | Real server-version detection (`IsIB5`/`IsIB6` are `True` stubs) | Not started |
+| 7 | FB4 named time zones / replication / encryption status | Not started |
+| 7 | FB5 profiler, `MON$COMPILED_STATEMENTS`, parallel workers | Not started |
+| 7 | FB5/FB6 keywords (blocked: SynEdit stops at `sqlFirebird40`) | Not started |
+| 7 | FB6 SQL schemas | Not started |
+| 7 | FB6 `EXPLAIN`, JSON functions, tablespaces | Not started |
+| 8 | Script as ALTER / DROP / MERGE | Not started |
+| 8 | Environment color coding / connection profiles | Not started |
+| 8 | Quick connection switcher | Not started |
+| 8 | XLSX export | Not started |
+| 8 | Parameterized routine executor | Not started |
+| 8 | Schema comparison / migration generator | Not started |
+| 8 | HiDPI / scalable icons | Not started |

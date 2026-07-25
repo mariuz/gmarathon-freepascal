@@ -33,6 +33,18 @@ function NoLangFormatDateTime(const Format: string; DateTime: TDateTime): string
 
 implementation
 
+const
+  { Firebird 4 field-type codes as stored in RDB$FIELDS.RDB$FIELD_TYPE.
+    IBHeader.pas only goes up to blr_bool (23, Firebird 3 BOOLEAN), so the
+    newer ones are declared here. Values verified empirically against a live
+    Firebird 6 server - note int128 is 26 (historically blr_dec_fixed), not
+    the blr_int128 value of 32 used in the wire/BLR layer. }
+  blr_dec64_type        = 24;   // DECFLOAT(16)
+  blr_dec128_type       = 25;   // DECFLOAT(34)
+  blr_int128_type       = 26;   // INT128 / NUMERIC|DECIMAL(38,x)
+  blr_sql_time_tz_type  = 28;   // TIME WITH TIME ZONE
+  blr_timestamp_tz_type = 29;   // TIMESTAMP WITH TIME ZONE
+
 function EscapeQuotes(I : String) : String;
 var
   Idx : Integer;
@@ -149,9 +161,11 @@ const
     { Alternate-calendar (era) string, e.g. Japanese/Chinese calendars. Only
       reachable via the 'G'/'E' format tokens, which no caller in this
       codebase uses; there is no portable equivalent of Windows'
-      GetDateFormat/DATE_USE_ALT_CALENDAR, so this is a no-op elsewhere. }
+      GetDateFormat/DATE_USE_ALT_CALENDAR - and FPC provides none of Delphi's
+      CharToByteIndex/CharToByteLen/ByteToCharLen MBCS helpers either - so this
+      is Delphi-only and a no-op under FPC on every target, Windows included. }
     function ConvertEraString(const Count: Integer) : string;
-    {$IFDEF MSWINDOWS}
+    {$IFNDEF FPC}
     var
       FormatStr: string;
       SystemTime: TSystemTime;
@@ -160,7 +174,7 @@ const
     {$ENDIF}
     begin
       Result := '';
-      {$IFDEF MSWINDOWS}
+      {$IFNDEF FPC}
       with SystemTime do
       begin
         wYear  := Year;
@@ -192,7 +206,7 @@ const
     end;
 
     function ConvertYearString(const Count: Integer): string;
-    {$IFDEF MSWINDOWS}
+    {$IFNDEF FPC}
     var
       FormatStr: string;
       SystemTime: TSystemTime;
@@ -200,7 +214,7 @@ const
     {$ENDIF}
     begin
       Result := '';
-      {$IFDEF MSWINDOWS}
+      {$IFNDEF FPC}
 			with SystemTime do
       begin
         wYear  := Year;
@@ -673,7 +687,11 @@ begin
 					case fsubtype of
             0 :
               begin
-                Result := 'decimal(18, 0)';
+                { BIGINT, not DECIMAL(18,0): both store as int64 scale 0, but
+                  emitting DECIMAL here changed RDB$FIELD_SUB_TYPE from 0 to 2
+                  on a DDL round trip. This branch already assumes dialect 3
+                  (NUMERIC with precision > 9 exists only there). }
+                Result := 'bigint';
               end;
             1 :
               begin
@@ -685,6 +703,48 @@ begin
               end;
           end;
         end;
+      end;
+
+    { Firebird 3+ types. Without these ConvertFieldType fell through leaving
+      Result empty, and callers emitted the internal domain name (RDB$29,
+      RDB$30, ...) in place of the type - producing DDL that cannot run. }
+    blr_bool :
+      begin
+        Result := 'boolean';
+      end;
+
+    blr_dec64_type :
+      begin
+        Result := 'decfloat(16)';
+      end;
+
+    blr_dec128_type :
+      begin
+        Result := 'decfloat(34)';
+      end;
+
+    blr_int128_type :
+      begin
+        { Same subtype convention as short/long/int64: 0 = raw integer type,
+          1 = NUMERIC, 2 = DECIMAL. }
+        case fsubtype of
+          1 :
+            Result := 'numeric(' + IntToStr(fprecision) + ', ' + IntToStr(fscale) + ')';
+          2 :
+            Result := 'decimal(' + IntToStr(fprecision) + ', ' + IntToStr(fscale) + ')';
+        else
+          Result := 'int128';
+        end;
+      end;
+
+    blr_sql_time_tz_type :
+      begin
+        Result := 'time with time zone';
+      end;
+
+    blr_timestamp_tz_type :
+      begin
+        Result := 'timestamp with time zone';
       end;
 
     blr_float :

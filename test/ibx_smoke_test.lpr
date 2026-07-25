@@ -6,7 +6,12 @@ program ibx_smoke_test;
   scripting engine) against a table, a view, a stored procedure, and a
   trigger built on that table - each object type is its own code path in
   DDLExtractor.pas. Used by CI to prove the IBX conversion and DDL extraction
-  actually work against Firebird, not just that the app compiles. }
+  actually work against Firebird, not just that the app compiles.
+
+  Also round-trips the modern (Firebird 3+) column types through
+  ConvertFieldType, gated on the connected server's engine version, since
+  those types silently produced unusable DDL (the internal RDB$nn domain name
+  in place of the type) before they were mapped. }
 
 {$MODE Delphi}
 
@@ -21,6 +26,19 @@ var
   DatabaseName, UserName, Password: String;
   Value: String;
   DDL: String;
+  EngineVersion: String;
+  EngineMajor: Integer;
+
+{ Fails the test run unless Needle appears in the extracted DDL. }
+procedure RequireInDDL(const DDLText, Needle, What: String);
+begin
+  if Pos(UpperCase(Needle), UpperCase(DDLText)) = 0 then
+  begin
+    WriteLn('FAIL: extracted DDL is missing ', What, ' (expected "', Needle, '"):');
+    WriteLn(DDLText);
+    Halt(1);
+  end;
+end;
 
 begin
   if ParamCount < 3 then
@@ -69,6 +87,21 @@ begin
     end;
     try
       Q.SQL.Text := 'drop view ibx_smoke_test_view';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop table ibx_smoke_types';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop index ibx_smoke_ix_expr';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop index ibx_smoke_ix_part';
       Q.ExecSQL;
     except
     end;
@@ -273,6 +306,154 @@ begin
         Halt(1);
       end;
       WriteLn('DDL extraction OK (trigger):');
+      WriteLn(DDL);
+
+      { Modern column types. Which ones exist depends on the server: BOOLEAN
+        arrived in Firebird 3, and DECFLOAT / INT128 / WITH TIME ZONE in
+        Firebird 4 - so ask the engine rather than assuming. CI currently runs
+        Firebird 3.0, which exercises the BOOLEAN path only. }
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text := 'select rdb$get_context(''SYSTEM'', ''ENGINE_VERSION'') from rdb$database';
+        Q.Open;
+        EngineVersion := Trim(Q.Fields[0].AsString);
+        Q.Close;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: could not read ENGINE_VERSION: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      EngineMajor := StrToIntDef(Copy(EngineVersion, 1, Pos('.', EngineVersion + '.') - 1), 0);
+      WriteLn('Server ENGINE_VERSION=', EngineVersion, ' (major ', EngineMajor, ')');
+
+      if EngineMajor >= 3 then
+      begin
+        Tr.StartTransaction;
+        try
+          if EngineMajor >= 4 then
+            Q.SQL.Text := 'recreate table ibx_smoke_types (' +
+              'c_bool boolean, c_dec16 decfloat(16), c_dec34 decfloat(34), ' +
+              'c_int128 int128, c_num38 numeric(38,4), ' +
+              'c_timetz time with time zone, c_tstz timestamp with time zone, ' +
+              'c_bigint bigint)'
+          else
+            Q.SQL.Text := 'recreate table ibx_smoke_types (c_bool boolean, c_bigint bigint)';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not create modern-types table: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        Tr.StartTransaction;
+        try
+          DDL := Extractor.Extract(ddlTable, ddlstNone, 'IBX_SMOKE_TYPES');
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: modern-types DDL extraction raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        { An unmapped type leaves ConvertFieldType's Result empty and the
+          caller falls back to the internal domain name, so guard against
+          that explicitly as well as checking each expected type name. }
+        if Pos('RDB$', UpperCase(DDL)) > 0 then
+        begin
+          WriteLn('FAIL: extracted DDL contains an internal RDB$ domain name, ');
+          WriteLn('      which means a column type is not mapped by ConvertFieldType:');
+          WriteLn(DDL);
+          Halt(1);
+        end;
+        RequireInDDL(DDL, 'boolean', 'BOOLEAN (Firebird 3)');
+        RequireInDDL(DDL, 'bigint', 'BIGINT');
+        if EngineMajor >= 4 then
+        begin
+          RequireInDDL(DDL, 'decfloat(16)', 'DECFLOAT(16) (Firebird 4)');
+          RequireInDDL(DDL, 'decfloat(34)', 'DECFLOAT(34) (Firebird 4)');
+          RequireInDDL(DDL, 'int128', 'INT128 (Firebird 4)');
+          RequireInDDL(DDL, 'numeric(38, 4)', 'NUMERIC(38,4) (Firebird 4)');
+          RequireInDDL(DDL, 'time with time zone', 'TIME WITH TIME ZONE (Firebird 4)');
+          RequireInDDL(DDL, 'timestamp with time zone', 'TIMESTAMP WITH TIME ZONE (Firebird 4)');
+        end;
+        WriteLn('DDL extraction OK (modern types):');
+        WriteLn(DDL);
+      end;
+
+      { Index DDL. An expression index has no RDB$INDEX_SEGMENTS rows, so it
+        used to emit an empty column list ("on TBL()") - invalid SQL. Partial
+        indexes (Firebird 5) additionally carry a WHERE condition that, if
+        dropped, silently yields a full index instead of a partial one. }
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text := 'create index ibx_smoke_ix_expr on ibx_smoke_test computed by (upper(note))';
+        Q.ExecSQL;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: could not create expression index: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      if EngineMajor >= 5 then
+      begin
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'create index ibx_smoke_ix_part on ibx_smoke_test (note) where note is not null';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not create partial index: ', E.Message);
+            Halt(1);
+          end;
+        end;
+      end;
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlTable, ddlstIndex, 'IBX_SMOKE_TEST');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: index DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      if Pos('()', DDL) > 0 then
+      begin
+        WriteLn('FAIL: index DDL has an empty column list (expression index not handled):');
+        WriteLn(DDL);
+        Halt(1);
+      end;
+      RequireInDDL(DDL, 'computed by', 'COMPUTED BY for the expression index');
+      if EngineMajor >= 5 then
+        RequireInDDL(DDL, 'where note is not null', 'WHERE clause for the partial index (Firebird 5)');
+      WriteLn('DDL extraction OK (indexes):');
       WriteLn(DDL);
     finally
       Extractor.Free;

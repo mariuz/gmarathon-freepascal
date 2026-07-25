@@ -1887,6 +1887,9 @@ var
   First : Boolean;
   Line : String;
   Line1 : String;
+  IdxExpr : String;
+  IdxCond : String;
+  Fld : TField;
 
 begin
   Result := '';
@@ -1930,7 +1933,34 @@ begin
           Line1 := Line1 + 'descending ';
 
         Line1 := Line1 + 'index ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$index_name').AsString), FIsIB6, FSQLDialect) + ' on ' + MakeQuotedIdent(ObjectName, FIsIb6, FSQLDialect);
-        Line1 := Line1 + '(' + Line + ');' + #13#10;
+
+        { An expression index has no RDB$INDEX_SEGMENTS rows, so the column
+          list built above is empty and emitting it produced invalid SQL
+          ("on TBL()"). RDB$EXPRESSION_SOURCE already carries its own
+          parentheses. FindField (not FieldByName) because RDB$CONDITION_SOURCE
+          only exists from Firebird 5 on - older servers have no such column. }
+        IdxExpr := '';
+        Fld := Q1.FindField('rdb$expression_source');
+        if Assigned(Fld) and not Fld.IsNull then
+          IdxExpr := AdjustLineBreaks(Trim(Fld.AsString));
+
+        if IdxExpr <> '' then
+          Line1 := Line1 + ' computed by ' + IdxExpr
+        else
+          Line1 := Line1 + '(' + Line + ')';
+
+        { Firebird 5 partial (conditional) index. RDB$CONDITION_SOURCE already
+          includes the WHERE keyword. Dropping it silently turned a partial
+          index into a full one - a different index, not just cosmetic. }
+        IdxCond := '';
+        Fld := Q1.FindField('rdb$condition_source');
+        if Assigned(Fld) and not Fld.IsNull then
+          IdxCond := AdjustLineBreaks(Trim(Fld.AsString));
+
+        if IdxCond <> '' then
+          Line1 := Line1 + ' ' + IdxCond;
+
+        Line1 := Line1 + ';' + #13#10;
 
       finally
         Q2.Free;

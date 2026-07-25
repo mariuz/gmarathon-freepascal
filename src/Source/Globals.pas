@@ -299,19 +299,30 @@ implementation
 uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE;
 
 const
-  // Firebird BLR type constants (from ibase.h)
-  blr_short     = 7;
-  blr_long      = 8;
-  blr_float     = 10;
-  blr_sql_date  = 12;
-  blr_sql_time  = 13;
-  blr_text      = 14;
-  blr_int64     = 16;
-  blr_double    = 27;
-  blr_timestamp = 35;
-  blr_varying   = 37;
-  blr_cstring   = 40;
-  blr_blob      = 261;
+  // Firebird BLR type constants (from ibase.h), as stored in
+  // RDB$FIELDS.RDB$FIELD_TYPE. Values for the Firebird 3+ types below were
+  // verified empirically against a live Firebird 6 server rather than taken
+  // from a header, since the int128 code in particular is easy to get wrong
+  // (it is 26, historically blr_dec_fixed, not the blr_int128 value of 32
+  // used in the wire/BLR layer).
+  blr_short        = 7;
+  blr_long         = 8;
+  blr_float        = 10;
+  blr_sql_date     = 12;
+  blr_sql_time     = 13;
+  blr_text         = 14;
+  blr_int64        = 16;
+  blr_bool         = 23;   // Firebird 3: BOOLEAN
+  blr_dec64        = 24;   // Firebird 4: DECFLOAT(16)
+  blr_dec128       = 25;   // Firebird 4: DECFLOAT(34)
+  blr_int128       = 26;   // Firebird 4: INT128 / NUMERIC|DECIMAL(38,x)
+  blr_double       = 27;
+  blr_sql_time_tz  = 28;   // Firebird 4: TIME WITH TIME ZONE
+  blr_timestamp_tz = 29;   // Firebird 4: TIMESTAMP WITH TIME ZONE
+  blr_timestamp    = 35;
+  blr_varying      = 37;
+  blr_cstring      = 40;
+  blr_blob         = 261;
 
 function TMarathonScreen.GetTop: Integer;
 var
@@ -1039,7 +1050,10 @@ begin
           case fsubtype of
             0 :
               begin
-                Result := 'decimal(18, 0)';
+                if Dialect = 3 then
+                  Result := 'bigint'
+                else
+                  Result := 'decimal(18, 0)';
 							end;
             1 :
               begin
@@ -1053,6 +1067,47 @@ begin
         end;
       end;
 
+    { Firebird 3+ types. Without these ConvertFieldType fell through leaving
+      Result empty, and callers emitted the internal domain name (RDB$29,
+      RDB$30, ...) in place of the type - producing DDL that cannot run. }
+    blr_bool :
+      begin
+        Result := 'boolean';
+      end;
+
+    blr_dec64 :
+      begin
+        Result := 'decfloat(16)';
+      end;
+
+    blr_dec128 :
+      begin
+        Result := 'decfloat(34)';
+      end;
+
+    blr_int128 :
+      begin
+        { Same subtype convention as short/long/int64: 0 = raw integer type,
+          1 = NUMERIC, 2 = DECIMAL. }
+        case fsubtype of
+          1 :
+            Result := 'numeric(' + IntToStr(fprecision) + ', ' + IntToStr(fscale) + ')';
+          2 :
+            Result := 'decimal(' + IntToStr(fprecision) + ', ' + IntToStr(fscale) + ')';
+        else
+          Result := 'int128';
+        end;
+      end;
+
+    blr_sql_time_tz :
+      begin
+        Result := 'time with time zone';
+      end;
+
+    blr_timestamp_tz :
+      begin
+        Result := 'timestamp with time zone';
+      end;
     blr_float :
       begin
 				Result := 'float';
