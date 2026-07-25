@@ -19,7 +19,7 @@ its `uses` clauses and wiring it directly to the new IBX types.
 
 - [x] **Single-object DDL tab** — `FrameMetadata.pas`'s "DDL" tab (used by the table/view/procedure/trigger/domain/generator/exception/UDF editors) now calls `TDDLExtractor` directly instead of showing "DDL Extraction not available in FPC yet." Covers `ctDomain`, `ctTable` (+ PK/FK/indexes/triggers/grants), `ctView` (+ grants), `ctSP` (+ grants), `ctTrigger`, `ctGenerator`, `ctException`, `ctUDF`.
 - [ ] **Bulk "Extract Metadata" wizard** — `MarathonIDE.pas`'s `opExtractDDL` tree action and `ToolsMetadataExtract` (multi-object DDL export to files, with dependent-object inclusion, wrap/decimal-format options) still show "Not implemented for FPC". `MetaExtractUnit.pas`'s `TIBMetaExtract` (the non-visual file-writing engine) is plain Pascal like `DDLExtractor` and should port easily, but the wizard *dialog* itself, `GlobalMigrateWizard.pas`/`TfrmGlobalMigrateWizard`, has no `.lfm` at all (Delphi `.dfm` only) and uses old rmControls units (`rmBtnEdit`, `rmBaseEdit`, `rmNotebook2`) that don't exist in this tree anymore — it needs a from-scratch Lazarus form built against `rmCompatControls.pas`'s replacements, not just a `uses`-clause fix. Bigger than the single-object DDL tab; do this as its own session.
-- [ ] **DDL round-trip test coverage** — extend `test/ibx_smoke_test.lpr` (or a new smoke test) to extract DDL for a view, a stored procedure, and a trigger, not just a plain table, so CI catches regressions in each `DDLExtractor` code path.
+- [x] **DDL round-trip test coverage** — `test/ibx_smoke_test.lpr` now creates a view, a stored procedure, and a trigger on the smoke-test table (plus best-effort drops in dependency order at startup so repeat runs against the same database don't fail on `recreate table`'s dependency check) and extracts DDL for each. Confirmed live that `ExtractStoredProcedure` (the `ddlstNone`/`ddlstProc` subtype) always emits the `ALTER PROCEDURE ... body` form rather than `CREATE` - it's meant to follow a separate `ddlstHeader` `CREATE PROCEDURE` stub for round-tripping procedures with forward references, matching how Phase 2's "Script as CREATE" already uses this extractor - so the test asserts on that shape rather than expecting `CREATE`.
 
 ## Phase 2 — "Script As ..." Productivity (SSMS/pgAdmin/vscode-mssql-style)
 
@@ -78,7 +78,7 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 |---|---|---|
 | 1 | Single-object DDL tab | **Done** |
 | 1 | Bulk Extract Metadata wizard | Not started |
-| 1 | DDL extraction test coverage | Not started |
+| 1 | DDL extraction test coverage | **Done** |
 | 2 | Script as CREATE (tree) | **Done** |
 | 2 | Script as SELECT/INSERT/UPDATE/DELETE | **Done** |
 | 2 | Script as EXECUTE PROCEDURE | **Done** |

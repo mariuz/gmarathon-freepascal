@@ -3,9 +3,10 @@ program ibx_smoke_test;
 { Standalone smoke test for the IBX (MWASoftware ibx4lazarus) database layer.
   Connects to a real Firebird server, creates a table, writes and reads a row,
   and verifies the round trip, then exercises DDLExtractor (Marathon's DDL
-  scripting engine) against the live table. Used by CI to prove the IBX
-  conversion and DDL extraction actually work against Firebird, not just
-  that the app compiles. }
+  scripting engine) against a table, a view, a stored procedure, and a
+  trigger built on that table - each object type is its own code path in
+  DDLExtractor.pas. Used by CI to prove the IBX conversion and DDL extraction
+  actually work against Firebird, not just that the app compiles. }
 
 {$MODE Delphi}
 
@@ -50,6 +51,28 @@ begin
 
     Q.Database := DB;
     Q.Transaction := Tr;
+
+    { Drop objects left over from a previous run, in dependency order, before
+      recreating the table - "recreate table" refuses to drop a table that
+      other objects still depend on. Each drop is best-effort: ignore
+      "doesn't exist" failures on a first-ever run. }
+    Tr.StartTransaction;
+    try
+      Q.SQL.Text := 'drop trigger ibx_smoke_test_trig';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop procedure ibx_smoke_test_proc';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop view ibx_smoke_test_view';
+      Q.ExecSQL;
+    except
+    end;
+    Tr.Commit;
 
     Tr.StartTransaction;
     try
@@ -128,7 +151,128 @@ begin
         WriteLn(DDL);
         Halt(1);
       end;
-      WriteLn('DDL extraction OK:');
+      WriteLn('DDL extraction OK (table):');
+      WriteLn(DDL);
+
+      { Round-trip DDLExtractor against a view, a stored procedure, and a
+        trigger too, not just a plain table - each code path in
+        DDLExtractor.pas has its own metadata queries and is worth its own
+        regression coverage. }
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text := 'create or alter view ibx_smoke_test_view as select id, note from ibx_smoke_test';
+        Q.ExecSQL;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: could not create view: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text :=
+          'create or alter procedure ibx_smoke_test_proc (a_id integer) ' +
+          'returns (a_note varchar(50)) ' +
+          'as ' +
+          'begin ' +
+          '  select note from ibx_smoke_test where id = :a_id into :a_note; ' +
+          '  suspend; ' +
+          'end';
+        Q.ExecSQL;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: could not create procedure: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      Tr.StartTransaction;
+      try
+        Q.SQL.Text :=
+          'create or alter trigger ibx_smoke_test_trig for ibx_smoke_test ' +
+          'active before insert position 0 ' +
+          'as ' +
+          'begin ' +
+          'end';
+        Q.ExecSQL;
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: could not create trigger: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlView, ddlstNone, 'IBX_SMOKE_TEST_VIEW');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: view DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      if (Pos('CREATE VIEW', UpperCase(DDL)) = 0) or (Pos('IBX_SMOKE_TEST_VIEW', UpperCase(DDL)) = 0) then
+      begin
+        WriteLn('FAIL: extracted view DDL does not look right:');
+        WriteLn(DDL);
+        Halt(1);
+      end;
+      WriteLn('DDL extraction OK (view):');
+      WriteLn(DDL);
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlStoredProc, ddlstNone, 'IBX_SMOKE_TEST_PROC');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: procedure DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      { ExtractStoredProcedure (ddlstNone) always emits the "alter procedure"
+        body form - it's meant to follow a separate ddlstHeader "create
+        procedure" stub for round-tripping procedures with forward
+        references, matching how Phase 2's "Script as CREATE" already uses
+        this extractor. }
+      if (Pos('PROCEDURE', UpperCase(DDL)) = 0) or (Pos('A_NOTE', UpperCase(DDL)) = 0) then
+      begin
+        WriteLn('FAIL: extracted procedure DDL does not look right:');
+        WriteLn(DDL);
+        Halt(1);
+      end;
+      WriteLn('DDL extraction OK (procedure):');
+      WriteLn(DDL);
+
+      Tr.StartTransaction;
+      try
+        DDL := Extractor.Extract(ddlTrigger, ddlstNone, 'IBX_SMOKE_TEST_TRIG');
+        Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          WriteLn('FAIL: trigger DDL extraction raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      if (Pos('CREATE', UpperCase(DDL)) = 0) or (Pos('TRIGGER', UpperCase(DDL)) = 0) or
+         (Pos('IBX_SMOKE_TEST', UpperCase(DDL)) = 0) then
+      begin
+        WriteLn('FAIL: extracted trigger DDL does not look right:');
+        WriteLn(DDL);
+        Halt(1);
+      end;
+      WriteLn('DDL extraction OK (trigger):');
       WriteLn(DDL);
     finally
       Extractor.Free;
