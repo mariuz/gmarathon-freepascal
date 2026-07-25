@@ -31,6 +31,10 @@ type
 		tsAttachments: TTabSheet;
 		tsStatements: TTabSheet;
 		tsTransactions: TTabSheet;
+		pnlAttachmentsBottom: TPanel;
+		btnDisconnectAttachment: TButton;
+		pnlStatementsBottom: TPanel;
+		btnCancelStatement: TButton;
 		grdAttachments: TDBGrid;
 		grdStatements: TDBGrid;
 		grdTransactions: TDBGrid;
@@ -44,9 +48,13 @@ type
 		procedure FormCreate(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure btnRefreshClick(Sender: TObject);
+		procedure btnDisconnectAttachmentClick(Sender: TObject);
+		procedure btnCancelStatementClick(Sender: TObject);
 	private
 		FConnectionName: String;
 		procedure SetConnectionName(const Value: String);
+		function GetCurrentAttachmentId: Integer;
+		procedure ExecuteAdminStatement(const SQL: String);
 	public
 		procedure RefreshData;
 		property ConnectionName: String read FConnectionName write SetConnectionName;
@@ -93,6 +101,125 @@ end;
 
 procedure TfrmSessionMonitor.btnRefreshClick(Sender: TObject);
 begin
+	RefreshData;
+end;
+
+procedure TfrmSessionMonitor.ExecuteAdminStatement(const SQL: String);
+var
+	Q: TIBQuery;
+	Tr: TIBTransaction;
+begin
+	{ Deliberately a fresh connection-scoped transaction, not tranMonitor (which
+	  is holding the MON$ snapshot from the last refresh) - keeps the admin
+	  action independent of whatever state the monitoring grids are in. }
+	Tr := TIBTransaction.Create(nil);
+	Q := TIBQuery.Create(nil);
+	try
+		Tr.DefaultDatabase := qryAttachments.Database;
+		Q.Database := qryAttachments.Database;
+		Q.Transaction := Tr;
+		Tr.StartTransaction;
+		try
+			Q.SQL.Text := SQL;
+			Q.ExecSQL;
+			Tr.Commit;
+		except
+			if Tr.Active then
+				Tr.Rollback;
+			raise;
+		end;
+	finally
+		Q.Free;
+		Tr.Free;
+	end;
+end;
+
+function TfrmSessionMonitor.GetCurrentAttachmentId: Integer;
+var
+	Q: TIBQuery;
+	Tr: TIBTransaction;
+begin
+	Result := -1;
+	Tr := TIBTransaction.Create(nil);
+	Q := TIBQuery.Create(nil);
+	try
+		Tr.DefaultDatabase := qryAttachments.Database;
+		Q.Database := qryAttachments.Database;
+		Q.Transaction := Tr;
+		Tr.StartTransaction;
+		try
+			Q.SQL.Text := 'select current_connection from rdb$database';
+			Q.Open;
+			if not Q.EOF then
+				Result := Q.FieldByName('current_connection').AsInteger;
+			Q.Close;
+			Tr.Commit;
+		except
+			if Tr.Active then
+				Tr.Rollback;
+			raise;
+		end;
+	finally
+		Q.Free;
+		Tr.Free;
+	end;
+end;
+
+procedure TfrmSessionMonitor.btnDisconnectAttachmentClick(Sender: TObject);
+var
+	AttachId: Integer;
+begin
+	if qryAttachments.EOF and qryAttachments.BOF then
+		Exit;
+	if qryAttachments.FieldByName('mon$attachment_id').IsNull then
+		Exit;
+	AttachId := qryAttachments.FieldByName('mon$attachment_id').AsInteger;
+
+	if AttachId = GetCurrentAttachmentId then
+	begin
+		MessageDlg('That is this Session Monitor''s own connection - disconnecting it would break this window. Choose a different attachment.',
+			mtWarning, [mbOK], 0);
+		Exit;
+	end;
+
+	if MessageDlg('Disconnect attachment ' + IntToStr(AttachId) + ' (' +
+		qryAttachments.FieldByName('mon$user').AsString + ')?' + #13#10#13#10 +
+		'This immediately terminates that connection. Any uncommitted work on it will be lost.',
+		mtWarning, [mbYes, mbNo], 0) <> mrYes then
+		Exit;
+
+	try
+		ExecuteAdminStatement('delete from mon$attachments where mon$attachment_id = ' + IntToStr(AttachId));
+		MessageDlg('Attachment disconnected.', mtInformation, [mbOK], 0);
+	except
+		on E: Exception do
+			MessageDlg('Could not disconnect attachment: ' + E.Message, mtError, [mbOK], 0);
+	end;
+	RefreshData;
+end;
+
+procedure TfrmSessionMonitor.btnCancelStatementClick(Sender: TObject);
+var
+	StmtId: Integer;
+begin
+	if qryStatements.EOF and qryStatements.BOF then
+		Exit;
+	if qryStatements.FieldByName('mon$statement_id').IsNull then
+		Exit;
+	StmtId := qryStatements.FieldByName('mon$statement_id').AsInteger;
+
+	if MessageDlg('Cancel statement ' + IntToStr(StmtId) + '?' + #13#10#13#10 +
+		qryStatements.FieldByName('mon$sql_text').AsString,
+		mtWarning, [mbYes, mbNo], 0) <> mrYes then
+		Exit;
+
+	try
+		ExecuteAdminStatement('delete from mon$statements where mon$statement_id = ' + IntToStr(StmtId));
+		MessageDlg('Statement cancelled.', mtInformation, [mbOK], 0);
+	except
+		on E: Exception do
+			MessageDlg('Could not cancel statement: ' + E.Message, mtError, [mbOK], 0);
+	end;
 	RefreshData;
 end;
 

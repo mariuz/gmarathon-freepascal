@@ -54,14 +54,32 @@ object frmSessionMonitor: TfrmSessionMonitor
     TabOrder = 1
     object tsAttachments: TTabSheet
       Caption = 'Attachments'
+      object pnlAttachmentsBottom: TPanel
+        Left = 0
+        Top = 358
+        Width = 744
+        Height = 33
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 0
+        object btnDisconnectAttachment: TButton
+          Left = 8
+          Top = 4
+          Width = 160
+          Height = 25
+          Caption = '&Disconnect Attachment'
+          TabOrder = 0
+          OnClick = btnDisconnectAttachmentClick
+        end
+      end
       object grdAttachments: TDBGrid
         Left = 0
         Top = 0
         Width = 744
-        Height = 391
+        Height = 358
         Align = alClient
         DataSource = dsAttachments
-        TabOrder = 0
+        TabOrder = 1
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
         TitleFont.Height = -11
@@ -71,14 +89,32 @@ object frmSessionMonitor: TfrmSessionMonitor
     end
     object tsStatements: TTabSheet
       Caption = 'Statements'
+      object pnlStatementsBottom: TPanel
+        Left = 0
+        Top = 358
+        Width = 744
+        Height = 33
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 0
+        object btnCancelStatement: TButton
+          Left = 8
+          Top = 4
+          Width = 130
+          Height = 25
+          Caption = '&Cancel Statement'
+          TabOrder = 0
+          OnClick = btnCancelStatementClick
+        end
+      end
       object grdStatements: TDBGrid
         Left = 0
         Top = 0
         Width = 744
-        Height = 391
+        Height = 358
         Align = alClient
         DataSource = dsStatements
-        TabOrder = 0
+        TabOrder = 1
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
         TitleFont.Height = -11
