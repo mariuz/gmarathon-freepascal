@@ -16,7 +16,7 @@ program ibx_smoke_test;
 {$MODE Delphi}
 
 uses
-  SysUtils, Classes, IBDatabase, IBQuery, DDLExtractor;
+  SysUtils, Classes, IBDatabase, IBQuery, DDLExtractor, MarathonProjectCacheTypes;
 
 var
   DB: TIBDatabase;
@@ -540,6 +540,63 @@ begin
         RequireInDDL(DDL, 'return a + 1', 'package body source');
         WriteLn('DDL extraction OK (package body):');
         WriteLn(DDL);
+      end;
+
+      { Replication publications (Firebird 4). Every FB4+ database owns exactly
+        one, the built-in RDB$DEFAULT, and its whole DDL surface is spelled
+        ALTER DATABASE. Including a table does not switch replication on
+        (RDB$ACTIVE_FLAG stays 0), so this leaves the database inert - and the
+        table is excluded again afterwards to leave it as found. }
+      if EngineMajor >= 4 then
+      begin
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'alter database include table ibx_smoke_test to publication';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not include a table in the publication: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        Tr.StartTransaction;
+        try
+          DDL := Extractor.Extract(ddlPublication, ddlstNone, DefaultPublicationName);
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: publication DDL extraction raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+        RequireInDDL(DDL, 'publication', 'publication statement');
+        RequireInDDL(DDL, 'include table', 'explicit publication member list');
+        RequireInDDL(DDL, 'ibx_smoke_test', 'the included table');
+        WriteLn('DDL extraction OK (publication):');
+        WriteLn(DDL);
+
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'alter database exclude table ibx_smoke_test from publication';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not exclude the table from the publication: ', E.Message);
+            Halt(1);
+          end;
+        end;
       end;
 
       { Trigger forms beyond the six single-action table triggers. A multi-action

@@ -602,8 +602,10 @@ var
 	ObjType: TDDLObjectType;
 begin
 	case CacheType of
-		ctView: ObjType := ddlView;
-		ctSP:   ObjType := ddlStoredProc;
+		ctView:        ObjType := ddlView;
+		ctSP:          ObjType := ddlStoredProc;
+		ctPackage:     ObjType := ddlPackage;
+		ctPublication: ObjType := ddlPublication;
 	else
 		ObjType := ddlTable;
 	end;
@@ -614,7 +616,13 @@ begin
 		Extractor.Transaction := Conn.Transaction;
 		Extractor.SQLDialect := Conn.SQLDialect;
 		Extractor.IsInterbase6 := Conn.IsIB6;
-		Result := Extractor.Extract(ObjType, ddlstNone, ObjectName);
+		if CacheType = ctPackage then
+			{ Header and body together - recreating a package takes both, and a
+			  package may legitimately have a header and no body. }
+			Result := Extractor.Extract(ddlPackage, ddlstHeader, ObjectName) + #13#10 +
+				Extractor.Extract(ddlPackage, ddlstProc, ObjectName)
+		else
+			Result := Extractor.Extract(ObjType, ddlstNone, ObjectName);
 	finally
 		Extractor.Free;
 	end;
@@ -1047,7 +1055,8 @@ begin
 							ctTriggerHeader,
 							ctGeneratorHeader,
 							ctExceptionHeader,
-							ctUDFHeader:
+							ctUDFHeader,
+							ctPackageHeader:
 								begin
 									N := Item.ContainerNode;
 									if Assigned(N) then

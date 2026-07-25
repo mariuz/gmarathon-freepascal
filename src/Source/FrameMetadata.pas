@@ -243,6 +243,9 @@ begin
         edDDL.Text := Extractor.Extract(ddlPackage, ddlstHeader, FForm.GetObjectName) +
                       #13#10 +
                       Extractor.Extract(ddlPackage, ddlstProc, FForm.GetObjectName);
+
+      ctPublication:
+        edDDL.Text := Extractor.Extract(ddlPublication, ddlstNone, FForm.GetObjectName);
     end;
   finally
     Extractor.Free;

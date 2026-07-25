@@ -520,6 +520,22 @@ type
     constructor Create; override;
   end;
 
+  TMarathonCachePublicationsHeader = class(TMarathonCacheHeader)
+  private
+
+  public
+    procedure Expand(Recursive: Boolean); override;
+    constructor Create; override;
+  end;
+
+  TMarathonCachePublication = class(TMarathonCacheObject)
+  private
+
+  public
+    constructor Create; override;
+    function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
+  end;
+
   TMarathonCacheProjectHeader = class(TMarathonCacheBaseNode)
   private
 
@@ -962,6 +978,12 @@ begin
 
 		ctPackage:
 			Result := 9;
+
+		ctPublicationHeader:
+			Result := 0;
+
+		ctPublication:
+			Result := 10;
 	else
 		Result := 0;
   end;
@@ -1472,6 +1494,9 @@ var
 
 			ctPackage:
 				Result := 'Packages';
+
+			ctPublication:
+				Result := 'Replication';
 		end;
 	end;
 
@@ -1941,6 +1966,14 @@ begin
 
 	NV := FRootItem.FCache.AddPathNode(fContainerNode, 'Packages');
 	wNode := TMarathonCachePackagesHeader.Create;
+	wNode.ContainerNode := NV;
+	wNode.RootItem := FRootItem;
+	wNode.Caption := NV.Text;
+	wNode.ConnectionName := FCaption;
+	NV.Data := wNode;
+
+	NV := FRootItem.FCache.AddPathNode(fContainerNode, 'Replication');
+	wNode := TMarathonCachePublicationsHeader.Create;
 	wNode.ContainerNode := NV;
 	wNode.RootItem := FRootItem;
 	wNode.Caption := NV.Text;
@@ -3886,7 +3919,7 @@ begin
       opScriptDelete:
         Result := CacheType in [ctTable, ctView];
       opScriptCreate:
-        Result := CacheType in [ctTable, ctView, ctSP];
+        Result := CacheType in [ctTable, ctView, ctSP, ctPackage];
       opScriptExecute:
         Result := CacheType = ctSP;
 		else
@@ -4552,6 +4585,85 @@ begin
 	inherited;
 	FImageIndex := 9;
 	FCacheType := ctPackage;
+end;
+
+{ TMarathonCachePublicationsHeader }
+constructor TMarathonCachePublicationsHeader.Create;
+begin
+	inherited;
+	FCacheType := ctPublicationHeader;
+end;
+
+procedure TMarathonCachePublicationsHeader.Expand(Recursive: Boolean);
+var
+	wNode: TMarathonCachePublication;
+	NV: TMarathonTreeNode;
+	Q: TIBQuery;
+
+begin
+	FContainerNode.DeleteChildren;
+	{ Replication is Firebird 4 (ODS 13). RDB$PUBLICATIONS does not exist
+	  earlier and querying a missing table is a hard error, so leave the branch
+	  empty. }
+	if not FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB4_MAJOR, ODS_FB4_MINOR) then
+	begin
+		FExpanded := True;
+		Exit;
+	end;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
+		try
+			{ Deliberately unfiltered by RDB$SYSTEM_FLAG, unlike every other
+			  header here: the built-in RDB$DEFAULT publication is flagged as a
+			  system object, and it is the only publication current Firebird can
+			  hold, so the usual filter would leave this branch permanently
+			  empty. }
+			Q.SQL.Add('select RDB$PUBLICATION_NAME from RDB$PUBLICATIONS order by RDB$PUBLICATION_NAME asc;');
+			Q.Open;
+			while not Q.EOF do
+			begin
+				NV := FRootItem.FCache.AddPathNode(FContainerNode, Trim(Q.FieldByName('RDB$PUBLICATION_NAME').AsString));
+				wNode := TMarathonCachePublication.Create;
+				wNode.ContainerNode := NV;
+				wNode.RootItem := FRootItem;
+				wNode.Caption := Trim(Q.FieldByName('RDB$PUBLICATION_NAME').AsString);
+				wNode.ObjectName := wNode.Caption;
+				wNode.ConnectionName := FConnectionName;
+				wNode.System := False;
+				NV.Data := wNode;
+				Q.Next;
+			end;
+			FExpanded := True;
+		finally
+			TIBTransaction(Q.Transaction).Commit;
+		end;
+	finally
+		Q.Free;
+	end;
+end;
+
+constructor TMarathonCachePublication.Create;
+begin
+	inherited;
+	FImageIndex := 10;
+	FCacheType := ctPublication;
+end;
+
+function TMarathonCachePublication.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
+begin
+	{ A publication is an attribute of the database, not a standalone object:
+	  it cannot be created or dropped on its own, has no editor form, and the
+	  bulk extract wizard has no tab for it. Scripting its DDL into an editor
+	  is all that applies. }
+	if Multiple then
+		Result := False
+	else
+		Result := Op = opScriptCreate;
 end;
 
 constructor TMarathonCacheFunction.Create;

@@ -35,7 +35,8 @@ type
     ddlTrigger,
     { Appended deliberately: callers pass this enum by value, so adding in the
       middle would silently renumber the existing ones. }
-    ddlPackage
+    ddlPackage,
+    ddlPublication
     );
 
   TDDLSubType = (
@@ -88,6 +89,7 @@ type
     function ExtractPSQLFunction(Q: TIBDataSet): String;
     function ExtractPackageHeader(ObjectName : String) : String;
     function ExtractPackageBody(ObjectName : String) : String;
+    function ExtractPublication(ObjectName : String) : String;
     function TriggerEventClause(TriggerType: Integer): String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function ExtractGenerator(ObjectName : String) : String;
@@ -367,6 +369,10 @@ begin
             ddlstProc :
               Result := ExtractPackageBody(ObjectName);
           end;
+        end;
+      ddlPublication:
+        begin
+          Result := ExtractPublication(ObjectName);
         end;
     end;
 end;
@@ -1483,6 +1489,125 @@ begin
     Q.Close;
   finally
     Q.Free;
+  end;
+end;
+
+function TDDLExtractor.ExtractPublication(ObjectName: String): String;
+var
+  Q : TIBDataSet;
+  Output : TStringList;
+  Members : TStringList;
+  Excluded : TStringList;
+  Line : String;
+  Idx : Integer;
+  AutoEnable : Boolean;
+begin
+  { Replication publications are Firebird 4 (ODS 13). }
+  Result := '';
+  if not ODSAtLeast(13, 0) then
+    Exit;
+  Output := TStringList.Create;
+  Members := TStringList.Create;
+  Excluded := TStringList.Create;
+  try
+    Q := TIBDataSet.Create(Self);
+    try
+      Q.Database := FDatabase;
+      Q.Transaction := FTransaction;
+      Q.SelectSQL.Add('select rdb$active_flag, rdb$auto_enable from rdb$publications where rdb$publication_name = ' +
+                 AnsiQuotedStr(ObjectName, ''''));
+      Q.Open;
+      if Q.EOF then
+      begin
+        Q.Close;
+        Exit;
+      end;
+      AutoEnable := Q.FieldByName('rdb$auto_enable').AsInteger <> 0;
+      { Firebird 4-6 have no CREATE PUBLICATION statement: the only publication
+        an engine can hold is the built-in default one, and every DDL verb for
+        it is spelled ALTER DATABASE, with the publication left unnamed. The
+        table exists to allow named publications later, so a row under any
+        other name has no DDL that can be written for it today. }
+      if AnsiUpperCase(Trim(ObjectName)) <> DefaultPublicationName then
+      begin
+        Q.Close;
+        Result := '/* Publication ' + Trim(ObjectName) +
+                  ' - this server version has no DDL syntax for named publications */' + #13#10;
+        Exit;
+      end;
+      if Q.FieldByName('rdb$active_flag').AsInteger <> 0 then
+        Output.Add('alter database enable publication;')
+      else
+        Output.Add('alter database disable publication;');
+      Q.Close;
+    finally
+      Q.Free;
+    end;
+
+    Q := TIBDataSet.Create(Self);
+    try
+      Q.Database := FDatabase;
+      Q.Transaction := FTransaction;
+      Q.SelectSQL.Add('select rdb$table_name from rdb$publication_tables where rdb$publication_name = ' +
+                 AnsiQuotedStr(ObjectName, '''') + ' order by rdb$table_name');
+      Q.Open;
+      while not Q.EOF do
+      begin
+        Members.Add(Trim(Q.FieldByName('rdb$table_name').AsString));
+        Q.Next;
+      end;
+      Q.Close;
+    finally
+      Q.Free;
+    end;
+
+    if AutoEnable then
+    begin
+      { "Include all" also opts every table created from now on into the
+        publication, so it has to be reproduced as such rather than as the
+        current member list - but a table can still have been excluded
+        afterwards, which leaves the flag set. Name those explicitly. }
+      Output.Add('alter database include all to publication;');
+      Q := TIBDataSet.Create(Self);
+      try
+        Q.Database := FDatabase;
+        Q.Transaction := FTransaction;
+        Q.SelectSQL.Add('select rdb$relation_name from rdb$relations where ' +
+                   '((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_blr is null ' +
+                   'order by rdb$relation_name');
+        Q.Open;
+        while not Q.EOF do
+        begin
+          Line := Trim(Q.FieldByName('rdb$relation_name').AsString);
+          if Members.IndexOf(Line) < 0 then
+            Excluded.Add(MakeQuotedIdent(Line, FIsIB6, FSQLDialect));
+          Q.Next;
+        end;
+        Q.Close;
+      finally
+        Q.Free;
+      end;
+      for Idx := 0 to Excluded.Count - 1 do
+        Output.Add('alter database exclude table ' + Excluded[Idx] + ' from publication;');
+    end
+    else
+      if Members.Count > 0 then
+      begin
+        Line := '';
+        for Idx := 0 to Members.Count - 1 do
+        begin
+          if Line <> '' then
+            Line := Line + ', ';
+          Line := Line + MakeQuotedIdent(Members[Idx], FIsIB6, FSQLDialect);
+        end;
+        Output.Add('alter database include table ' + Line + ' to publication;');
+      end;
+
+    Result := Output.Text;
+  finally
+    Excluded.Free;
+    Members.Free;
+    Output.Free;
   end;
 end;
 

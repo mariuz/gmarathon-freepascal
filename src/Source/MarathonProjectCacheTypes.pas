@@ -32,6 +32,12 @@ interface
 
 uses SysUtils, Classes;
 
+const
+  { The one publication every FB4+ database has. Firebird has no CREATE
+    PUBLICATION statement yet, so in practice this is the only row
+    RDB$PUBLICATIONS ever holds. }
+  DefaultPublicationName = 'RDB$DEFAULT';
+
 type
   TGSSCacheOp = (
     opConnect,
@@ -91,7 +97,9 @@ type
       (GetEnumName/GetEnumValue), not ordinal, so adding values here does not
       invalidate saved projects. }
     ctPackageHeader,
-    ctPackage);
+    ctPackage,
+    ctPublicationHeader,
+    ctPublication);
 
   TSortOrder = (srtAsc, srtDesc);
 

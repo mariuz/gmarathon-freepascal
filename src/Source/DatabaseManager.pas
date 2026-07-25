@@ -1197,7 +1197,9 @@ begin
 					 ctTriggerHeader,
 					 ctGeneratorHeader,
 					 ctExceptionHeader,
-					 ctUDFHeader:
+					 ctUDFHeader,
+					 ctPackageHeader,
+					 ctPublicationHeader:
 						 begin
 							 Result := TMarathonCacheHeader(tscObj).ConnectionName;
 						 end;
@@ -1209,7 +1211,9 @@ begin
 					 ctTrigger,
 					 ctGenerator,
 					 ctException,
-					 ctUDF:
+					 ctUDF,
+					 ctPackage,
+					 ctPublication:
 						 begin
 							 Result := TMarathonCacheObject(tscObj).ConnectionName;
 						 end;
