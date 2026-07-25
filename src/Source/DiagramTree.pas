@@ -392,7 +392,7 @@ var
 begin
   // Set colors depending on whether we need to highlight this node.
   cvs.Font.Assign(TdiagramTree(FOwner.Owner).Font);
-  cvs.Brush.Color := clWindow;
+  cvs.Brush.Color := Color;
   cvs.Font.Color := TDiagramTree(FOwner.Owner).Font.Color;
 
   // Erase the node's Position and draw a box.
@@ -589,7 +589,7 @@ var
 begin
   node := TDiagramNode.Create(self.DVCanvas, ParentNode);
   node.NodeID := id;
-  node.Color := clGreen;
+  node.Color := clWindow;
   if ParentNode = nil then
   begin
     Root := node;

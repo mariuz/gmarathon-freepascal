@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, SQLYacc, IBPerformanceMonitor, DiagramTree, rmCompatControls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -1144,7 +1144,6 @@ var
 	Idx, DelCount: Integer;
 	Found: Boolean;
 	ISQLObj: TIBSQLObj;
-	PlanParser: TSQLParser;
   nRecords: Integer;
 
 begin
@@ -1448,20 +1447,8 @@ begin
 
 				if FShowPlan and (qrySQLStatement.StatementType in [SQLSelect, SQLSelectForUpdate, SQLUpdate, SQLDelete]) then
 				begin
-					{$IFNDEF FPC}edPlan.Text := qrySQLStatement.Plan;{$ENDIF}
-					PlanParser := TSQLParser.Create(Self);
-					try
-						PlanParser.ParserType := ptPlan;
-						PlanParser.Lexer.yyinput.Text := edPlan.Text;
-						PlanParser.Lexer.IsInterbase6 := FIsInterbase6;
-						PlanParser.Lexer.SQLDialect := FSQLDialect;
-						if PlanParser.yyparse = 0 then
-						begin
-							PlanParser.PlanObject.FillTree(dtPlan);
-						end;
-					finally
-						PlanParser.Free;
-					end;
+					edPlan.Text := qrySQLStatement.GetPlan;
+					FillTreeFromExplainedPlan(edPlan.Text, dtPlan);
 				end
 				else
 					dtPlan.Clear;

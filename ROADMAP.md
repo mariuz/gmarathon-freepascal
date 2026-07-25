@@ -56,8 +56,10 @@ vendored in `lib/ibx4lazarus`) that nothing in Marathon currently uses.
 
 ## Phase 6 — SQL Editor Modernization
 
-- [ ] **Firebird 3/4/5 keyword highlighting** — audit `SynHighlighterSQL`'s keyword list against modern Firebird reserved words (`RETURNING`, window functions, `DECFLOAT`, boolean literals, etc.) — this project targets Firebird generally, so no version gating is needed, just a keyword-list refresh.
-- [ ] **Execution plan tree view** — `SQLForm.pas` already fetches `qrySQLStatement`'s plan text (`FShowPlan`); rendering it as an indented tree (`NATURAL` vs `INDEX` highlighted) instead of raw text is a UI-only enhancement.
+- [x] **Firebird 3/4/5 keyword highlighting** — `MenuModule.lfm`'s shared `synHighlighter: TSynSQLSyn` was set to `SQLDialect = sqlInterbase6`, a ~180-keyword InterBase 6-era list missing `RETURNING`, `OVER`, `ROW_NUMBER`, `DECFLOAT`, `BOOLEAN`/`TRUE`/`FALSE`/`UNKNOWN`, `OFFSET`, `RECURSIVE`, `LATERAL`, `WINDOW`, `PARTITION`, `MATCHED`, etc. Lazarus's SynEdit package ships fully populated, already-correct `sqlFirebird25`/`sqlFirebird30`/`sqlFirebird40` keyword sets (`synhighlightersql.pas`) that were simply never selected — switched to `sqlFirebird40` (superset of the others, and highlighting an identifier as a keyword is harmless even against an older server).
+- [x] **Execution plan tree view** — this turned out to be two separate things, one true bug and one format-compatibility gap:
+  - **Bug**: the plan text fetch in `SQLForm.pas`'s `DoExecute` was `{$IFNDEF FPC}edPlan.Text := qrySQLStatement.Plan;{$ENDIF}` - on this FPC port the fetch was skipped entirely (`TIBQuery` has no `Plan` property, only a `GetPlan` method), so the plan tab showed nothing. Fixed to `edPlan.Text := qrySQLStatement.GetPlan;` (unconditional, no method to gate on FPC).
+  - **Format gap**: fixing the fetch revealed the existing tree-builder (`PlanUnit.pas`'s `TPlanObject.FillTree`, fed by `SQLYacc.pas`'s `ptPlan` grammar) parses the *classic* single-line `PLAN (T INDEX (IX))` format - but this vendored IBX/fbintf's `TIBQuery.GetPlan` (via `IStatement.getPlan(status, detailed=True)`, hardcoded in `fbintf`'s `FB30Statement.GetPlan`) only ever returns Firebird 3+'s newer indentation-structured "explained" format (`Select Expression / -> Filter / -> Table ... Full Scan`), which the yacc grammar can't parse at all - so the tree stayed empty even after the fetch fix. Added `PlanUnit.FillTreeFromExplainedPlan`, a small indentation-depth tree builder for this actual format (no grammar needed - it's already whitespace-structured), wired in place of the yacc path in `SQLForm.pas`. `Table ... Full Scan` nodes get a red/pink `TDiagramNode.Color`, `Access By ID`/`Index "..."` nodes get green - `DiagramTree.pas`'s `DrawNode` previously ignored `Color` entirely (hardcoded `clWindow` fill) so this also required making it actually honor the property. Verified against a live server: single-table natural scan, indexed join, and a plain non-indexed filter all produce correctly-nested, correctly-colored trees.
 
 ---
 
@@ -87,4 +89,5 @@ Adapted-but-rejected FlameRobin roadmap items, and why:
 | 4 | Client-side result filter | **Done** |
 | 5 | Maintenance dialog (IBX Services) | **Done** |
 | 5 | Backup/Restore via Services API | **Done** |
-| 6 | Keyword highlighting refresh | Not started |
+| 6 | Keyword highlighting refresh | **Done** |
+| 6 | Execution plan tree view | **Done** |

@@ -31,7 +31,7 @@ unit PlanUnit;
 
 interface
 
-uses Classes, SysUtils, ParseCollection, Dialogs, DiagramTree, InterbaseExplainPlan;
+uses Classes, SysUtils, Graphics, ParseCollection, Dialogs, DiagramTree, InterbaseExplainPlan;
 
 type
   TPlanType = (pptNone, pptJoin, pptSortMerge, pptMerge, pptSort);
@@ -112,6 +112,14 @@ type
 		constructor Create;
 		destructor Destroy; override;
 	end;
+
+{ Firebird 3+ client libraries only return the newer, indentation-structured
+  "explained" plan format (Select Expression / -> Filter / -> Table ... /
+  -> Bitmap / -> Index ...) - the classic single-line "PLAN (T INDEX (IX))"
+  format that TPlanObject.FillTree/SQLYacc's ptPlan grammar parses is no
+  longer produced by TIBQuery.GetPlan against a live server, so it needs its
+  own much simpler indentation-based tree builder. }
+procedure FillTreeFromExplainedPlan(const PlanText: String; Tree: TDiagramTree);
 
 implementation
 
@@ -243,12 +251,16 @@ procedure TPlanObject.FillTree(Tree: TDiagramTree);
 								begin
                   TData.AccessType := 'NATURAL';
                   TData.ImageIndex := 5;
+                  { Full table scan - flag it, since this is usually the thing
+                    a developer is looking for when reading a plan. }
+                  SubNode.Color := $00C8C8FF;
                 end;
 
               atIndex :
                 begin
                   TData.AccessType := 'INDEX';
                   TData.ImageIndex := 6;
+                  SubNode.Color := $00C8FFC8;
                   IndexList := TPlanNodeAccessTypeStatement(AccessType).IndexList;
                   for Idz := 0 to TPlanNodeIndexListStatement(IndexList).IndexList.Count - 1 do
                   begin
@@ -260,6 +272,7 @@ procedure TPlanObject.FillTree(Tree: TDiagramTree);
                 begin
                   TData.AccessType := 'ORDER';
                   TData.ImageIndex := 7;
+                  SubNode.Color := $00C8FFC8;
                 end;
             end;
             SubNode.ImageIndex := TData.ImageIndex;
@@ -276,6 +289,74 @@ procedure TPlanObject.FillTree(Tree: TDiagramTree);
 begin
   Tree.Clear;
   RecurseNodes(FStatement, nil);
+  Tree.Redraw;
+end;
+
+procedure FillTreeFromExplainedPlan(const PlanText: String; Tree: TDiagramTree);
+var
+  Lines: TStringList;
+  Stack: array of TDiagramNode;
+  Idx, Depth, Indent: Integer;
+  Line, Caption: String;
+  ParentNode, Node, RootNode: TDiagramNode;
+begin
+  Tree.Clear;
+  if Trim(PlanText) = '' then
+    Exit;
+
+  Lines := TStringList.Create;
+  try
+    Lines.Text := PlanText;
+
+    { A single synthetic root so multiple top-level "Select Expression"
+      blocks (correlated subqueries) become siblings instead of each
+      overwriting Tree.Root in turn. }
+    RootNode := Tree.AddNode('Plan', nil);
+    RootNode.Caption := 'Plan';
+    SetLength(Stack, 1);
+    Stack[0] := RootNode;
+
+    for Idx := 0 to Lines.Count - 1 do
+    begin
+      Line := Lines[Idx];
+      if Trim(Line) = '' then
+        Continue;
+
+      Indent := 0;
+      while (Indent < Length(Line)) and (Line[Indent + 1] = ' ') do
+        Inc(Indent);
+      Depth := (Indent div 4) + 1;
+
+      Caption := Trim(Line);
+      if Copy(Caption, 1, 3) = '-> ' then
+        Caption := Copy(Caption, 4, MaxInt);
+
+      if Depth > Length(Stack) then
+        ParentNode := Stack[High(Stack)]
+      else
+        ParentNode := Stack[Depth - 1];
+
+      Node := Tree.AddNode(Caption, ParentNode);
+      Node.Caption := Caption;
+
+      if Pos('Full Scan', Caption) > 0 then
+      begin
+        { Full table scan - usually the thing worth flagging in a plan. }
+        Node.ImageIndex := 5;
+        Node.Color := $00C8C8FF;
+      end
+      else if (Pos('Index "', Caption) > 0) or (Pos('Access By ID', Caption) > 0) then
+      begin
+        Node.ImageIndex := 6;
+        Node.Color := $00C8FFC8;
+      end;
+
+      SetLength(Stack, Depth + 1);
+      Stack[Depth] := Node;
+    end;
+  finally
+    Lines.Free;
+  end;
   Tree.Redraw;
 end;
 

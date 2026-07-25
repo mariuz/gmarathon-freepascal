@@ -584,7 +584,7 @@ object dmMenus: TdmMenus
     SymbolAttri.Foreground = clBlack
     VariableAttri.Background = clWhite
     VariableAttri.Foreground = clBlack
-    SQLDialect = sqlInterbase6
+    SQLDialect = sqlFirebird40
     Left = 280
     Top = 8
   end
