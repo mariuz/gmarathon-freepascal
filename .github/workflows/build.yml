@@ -53,3 +53,55 @@ jobs:
 
       - name: Run IBX smoke test against live Firebird
         run: ./test/ibx_smoke_test "localhost:/tmp/ibx_smoke_test.fdb" SYSDBA "${FIREBIRD_SYSDBA_PASSWORD}"
+
+  # Windows is compile-only (no Firebird server / smoke test): its purpose is
+  # to type-check the {$IFDEF WINDOWS} code paths, which are invisible to the
+  # Linux build and so went unchecked for the whole life of this port - they
+  # accumulated a string of breaks (Win32 API units never imported under FPC,
+  # Delphi-only types like TMetafile, a Delphi COM type library) that only
+  # surfaced one release tag at a time. Running it on every push catches the
+  # next one immediately.
+  build-windows:
+    name: Build (Lazarus x86_64 Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Lazarus's own file server; SourceForge serves a Cloudflare bot
+      # challenge to GitHub-hosted runners. See release.yml for the detail.
+      - name: Download Lazarus/FPC installer
+        shell: pwsh
+        run: |
+          $url = "https://download.lazarus-ide.org/Lazarus%20Windows%2064%20bits/Lazarus%204.8/lazarus-4.8-fpc-3.2.2-win64.exe"
+          Invoke-WebRequest -Uri $url -OutFile "lazarus-setup.exe" -UserAgent "Mozilla/5.0"
+
+      - name: Install Lazarus/FPC (silent)
+        shell: pwsh
+        run: |
+          $installDir = "C:\lazarus"
+          Start-Process -FilePath ".\lazarus-setup.exe" `
+            -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-","/DIR=$installDir" `
+            -Wait -NoNewWindow
+          Add-Content -Path $env:GITHUB_PATH -Value $installDir
+          $fpcExe = Get-ChildItem -Path "$installDir\fpc" -Filter "fpc.exe" -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*bin*" } | Select-Object -First 1
+          if ($fpcExe) {
+            Add-Content -Path $env:GITHUB_PATH -Value $fpcExe.DirectoryName
+          } else {
+            Write-Error "fpc.exe not found under $installDir\fpc after install"
+            exit 1
+          }
+
+      - name: Register IBX packages with lazbuild
+        run: |
+          lazbuild --add-package-link lib/fbintf/fbintf.lpk
+          lazbuild --add-package-link lib/ibx4lazarus/ibexpress.lpk
+
+      # marathon.lpi pins TargetOS=linux, so a native Windows build needs the
+      # target overridden on the command line.
+      - name: Build Release
+        run: lazbuild --os=win64 --cpu=x86_64 --build-mode=Release src/Source/marathon.lpi

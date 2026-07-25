@@ -2,8 +2,11 @@ unit gssscript_TLB;
 
 {$MODE Delphi}
 
-{$IFNDEF WINDOWS}
-// Stub for non-Windows platforms
+{$IFDEF FPC}
+// Stub under FPC on every target, Windows included: the body below is a
+// Delphi-generated COM type library that needs Delphi's StdVCL unit, and
+// every consumer of it is {$IFNDEF FPC}-guarded anyway (the FPC build uses
+// MetaExtractWizard instead of this COM automation path).
 interface
 implementation
 end.
