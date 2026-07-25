@@ -31,27 +31,37 @@ type
 		tsAttachments: TTabSheet;
 		tsStatements: TTabSheet;
 		tsTransactions: TTabSheet;
+		tsCompiled: TTabSheet;
 		pnlAttachmentsBottom: TPanel;
 		btnDisconnectAttachment: TButton;
 		pnlStatementsBottom: TPanel;
 		btnCancelStatement: TButton;
+		pnlCompiledDetail: TPanel;
+		lblCompiledDetail: TLabel;
+		memCompiled: TMemo;
+		splCompiled: TSplitter;
 		grdAttachments: TDBGrid;
 		grdStatements: TDBGrid;
 		grdTransactions: TDBGrid;
+		grdCompiled: TDBGrid;
 		dsAttachments: TDataSource;
 		dsStatements: TDataSource;
 		dsTransactions: TDataSource;
+		dsCompiled: TDataSource;
 		qryAttachments: TIBQuery;
 		qryStatements: TIBQuery;
 		qryTransactions: TIBQuery;
+		qryCompiled: TIBQuery;
 		tranMonitor: TIBTransaction;
 		procedure FormCreate(Sender: TObject);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure btnRefreshClick(Sender: TObject);
 		procedure btnDisconnectAttachmentClick(Sender: TObject);
 		procedure btnCancelStatementClick(Sender: TObject);
+		procedure dsCompiledDataChange(Sender: TObject; Field: TField);
 	private
 		FConnectionName: String;
+		FCompiledSupported: Boolean;
 		procedure SetConnectionName(const Value: String);
 		function GetCurrentAttachmentId: Integer;
 		procedure ExecuteAdminStatement(const SQL: String);
@@ -95,6 +105,14 @@ begin
 	qryStatements.Transaction := tranMonitor;
 	qryTransactions.Database := Conn.Connection;
 	qryTransactions.Transaction := tranMonitor;
+	qryCompiled.Database := Conn.Connection;
+	qryCompiled.Transaction := tranMonitor;
+
+	{ MON$COMPILED_STATEMENTS is Firebird 5 (ODS 13.1). Querying a table that
+	  does not exist is a hard error, so hide the tab rather than let a refresh
+	  fail on older servers. }
+	FCompiledSupported := Conn.IsODSAtLeast(ODS_FB4_MAJOR, ODS_FB5_MINOR);
+	tsCompiled.TabVisible := FCompiledSupported;
 
 	RefreshData;
 end;
@@ -223,6 +241,26 @@ begin
 	RefreshData;
 end;
 
+procedure TfrmSessionMonitor.dsCompiledDataChange(Sender: TObject; Field: TField);
+begin
+	{ Only interested in moving between records, not in a single field edit. }
+	if Assigned(Field) then
+		Exit;
+	memCompiled.Lines.BeginUpdate;
+	try
+		memCompiled.Clear;
+		if qryCompiled.Active and not (qryCompiled.EOF and qryCompiled.BOF) then
+		begin
+			memCompiled.Lines.Add(qryCompiled.FieldByName('mon$sql_text').AsString);
+			memCompiled.Lines.Add('');
+			memCompiled.Lines.Add('/* Cached plan */');
+			memCompiled.Lines.Add(qryCompiled.FieldByName('mon$explained_plan').AsString);
+		end;
+	finally
+		memCompiled.Lines.EndUpdate;
+	end;
+end;
+
 procedure TfrmSessionMonitor.RefreshData;
 begin
 	{ Firebird takes a fresh MON$ snapshot for the first statement of each new
@@ -231,27 +269,68 @@ begin
 	qryAttachments.Close;
 	qryStatements.Close;
 	qryTransactions.Close;
+	qryCompiled.Close;
 	if tranMonitor.Active then
 		tranMonitor.Commit;
 	tranMonitor.StartTransaction;
 
+	{ MON$STATE, MON$ISOLATION_MODE and MON$OBJECT_TYPE are raw code numbers.
+	  Rather than hard-code a decode table that would go stale on a newer
+	  server, join RDB$TYPES, which is where Firebird itself publishes the
+	  meaning of each code - a code the running server does not know about
+	  falls back to its number instead of being mislabelled. Aliases are
+	  unquoted and upper case because IBX normalises a field name to that
+	  anyway, so a prettier quoted alias would not survive to the grid. }
 	qryAttachments.SQL.Text :=
-		'select mon$attachment_id, mon$user, mon$remote_address, mon$remote_process, ' +
-		'mon$timestamp, mon$state ' +
-		'from mon$attachments order by mon$attachment_id';
+		'select a.mon$attachment_id, a.mon$user, a.mon$remote_address, a.mon$remote_process, ' +
+		'a.mon$timestamp, ' +
+		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(a.mon$state as varchar(11))) as STATE ' +
+		'from mon$attachments a ' +
+		'left join rdb$types st on st.rdb$field_name = ''MON$STATE'' and st.rdb$type = a.mon$state ' +
+		'order by a.mon$attachment_id';
 	qryAttachments.Open;
 
 	qryStatements.SQL.Text :=
-		'select mon$statement_id, mon$attachment_id, mon$transaction_id, mon$state, ' +
-		'mon$timestamp, mon$sql_text ' +
-		'from mon$statements order by mon$statement_id';
+		'select s.mon$statement_id, s.mon$attachment_id, s.mon$transaction_id, ' +
+		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(s.mon$state as varchar(11))) as STATE, ' +
+		's.mon$timestamp, s.mon$sql_text ' +
+		'from mon$statements s ' +
+		'left join rdb$types st on st.rdb$field_name = ''MON$STATE'' and st.rdb$type = s.mon$state ' +
+		'order by s.mon$statement_id';
 	qryStatements.Open;
 
+	{ Firebird 4 added isolation mode 4, READ COMMITTED READ CONSISTENCY, and
+	  makes it the default for read-committed transactions (ReadConsistency=1
+	  in firebird.conf), so on a stock FB4+ server this is what nearly every
+	  transaction here reports - including ones that asked for RECORD VERSION
+	  or NO RECORD VERSION, which the engine silently upgrades. }
 	qryTransactions.SQL.Text :=
-		'select mon$transaction_id, mon$attachment_id, mon$state, mon$timestamp, ' +
-		'mon$isolation_mode, mon$read_only ' +
-		'from mon$transactions order by mon$transaction_id';
+		'select t.mon$transaction_id, t.mon$attachment_id, ' +
+		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(t.mon$state as varchar(11))) as STATE, ' +
+		't.mon$timestamp, ' +
+		'coalesce(replace(trim(iso.rdb$type_name), ''_'', '' ''), cast(t.mon$isolation_mode as varchar(11))) as ISOLATION, ' +
+		'case when t.mon$read_only <> 0 then ''Yes'' else ''No'' end as READ_ONLY, ' +
+		't.mon$lock_timeout ' +
+		'from mon$transactions t ' +
+		'left join rdb$types iso on iso.rdb$field_name = ''MON$ISOLATION_MODE'' and iso.rdb$type = t.mon$isolation_mode ' +
+		'left join rdb$types st on st.rdb$field_name = ''MON$STATE'' and st.rdb$type = t.mon$state ' +
+		'order by t.mon$transaction_id';
 	qryTransactions.Open;
+
+	if FCompiledSupported then
+	begin
+		{ Unlike the other three, this is a server-wide cache rather than a view
+		  of live activity: rows outlive the attachment that compiled them, so
+		  it shows what Firebird still has compiled and the plan it chose. }
+		qryCompiled.SQL.Text :=
+			'select c.mon$compiled_statement_id, c.mon$object_name, c.mon$package_name, ' +
+			'coalesce(replace(trim(ot.rdb$type_name), ''_'', '' ''), cast(c.mon$object_type as varchar(11))) as OBJECT_TYPE, ' +
+			'c.mon$sql_text, c.mon$explained_plan ' +
+			'from mon$compiled_statements c ' +
+			'left join rdb$types ot on ot.rdb$field_name = ''RDB$OBJECT_TYPE'' and ot.rdb$type = c.mon$object_type ' +
+			'order by c.mon$compiled_statement_id';
+		qryCompiled.Open;
+	end;
 end;
 
 end.

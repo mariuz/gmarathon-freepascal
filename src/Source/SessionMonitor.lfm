@@ -139,6 +139,65 @@ object frmSessionMonitor: TfrmSessionMonitor
         TitleFont.Style = []
       end
     end
+    object tsCompiled: TTabSheet
+      Caption = 'Compiled Statements'
+      object pnlCompiledDetail: TPanel
+        Left = 0
+        Top = 241
+        Width = 744
+        Height = 150
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 0
+        object lblCompiledDetail: TLabel
+          Left = 0
+          Top = 0
+          Width = 744
+          Height = 15
+          Align = alTop
+          Caption = 'SQL text and cached plan for the selected statement:'
+        end
+        object memCompiled: TMemo
+          Left = 0
+          Top = 15
+          Width = 744
+          Height = 135
+          Align = alClient
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Courier New'
+          Font.Style = []
+          ParentFont = False
+          ReadOnly = True
+          ScrollBars = ssBoth
+          TabOrder = 0
+          WordWrap = False
+        end
+      end
+      object splCompiled: TSplitter
+        Left = 0
+        Top = 236
+        Width = 744
+        Height = 5
+        Align = alBottom
+        ResizeAnchor = akBottom
+      end
+      object grdCompiled: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 744
+        Height = 236
+        Align = alClient
+        DataSource = dsCompiled
+        TabOrder = 1
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
   end
   object dsAttachments: TDataSource
     DataSet = qryAttachments
@@ -154,6 +213,18 @@ object frmSessionMonitor: TfrmSessionMonitor
     DataSet = qryTransactions
     Left = 120
     Top = 80
+  end
+  object dsCompiled: TDataSource
+    DataSet = qryCompiled
+    OnDataChange = dsCompiledDataChange
+    Left = 160
+    Top = 80
+  end
+  object qryCompiled: TIBQuery
+    Params = <>
+    ReadOnly = True
+    Left = 200
+    Top = 120
   end
   object qryAttachments: TIBQuery
     Params = <>
