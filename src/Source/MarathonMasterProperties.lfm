@@ -4,7 +4,7 @@ object frmMasterProperties: TfrmMasterProperties
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'Master Properties'
-  ClientHeight = 353
+  ClientHeight = 393
   ClientWidth = 422
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -21,7 +21,7 @@ object frmMasterProperties: TfrmMasterProperties
     Left = 4
     Top = 4
     Width = 415
-    Height = 315
+    Height = 355
     ActivePage = tsConnection
     TabIndex = 0
     TabOrder = 0
@@ -206,6 +206,40 @@ object frmMasterProperties: TfrmMasterProperties
         Style = csDropDownList
         ItemHeight = 13
         TabOrder = 1
+      end
+      object Label19: TLabel
+        Left = 8
+        Top = 274
+        Width = 66
+        Height = 13
+        Caption = 'Auth &Method:'
+        FocusControl = edAuthMethod
+      end
+      object edAuthMethod: TEdit
+        Left = 100
+        Top = 270
+        Width = 295
+        Height = 21
+        ReadOnly = True
+        TabStop = False
+        TabOrder = 9
+      end
+      object Label20: TLabel
+        Left = 8
+        Top = 302
+        Width = 88
+        Height = 13
+        Caption = '&Remote Protocol:'
+        FocusControl = edRemoteProtocol
+      end
+      object edRemoteProtocol: TEdit
+        Left = 100
+        Top = 298
+        Width = 295
+        Height = 21
+        ReadOnly = True
+        TabStop = False
+        TabOrder = 10
       end
     end
     object tsProject: TTabSheet
@@ -507,7 +541,7 @@ object frmMasterProperties: TfrmMasterProperties
   end
   object btnHelp: TButton
     Left = 344
-    Top = 324
+    Top = 364
     Width = 75
     Height = 25
     Caption = 'Help'
@@ -515,7 +549,7 @@ object frmMasterProperties: TfrmMasterProperties
   end
   object btnCancel: TButton
     Left = 264
-    Top = 324
+    Top = 364
     Width = 75
     Height = 25
     Cancel = True
@@ -525,7 +559,7 @@ object frmMasterProperties: TfrmMasterProperties
   end
   object btnOK: TButton
     Left = 184
-    Top = 324
+    Top = 364
     Width = 75
     Height = 25
     Caption = 'OK'

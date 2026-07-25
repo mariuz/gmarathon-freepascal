@@ -91,6 +91,10 @@ type
     Label17: TLabel;
     Label18: TLabel;
     cmbServerName: TComboBox;
+    Label19: TLabel;
+    edAuthMethod: TEdit;
+    Label20: TLabel;
+    edRemoteProtocol: TEdit;
 		procedure btnOKClick(Sender: TObject);
 		procedure edDatabaseNameChange(Sender: TObject);
 		procedure edDatabaseNameBtn1Click(Sender: TObject);
@@ -192,6 +196,22 @@ begin
 	chkRememberPassword.Checked := Connection.RememberPassword;
 	edRole.Text := Connection.SQLRole;
 	cmbDialect.ItemIndex := Connection.SQLDialect - 1;
+
+	if Connection.Connected then
+	begin
+		try
+			edAuthMethod.Text := Connection.Connection.AuthenticationMethod;
+			edRemoteProtocol.Text := Connection.Connection.RemoteProtocol;
+		except
+			edAuthMethod.Text := '(unavailable)';
+			edRemoteProtocol.Text := '(unavailable)';
+		end;
+	end
+	else
+	begin
+		edAuthMethod.Text := '(not connected)';
+		edRemoteProtocol.Text := '(not connected)';
+	end;
 end;
 
 constructor TfrmMasterProperties.CreateNewProject(const AOwner: TComponent);
