@@ -807,7 +807,7 @@ begin
 end;
 
 procedure TfrmSQLForm.DoPrint;
-{$IFDEF WINDOWS}
+{$IFNDEF FPC}
 var
 	M: TMetafileCanvas;
 	MF: TMetafile;
@@ -823,7 +823,7 @@ begin
 	if pgSQLStatement.ActivePage = tsPerformance then
 		MarathonIDEInstance.PrintPerformanceAnalysis(False, edSQLStatement.Lines, dtaPerform, chtPerform);
 
-	{$IFDEF WINDOWS}
+	{$IFNDEF FPC}
 	if pgSQLStatement.ActivePage = tsPlan then
 	begin
 		MF := TMetafile.Create;
@@ -843,7 +843,7 @@ begin
 end;
 
 procedure TfrmSQLForm.DoPrintPreview;
-{$IFDEF WINDOWS}
+{$IFNDEF FPC}
 var
 	M: TMetafileCanvas;
 	MF: TMetafile;
@@ -859,7 +859,7 @@ begin
 	if pgSQLStatement.ActivePage = tsPerformance then
 		MarathonIDEInstance.PrintPerformanceAnalysis(True, edSQLStatement.Lines, dtaPerform, chtPerform);
 
-	{$IFDEF WINDOWS}
+	{$IFNDEF FPC}
 	if pgSQLStatement.ActivePage = tsPlan then
 	begin
 		MF := TMetafile.Create;

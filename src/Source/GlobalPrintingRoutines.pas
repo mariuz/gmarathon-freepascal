@@ -38,7 +38,7 @@ type
 		procedure PrintLines(Lines : TStrings; Preview : Boolean; Title : String);
 		procedure PrintLinesWithTitle(Lines : TStrings; PageTitle : String; Preview : Boolean; Title : String);
 		procedure PrintPerformanceAnalysis(Preview : Boolean; Query : TStrings; Dataset : TDataSet; Chart : TChart);
-		{$IFDEF WINDOWS}procedure PrintQueryPlan(Preview : Boolean; Query : TStrings; Plan : String; GPlan : TMetafile);{$ENDIF}
+		{$IFNDEF FPC}procedure PrintQueryPlan(Preview : Boolean; Query : TStrings; Plan : String; GPlan : TMetafile);{$ENDIF}
 
 		//object
     procedure PrintGeneral(Preview: Boolean;	ReportTitle, ObjectType, ObjectName, ConnectionName: String);
@@ -236,7 +236,7 @@ begin
   ShowPrintingUnavailable;
 end;
 
-{$IFDEF WINDOWS}
+{$IFNDEF FPC}
 procedure TfrmGlobalPrintingRoutines.PrintQueryPlan(Preview : Boolean; Query : TStrings; Plan : String; GPlan : TMetafile);
 begin
   ShowPrintingUnavailable;
