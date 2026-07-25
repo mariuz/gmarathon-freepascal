@@ -15,3 +15,6 @@ packagefiles.xml
 src/Source/marathon
 test/ibx_smoke_test
 test/lib/
+
+# Local toolchain installers (fpc/lazarus .deb packages etc.)
+*.deb
