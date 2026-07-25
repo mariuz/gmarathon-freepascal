@@ -1,5 +1,7 @@
 # Marathon
 
+[![Build](https://github.com/mariuz/gmarathon-freepascal/actions/workflows/build.yml/badge.svg)](https://github.com/mariuz/gmarathon-freepascal/actions/workflows/build.yml)
+
 Marathon is a SQL IDE and database administration tool for [Firebird](https://firebirdsql.org/)
 databases. This repository is a port of the original Delphi
 [gmarathon](http://gmarathon.sourceforge.net/) codebase to
