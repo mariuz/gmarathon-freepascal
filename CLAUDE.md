@@ -77,7 +77,7 @@ Key API differences from SQLDB/TIBConnection that show up throughout the codebas
 - A transaction links to its connection via `.DefaultDatabase`, not `.Database` (that property is on datasets/queries, e.g. `TIBQuery.Database`).
 - `TIBQuery.StatementType` returns `TIBSQLStatementTypes` (`SQLSelect`, `SQLInsert`, `SQLUpdate`, `SQLDelete`, `SQLDDL`, `SQLExecProcedure`, `SQLCommit`, `SQLRollback`, `SQLSelectForUpdate`, …), unit `IB` — not the old SQLDB `TStatementType` (`stSelect` etc.).
 - Errors: `EIBError` (base, has `.SQLCode`) and `EIBInterBaseError` (has `.IBErrorCode`, `.Status`), unit `IB`.
-- No raw legacy `isc_db_handle`/`isc_database_info` access — `TIBDatabase` doesn't expose a handle. `IBPerformanceMonitor.pas`'s low-level buffer-stats reader is stubbed out for this reason (see Remaining Porting Tasks).
+- No raw legacy `isc_db_handle`/`isc_database_info` access — `TIBDatabase` doesn't expose a handle. `IBPerformanceMonitor.pas` originally relied on this and was stubbed out for this reason, but has since been rewritten to source the same stats from Firebird's `MON$*` monitoring tables instead (see `ROADMAP.md` Phase 3).
 
 ## Component Replacement Reference
 
@@ -112,4 +112,3 @@ The following features are intentionally stubbed/disabled on this FPC/Lazarus po
 - **Query Builder** (`QBuilder.pas`) — not compiled into the app at all (removed from `marathon.lpr`); deep Win32 GDI/grid message handling (`WM_*`, `TWMMouse`, raw `Polygon`/`ClipCursor` calls).
 - **SQL Insight code templates** (Options dialog "SQL Insight" tab) and **Find/Replace/bookmark glyphs** in the SQL/trigger/SP editors — `src/Source/SyntaxMemoWithStuff2.pas` is a reduced stub of the full editor wrapper at `lib/SyntaxMemoWithStuff2/SyntaxMemoWithStuff2.pas` (which is itself unported/unbuilt); it's missing `SQLInsightList`, `WSFind`/`WSFindNext`/`WSReplace`, `AddQuestGlyph`/`RemoveQuestGlyph`.
 - **Keybinding editor** (`btnEditKeysClick` in `MarathonOptions.pas`) — `MarathonMain.pas`'s `kbgKeys` is a bare `TComponent` placeholder, not a real keybinding grid.
-- **`IBPerformanceMonitor`**'s per-relation indexed/non-indexed read counters — relied on a raw `isc_db_handle` that IBX's `TIBDatabase` doesn't expose; `Initialise` (relation list) still works, but `DoDBInfo` is stubbed to return no data, so `SQLForm.pas`'s "Query Performance Analysis" chart is currently always empty.

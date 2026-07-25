@@ -900,6 +900,7 @@ begin
 		qrySQLStatement.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		perfSQL.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		perfSQL.Transaction := transSQLStatement;
 		qrySQLStatement.Transaction := transSQLStatement;
 		qryScript.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
 		qryScript.Transaction := transSQLStatement;
@@ -1216,7 +1217,10 @@ begin
 			lstResults.Collection.Clear;
 			try
 				if FShowPerformData then
+				begin
+					perfSQL.ResetCounters;
 					FStartMemory := perfSQL.ReadCurrentMemory;
+				end;
 
 				qrySQLStatement.Close;
 				qrySQLStatement.SQL.Clear;
@@ -1271,6 +1275,7 @@ begin
 
 					if True then { FPC: InternalDataset.FetchingAborted not available }
 					begin
+						perfSQL.Refresh;
 						Series1.Clear;
 
 						// Index reads
