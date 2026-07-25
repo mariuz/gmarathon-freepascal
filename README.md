@@ -71,6 +71,16 @@ CI (`.github/workflows/build.yml`) builds Debug and Release and runs this
 smoke test against a live Firebird server on every push and pull request to
 `master`.
 
+## Releases
+
+Pushing a `v*` tag (e.g. `v1.0.0`) triggers `.github/workflows/release.yml`,
+which builds a Release binary, runs the IBX smoke test against it, packages
+`marathon` plus `README.md`/`ROADMAP.md` into
+`marathon-<version>-linux-x86_64.tar.gz`, and attaches it to a GitHub
+release for that tag (creating one if it doesn't already exist) — the same
+tag-push-triggered pattern [FlameRobin's release workflow](https://github.com/mariuz/flamerobin/blob/master/.github/workflows/release.yml)
+uses, scaled down to this project's single Linux build target.
+
 ## Architecture
 
 See [CLAUDE.md](CLAUDE.md) for a full guide to the codebase: layer-by-layer

@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published, edited]
+
+permissions:
+  contents: write
+
+env:
+  FIREBIRD_SYSDBA_PASSWORD: masterkey
+
+jobs:
+  build-linux:
+    name: Build & Package (Linux x86_64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Same real Firebird server + client dev headers as the regular build
+      # workflow, so the release binary is built and smoke-tested against
+      # the real fbclient before it's packaged - same spirit as FlameRobin's
+      # own release.yml.
+      - name: Install Firebird server
+        run: |
+          echo "firebird3.0-server shared/firebird/sysdba_password/first_install password ${FIREBIRD_SYSDBA_PASSWORD}" | sudo debconf-set-selections
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y firebird3.0-server firebird3.0-utils firebird-dev
+
+      - name: Setup Lazarus / FPC
+        uses: gcarreno/setup-lazarus@v3.4.1
+        with:
+          lazarus-version: stable
+
+      - name: Register IBX packages with lazbuild
+        run: |
+          lazbuild --add-package-link lib/fbintf/fbintf.lpk
+          lazbuild --add-package-link lib/ibx4lazarus/ibexpress.lpk
+
+      - name: Build Release
+        run: lazbuild --build-mode=Release src/Source/marathon.lpi
+
+      - name: Build and run IBX smoke test
+        run: |
+          lazbuild test/ibx_smoke_test.lpi
+          ./test/ibx_smoke_test "localhost:/tmp/ibx_smoke_test.fdb" SYSDBA "${FIREBIRD_SYSDBA_PASSWORD}"
+
+      - name: Determine release version
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+          echo "MARATHON_VERSION=${VERSION:-dev}" >> "$GITHUB_ENV"
+
+      - name: Package release archive
+        run: |
+          STAGE="marathon-${MARATHON_VERSION}-linux-x86_64"
+          mkdir -p "$STAGE"
+          cp src/Source/marathon "$STAGE/"
+          cp README.md ROADMAP.md "$STAGE/"
+          tar -czf "${STAGE}.tar.gz" "$STAGE"
+          echo "MARATHON_ASSET=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.MARATHON_ASSET }}
+          generate_release_notes: true
