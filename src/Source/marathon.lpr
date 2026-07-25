@@ -134,6 +134,9 @@ begin
     Application.Run;
 	finally
 		MarathonScreen.Free;
-		{$IFDEF WINDOWS}if LongBool(MutexHandle) then FileClose(MutexHandle);{$ENDIF}
+		// The single-instance mutex this used to release was dropped during the
+		// port: nothing in the tree creates a mutex any more, and MutexHandle
+		// is not declared anywhere, so this cleanup was dead code that only
+		// ever compiled because no Windows build was attempted.
 	end;
 end.
