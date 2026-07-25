@@ -19,7 +19,7 @@ unit Globals;
 
 interface
 
-uses Classes, SysUtils, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
+uses {$IFDEF WINDOWS}Windows,{$ENDIF} Classes, SysUtils, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
 
 const
   WM_USER = 1024;

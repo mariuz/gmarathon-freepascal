@@ -19,7 +19,7 @@ unit MarathonToolsAPIDocForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, GimbalToolsAPI, GimbalToolsAPIImpl, Menus;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, GimbalToolsAPI, GimbalToolsAPIImpl, Menus;
 
 type
   TfrmMarathonToolsDocForm = class(TfrmBaseDocumentForm)

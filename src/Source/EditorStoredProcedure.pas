@@ -21,7 +21,7 @@ unit EditorStoredProcedure;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
 	Variants, {$ENDIF}
 	  BufDataset, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmCompatControls;
 

@@ -21,7 +21,7 @@ interface
 
 {$I compilerdefines.inc}
 
-uses Classes, {$IFDEF FPC}
+uses Classes, {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
   SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs, {$IFNDEF FPC}

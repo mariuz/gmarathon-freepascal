@@ -19,7 +19,7 @@ unit EditorGenerator;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, IBQuery, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameMetadata;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Spin, ActnList, IBQuery, BaseDocumentDataAwareForm, MarathonProjectCacheTypes, MarathonInternalInterfaces, FrameMetadata;
 
 type
   TfrmGenerators = class(TfrmBaseDocumentDataAwareForm)

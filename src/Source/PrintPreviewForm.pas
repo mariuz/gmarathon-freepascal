@@ -19,7 +19,7 @@ unit PrintPreviewForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, Printers, Dialogs, ExtCtrls, DBCtrls, Menus, ComCtrls, ToolWin, Buttons, ActnList, BaseDocumentFOrm, GlobalPrintingRoutines;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, Printers, Dialogs, ExtCtrls, DBCtrls, Menus, ComCtrls, ToolWin, Buttons, ActnList, BaseDocumentFOrm, GlobalPrintingRoutines;
 
 type
 

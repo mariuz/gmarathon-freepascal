@@ -69,7 +69,7 @@ unit EditorTable;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls;
 
 type
 	TfrmTables = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor, IGimbalIDETableEditorWindow)

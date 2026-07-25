@@ -19,7 +19,7 @@ unit ScriptExecutive;
 
 interface
 
-uses Classes, {$IFDEF FPC}LCLIntf, LCLType, ibase60dyn, {$ELSE}Windows, Messages, {$ENDIF}SysUtils, Registry, Dialogs, Forms, Controls, StdCtrls, IBDatabase, IBQuery, IB, DOM, XMLRead, XMLWrite;
+uses Classes, {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}LCLIntf, LCLType, ibase60dyn, {$ELSE}Windows, Messages, {$ENDIF}SysUtils, Registry, Dialogs, Forms, Controls, StdCtrls, IBDatabase, IBQuery, IB, DOM, XMLRead, XMLWrite;
 
 type
   TISQLExceptionCode = (eeInitialization, eeInvDialect, eeFOpen, eeParse,
