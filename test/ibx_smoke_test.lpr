@@ -17,7 +17,7 @@ program ibx_smoke_test;
 
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
-  MarathonProjectCacheTypes, ScriptAs, SingletonQuery;
+  MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText;
 
 var
   DB: TIBDatabase;
@@ -77,6 +77,27 @@ begin
     end;
   finally
     S.Free;
+  end;
+end;
+
+{ Checks IsExplainRequest against one input, including what it hands back as
+  the statement to actually prepare. }
+procedure CheckExplain(const Input: String; ExpectIsExplain: Boolean; const ExpectInner: String);
+var
+  Inner: String;
+  Got: Boolean;
+begin
+  Got := IsExplainRequest(Input, Inner);
+  if Got <> ExpectIsExplain then
+  begin
+    WriteLn('FAIL: IsExplainRequest("', Input, '") returned ', Got, ', expected ', ExpectIsExplain);
+    Halt(1);
+  end;
+  if Got and (Inner <> ExpectInner) then
+  begin
+    WriteLn('FAIL: IsExplainRequest("', Input, '") gave inner SQL "', Inner,
+      '", expected "', ExpectInner, '"');
+    Halt(1);
   end;
 end;
 
@@ -1110,6 +1131,56 @@ begin
           if Tr.Active then
             Tr.Rollback;
           WriteLn('FAIL: singleton-output handling raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      { EXPLAIN. It is a client-side command that isql implements itself, not
+        server DSQL - preparing "explain select ..." through IBX fails with
+        "Token unknown - explain" - so the editor recognises it, strips it and
+        prepares what is left. Two things have to hold for that to work. }
+      CheckExplain('explain select 1 from rdb$database', True, 'select 1 from rdb$database');
+      CheckExplain('   EXPLAIN   select 1 from rdb$database  ', True, 'select 1 from rdb$database');
+      CheckExplain('explain' + #13#10 + 'select 1 from rdb$database', True, 'select 1 from rdb$database');
+      { Not a request to explain: the keyword has to be a whole word, and there
+        has to be something after it. }
+      CheckExplain('select * from EXPLAINED', False, '');
+      CheckExplain('explainer select 1', False, '');
+      CheckExplain('explain', False, '');
+      CheckExplain('   ', False, '');
+      WriteLn('EXPLAIN parsing OK');
+
+      { First: a prepared statement carries its explained plan, so no execution
+        is needed to get one. Second - the point of the whole feature - the
+        statement really is not executed, which is what makes explaining a
+        DELETE safe. }
+      EnsureTransaction;
+      try
+        Q.SQL.Text := 'delete from ibx_smoke_test';
+        Q.Prepare;
+        Script := Q.GetPlan;
+        if Trim(Script) = '' then
+        begin
+          WriteLn('FAIL: GetPlan after Prepare returned nothing - EXPLAIN would show an empty plan');
+          Halt(1);
+        end;
+        Q.SQL.Text := 'select count(*) from ibx_smoke_test';
+        Q.Open;
+        if Q.Fields[0].AsInteger = 0 then
+        begin
+          WriteLn('FAIL: preparing a DELETE executed it - EXPLAIN would destroy data');
+          Halt(1);
+        end;
+        Q.Close;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('EXPLAIN OK (plan available from Prepare alone, nothing executed)');
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: EXPLAIN plan check raised: ', E.Message);
           Halt(1);
         end;
       end;

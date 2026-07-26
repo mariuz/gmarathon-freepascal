@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SQLStatementText, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -1184,8 +1184,11 @@ var
 	Found: Boolean;
 	ISQLObj: TIBSQLObj;
   nRecords: Integer;
+	StatementText, InnerSQL: String;
+	IsExplain: Boolean;
 
 begin
+	IsExplain := False;
 	try
 		if FExecuteMode = exScript then
 		begin
@@ -1264,9 +1267,20 @@ begin
 				ResetResultSet;
 				qrySQLStatement.SQL.Clear;
 				if edSQLStatement.SelText <> '' then
-					qrySQLStatement.SQL.Text := edSQLStatement.SelText
+					StatementText := edSQLStatement.SelText
 				else
-					qrySQLStatement.SQL.Text := edSQLStatement.Text;
+					StatementText := edSQLStatement.Text;
+
+				{ EXPLAIN is a client-side command, not something Firebird will
+				  prepare, so strip it and prepare the statement underneath. A
+				  prepared statement already carries its explained plan and
+				  preparing executes nothing - which is exactly what makes
+				  explaining a DELETE useful. }
+				IsExplain := IsExplainRequest(StatementText, InnerSQL);
+				if IsExplain then
+					qrySQLStatement.SQL.Text := InnerSQL
+				else
+					qrySQLStatement.SQL.Text := StatementText;
 
 				try
 					qrySQLStatement.Prepare;
@@ -1276,6 +1290,19 @@ begin
 						// nothing...
 					end;
 				end;
+
+				if IsExplain then
+				begin
+					edPlan.Text := qrySQLStatement.GetPlan;
+					FillTreeFromExplainedPlan(edPlan.Text, dtPlan);
+					{ The user asked for the plan explicitly, so show it even when
+					  the Plan tab is otherwise switched off. }
+					tsPlan.TabVisible := True;
+					pgSQLStatement.ActivePage := tsPlan;
+					stsSQLStatement.Panels[3].Text := '      Statement Explained';
+					imgSuccess.Picture.Bitmap.LoadFromResourceName(HInstance, 'SQL_ED_OK');
+				end
+				else
 
 				case qrySQLStatement.StatementType of
 					SQLSelect, SQLSelectForUpdate:
@@ -1511,13 +1538,18 @@ begin
 					Refresh;
 				end;
 
-				if FShowPlan and (qrySQLStatement.StatementType in [SQLSelect, SQLSelectForUpdate, SQLUpdate, SQLDelete]) then
+				{ An EXPLAIN already filled the plan in above, and executed
+				  nothing there is a plan to report for. }
+				if not IsExplain then
 				begin
-					edPlan.Text := qrySQLStatement.GetPlan;
-					FillTreeFromExplainedPlan(edPlan.Text, dtPlan);
-				end
-				else
-					dtPlan.Clear;
+					if FShowPlan and (qrySQLStatement.StatementType in [SQLSelect, SQLSelectForUpdate, SQLUpdate, SQLDelete]) then
+					begin
+						edPlan.Text := qrySQLStatement.GetPlan;
+						FillTreeFromExplainedPlan(edPlan.Text, dtPlan);
+					end
+					else
+						dtPlan.Clear;
+				end;
 
 			except
 				On E : Exception do
