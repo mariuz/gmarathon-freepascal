@@ -617,32 +617,9 @@ object frmMarathonOptions: TfrmMarathonOptions
             Font.Name = 'Courier New'
             Font.Style = []
             TabOrder = 2
-            Gutter.Font.Charset = DEFAULT_CHARSET
-            Gutter.Font.Color = clWindowText
-            Gutter.Font.Height = -11
-            Gutter.Font.Name = 'Terminal'
-            Gutter.Font.Style = []
             Highlighter = synOptions
             ReadOnly = True
-            FindDialogHelpContext = 0
-            ReplaceDialogHelpContext = 0
-            KeywordCapitalise = False
             UseNavigateHyperLinks = False
-            NavigatorHyperLinkStyle.Strings = (
-              '2')
-            ListDelay = 800
-            WordList = <>
-            SQLInsightList = <>
-            RemovedKeystrokes = <
-              item
-                Command = ecLineBreak
-                ShortCut = 8205
-              end
-              item
-                Command = ecContextHelp
-                ShortCut = 112
-              end>
-            AddedKeystrokes = <>
           end
           object gbxAttributes: TGroupBox
             Left = 256
@@ -878,32 +855,9 @@ object frmMarathonOptions: TfrmMarathonOptions
             Font.Name = 'Courier New'
             Font.Style = []
             TabOrder = 4
-            Gutter.Font.Charset = DEFAULT_CHARSET
-            Gutter.Font.Color = clWindowText
-            Gutter.Font.Height = -11
-            Gutter.Font.Name = 'Terminal'
-            Gutter.Font.Style = []
             Highlighter = dmMenus.synHighlighter
             OnChange = edSQLInsightCodeChange
-            FindDialogHelpContext = 0
-            ReplaceDialogHelpContext = 0
-            KeywordCapitalise = False
             UseNavigateHyperLinks = False
-            NavigatorHyperLinkStyle.Strings = (
-              '2')
-            ListDelay = 800
-            WordList = <>
-            SQLInsightList = <>
-            RemovedKeystrokes = <
-              item
-                Command = ecLineBreak
-                ShortCut = 8205
-              end
-              item
-                Command = ecContextHelp
-                ShortCut = 112
-              end>
-            AddedKeystrokes = <>
           end
           object btnSQLIAdd: TButton
             Left = 321

@@ -82,35 +82,11 @@ object frmTriggerEditor: TfrmTriggerEditor
         OnDragDrop = edEditorDragDrop
         OnDragOver = edEditorDragOver
         OnKeyDown = edEditorKeyDown
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         OnChange = edEditorChange
         OnStatusChange = edEditorStatusChange
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         OnGetHintText = edEditorGetHintText
         UseNavigateHyperLinks = True
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        OnNavigateHyperLinkClick = edEditorNavigateHyperLinkClick
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
       object edTriggerHeader: TSyntaxMemoWithStuff2
         Left = 0
@@ -124,32 +100,9 @@ object frmTriggerEditor: TfrmTriggerEditor
         Font.Name = 'Courier New'
         Font.Style = []
         TabOrder = 1
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         ReadOnly = True
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         UseNavigateHyperLinks = False
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
       object pnlMessages: TPanel
         Left = 0
@@ -157,7 +110,6 @@ object frmTriggerEditor: TfrmTriggerEditor
         Width = 624
         Height = 102
         Align = alBottom
-        ResizeBtn = True
         TabOrder = 2
         OnResize = pnlMessagesResize
         object lstResults: TrmCollectionListBox
@@ -166,7 +118,6 @@ object frmTriggerEditor: TfrmTriggerEditor
           Width = 624
           Height = 96
           AutoSelect = True
-          Collection = <>
           Images = dmMenus.ilErrors
           Align = alClient
           Font.Charset = DEFAULT_CHARSET
@@ -243,11 +194,6 @@ object frmTriggerEditor: TfrmTriggerEditor
           Height = 293
         end
         inherited dtaCrud: TBufDataset
-          FieldRoster = <
-            item
-              Size = 0
-              FieldType = fdtString
-            end>
         end
       end
     end
@@ -265,31 +211,8 @@ object frmTriggerEditor: TfrmTriggerEditor
         Font.Name = 'Courier New'
         Font.Style = []
         TabOrder = 0
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         ReadOnly = True
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         UseNavigateHyperLinks = False
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
     end
   end
@@ -303,18 +226,15 @@ object frmTriggerEditor: TfrmTriggerEditor
   end
   object qryTrigger: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 396
     Top = 96
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 396
     Top = 164
   end
   object qryWarnings: TIBQuery
-    ParamChar = '?'
     Left = 316
     Top = 116
   end

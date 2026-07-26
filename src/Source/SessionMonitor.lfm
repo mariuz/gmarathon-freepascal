@@ -222,25 +222,21 @@ object frmSessionMonitor: TfrmSessionMonitor
   end
   object qryCompiled: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 200
     Top = 120
   end
   object qryAttachments: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 40
     Top = 120
   end
   object qryStatements: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 80
     Top = 120
   end
   object qryTransactions: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 120
     Top = 120
   end

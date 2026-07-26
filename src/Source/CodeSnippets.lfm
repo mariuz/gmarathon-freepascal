@@ -41,7 +41,6 @@ object frmCodeSnippets: TfrmCodeSnippets
       Top = 0
       Width = 232
       Height = 200
-      SepChar = '\'
       Align = alClient
       DragMode = dmAutomatic
       HideSelection = False

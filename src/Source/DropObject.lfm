@@ -72,7 +72,6 @@ object frmDropObject: TfrmDropObject
     Width = 405
     Height = 209
     AutoSelect = True
-    Collection = <>
     Images = ilResults
     TabOrder = 1
   end

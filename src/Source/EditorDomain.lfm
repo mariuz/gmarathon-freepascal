@@ -97,7 +97,6 @@ object frmDomains: TfrmDomains
         Top = 76
         Width = 437
         Height = 85
-        ActivePageIndex = 1
         object nbpBlank: TrmNotebookPage
           Left = 0
           Top = 0
@@ -673,32 +672,9 @@ object frmDomains: TfrmDomains
         Font.Style = []
         PopupMenu = dmMenus.mnuSQLEditor
         TabOrder = 0
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         OnChange = edColDefaultChange
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         UseNavigateHyperLinks = False
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
     end
     object tsConstraint: TTabSheet
@@ -716,32 +692,9 @@ object frmDomains: TfrmDomains
         Font.Style = []
         PopupMenu = dmMenus.mnuSQLEditor
         TabOrder = 0
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         OnChange = edColCheckChange
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         UseNavigateHyperLinks = False
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
     end
     object tsDescription: TTabSheet
@@ -811,7 +764,6 @@ object frmDomains: TfrmDomains
       Width = 452
       Height = 70
       AutoSelect = True
-      Collection = <>
       Images = dmMenus.ilErrors
       Align = alClient
       TabOrder = 0
@@ -819,7 +771,6 @@ object frmDomains: TfrmDomains
   end
   object qryDomain: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 8
     Top = 280
   end

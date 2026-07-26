@@ -53,7 +53,6 @@ object frameDRUI: TframeDRUI
     Top = 33
     Width = 466
     Height = 156
-    SepChar = #2
     Align = alClient
     HideSelection = False
     Indent = 19
@@ -61,22 +60,6 @@ object frameDRUI: TframeDRUI
     TabOrder = 1
   end
   object dtaCrud: TBufDataset
-    FieldRoster = <
-      item
-        Name = 'line'
-        Size = 0
-        FieldType = fdtInteger
-      end
-      item
-        Name = 'op'
-        Size = 40
-        FieldType = fdtString
-      end
-      item
-        Name = 'table'
-        Size = 120
-        FieldType = fdtString
-      end>
     Left = 56
     Top = 80
     object dtaCrudline: TIntegerField

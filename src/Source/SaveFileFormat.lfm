@@ -89,7 +89,6 @@ object frmSaveFileFormat: TfrmSaveFileFormat
         Top = 68
         Width = 337
         Height = 89
-        ActivePageIndex = 1
         object nbpSV: TrmNotebookPage
           Left = 0
           Top = 0

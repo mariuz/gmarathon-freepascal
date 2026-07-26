@@ -225,13 +225,11 @@ object frmEditorGrant: TfrmEditorGrant
   end
   object qryGrants: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 596
     Top = 8
   end
   object qryGrants2: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 596
     Top = 36
   end

@@ -19,31 +19,8 @@ object frameDesc: TframeDesc
     TabOrder = 0
     OnDragDrop = edDocoDragDrop
     OnDragOver = edDocoDragOver
-    Gutter.Font.Charset = DEFAULT_CHARSET
-    Gutter.Font.Color = clWindowText
-    Gutter.Font.Height = -11
-    Gutter.Font.Name = 'Terminal'
-    Gutter.Font.Style = []
     OnChange = edDocoChange
-    FindDialogHelpContext = 0
-    ReplaceDialogHelpContext = 0
-    KeywordCapitalise = False
     UseNavigateHyperLinks = False
-    NavigatorHyperLinkStyle.Strings = (
-      '2')
-    ListDelay = 800
-    WordList = <>
-    SQLInsightList = <>
-    RemovedKeystrokes = <
-      item
-        Command = ecLineBreak
-        ShortCut = 8205
-      end
-      item
-        Command = ecContextHelp
-        ShortCut = 112
-      end>
-    AddedKeystrokes = <>
   end
   object qryDoco: TIBQuery
     Params = <>

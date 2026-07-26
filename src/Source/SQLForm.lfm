@@ -90,35 +90,11 @@ object frmSQLForm: TfrmSQLForm
           OnDragDrop = edSQLStateMentDragDrop
           OnDragOver = edSQLStateMentDragOver
           OnKeyDown = edSQLStatementKeyDown
-          Gutter.Font.Charset = DEFAULT_CHARSET
-          Gutter.Font.Color = clWindowText
-          Gutter.Font.Height = -11
-          Gutter.Font.Name = 'Terminal'
-          Gutter.Font.Style = []
           Highlighter = dmMenus.synHighlighter
           OnChange = edSQLStatementChange
           OnStatusChange = edSQLStatementStatusChange
-          FindDialogHelpContext = 0
-          ReplaceDialogHelpContext = 0
-          KeywordCapitalise = False
           OnGetHintText = edSQLStatementGetHintText
           UseNavigateHyperLinks = True
-          NavigatorHyperLinkStyle.Strings = (
-            '2')
-          OnNavigateHyperLinkClick = edSQLStatementNavigateHyperLinkClick
-          ListDelay = 800
-          WordList = <>
-          SQLInsightList = <>
-          RemovedKeystrokes = <
-            item
-              Command = ecLineBreak
-              ShortCut = 8205
-            end
-            item
-              Command = ecContextHelp
-              ShortCut = 112
-            end>
-          AddedKeystrokes = <>
         end
         object pnlMessages: TPanel
           Left = 0
@@ -128,7 +104,6 @@ object frmSQLForm: TfrmSQLForm
           Align = alBottom
           Caption = 'pnlMessages'
           ParentBackground = True
-          ResizeBtn = True
           TabOrder = 1
           OnResize = pnlMessagesResize
           object lstResults: TrmCollectionListBox
@@ -137,7 +112,6 @@ object frmSQLForm: TfrmSQLForm
             Width = 631
             Height = 105
             AutoSelect = True
-            Collection = <>
             Images = dmMenus.ilErrors
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
@@ -159,7 +133,6 @@ object frmSQLForm: TfrmSQLForm
           Top = 0
           Width = 631
           Height = 348
-          ActivePageIndex = 0
           Align = alClient
           object nbpDatasheet: TrmNotebookPage
             Left = 0
@@ -259,21 +232,10 @@ object frmSQLForm: TfrmSQLForm
               Width = 631
               Height = 322
               DataSource = dsSQLStatement
-              ControlFont.Charset = DEFAULT_CHARSET
-              ControlFont.Color = clWindowText
-              ControlFont.Height = -11
-              ControlFont.Name = 'MS Sans Serif'
-              ControlFont.Style = []
-              LabelFont.Charset = DEFAULT_CHARSET
-              LabelFont.Color = clWindowText
-              LabelFont.Height = -11
-              LabelFont.Name = 'MS Sans Serif'
-              LabelFont.Style = []
-              ReadOnly = False
-              Refreshed = False
               Align = alClient
-              BevelOuter = bvNone
+              ReadOnly = False
               TabOrder = 0
+              ReadOnly = False
             end
             object pnlPerformance: TPanel
               Left = 0
@@ -401,7 +363,6 @@ object frmSQLForm: TfrmSQLForm
             Top = 0
             Width = 631
             Height = 348
-            ActivePageIndex = 0
             Align = alClient
             object nbpStats: TrmNotebookPage
               Left = 0
@@ -471,12 +432,8 @@ object frmSQLForm: TfrmSQLForm
                   Title.Visible = True
                   Legend.Visible = False
                   Align = alClient
-                  BevelOuter = bvNone
-                  BorderStyle = bsSingle
                   Color = clWindow
-                  TabOrder = 0
                   object Series1: TBarSeries
-                    IsRotated = True
                     Marks.Visible = False
                   end
                 end
@@ -591,11 +548,8 @@ object frmSQLForm: TfrmSQLForm
   end
   object qrySQLStatement: TIBQuery
     Params = <>
-    CallbackCaption = 'Fetching data'
     Transaction = transSQLStatement
     AfterOpen = qrySQLStatementAfterOpen
-    AfterPrepare = qrySQLStatementAfterPrepare
-    BeforePrepare = qrySQLStatementBeforePrepare
     OnFilterRecord = qrySQLStatementFilterRecord
     Left = 100
     Top = 96
@@ -603,27 +557,14 @@ object frmSQLForm: TfrmSQLForm
   object qryUtil: TIBQuery
     Params = <>
     Transaction = transSQLStatement
-    ReadOnly = True
     Left = 136
     Top = 96
   end
   object transSQLStatement: TIBTransaction
-    Isolation = tiConcurrency
     Left = 65
     Top = 125
   end
   object dtaPerform: TBufDataset
-    FieldRoster = <
-      item
-        Name = 'item'
-        Size = 30
-        FieldType = fdtString
-      end
-      item
-        Name = 'value'
-        Size = 100
-        FieldType = fdtString
-      end>
     Left = 65
     Top = 168
   end

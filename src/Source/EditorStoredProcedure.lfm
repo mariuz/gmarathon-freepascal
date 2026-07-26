@@ -73,35 +73,10 @@ object frmStoredProcedure: TfrmStoredProcedure
         OnDragDrop = edEditorDragDrop
         OnDragOver = edEditorDragOver
         OnKeyDown = edEditorKeyDown
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         OnChange = edEditorChange
         OnStatusChange = edEditorStatusChange
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
-        OnGetHintText = edEditorGetHintText
         UseNavigateHyperLinks = True
-        NavigatorHyperLinkStyle.Strings = (
-          '4')
-        OnNavigateHyperLinkClick = edEditorNavigateHyperLinkClick
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
       object pnlMessages: TPanel
         Left = 0
@@ -110,7 +85,6 @@ object frmStoredProcedure: TfrmStoredProcedure
         Height = 109
         Align = alBottom
         ParentBackground = True
-        ResizeBtn = True
         TabOrder = 1
         OnResize = pnlMessagesResize
         object lstResults: TrmCollectionListBox
@@ -119,7 +93,6 @@ object frmStoredProcedure: TfrmStoredProcedure
           Width = 624
           Height = 103
           AutoSelect = True
-          Collection = <>
           Images = dmMenus.ilErrors
           Align = alClient
           Font.Charset = DEFAULT_CHARSET
@@ -156,7 +129,6 @@ object frmStoredProcedure: TfrmStoredProcedure
         Top = 27
         Width = 624
         Height = 278
-        ActivePageIndex = 0
         Align = alClient
         object nbpDatasheet: TrmNotebookPage
           Left = 0
@@ -199,21 +171,10 @@ object frmStoredProcedure: TfrmStoredProcedure
             Width = 624
             Height = 278
             DataSource = dsResults
-            ControlFont.Charset = DEFAULT_CHARSET
-            ControlFont.Color = clWindowText
-            ControlFont.Height = -11
-            ControlFont.Name = 'MS Sans Serif'
-            ControlFont.Style = []
-            LabelFont.Charset = DEFAULT_CHARSET
-            LabelFont.Color = clWindowText
-            LabelFont.Height = -11
-            LabelFont.Name = 'MS Sans Serif'
-            LabelFont.Style = []
-            ReadOnly = False
-            Refreshed = False
             Align = alClient
-            BevelOuter = bvNone
+            ReadOnly = False
             TabOrder = 0
+            ReadOnly = False
           end
         end
       end
@@ -309,11 +270,6 @@ object frmStoredProcedure: TfrmStoredProcedure
           Height = 293
         end
         inherited dtaCrud: TBufDataset
-          FieldRoster = <
-            item
-              Size = 0
-              FieldType = fdtString
-            end>
         end
       end
     end
@@ -347,31 +303,8 @@ object frmStoredProcedure: TfrmStoredProcedure
         Font.Name = 'Courier New'
         Font.Style = []
         TabOrder = 0
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         ReadOnly = True
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         UseNavigateHyperLinks = False
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
     end
     object tsDebugger: TTabSheet
@@ -411,71 +344,26 @@ object frmStoredProcedure: TfrmStoredProcedure
   end
   object qryStoredProc: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 396
     Top = 96
   end
   object qryResults: TIBQuery
     Params = <>
     Transaction = tranResults
-    ReadOnly = True
     AfterOpen = qryResultsAfterOpen
     Left = 360
     Top = 96
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 396
     Top = 164
   end
   object tranResults: TIBTransaction
-    Isolation = tiConcurrency
     Left = 429
     Top = 129
   end
   object txtParameters: TBufDataset
-    FieldRoster = <
-      item
-        Name = 'param_name'
-        Size = 60
-        FieldType = fdtString
-      end
-      item
-        Name = 'param_type'
-        Size = 20
-        FieldType = fdtString
-      end
-      item
-        Name = 'param_value'
-        Size = 300
-        FieldType = fdtString
-      end
-      item
-        Name = 'field_type'
-        Size = 6
-        FieldType = fdtString
-      end
-      item
-        Name = 'field_length'
-        Size = 6
-        FieldType = fdtString
-      end
-      item
-        Name = 'field_scale'
-        Size = 6
-        FieldType = fdtString
-      end
-      item
-        Name = 'match'
-        Size = 1
-        FieldType = fdtString
-      end
-      item
-        Name = 'null'
-        Size = 4
-        FieldType = fdtString
-      end>
     Active = True
     OnNewRecord = txtParametersNewRecord
     Left = 432

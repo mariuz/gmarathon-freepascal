@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="12"/>
+    <General>
+      <Flags>
+        <MainUnitHasCreateFormStatements Value="False"/>
+        <MainUnitHasTitleStatement Value="False"/>
+        <MainUnitHasScaledStatement Value="False"/>
+        <CompatibilityMode Value="True"/>
+      </Flags>
+      <SessionStorage Value="InProjectDir"/>
+      <Title Value="form_load_test"/>
+    </General>
+    <BuildModes>
+      <Item Name="Default" Default="True"/>
+    </BuildModes>
+    <RequiredPackages>
+      <Item>
+        <PackageName Value="ibexpress"/>
+      </Item>
+      <Item>
+        <PackageName Value="fbintf"/>
+      </Item>
+      <Item>
+        <PackageName Value="Printer4Lazarus"/>
+      </Item>
+      <Item>
+        <PackageName Value="TAChartLazarusPkg"/>
+      </Item>
+      <Item>
+        <PackageName Value="SynEdit"/>
+      </Item>
+      <Item>
+        <PackageName Value="LCL"/>
+      </Item>
+    </RequiredPackages>
+    <Units>
+      <Unit>
+        <Filename Value="form_load_test.lpr"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <Target>
+      <Filename Value="form_load_test"/>
+    </Target>
+    <SearchPaths>
+      <OtherUnitFiles Value="../src/Common;../src/CreateDBWizard;../src/MetaExtract;../src/Source;../lib/SyntaxMemoWithStuff2"/>
+      <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <SyntaxMode Value="Delphi"/>
+      </SyntaxOptions>
+    </Parsing>
+  </CompilerOptions>
+</CONFIG>

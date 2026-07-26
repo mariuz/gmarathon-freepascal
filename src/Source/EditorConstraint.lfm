@@ -410,7 +410,6 @@ object frmEditorConstraint: TfrmEditorConstraint
   end
   object qryConstraint: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 4
     Top = 372
   end

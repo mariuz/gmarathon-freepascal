@@ -218,7 +218,6 @@ object frmUDFEditor: TfrmUDFEditor
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 272
     Top = 32
   end

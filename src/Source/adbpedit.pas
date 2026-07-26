@@ -61,6 +61,12 @@ published
   property DataSource: TDataSource read FDataSource write SetDataSource;
   property ReadOnly: Boolean read FReadOnly write SetReadOnly;
   property Font : TFont read AFont write AFont;
+  { Inherited from TScrollingWinControl but never re-published, so every
+    "Align = alClient" the .lfm files set on one of these failed to stream and
+    took the whole form down with it. }
+  property Align;
+  property Anchors;
+  property TabOrder;
 end;
 
 implementation

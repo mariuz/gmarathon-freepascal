@@ -111,7 +111,6 @@ object frameDepend: TframeDepend
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 44
     Top = 88
   end

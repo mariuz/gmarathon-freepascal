@@ -175,7 +175,6 @@ object frmEditorIndex: TfrmEditorIndex
   end
   object qryIndex: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 4
     Top = 304
   end

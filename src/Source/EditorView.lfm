@@ -59,7 +59,6 @@ object frmViewEditor: TfrmViewEditor
         Height = 107
         Align = alBottom
         ParentBackground = True
-        ResizeBtn = True
         TabOrder = 0
         object lstResults: TrmCollectionListBox
           Left = 0
@@ -67,7 +66,6 @@ object frmViewEditor: TfrmViewEditor
           Width = 624
           Height = 101
           AutoSelect = True
-          Collection = <>
           Images = dmMenus.ilErrors
           Align = alClient
           Font.Charset = DEFAULT_CHARSET
@@ -97,34 +95,11 @@ object frmViewEditor: TfrmViewEditor
         OnDragDrop = edEditorDragDrop
         OnDragOver = edEditorDragOver
         OnKeyDown = edEditorKeyDown
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         OnChange = edEditorChange
         OnStatusChange = edEditorStatusChange
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         OnGetHintText = edEditorGetHintText
         UseNavigateHyperLinks = True
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
     end
     object tsTableView: TTabSheet
@@ -308,7 +283,6 @@ object frmViewEditor: TfrmViewEditor
         Top = 27
         Width = 624
         Height = 320
-        ActivePageIndex = 0
         Align = alClient
         object nbpDatasheet: TrmNotebookPage
           Left = 0
@@ -357,21 +331,10 @@ object frmViewEditor: TfrmViewEditor
             Width = 624
             Height = 320
             DataSource = dsTableData
-            ControlFont.Charset = DEFAULT_CHARSET
-            ControlFont.Color = clWindowText
-            ControlFont.Height = -11
-            ControlFont.Name = 'MS Sans Serif'
-            ControlFont.Style = []
-            LabelFont.Charset = DEFAULT_CHARSET
-            LabelFont.Color = clWindowText
-            LabelFont.Height = -11
-            LabelFont.Name = 'MS Sans Serif'
-            LabelFont.Style = []
-            ReadOnly = False
-            Refreshed = False
             Align = alClient
-            BevelOuter = bvNone
+            ReadOnly = False
             TabOrder = 0
+            ReadOnly = False
           end
         end
       end
@@ -431,13 +394,11 @@ object frmViewEditor: TfrmViewEditor
   end
   object qryTable: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 48
     Top = 188
   end
   object qryTriggers: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 48
     Top = 256
   end
@@ -449,13 +410,11 @@ object frmViewEditor: TfrmViewEditor
     Top = 152
   end
   object tranTableData: TIBTransaction
-    Isolation = tiConcurrency
     Left = 80
     Top = 152
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 48
     Top = 224
   end

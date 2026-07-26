@@ -86,81 +86,13 @@ object frmBlobViewer: TfrmBlobViewer
         Width = 465
         Height = 161
         Cursor = crIBeam
-        BytesPerColumn = 2
-        Translation = ttAnsi
-        BackupExtension = '.bak'
         Align = alClient
-        OffsetDisplay = odHex
-        BytesPerLine = 16
-        Colors.Background = clWindow
-        Colors.PositionBackground = clMaroon
-        Colors.PositionText = clWhite
-        Colors.ChangedBackground = 11075583
-        Colors.ChangedText = clMaroon
-        Colors.CursorFrame = clNavy
-        Colors.Offset = clBlack
-        Colors.OddColumn = clBlue
-        Colors.EvenColumn = clNavy
-        FocusFrame = True
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
         Font.Height = -11
         Font.Name = 'Courier New'
         Font.Style = []
-        OffsetSeparator = ':'
         TabOrder = 0
-        ColWidths = (
-          28
-          7
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          14
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7
-          7)
       end
     end
   end

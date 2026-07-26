@@ -60,7 +60,6 @@ object frmColumns: TfrmColumns
             Top = 0
             Width = 448
             Height = 266
-            ActivePageIndex = 0
             Align = alClient
             object nbpType: TrmNotebookPage
               Left = 0
@@ -107,7 +106,6 @@ object frmColumns: TfrmColumns
                 Top = 36
                 Width = 427
                 Height = 81
-                ActivePageIndex = 3
                 object nbpBlank: TrmNotebookPage
                   Left = 0
                   Top = 0
@@ -681,30 +679,7 @@ object frmColumns: TfrmColumns
                 Font.Name = 'Courier New'
                 Font.Style = []
                 TabOrder = 0
-                Gutter.Font.Charset = DEFAULT_CHARSET
-                Gutter.Font.Color = clWindowText
-                Gutter.Font.Height = -11
-                Gutter.Font.Name = 'Terminal'
-                Gutter.Font.Style = []
-                FindDialogHelpContext = 0
-                ReplaceDialogHelpContext = 0
-                KeywordCapitalise = False
                 UseNavigateHyperLinks = False
-                NavigatorHyperLinkStyle.Strings = (
-                  '2')
-                ListDelay = 800
-                WordList = <>
-                SQLInsightList = <>
-                RemovedKeystrokes = <
-                  item
-                    Command = ecLineBreak
-                    ShortCut = 8205
-                  end
-                  item
-                    Command = ecContextHelp
-                    ShortCut = 112
-                  end>
-                AddedKeystrokes = <>
               end
             end
           end
@@ -783,32 +758,9 @@ object frmColumns: TfrmColumns
             Font.Style = []
             PopupMenu = dmMenus.mnuSQLEditor
             TabOrder = 0
-            Gutter.Font.Charset = DEFAULT_CHARSET
-            Gutter.Font.Color = clWindowText
-            Gutter.Font.Height = -11
-            Gutter.Font.Name = 'Terminal'
-            Gutter.Font.Style = []
             Highlighter = dmMenus.synHighlighter
             OnChange = edColCheckChange
-            FindDialogHelpContext = 0
-            ReplaceDialogHelpContext = 0
-            KeywordCapitalise = False
             UseNavigateHyperLinks = False
-            NavigatorHyperLinkStyle.Strings = (
-              '2')
-            ListDelay = 800
-            WordList = <>
-            SQLInsightList = <>
-            RemovedKeystrokes = <
-              item
-                Command = ecLineBreak
-                ShortCut = 8205
-              end
-              item
-                Command = ecContextHelp
-                ShortCut = 112
-              end>
-            AddedKeystrokes = <>
           end
         end
         object tsColumnDomain: TTabSheet
@@ -895,33 +847,10 @@ object frmColumns: TfrmColumns
               Font.Style = []
               PopupMenu = dmMenus.mnuSQLEditor
               TabOrder = 0
-              Gutter.Font.Charset = DEFAULT_CHARSET
-              Gutter.Font.Color = clWindowText
-              Gutter.Font.Height = -11
-              Gutter.Font.Name = 'Terminal'
-              Gutter.Font.Style = []
               Highlighter = dmMenus.synHighlighter
               ReadOnly = True
               OnChange = edColCheckChange
-              FindDialogHelpContext = 0
-              ReplaceDialogHelpContext = 0
-              KeywordCapitalise = False
               UseNavigateHyperLinks = False
-              NavigatorHyperLinkStyle.Strings = (
-                '2')
-              ListDelay = 800
-              WordList = <>
-              SQLInsightList = <>
-              RemovedKeystrokes = <
-                item
-                  Command = ecLineBreak
-                  ShortCut = 8205
-                end
-                item
-                  Command = ecContextHelp
-                  ShortCut = 112
-                end>
-              AddedKeystrokes = <>
             end
           end
         end
@@ -940,31 +869,8 @@ object frmColumns: TfrmColumns
             Font.Name = 'Courier New'
             Font.Style = []
             TabOrder = 0
-            Gutter.Font.Charset = DEFAULT_CHARSET
-            Gutter.Font.Color = clWindowText
-            Gutter.Font.Height = -11
-            Gutter.Font.Name = 'Terminal'
-            Gutter.Font.Style = []
             ReadOnly = True
-            FindDialogHelpContext = 0
-            ReplaceDialogHelpContext = 0
-            KeywordCapitalise = False
             UseNavigateHyperLinks = False
-            NavigatorHyperLinkStyle.Strings = (
-              '2')
-            ListDelay = 800
-            WordList = <>
-            SQLInsightList = <>
-            RemovedKeystrokes = <
-              item
-                Command = ecLineBreak
-                ShortCut = 8205
-              end
-              item
-                Command = ecContextHelp
-                ShortCut = 112
-              end>
-            AddedKeystrokes = <>
           end
         end
         object tsColumnDescription: TTabSheet
@@ -1053,32 +959,9 @@ object frmColumns: TfrmColumns
         Font.Style = []
         PopupMenu = dmMenus.mnuSQLEditor
         TabOrder = 0
-        Gutter.Font.Charset = DEFAULT_CHARSET
-        Gutter.Font.Color = clWindowText
-        Gutter.Font.Height = -11
-        Gutter.Font.Name = 'Terminal'
-        Gutter.Font.Style = []
         Highlighter = dmMenus.synHighlighter
         OnChange = edColCheckChange
-        FindDialogHelpContext = 0
-        ReplaceDialogHelpContext = 0
-        KeywordCapitalise = False
         UseNavigateHyperLinks = False
-        NavigatorHyperLinkStyle.Strings = (
-          '2')
-        ListDelay = 800
-        WordList = <>
-        SQLInsightList = <>
-        RemovedKeystrokes = <
-          item
-            Command = ecLineBreak
-            ShortCut = 8205
-          end
-          item
-            Command = ecContextHelp
-            ShortCut = 112
-          end>
-        AddedKeystrokes = <>
       end
     end
     object tsDescription: TTabSheet
@@ -1150,7 +1033,6 @@ object frmColumns: TfrmColumns
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 12
     Top = 400
   end

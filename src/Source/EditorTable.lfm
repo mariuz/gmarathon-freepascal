@@ -323,7 +323,6 @@ object frmTables: TfrmTables
         Top = 27
         Width = 624
         Height = 323
-        ActivePageIndex = 0
         Align = alClient
         object nbpDatasheet: TrmNotebookPage
           Left = 0
@@ -372,21 +371,10 @@ object frmTables: TfrmTables
             Width = 624
             Height = 323
             DataSource = dsTableData
-            ControlFont.Charset = DEFAULT_CHARSET
-            ControlFont.Color = clWindowText
-            ControlFont.Height = -11
-            ControlFont.Name = 'MS Sans Serif'
-            ControlFont.Style = []
-            LabelFont.Charset = DEFAULT_CHARSET
-            LabelFont.Color = clWindowText
-            LabelFont.Height = -11
-            LabelFont.Name = 'MS Sans Serif'
-            LabelFont.Style = []
-            ReadOnly = False
-            Refreshed = False
             Align = alClient
-            BevelOuter = bvNone
+            ReadOnly = False
             TabOrder = 0
+            ReadOnly = False
           end
         end
       end
@@ -461,26 +449,22 @@ object frmTables: TfrmTables
   end
   object qryTable: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 50
     Top = 190
   end
   object qryConstraints: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 48
     Top = 224
   end
   object qryTriggers: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 48
     Top = 256
   end
   object tblTableData: TIBQuery
     Params = <>
     Transaction = tranTableData
-    PreparedInserts = True
     AfterOpen = tblTableDataAfterOpen
     Left = 50
     Top = 152

@@ -59,12 +59,10 @@ object frmStatementHistory: TfrmStatementHistory
     Width = 345
     Height = 205
     AutoSelect = True
-    Collection = <>
     Images = ImageList1
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 3
     OnDblClick = lvHistoryDblClick
-    OnKeyPress = lvHistoryKeyPress
   end
   object ImageList1: TImageList
     Left = 364

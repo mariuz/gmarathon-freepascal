@@ -245,4 +245,13 @@ begin
   RegisterComponents('Marathon', [TrmNoteBookControl, TrmNotebookPage, TrmTabSet, TrmBtnEdit, TrmCollectionListBox]);
 end;
 
+initialization
+  { The .lfm files still name these compat classes, but several forms declare
+    the matching field as the LCL base class (nbResults: TPageControl, say).
+    When the field type does not name the class, the streaming reader falls
+    back to the global class registry - so without this, loading such a form
+    dies with EClassNotFound. }
+  RegisterClasses([TrmNoteBookControl, TrmNotebookPage, TrmTabSet, TrmBtnEdit,
+    TrmCollectionListBox]);
+
 end.

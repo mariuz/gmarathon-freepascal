@@ -62,6 +62,19 @@ jobs:
       - name: Run keyword highlighting test
         run: ./test/keyword_test
 
+      # Constructs every form in the application to prove each .lfm still
+      # streams. Needs a real widgetset (nogui cannot build a form at all), but
+      # not a real screen - hence Xvfb. HOME is redirected so the settings the
+      # test writes cannot disturb anything else on the runner.
+      - name: Build form loading test
+        run: lazbuild test/form_load_test.lpi
+
+      - name: Run form loading test
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb
+          mkdir -p /tmp/marathon-test-home
+          HOME=/tmp/marathon-test-home xvfb-run -a ./test/form_load_test
+
   # Windows is compile-only (no Firebird server / smoke test): its purpose is
   # to type-check the {$IFDEF WINDOWS} code paths, which are invisible to the
   # Linux build and so went unchecked for the whole life of this port - they

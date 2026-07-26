@@ -84,7 +84,6 @@ object frmUsers: TfrmUsers
   end
   object qryUser: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 252
     Top = 36
   end
@@ -318,8 +317,6 @@ object frmUsers: TfrmUsers
     Top = 32
   end
   object tranSecurity: TIBTransaction
-    Database = dbSecurity
-    Isolation = tiConcurrency
     Left = 12
     Top = 64
   end
@@ -327,7 +324,6 @@ object frmUsers: TfrmUsers
     Params = <>
     Database = dbSecurity
     Transaction = tranSecurity
-    ReadOnly = True
     Left = 44
     Top = 32
   end

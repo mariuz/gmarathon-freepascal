@@ -126,7 +126,6 @@ object frmExceptions: TfrmExceptions
   end
   object qryException: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 28
     Top = 100
   end

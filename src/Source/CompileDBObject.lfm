@@ -32,7 +32,7 @@ object frmCompileDBObject: TfrmCompileDBObject
     TabOrder = 0
     Visible = False
   end
-  object aniCompile: TAnimate
+  object aniCompile: TProgressBar
     Left = 36
     Top = 8
     Width = 269

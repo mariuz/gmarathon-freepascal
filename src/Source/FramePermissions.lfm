@@ -41,7 +41,6 @@ object framePerms: TframePerms
   end
   object qryUtil: TIBQuery
     Params = <>
-    ReadOnly = True
     Left = 44
     Top = 116
   end
