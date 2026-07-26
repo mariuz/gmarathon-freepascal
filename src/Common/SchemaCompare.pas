@@ -180,6 +180,106 @@ begin
   end;
 end;
 
+{ Reorders Names so that anything depending on another entry comes after it.
+
+  Alphabetical order is no guide: a view V_AAA selecting from V_ZZZ sorts first,
+  and the script then fails with "Table unknown". RDB$DEPENDENCIES is consulted
+  only for entries within this list - anything depended on that is not in it
+  belongs to an earlier kind and already exists by the time this section runs.
+
+  A cycle leaves the entries it involves in the order they arrived, which is no
+  worse than not ordering at all. Firebird permits mutually recursive procedures,
+  so this is reachable rather than theoretical. }
+procedure OrderByDependency(const Ctx: TScriptAsContext; Names: TStringList);
+var
+  Q: TIBQuery;
+  Pending, Ordered, Depends: TStringList;
+  InList, Dependent, DependedOn: String;
+  Idx, Pick, D: Integer;
+  Blocked: Boolean;
+begin
+  if Names.Count < 2 then
+    Exit;
+
+  InList := '';
+  for Idx := 0 to Names.Count - 1 do
+  begin
+    if InList <> '' then
+      InList := InList + ', ';
+    InList := InList + AnsiQuotedStr(Names[Idx], '''');
+  end;
+
+  Depends := TStringList.Create;
+  Pending := TStringList.Create;
+  Ordered := TStringList.Create;
+  try
+    Q := TIBQuery.Create(nil);
+    try
+      Q.Database := Ctx.Database;
+      Q.Transaction := Ctx.Transaction;
+      if Assigned(Q.Transaction) and not Q.Transaction.Active then
+        Q.Transaction.StartTransaction;
+      Q.SQL.Text :=
+        'select distinct rdb$dependent_name, rdb$depended_on_name ' +
+        'from rdb$dependencies where rdb$dependent_name in (' + InList + ') ' +
+        'and rdb$depended_on_name in (' + InList + ')';
+      Q.Open;
+      while not Q.EOF do
+      begin
+        Dependent := Trim(Q.Fields[0].AsString);
+        DependedOn := Trim(Q.Fields[1].AsString);
+        { An object listing itself is not an ordering constraint - a recursive
+          view or procedure would otherwise never become pickable. }
+        if not SameText(Dependent, DependedOn) then
+          Depends.Add(Dependent + #1 + DependedOn);
+        Q.Next;
+      end;
+      Q.Close;
+    finally
+      Q.Free;
+    end;
+
+    if Depends.Count = 0 then
+      Exit;
+
+    Pending.Assign(Names);
+    while Pending.Count > 0 do
+    begin
+      Pick := -1;
+      for Idx := 0 to Pending.Count - 1 do
+      begin
+        Blocked := False;
+        for D := 0 to Depends.Count - 1 do
+          if SameText(Copy(Depends[D], 1, Pos(#1, Depends[D]) - 1), Pending[Idx]) and
+             (Pending.IndexOf(Copy(Depends[D], Pos(#1, Depends[D]) + 1, MaxInt)) >= 0) then
+          begin
+            Blocked := True;
+            Break;
+          end;
+        if not Blocked then
+        begin
+          Pick := Idx;
+          Break;
+        end;
+      end;
+      if Pick < 0 then
+      begin
+        { A cycle: take the rest as they are rather than looping forever. }
+        for Idx := 0 to Pending.Count - 1 do
+          Ordered.Add(Pending[Idx]);
+        Break;
+      end;
+      Ordered.Add(Pending[Pick]);
+      Pending.Delete(Pick);
+    end;
+    Names.Assign(Ordered);
+  finally
+    Ordered.Free;
+    Pending.Free;
+    Depends.Free;
+  end;
+end;
+
 { The whole DDL for one object, which is what the comparison is made on. }
 function ObjectDDL(const Ctx: TScriptAsContext; const Name: String;
   CacheType: TGSSCacheType): String;
@@ -396,7 +496,7 @@ var
   SrcCon, SrcName, SrcKind, TgtCon, TgtName, TgtKind: TStringList;
   I2: Integer;
   Header, TableHeader: Boolean;
-  AllTables: TStringList;
+  AllTables, ToCreate: TStringList;
 
   procedure Section(const Caption: String; var Emitted: Boolean);
   begin
@@ -437,16 +537,28 @@ begin
       InSource := ObjectNames(Source, SourceKinds[K].ListSQL);
       InTarget := ObjectNames(Target, TargetKinds[K].ListSQL);
       try
-        { Present in the source only - create it. }
-        for Idx := 0 to InSource.Count - 1 do
-          if InTarget.IndexOf(InSource[Idx]) < 0 then
+        { Present in the source only - create it. Gathered first and then
+          ordered by dependency, because these are the ones being created from
+          nothing: a view over another view, or a procedure calling one, has to
+          come second, and the alphabetical order the list arrives in is no
+          guide. Objects already in the target need no such ordering. }
+        ToCreate := TStringList.Create;
+        try
+          for Idx := 0 to InSource.Count - 1 do
+            if InTarget.IndexOf(InSource[Idx]) < 0 then
+              ToCreate.Add(InSource[Idx]);
+          OrderByDependency(Source, ToCreate);
+          for Idx := 0 to ToCreate.Count - 1 do
           begin
             Section(SourceKinds[K].Caption, Header);
             Script.Add('');
             Script.Add('/* missing from target */');
-            Script.Add(Trim(ObjectDDL(Source, InSource[Idx], SourceKinds[K].CacheType)));
+            Script.Add(Trim(ObjectDDL(Source, ToCreate[Idx], SourceKinds[K].CacheType)));
             Inc(Differences.ToCreate);
           end;
+        finally
+          ToCreate.Free;
+        end;
 
         { Present in both - compare, and replace where that is safe. }
         for Idx := 0 to InSource.Count - 1 do

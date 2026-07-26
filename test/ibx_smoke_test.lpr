@@ -160,6 +160,22 @@ begin
   end;
 end;
 
+{ Order matters as much as presence: a view over another view has to be created
+  second, and the script is run top to bottom. }
+procedure RequireOrderInDDL(const Script, First, Second, What: String);
+var
+  PosFirst, PosSecond: Integer;
+begin
+  PosFirst := Pos(UpperCase(First), UpperCase(Script));
+  PosSecond := Pos(UpperCase(Second), UpperCase(Script));
+  if (PosFirst = 0) or (PosSecond = 0) or (PosFirst > PosSecond) then
+  begin
+    WriteLn('FAIL: ', What, ' - expected "', First, '" before "', Second, '"');
+    WriteLn(Script);
+    Halt(1);
+  end;
+end;
+
 procedure RequireNotInDDL(const DDLText, Needle, What: String);
 begin
   if Pos(UpperCase(Needle), UpperCase(DDLText)) <> 0 then
@@ -544,6 +560,11 @@ begin
     'create table BOTH_TBL (ID integer not null primary key, NOTE varchar(10))',
     'create table ONLY_SRC (ID integer not null primary key, CODE D_CODE)',
     'create view V_SHARED as select ID from BOTH_TBL',
+    { A view over a view, named so that the dependent sorts first. Emitted in
+      name order the script would try to create V_AAA before the V_ZZZ it
+      selects from. }
+    'create view V_ZZZ as select ID from BOTH_TBL',
+    'create view V_AAA as select ID from V_ZZZ',
     'create procedure P_ONLY_SRC (A integer) returns (R integer) as ' +
       'begin R = A + 1; suspend; end',
     'create function F_ONLY_SRC (A integer) returns integer as begin return A * 2; end',
@@ -615,6 +636,8 @@ begin
       real name to work. Anything the script would actually run must name no
       constraint at all, since those names differ between databases. }
     RequireGeneratedNamesOnlyCommented(MigrationScript);
+    RequireOrderInDDL(MigrationScript, 'create view V_ZZZ', 'create view V_AAA',
+      'a view is created before the view built on it');
     RequireInDDL(MigrationScript, 'has a different primary key',
       'a primary key that cannot be added without dropping the old one');
     if Diff.NeedingAttention <> 1 then
