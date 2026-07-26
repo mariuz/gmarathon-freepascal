@@ -86,6 +86,39 @@ Legacy components that have been replaced (useful when reading old code or `.lfm
 - `TrmPanel` / `TrmComboBox` / `TrmTabSet` / `TrmPathTreeView` → `TPanel` / `TComboBox` / `TTabControl` / `TTreeView`
 - `TVirtualStringTree` → `TTreeView`
 
+### Delphi/LCL behavioural differences
+
+Components that exist in both but *behave* differently. Each of these shipped as
+a working-looking build and failed only at runtime, so treat a compiling port of
+Delphi UI code as unverified until it has been run:
+
+- **`TImageList.AddMasked`** — Delphi splits a bitmap wider than the list's image
+  size into one image per cell; LCL adds the whole strip as a single image, *and
+  swallows the exception*, returning −1. Use `AddStripMasked` (`Globals.pas`). An
+  image list holding one image makes every icon index ≥ 1 raise `List index out
+  of bounds` from inside the gtk2 widgetset, nowhere near the real cause.
+- **`TImageList` in a `.lfm`** — a Delphi `Bitmap = {494C0101…}` blob loads as a
+  single image whatever its header says. Convert with
+  `tools/imagelist_convert.lpr`.
+- **`TTabSheet.TabVisible`** — making a tab visible does not make it the active
+  page. Set `PageControl.ActivePage` explicitly, and before `ActiveControl`.
+- **`TIBDatabase.LoginPrompt`** — defaults to `True`, which makes IBX try to raise
+  its own login dialog from the GUI half of the package. Always set it `False`;
+  Marathon collects credentials itself.
+- **Transactions are not opened on demand** — a query on a committed transaction
+  raises `Transaction is not active` rather than starting one. The shared
+  per-connection transaction is committed constantly, so guard at the entry
+  point (`ScriptAs.EnsureActive`, `DDLExtractor.Extract`) or grant
+  `AllowAutoActivateTransaction` via `Globals.AllowAutoTransactions`, which
+  recurses because a form does not own the components on its frames.
+- **Event handlers fire with nil arguments** — `TTreeView.OnChange` fires with no
+  node when the selection is cleared, which any tree rebuild does. Check before
+  dereferencing.
+
+Set `MARATHON_TRACE_EXCEPTIONS=1` to print a Pascal backtrace for every
+exception. gdb cannot produce one for faults raised inside the RTL — it is built
+without frame pointers, so the caller's frame is lost.
+
 ## Key Files Quick Reference
 
 | File | Role |
