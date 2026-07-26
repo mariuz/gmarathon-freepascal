@@ -187,41 +187,6 @@ begin
   Result := ScriptAsCreate(Ctx, Name, CacheType);
 end;
 
-{ The index statements of one table, one per entry, as the extractor renders
-  them. Splitting the block up is what makes a useful comparison possible: both
-  databases are rendered by the same code, so a statement present in one list
-  and not the other is exactly one index's worth of difference, and only those
-  need be emitted - re-running the whole block would fail on the indexes that
-  are already there. }
-function TableIndexStatements(const Ctx: TScriptAsContext; const TableName: String): TStringList;
-var
-  Extractor: TDDLExtractor;
-  Block, Statement: String;
-  Parts: TStringList;
-  Idx: Integer;
-begin
-  Result := TStringList.Create;
-  Extractor := TDDLExtractor.Create(nil);
-  Parts := TStringList.Create;
-  try
-    Extractor.Database := Ctx.Database;
-    Extractor.Transaction := Ctx.Transaction;
-    Extractor.SQLDialect := Ctx.Dialect;
-    Extractor.IsInterbase6 := Ctx.IsIB6;
-    Block := Extractor.Extract(ddlTable, ddlstIndex, TableName);
-    Parts.Text := StringReplace(Block, ';', ';' + #13#10, [rfReplaceAll]);
-    for Idx := 0 to Parts.Count - 1 do
-    begin
-      Statement := Trim(Parts[Idx]);
-      if Statement <> '' then
-        Result.Add(Statement);
-    end;
-  finally
-    Parts.Free;
-    Extractor.Free;
-  end;
-end;
-
 { The index name out of a CREATE INDEX statement, for writing the DROP that
   removes it. Returns an empty string for anything that is not one, so an
   unrecognised statement is skipped rather than turned into a wrong DROP. }
@@ -246,6 +211,179 @@ begin
   end;
 end;
 
+{ The index statements of one table, one per entry, as the extractor renders
+  them. Splitting the block up is what makes a useful comparison possible: both
+  databases are rendered by the same code, so a statement present in one list
+  and not the other is exactly one index's worth of difference, and only those
+  need be emitted - re-running the whole block would fail on the indexes that
+  are already there. }
+function TableIndexStatements(const Ctx: TScriptAsContext; const TableName: String): TStringList;
+var
+  Extractor: TDDLExtractor;
+  Block, Statement: String;
+  Parts, ConstraintIndexes: TStringList;
+  Q: TIBQuery;
+  Idx: Integer;
+begin
+  Result := TStringList.Create;
+  Extractor := TDDLExtractor.Create(nil);
+  Parts := TStringList.Create;
+  ConstraintIndexes := TStringList.Create;
+  try
+    { The indexes a constraint owns are compared as constraints, not here.
+      ExtractTableIDX already leaves out those behind PRIMARY KEY and FOREIGN
+      KEY but not the ones behind UNIQUE, and their names are generated - so
+      the same unique constraint appears as UQ_NOTE in one database and
+      INTEG_512 in the other, and comparing the index text reported a
+      difference where there was none. }
+    Q := TIBQuery.Create(nil);
+    try
+      Q.Database := Ctx.Database;
+      Q.Transaction := Ctx.Transaction;
+      if Assigned(Q.Transaction) and not Q.Transaction.Active then
+        Q.Transaction.StartTransaction;
+      Q.SQL.Text := 'select rdb$index_name from rdb$relation_constraints ' +
+        'where rdb$relation_name = ' + AnsiQuotedStr(TableName, '''') +
+        ' and rdb$index_name is not null';
+      Q.Open;
+      while not Q.EOF do
+      begin
+        ConstraintIndexes.Add(UpperCase(Trim(Q.Fields[0].AsString)));
+        Q.Next;
+      end;
+      Q.Close;
+    finally
+      Q.Free;
+    end;
+
+    Extractor.Database := Ctx.Database;
+    Extractor.Transaction := Ctx.Transaction;
+    Extractor.SQLDialect := Ctx.Dialect;
+    Extractor.IsInterbase6 := Ctx.IsIB6;
+    Block := Extractor.Extract(ddlTable, ddlstIndex, TableName);
+    Parts.Text := StringReplace(Block, ';', ';' + #13#10, [rfReplaceAll]);
+    for Idx := 0 to Parts.Count - 1 do
+    begin
+      Statement := Trim(Parts[Idx]);
+      if (Statement <> '') and
+         (ConstraintIndexes.IndexOf(UpperCase(IndexNameOf(Statement))) < 0) then
+        Result.Add(Statement);
+    end;
+  finally
+    ConstraintIndexes.Free;
+    Parts.Free;
+    Extractor.Free;
+  end;
+end;
+
+{ The columns of an index, in key order, as a bracketed list.  }
+function IndexColumnList(const Ctx: TScriptAsContext; const IndexName: String): String;
+var
+  Q: TIBQuery;
+begin
+  Result := '';
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Ctx.Database;
+    Q.Transaction := Ctx.Transaction;
+    if Assigned(Q.Transaction) and not Q.Transaction.Active then
+      Q.Transaction.StartTransaction;
+    Q.SQL.Text := 'select rdb$field_name from rdb$index_segments ' +
+      'where rdb$index_name = ' + AnsiQuotedStr(IndexName, '''') +
+      ' order by rdb$field_position';
+    Q.Open;
+    while not Q.EOF do
+    begin
+      if Result <> '' then
+        Result := Result + ', ';
+      Result := Result + Trim(Q.Fields[0].AsString);
+      Q.Next;
+    end;
+    Q.Close;
+  finally
+    Q.Free;
+  end;
+  Result := '(' + Result + ')';
+end;
+
+{ True for a name Firebird made up because the user did not supply one. Those
+  differ between databases holding identical schemas - a primary key is
+  INTEG_249 in one and INTEG_512 in another - which is precisely why
+  constraints cannot be compared by name. }
+function IsGeneratedConstraintName(const Name: String): Boolean;
+begin
+  Result := Copy(UpperCase(Trim(Name)), 1, 6) = 'INTEG_';
+end;
+
+{ The key constraints of one table, rendered without their names so that two
+  databases describing the same constraint produce the same text. Statements
+  and Names are filled in step: Statements[i] is what would add it, Names[i] is
+  what it is actually called, which is what a DROP needs.
+
+  CHECK constraints are left out. Their text lives in the trigger the engine
+  writes for them rather than in the constraint, and comparing that is a
+  different problem from comparing a key. }
+procedure TableConstraints(const Ctx: TScriptAsContext; const TableName: String;
+  Statements, Names, Kinds: TStringList);
+var
+  Q: TIBQuery;
+  Ident, Kind, Clause, Rule: String;
+begin
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Ctx.Database;
+    Q.Transaction := Ctx.Transaction;
+    if Assigned(Q.Transaction) and not Q.Transaction.Active then
+      Q.Transaction.StartTransaction;
+    Q.SQL.Text :=
+      'select rc.rdb$constraint_name, rc.rdb$constraint_type, rc.rdb$index_name, ' +
+      'ref.rdb$update_rule, ref.rdb$delete_rule, ' +
+      'uq.rdb$relation_name as uq_relation, uq.rdb$index_name as uq_index ' +
+      'from rdb$relation_constraints rc ' +
+      'left join rdb$ref_constraints ref on ref.rdb$constraint_name = rc.rdb$constraint_name ' +
+      'left join rdb$relation_constraints uq on uq.rdb$constraint_name = ref.rdb$const_name_uq ' +
+      'where rc.rdb$relation_name = ' + AnsiQuotedStr(TableName, '''') + ' ' +
+      'and rc.rdb$constraint_type in (''PRIMARY KEY'', ''UNIQUE'', ''FOREIGN KEY'') ' +
+      'order by rc.rdb$constraint_type, rc.rdb$constraint_name';
+    Q.Open;
+    while not Q.EOF do
+    begin
+      Kind := Trim(Q.FieldByName('rdb$constraint_type').AsString);
+      Ident := Trim(Q.FieldByName('rdb$index_name').AsString);
+      Clause := '';
+      if Kind = 'PRIMARY KEY' then
+        Clause := 'primary key ' + IndexColumnList(Ctx, Ident)
+      else if Kind = 'UNIQUE' then
+        Clause := 'unique ' + IndexColumnList(Ctx, Ident)
+      else if Kind = 'FOREIGN KEY' then
+      begin
+        Clause := 'foreign key ' + IndexColumnList(Ctx, Ident) +
+          ' references ' + Trim(Q.FieldByName('uq_relation').AsString) + ' ' +
+          IndexColumnList(Ctx, Trim(Q.FieldByName('uq_index').AsString));
+        { RESTRICT is what Firebird stores when the user wrote no rule at all,
+          so writing it out would make a schema differ from itself depending on
+          how it was typed. }
+        Rule := Trim(Q.FieldByName('rdb$update_rule').AsString);
+        if (Rule <> '') and (Rule <> 'RESTRICT') then
+          Clause := Clause + ' on update ' + LowerCase(Rule);
+        Rule := Trim(Q.FieldByName('rdb$delete_rule').AsString);
+        if (Rule <> '') and (Rule <> 'RESTRICT') then
+          Clause := Clause + ' on delete ' + LowerCase(Rule);
+      end;
+      if Clause <> '' then
+      begin
+        Statements.Add('alter table ' + Trim(TableName) + ' add ' + Clause + ';');
+        Names.Add(Trim(Q.FieldByName('rdb$constraint_name').AsString));
+        Kinds.Add(Kind);
+      end;
+      Q.Next;
+    end;
+    Q.Close;
+  finally
+    Q.Free;
+  end;
+end;
+
 function CompareSchemas(const Source, Target: TScriptAsContext;
   out Differences: TSchemaDifferences): String;
 var
@@ -255,8 +393,10 @@ var
   InSource, InTarget: TStringList;
   SourceDDL, TargetDDL, IndexName: String;
   SourceIdx, TargetIdx: TStringList;
+  SrcCon, SrcName, SrcKind, TgtCon, TgtName, TgtKind: TStringList;
   I2: Integer;
-  Header: Boolean;
+  Header, TableHeader: Boolean;
+  AllTables: TStringList;
 
   procedure Section(const Caption: String; var Emitted: Boolean);
   begin
@@ -342,42 +482,6 @@ begin
               end;
             end;
 
-            { Indexes, whether or not the columns matched. A table whose columns
-              are identical can still have different indexes, and unlike a
-              column change an index can be added or removed safely - so these
-              are migrated rather than merely reported. }
-            if SourceKinds[K].CacheType = ctTable then
-            begin
-              SourceIdx := TableIndexStatements(Source, InSource[Idx]);
-              TargetIdx := TableIndexStatements(Target, InSource[Idx]);
-              try
-                for I2 := 0 to SourceIdx.Count - 1 do
-                  if TargetIdx.IndexOf(SourceIdx[I2]) < 0 then
-                  begin
-                    Section(SourceKinds[K].Caption, Header);
-                    Script.Add('');
-                    Script.Add('/* index missing from target */');
-                    Script.Add(SourceIdx[I2]);
-                    Inc(Differences.ToCreate);
-                  end;
-                for I2 := 0 to TargetIdx.Count - 1 do
-                  if SourceIdx.IndexOf(TargetIdx[I2]) < 0 then
-                  begin
-                    IndexName := IndexNameOf(TargetIdx[I2]);
-                    if IndexName <> '' then
-                    begin
-                      Section(SourceKinds[K].Caption, Header);
-                      Script.Add('');
-                      Script.Add('/* index only in target - uncomment to remove */');
-                      Script.Add('-- drop index ' + IndexName + ';');
-                      Inc(Differences.ToDrop);
-                    end;
-                  end;
-              finally
-                TargetIdx.Free;
-                SourceIdx.Free;
-              end;
-            end;
           end;
 
         { Present in the target only - drop it, commented out. }
@@ -394,6 +498,104 @@ begin
         InTarget.Free;
         InSource.Free;
       end;
+    end;
+
+    { Keys and indexes, in a pass of their own once every table exists.
+
+      They cannot go with the tables: a table missing from the target is
+      created from its column DDL alone, so it arrives without them, and a
+      foreign key may point at a table that is created later in the script.
+      Running the whole pass at the end settles both - by then every table is
+      there, whether it was just created or was already present. }
+    TableHeader := False;
+    AllTables := ObjectNames(Source, SourceKinds[3].ListSQL);
+    try
+      for Idx := 0 to AllTables.Count - 1 do
+      begin
+        SourceIdx := TableIndexStatements(Source, AllTables[Idx]);
+        TargetIdx := TableIndexStatements(Target, AllTables[Idx]);
+        SrcCon := TStringList.Create;
+        SrcName := TStringList.Create;
+        SrcKind := TStringList.Create;
+        TgtCon := TStringList.Create;
+        TgtName := TStringList.Create;
+        TgtKind := TStringList.Create;
+        try
+          TableConstraints(Source, AllTables[Idx], SrcCon, SrcName, SrcKind);
+          TableConstraints(Target, AllTables[Idx], TgtCon, TgtName, TgtKind);
+
+          for I2 := 0 to SrcCon.Count - 1 do
+            if TgtCon.IndexOf(SrcCon[I2]) < 0 then
+            begin
+              Section('Table keys and indexes', TableHeader);
+              Script.Add('');
+              { A table can have only one primary key, so where the target
+                already has a different one this cannot simply be added - the
+                old one has to go first, and which of the two is right is not
+                something to decide here. }
+              if (SrcKind[I2] = 'PRIMARY KEY') and (TgtKind.IndexOf('PRIMARY KEY') >= 0) then
+              begin
+                Script.Add('/* ' + AllTables[Idx] + ' has a different primary key.');
+                Script.Add('   Adding this one needs the existing one dropped first:');
+                Script.Add('   ' + SrcCon[I2]);
+                Script.Add('*/');
+                Inc(Differences.NeedingAttention);
+              end
+              else
+              begin
+                Script.Add('/* constraint missing from target */');
+                Script.Add(SrcCon[I2]);
+                Inc(Differences.ToCreate);
+              end;
+            end;
+
+          for I2 := 0 to TgtCon.Count - 1 do
+            if SrcCon.IndexOf(TgtCon[I2]) < 0 then
+            begin
+              Section('Table keys and indexes', TableHeader);
+              Script.Add('');
+              Script.Add('/* constraint only in target - uncomment to remove */');
+              Script.Add('-- alter table ' + Trim(AllTables[Idx]) +
+                ' drop constraint ' + TgtName[I2] + ';');
+              Inc(Differences.ToDrop);
+            end;
+
+          for I2 := 0 to SourceIdx.Count - 1 do
+            if TargetIdx.IndexOf(SourceIdx[I2]) < 0 then
+            begin
+              Section('Table keys and indexes', TableHeader);
+              Script.Add('');
+              Script.Add('/* index missing from target */');
+              Script.Add(SourceIdx[I2]);
+              Inc(Differences.ToCreate);
+            end;
+
+          for I2 := 0 to TargetIdx.Count - 1 do
+            if SourceIdx.IndexOf(TargetIdx[I2]) < 0 then
+            begin
+              IndexName := IndexNameOf(TargetIdx[I2]);
+              if IndexName <> '' then
+              begin
+                Section('Table keys and indexes', TableHeader);
+                Script.Add('');
+                Script.Add('/* index only in target - uncomment to remove */');
+                Script.Add('-- drop index ' + IndexName + ';');
+                Inc(Differences.ToDrop);
+              end;
+            end;
+        finally
+          TgtKind.Free;
+          TgtName.Free;
+          TgtCon.Free;
+          SrcKind.Free;
+          SrcName.Free;
+          SrcCon.Free;
+          TargetIdx.Free;
+          SourceIdx.Free;
+        end;
+      end;
+    finally
+      AllTables.Free;
     end;
 
     if (Differences.ToCreate = 0) and (Differences.ToDrop = 0) and

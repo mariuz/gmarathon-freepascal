@@ -136,6 +136,30 @@ begin
     Result := '';
 end;
 
+{ Firebird names an unnamed constraint INTEG_nnn, and the number differs
+  between databases holding identical schemas. Such a name is therefore only
+  ever safe on a line the script does not run. }
+procedure RequireGeneratedNamesOnlyCommented(const Script: String);
+var
+  Lines: TStringList;
+  Idx: Integer;
+begin
+  Lines := TStringList.Create;
+  try
+    Lines.Text := Script;
+    for Idx := 0 to Lines.Count - 1 do
+      if (Pos('INTEG_', UpperCase(Lines[Idx])) > 0) and
+         (Copy(TrimLeft(Lines[Idx]), 1, 2) <> '--') then
+      begin
+        WriteLn('FAIL: a generated constraint name appears on a line the script would run:');
+        WriteLn(Lines[Idx]);
+        Halt(1);
+      end;
+  finally
+    Lines.Free;
+  end;
+end;
+
 procedure RequireNotInDDL(const DDLText, Needle, What: String);
 begin
   if Pos(UpperCase(Needle), UpperCase(DDLText)) <> 0 then
@@ -517,7 +541,7 @@ begin
     'create domain D_CODE as varchar(10) not null',
     'create generator G_SEQ',
     'create exception E_BAD ''something went wrong''',
-    'create table BOTH_TBL (ID integer not null primary key)',
+    'create table BOTH_TBL (ID integer not null primary key, NOTE varchar(10))',
     'create table ONLY_SRC (ID integer not null primary key, CODE D_CODE)',
     'create view V_SHARED as select ID from BOTH_TBL',
     'create procedure P_ONLY_SRC (A integer) returns (R integer) as ' +
@@ -527,13 +551,24 @@ begin
     { BOTH_TBL is otherwise identical on the two sides, so an index only here
       is the case that used to be invisible: comparing tables by their column
       DDL alone said they matched. }
-    'create index IDX_BOTH_ID on BOTH_TBL (ID)']);
+    'create index IDX_BOTH_ID on BOTH_TBL (ID)',
+    { A constraint on a table both sides have, so it is compared by definition
+      rather than by name - Firebird would call it INTEG_nnn on each side and
+      those numbers do not match. }
+    'alter table ONLY_SRC add constraint FK_SRC foreign key (ID) ' +
+      'references BOTH_TBL (ID) on delete cascade',
+    'alter table BOTH_TBL add constraint UQ_NOTE unique (NOTE)',
+    { Identical columns, different primary key. A table can only have one, so
+      this is the case that must be reported rather than migrated - adding it
+      needs the existing one dropped first. }
+    'create table PK_DIFF (A integer not null, B integer not null, primary key (A))']);
 
   Build(TgtDB, TgtTr, '/tmp/marathon_cmp_tgt.fdb', [
-    'create table BOTH_TBL (ID integer not null primary key)',
+    'create table BOTH_TBL (ID integer not null primary key, NOTE varchar(10))',
     'create table ONLY_TGT (ID integer not null primary key)',
     { Same name, different body - the case a comparison exists to catch. }
-    'create view V_SHARED as select ID + 0 as ID from BOTH_TBL']);
+    'create view V_SHARED as select ID + 0 as ID from BOTH_TBL',
+    'create table PK_DIFF (A integer not null, B integer not null, primary key (B))']);
 
   try
     SrcCtx := ScriptAsContext(SrcDB, SrcTr, True, 3, EngineMajor);
@@ -569,15 +604,37 @@ begin
       'an index missing from an otherwise identical table');
     RequireInDDL(MigrationScript, 'index missing from target',
       'the index difference is reported as such');
+    RequireInDDL(MigrationScript, 'unique (NOTE)',
+      'a constraint missing from an otherwise identical table');
+    RequireInDDL(MigrationScript, 'constraint missing from target',
+      'the constraint difference is reported as such');
+    { Named by neither side in the generated text: comparing by definition is
+      the whole point, so the statement must not carry a name that would differ
+      between databases. }
+    { A generated name may appear only on a commented-out DROP, which needs the
+      real name to work. Anything the script would actually run must name no
+      constraint at all, since those names differ between databases. }
+    RequireGeneratedNamesOnlyCommented(MigrationScript);
+    RequireInDDL(MigrationScript, 'has a different primary key',
+      'a primary key that cannot be added without dropping the old one');
+    if Diff.NeedingAttention <> 1 then
+    begin
+      WriteLn('FAIL: expected exactly one object needing attention, got ',
+        Diff.NeedingAttention);
+      Halt(1);
+    end;
 
     { BOTH_TBL is identical on both sides, so it must not be recreated. Its
       name still appears - the view and trigger select from it - so the test is
       that no CREATE TABLE names it. }
     RequireNotInDDL(MigrationScript, 'create table BOTH_TBL', 'an unchanged table');
 
-    if Diff.ToDrop <> 1 then
+    { Two: the table only the target has, and the target's own primary key on
+      PK_DIFF - which is the other half of the report above, since adding the
+      source's key means dropping this one first. }
+    if Diff.ToDrop <> 2 then
     begin
-      WriteLn('FAIL: expected exactly one object to drop, got ', Diff.ToDrop);
+      WriteLn('FAIL: expected exactly two objects to drop, got ', Diff.ToDrop);
       Halt(1);
     end;
     if Diff.Changed <> 1 then
@@ -615,22 +672,27 @@ begin
       TgtTr.Commit;
 
     MigrationScript := CompareSchemas(SrcCtx, TgtCtx, Diff2);
+    { Everything the script could do must be done. What it said it could not do
+      is expected to be reported again, unchanged - that is the honest outcome,
+      not a failure to converge. }
     if (Diff2.ToCreate <> 0) or (Diff2.Changed <> 0) or
-       (Diff2.NeedingAttention <> 0) then
+       (Diff2.NeedingAttention <> Diff.NeedingAttention) then
     begin
       WriteLn('FAIL: the migration did not converge - still ', Diff2.ToCreate,
         ' to create, ', Diff2.Changed, ' to redefine, ', Diff2.NeedingAttention,
-        ' needing attention');
+        ' needing attention (expected ', Diff.NeedingAttention, ')');
       WriteLn(MigrationScript);
       Halt(1);
     end;
-    if Diff2.ToDrop <> 1 then
+    if Diff2.ToDrop <> Diff.ToDrop then
     begin
-      WriteLn('FAIL: the commented-out drop was not inert - ', Diff2.ToDrop,
-        ' objects to drop, expected the same 1');
+      WriteLn('FAIL: the commented-out drops were not inert - ', Diff2.ToDrop,
+        ' objects to drop, expected the same ', Diff.ToDrop);
       Halt(1);
     end;
-    WriteLn('Migration script converges (only the commented-out drop remains)');
+    WriteLn('Migration script converges (', Diff2.ToDrop,
+      ' commented-out drop(s) and ', Diff2.NeedingAttention,
+      ' report(s) remain, as intended)');
   finally
     if SrcTr.Active then
       SrcTr.Rollback;
