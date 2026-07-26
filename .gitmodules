@@ -3,4 +3,5 @@
 	url = https://github.com/MWASoftware/ibx4lazarus.git
 [submodule "lib/fbintf"]
 	path = lib/fbintf
-	url = https://github.com/MWASoftware/fbintf.git
+	url = https://github.com/mariuz/fbintf.git
+	branch = fix-use-after-free-in-transaction-end

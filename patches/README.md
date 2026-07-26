@@ -1,18 +1,30 @@
 # Patches for the vendored submodules
 
 Fixes to `lib/fbintf` and `lib/ibx4lazarus` that Marathon needs but that belong
-upstream. They are kept here as patch files rather than by pointing the
-submodules at a fork, so that `git submodule update --init --recursive` keeps
-working against MWASoftware's repositories for everyone.
+upstream.
 
-Apply them with:
+`lib/fbintf` currently points at **https://github.com/mariuz/fbintf** rather
+than MWASoftware's repository, pinned to the commit carrying the fix below, so
+that a fresh `git submodule update --init --recursive` builds with it. The fork
+tracks upstream and carries nothing else.
+
+**When MWASoftware/fbintf#7 is merged**, undo that in one step:
 
 ```sh
-git -C lib/fbintf apply ../../patches/fbintf-*.patch
+git config --file .gitmodules submodule.lib/fbintf.url https://github.com/MWASoftware/fbintf.git
+git config --file .gitmodules --unset submodule.lib/fbintf.branch
+git submodule sync lib/fbintf
+git -C lib/fbintf fetch origin && git -C lib/fbintf checkout <upstream commit with the fix>
+git add .gitmodules lib/fbintf && git commit
 ```
 
-Drop a patch once the corresponding pull request is merged and the submodule is
-bumped past it.
+and delete `fbintf-0001-transaction-use-after-free.patch`. The patch file is
+kept alongside the fork so the change is readable here, and so it can be
+applied by hand to any other checkout:
+
+```sh
+git -C lib/fbintf apply ../../patches/fbintf-0001-transaction-use-after-free.patch
+```
 
 ## fbintf-0001-transaction-use-after-free.patch
 
@@ -32,7 +44,10 @@ references, that is the last one. The transaction is destroyed while
 method operates on freed memory. The patch holds a reference to `self` for the
 duration.
 
-Marathon does not depend on the patch being applied. Its own queries cast
+The build now gets this fix by default, but Marathon still does not *depend* on
+it - the workarounds below stay, because they also serve users on a stock
+fbintf and because the casts do more than work around the defect. Its own
+queries cast
 `WITH TIME ZONE` columns to text, which both preserves the IANA zone name and
 avoids the defect, and `src/Common/SafeDisconnect.pas` contains the fault if a
 user's own query in the SQL editor triggers it. `test/ibx_smoke_test.lpr`

@@ -109,7 +109,9 @@ a `WITH TIME ZONE` column is not rewritten, so the connection it ran on still
 faults when closed. Fixing that properly needs the IBX layer, not this
 codebase — but the consequence is now contained rather than fatal, and a fix
 has been proposed upstream: **https://github.com/MWASoftware/fbintf/pull/7**,
-carried here as `patches/fbintf-0001-transaction-use-after-free.patch`. The
+carried here as `patches/fbintf-0001-transaction-use-after-free.patch`, with
+`lib/fbintf` pinned to a fork carrying it so a fresh checkout builds with the
+fix rather than needing a manual patch step. The
 cause is a use-after-free: reading a time zone value creates
 `TFB30TimeZoneServices`, which starts an internal transaction and registers
 itself on it; at disconnect `DoDefaultTransactionEnd` calls its
