@@ -803,10 +803,18 @@ begin
       Extractor.SQLDialect := DB.SQLDialect;
       Extractor.IsInterbase6 := True;
 
-      Tr.StartTransaction;
+      { Deliberately with no transaction open. The extractor's transaction is
+        shared with everything else on the connection and is committed
+        constantly - by the object tree's queries, by saving an editor - so
+        being asked to extract without one is the normal case, not an edge
+        case. It used to raise "Transaction is not active", which is what the
+        table editor's DDL tab did. }
+      if Tr.Active then
+        Tr.Commit;
       try
         DDL := Extractor.Extract(ddlTable, ddlstNone, 'IBX_SMOKE_TEST');
-        Tr.Commit;
+        if Tr.Active then
+          Tr.Commit;
       except
         on E: Exception do
         begin

@@ -19,8 +19,8 @@ program form_load_test;
 
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
-  ActnList, Menus, DB, DBGrids, Registry, Graphics,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB,
+  ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -764,6 +764,355 @@ begin
   end;
 end;
 
+{ The application image list, which every tree and list icon indexes into.
+
+  gtk2's ItemSetImage writes Widgets^.Images.Items[AImageIndex] with no bound
+  check of its own beyond requiring that list to match the image list's Count -
+  so an ImageIndex at or past ImageList.Count raises EListError from inside the
+  widgetset, which is what "List index (1) out of bounds" was. }
+{ Every IBX dataset on a document form must be allowed to start a transaction
+  for itself. The editors share one metadata transaction per connection and
+  plenty of code commits it, so a dataset opened afterwards would otherwise
+  fail with "Transaction is not active" - which is what switching tabs in the
+  table editor did. }
+procedure CheckEditorsAllowAutoTransactions;
+var
+  F: TfrmTables;
+  Datasets, Refused: Integer;
+  FirstRefused: String;
+
+  { Recursive for the same reason the fix is: a form does not own the
+    components sitting on its frames, and the editors put whole tabs on
+    frames. Counting only the form's own datasets would have called the first
+    version of this fix a pass. }
+  procedure Walk(C: TComponent);
+  var
+    Idx: Integer;
+    Child: TComponent;
+  begin
+    for Idx := 0 to C.ComponentCount - 1 do
+    begin
+      Child := C.Components[Idx];
+      if Child is TIBCustomDataSet then
+      begin
+        Inc(Datasets);
+        if not TIBCustomDataSet(Child).AllowAutoActivateTransaction then
+        begin
+          Inc(Refused);
+          if FirstRefused = '' then
+            FirstRefused := Child.Name;
+        end;
+      end;
+      if Child.ComponentCount > 0 then
+        Walk(Child);
+    end;
+  end;
+
+begin
+  WriteLn('Editor transactions:');
+  F := TfrmTables.Create(nil);
+  try
+    Datasets := 0;
+    Refused := 0;
+    FirstRefused := '';
+    Walk(F);
+    Check(Datasets > 0, 'the table editor has IBX datasets to check');
+    { More than the form's own, or the frames are not being reached. }
+    Check(Datasets > 4, 'the datasets on its frames are counted too (' +
+      IntToStr(Datasets) + ' found)');
+    if Refused = 0 then
+      Check(True, 'all ' + IntToStr(Datasets) +
+        ' datasets may start their own transaction')
+    else
+      Check(False, IntToStr(Refused) + ' dataset(s) may not start a ' +
+        'transaction, first: ' + FirstRefused);
+  finally
+    F.Free;
+  end;
+end;
+
+{ Saving a project that remembers a password. The password is stored with the
+  Borland XOR cipher, whose output is arbitrary bytes - Encrypt('masterkey')
+  contains $15 and $04, both of which XML forbids outright. Writing those raw
+  into an attribute made the whole save fail, and the only thing the user was
+  told was "Unable to save project.". }
+procedure CheckProjectSaveWithRememberedPassword;
+var
+  Conn: TMarathonCacheConnection;
+  SavedName, Failure: String;
+  Legacy: TStringList;
+begin
+  WriteLn('Project save with a remembered password:');
+  Conn := MarathonIDEInstance.CurrentProject.Cache.AddConnectionInternal;
+  Conn.Caption := 'PwdRoundTrip';
+  Conn.DBFileName := '/tmp/whatever.fdb';
+  Conn.ServerName := '';
+  Conn.UserName := 'SYSDBA';
+  Conn.Password := 'masterkey';
+  Conn.RememberPassword := True;
+
+  SavedName := GetTempDir + 'marathon_pwd_saved.xmpr';
+  Failure := '';
+  try
+    MarathonIDEInstance.CurrentProject.SaveToFile(SavedName);
+  except
+    on E: Exception do
+      Failure := E.Message;
+  end;
+  if Failure = '' then
+    Check(True, 'a project with a remembered password saves')
+  else
+    Check(False, 'a project with a remembered password saves -- ' + Failure);
+
+  if Failure = '' then
+  begin
+    MarathonIDEInstance.CurrentProject.LoadFromFile(SavedName);
+    Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName['PwdRoundTrip'];
+    Check(Assigned(Conn), 'the connection is read back');
+    if Assigned(Conn) then
+      Check(Conn.Password = 'masterkey', 'the password survives the round trip');
+  end;
+
+  { A project written by an earlier build stores the raw ciphertext. That only
+    survived XML at all when it happened to contain no forbidden byte, which is
+    exactly the case still out there to be read - Encrypt('a') is the single
+    printable byte 'b'. Built by rewriting a project this build just saved,
+    rather than by hand, so everything else in the file is genuinely what the
+    loader expects. }
+  Conn.Password := 'a';
+  MarathonIDEInstance.CurrentProject.SaveToFile(SavedName);
+  Legacy := TStringList.Create;
+  try
+    Legacy.LoadFromFile(SavedName);
+    Legacy.Text := StringReplace(Legacy.Text,
+      'passwordhex="' + EncryptToHex('a', E_START_KEY, E_MULT_KEY, E_ADD_KEY) + '"',
+      'password="' + Encrypt('a', E_START_KEY, E_MULT_KEY, E_ADD_KEY) + '"',
+      [rfReplaceAll]);
+    Legacy.SaveToFile(SavedName);
+  finally
+    Legacy.Free;
+  end;
+  MarathonIDEInstance.CurrentProject.LoadFromFile(SavedName);
+  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName['PwdRoundTrip'];
+  Check(Assigned(Conn), 'a project written by an earlier build still loads');
+  if Assigned(Conn) then
+    Check(Conn.Password = 'a', 'its raw-ciphertext password is still read');
+  DeleteFile(SavedName);
+end;
+
+{ The image lists that live in a .lfm rather than being rebuilt from a resource
+  strip at runtime. These inherited Delphi's TImageList blob, which LCL reads
+  as a single image no matter how many it held, so they were converted to LCL's
+  own format (see tools/imagelist_convert.lpr). Checked here because a blob
+  that round-trips standalone is not proof it survives being streamed as part
+  of a form. }
+procedure CheckDesignedImageLists;
+var
+  NewObj: TfrmNewObject;
+  Drop: TfrmDropObject;
+  SQL: TfrmSQLForm;
+begin
+  WriteLn('Image lists stored in .lfm files:');
+  Check(dmMenus.ilErrors.Count = 2, 'the menu module error list holds 2 images (has ' +
+    IntToStr(dmMenus.ilErrors.Count) + ')');
+  NewObj := TfrmNewObject.Create(nil);
+  try
+    Check(NewObj.ilImages.Count = 8, 'the new-object list holds 8 images (has ' +
+      IntToStr(NewObj.ilImages.Count) + ')');
+  finally
+    NewObj.Free;
+  end;
+  Drop := TfrmDropObject.Create(nil);
+  try
+    Check(Drop.ilResults.Count = 2, 'the drop-object list holds 2 images (has ' +
+      IntToStr(Drop.ilResults.Count) + ')');
+  finally
+    Drop.Free;
+  end;
+  SQL := TfrmSQLForm.Create(nil);
+  try
+    Check(SQL.ImageList1.Count = 8, 'the SQL editor list holds 8 images (has ' +
+      IntToStr(SQL.ImageList1.Count) + ')');
+  finally
+    SQL.Free;
+  end;
+end;
+
+procedure CheckImageListsSliced;
+
+  { Every strip is a single row of square icons, so the image count the list
+    should end up with is simply how many cells the strip holds. }
+  procedure CheckList(IL: TCustomImageList; const ResName, What: String);
+  var
+    B: TBitmap;
+    Expected: Integer;
+  begin
+    B := TBitmap.Create;
+    try
+      B.LoadFromResourceName(HInstance, ResName);
+      Expected := B.Width div IL.Width;
+    finally
+      B.Free;
+    end;
+    Check(IL.Count = Expected, What + ' holds all ' + IntToStr(Expected) +
+      ' icons of its strip (has ' + IntToStr(IL.Count) + ')');
+  end;
+
+begin
+  WriteLn('Image lists built from strips:');
+  CheckList(frmMarathonMain.ilMarathonImages, 'TREE_IMAGES_STRIP', 'the tree image list');
+  CheckList(frmMarathonMain.ilErrorInfo, 'ERROR_INFO_STRIP', 'the error image list');
+  CheckList(frmMarathonMain.imgMenuTools, 'TOOL_BAR_STRIP', 'the toolbar image list');
+  { The two overlays the tree uses for connected and inactive connections are
+    indexed directly, so they have to exist. }
+  Check(frmMarathonMain.ilMarathonImages.Count > 14,
+    'the overlay images the tree indexes (13 and 14) are present');
+end;
+
+{ The object browser's list pane, rebuilt the way TfrmDatabaseExplorer rebuilds
+  it. Clearing and re-adding the columns inside an Items.BeginUpdate block
+  makes the gtk2 widget rebuild its store, so the rows added afterwards are not
+  there yet as far as the widgetset is concerned - and TListItem.SetImageIndex
+  hands it the item's index. The second item therefore raised
+  "EListError: List index (1) out of bounds", which is exactly what a user saw
+  on selecting a connection: one entry listed, then the error. }
+procedure CheckListViewRebuild;
+var
+  F: TForm;
+  LV: TListView;
+  Idx: Integer;
+  Item: TListItem;
+  Failure: String;
+  Images: TImageList;
+  Bmp: TBitmap;
+begin
+  WriteLn('Object list rebuild:');
+  Failure := '';
+  F := TForm.CreateNew(nil);
+  try
+    F.Width := 300;
+    F.Height := 200;
+    { Configured like lvDatabase: a report view with a small-image list. The
+      image list matters - TListItem.SetImageIndex only reaches the widgetset
+      code that failed when one is assigned. }
+    Images := TImageList.Create(F);
+    Images.Width := 16;
+    Images.Height := 16;
+    for Idx := 0 to 11 do
+    begin
+      Bmp := TBitmap.Create;
+      try
+        Bmp.SetSize(16, 16);
+        Bmp.Canvas.Brush.Color := clWhite;
+        Bmp.Canvas.FillRect(0, 0, 16, 16);
+        Images.Add(Bmp, nil);
+      finally
+        Bmp.Free;
+      end;
+    end;
+    LV := TListView.Create(F);
+    LV.Parent := F;
+    LV.ViewStyle := vsReport;
+    LV.SmallImages := Images;
+    LV.HandleNeeded;
+    F.Show;
+    Application.ProcessMessages;
+    try
+      { The order under test: columns settled first, then the items added
+        inside the update block. }
+      LV.Items.Clear;
+      LV.Columns.Clear;
+      with LV.Columns.Add do
+      begin
+        Caption := 'Object';
+        Width := 200;
+      end;
+      LV.Items.BeginUpdate;
+      try
+        for Idx := 0 to 3 do
+        begin
+          Item := LV.Items.Add;
+          Item.Caption := 'Item ' + IntToStr(Idx);
+          Item.ImageIndex := Idx;
+        end;
+      finally
+        LV.Items.EndUpdate;
+      end;
+    except
+      on E: Exception do
+        Failure := E.ClassName + ': ' + E.Message;
+    end;
+    Check(Failure = '', 'rebuilding the list with several items does not raise' +
+      TrimRight(' ' + Failure));
+    Check(LV.Items.Count = 4, 'every item is added');
+    for Idx := 0 to LV.Items.Count - 1 do
+    begin
+      Item := LV.Items[Idx];
+      if Item.ImageIndex <> Idx then
+      begin
+        Check(False, 'item ' + IntToStr(Idx) + ' keeps its image index');
+        Break;
+      end;
+    end;
+  finally
+    F.Free;
+  end;
+end;
+
+{ IBX raises a login dialog of its own whenever LoginPrompt is left at its
+  default of True - and that dialog lives in the GUI half of the package, so in
+  a program that does not pull it in the attempt fails with "Default Login
+  Dialog not found. Have you included ibexpress in your program uses list?"
+  rather than connecting. Marathon collects credentials itself, so every
+  connection it makes has to turn the prompt off; this checks the one every
+  connection in the object tree is built from. }
+procedure CheckConnectionDoesNotPrompt;
+var
+  Conn: TMarathonCacheConnection;
+begin
+  WriteLn('Connection login prompt:');
+  Conn := TMarathonCacheConnection.Create;
+  Check(not Conn.Connection.LoginPrompt,
+    'a new connection does not ask IBX to prompt for a login');
+  { Deliberately not freed. Destroy writes through FRootItem, which only a
+    connection belonging to a project has, so freeing this one raises - and an
+    unhandled exception here means a modal error dialog with nobody to dismiss
+    it, which hangs the run rather than failing it. Leaking one object in a
+    process that is about to exit is the lesser problem. }
+end;
+
+{ The three variants of the master properties dialog. Each shows one tab of a
+  page control that holds all three; making that tab visible does not make it
+  the active page, so New Project and New Server both used to open completely
+  empty - the right tab drawn over the page the .lfm left active, which was
+  the hidden connection one. Only the connection dialogs escaped, because that
+  is where ActivePage already pointed. }
+procedure CheckMasterPropertiesTabs;
+
+  procedure CheckOne(F: TfrmMasterProperties; const Expected, What: String);
+  begin
+    try
+      Check(Assigned(F.pgProperties.ActivePage) and
+            (F.pgProperties.ActivePage.Name = Expected),
+        What + ' shows the ' + Expected + ' page');
+      Check(Assigned(F.pgProperties.ActivePage) and
+            (F.pgProperties.ActivePage.ControlCount > 0),
+        What + ' shows a page with controls on it');
+      Check(Assigned(F.pgProperties.ActivePage) and
+            F.pgProperties.ActivePage.TabVisible,
+        What + ' shows a page whose tab is visible');
+    finally
+      F.Free;
+    end;
+  end;
+
+begin
+  WriteLn('Master properties dialog tabs:');
+  CheckOne(TfrmMasterProperties.CreateNewProject(nil), 'tsProject', 'New Project');
+  CheckOne(TfrmMasterProperties.CreateNewServer(nil), 'tsServer', 'New Server');
+  CheckOne(TfrmMasterProperties.CreateNewConnection(nil), 'tsConnection', 'New Connection');
+end;
+
 { The Create Database dialog. The wizard it replaces could not run on this
   platform at all, so the defaults it opens with are the whole user-facing
   contract: a page size the server will honour, dialect 3, and a character set
@@ -913,6 +1262,13 @@ begin
   CheckMaintenanceParallelWorkers;
   CheckSchemaCompareDialog;
   CheckCreateDatabaseDialog;
+  CheckMasterPropertiesTabs;
+  CheckConnectionDoesNotPrompt;
+  CheckListViewRebuild;
+  CheckImageListsSliced;
+  CheckDesignedImageLists;
+  CheckEditorsAllowAutoTransactions;
+  CheckProjectSaveWithRememberedPassword;
 
   if Failures > 0 then
   begin

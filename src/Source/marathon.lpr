@@ -121,13 +121,46 @@ uses
 {$R MarathonVersion.RES}
 {$R marathon.res}
 
+type
+	{ Prints a Pascal backtrace for any exception the LCL would otherwise only
+	  show in a message box.
+
+	  This exists because gdb cannot produce one: the FPC RTL is compiled
+	  without frame pointers, so a backtrace taken inside, say, TFPList.Error
+	  unwinds to "#2 0x0" and the actual caller is lost. FPC's own
+	  DumpExceptionBackTrace uses the DWARF line info instead and gets the whole
+	  chain with unit names and line numbers.
+
+	  Off unless MARATHON_TRACE_EXCEPTIONS is set in the environment, so it
+	  costs a normal run nothing and cannot change what the user sees - the
+	  handler re-shows the dialog itself. }
+	TExceptionTracer = class
+		procedure HandleException(Sender: TObject; E: Exception);
+	end;
+
+procedure TExceptionTracer.HandleException(Sender: TObject; E: Exception);
+begin
+	WriteLn(StdErr);
+	WriteLn(StdErr, '=== ', E.ClassName, ': ', E.Message);
+	DumpExceptionBackTrace(StdErr);
+	Flush(StdErr);
+	Application.ShowException(E);
+end;
+
 var
 	frmSplash : TfrmSplash;
+	Tracer : TExceptionTracer;
 begin
 	MarathonScreen := TMarathonScreen.Create;
 	try
 		Application.Initialize;
 		Application.Title := 'Marathon - The SQL Tool for Firebird ';
+		Tracer := nil;
+		if GetEnvironmentVariable('MARATHON_TRACE_EXCEPTIONS') <> '' then
+		begin
+			Tracer := TExceptionTracer.Create;
+			Application.OnException := Tracer.HandleException;
+		end;
 		frmSplash := TfrmSplash.Create(Application);
 		frmSplash.ShowModal;
 		Application.CreateForm(TfrmMarathonMain, frmMarathonMain);
@@ -139,6 +172,7 @@ begin
 
     Application.Run;
 	finally
+		Tracer.Free;
 		MarathonScreen.Free;
 		// The single-instance mutex this used to release was dropped during the
 		// port: nothing in the tree creates a mutex any more, and MutexHandle
