@@ -57,6 +57,14 @@ function ScriptAsMerge(const Ctx: TScriptAsContext; ObjectName: String): String;
 function ScriptAsAlter(const Ctx: TScriptAsContext; ObjectName: String; CacheType: TGSSCacheType): String;
 function ScriptAsExecute(const Ctx: TScriptAsContext; ObjectName: String): String;
 
+{ A routine's call signature, for showing beside it rather than making the user
+  open it: 'MYPROC(A INTEGER, B VARCHAR(20)) RETURNS (R INTEGER)'. Works for a
+  stored procedure or a PSQL function; returns an empty string for anything
+  else, including a legacy external UDF, whose arguments are typed differently
+  and are not what this is for. }
+function RoutineSignature(const Ctx: TScriptAsContext; ObjectName: String;
+  IsFunction: Boolean): String;
+
 implementation
 
 function ScriptAsContext(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
@@ -478,6 +486,92 @@ begin
 	finally
 		Extractor.Free;
 	end;
+end;
+
+{ Formats one parameter's declared type. Both catalogues type their arguments
+  through RDB$FIELD_SOURCE - the domain - rather than carrying the type
+  directly, so the domain has to be joined in. }
+function SignatureParamList(const Ctx: TScriptAsContext; const SQL: String): String;
+var
+	Q: TIBQuery;
+	TypeName: String;
+begin
+	Result := '';
+	Q := TIBQuery.Create(nil);
+	try
+		Q.Database := Ctx.Database;
+		Q.Transaction := Ctx.Transaction;
+		Q.SQL.Text := SQL;
+		Q.Open;
+		while not Q.EOF do
+		begin
+			if Result <> '' then
+				Result := Result + ', ';
+			TypeName := ConvertFieldType(
+				Q.FieldByName('rdb$field_type').AsInteger,
+				Q.FieldByName('rdb$field_length').AsInteger,
+				Q.FieldByName('rdb$field_scale').AsInteger,
+				Q.FieldByName('rdb$field_sub_type').AsInteger,
+				Q.FieldByName('rdb$field_precision').AsInteger,
+				Ctx.IsIB6);
+			Result := Result + Trim(Q.FieldByName('param_name').AsString);
+			if Trim(TypeName) <> '' then
+				Result := Result + ' ' + Trim(TypeName);
+			Q.Next;
+		end;
+		Q.Close;
+	finally
+		Q.Free;
+	end;
+end;
+
+function RoutineSignature(const Ctx: TScriptAsContext; ObjectName: String;
+  IsFunction: Boolean): String;
+var
+	Args, Returns: String;
+	Name: String;
+begin
+	Result := '';
+	EnsureActive(Ctx);
+	Name := AnsiQuotedStr(ObjectName, '''');
+	if IsFunction then
+	begin
+		Args := SignatureParamList(Ctx,
+			'select a.rdb$argument_name as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
+			'from rdb$function_arguments a ' +
+			'join rdb$fields f on f.rdb$field_name = a.rdb$field_source ' +
+			'where a.rdb$function_name = ' + Name +
+			' and a.rdb$argument_position > 0 order by a.rdb$argument_position');
+		Returns := SignatureParamList(Ctx,
+			'select cast(null as varchar(1)) as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
+			'from rdb$function_arguments a ' +
+			'join rdb$fields f on f.rdb$field_name = a.rdb$field_source ' +
+			'where a.rdb$function_name = ' + Name +
+			' and a.rdb$argument_position = 0');
+	end
+	else
+	begin
+		Args := SignatureParamList(Ctx,
+			'select p.rdb$parameter_name as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
+			'from rdb$procedure_parameters p ' +
+			'join rdb$fields f on f.rdb$field_name = p.rdb$field_source ' +
+			'where p.rdb$procedure_name = ' + Name +
+			' and p.rdb$parameter_type = 0 order by p.rdb$parameter_number');
+		Returns := SignatureParamList(Ctx,
+			'select p.rdb$parameter_name as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
+			'from rdb$procedure_parameters p ' +
+			'join rdb$fields f on f.rdb$field_name = p.rdb$field_source ' +
+			'where p.rdb$procedure_name = ' + Name +
+			' and p.rdb$parameter_type = 1 order by p.rdb$parameter_number');
+	end;
+
+	Result := Trim(ObjectName) + '(' + Args + ')';
+	if Returns <> '' then
+		Result := Result + ' RETURNS (' + Trim(Returns) + ')';
 end;
 
 function ScriptAsExecute(const Ctx: TScriptAsContext; ObjectName: String): String;

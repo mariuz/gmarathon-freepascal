@@ -952,7 +952,12 @@ begin
         initialise. Each generated statement is either executed or prepared,
         so this checks the SQL is real rather than merely that the text looks
         plausible. }
-      Ctx := ScriptAsContext(DB, Tr, False, DB.SQLDialect, EngineMajor);
+      { IsIB6 is True for every Firebird a connection can be made to - see
+        TMarathonCacheConnection.IsIB6 - so pass True here as well, or these
+        tests exercise a configuration the application never uses. It decides
+        identifier quoting and whether dialect-3 types are formatted at all:
+        with False, ConvertFieldType returns an empty string for NUMERIC. }
+      Ctx := ScriptAsContext(DB, Tr, True, DB.SQLDialect, EngineMajor);
 
       try
         { SELECT/INSERT/UPDATE/DELETE all have to parse. The SELECT is the only
@@ -991,7 +996,7 @@ begin
           RequireInDDL(Script, '=>', 'named arguments on Firebird 6');
           { Both forms have to compile, so build the positional one explicitly
             and prepare that too rather than assuming it still works. }
-          PositionalCtx := ScriptAsContext(DB, Tr, False, DB.SQLDialect, 5);
+          PositionalCtx := ScriptAsContext(DB, Tr, True, DB.SQLDialect, 5);
           Script := ScriptAsExecute(PositionalCtx, 'IBX_SMOKE_TEST_PROC');
           if Pos('=>', Script) > 0 then
           begin
@@ -1019,6 +1024,45 @@ begin
         end;
       end;
       WriteLn('Script As OK (SELECT/INSERT/UPDATE/DELETE/EXECUTE)');
+
+      { Routine signatures, shown in the explorer's status bar so a routine's
+        parameters can be read without opening it. Both catalogues type their
+        arguments through the domain rather than carrying the type directly,
+        which is the part worth checking. }
+      Script := RoutineSignature(Ctx, 'IBX_SMOKE_TEST_PROC', False);
+      RequireInDDL(Script, 'IBX_SMOKE_TEST_PROC(', 'the routine name and an argument list');
+      RequireInDDL(Script, 'A_ID integer', 'the parameter with its declared type');
+      WriteLn('Signature OK (procedure): ', Script);
+
+      if EngineMajor >= 3 then
+      begin
+        { A PSQL function's return type lives at argument position 0, not in a
+          separate column - a detail easy to get wrong, and the reason the
+          function path is checked separately. }
+        Script := RoutineSignature(Ctx, 'IBX_SMOKE_FN', True);
+        RequireInDDL(Script, 'IBX_SMOKE_FN(', 'the function name');
+        RequireInDDL(Script, 'X integer', 'the function argument');
+        RequireInDDL(Script, 'RETURNS', 'the function return type');
+        WriteLn('Signature OK (function): ', Script);
+      end;
+
+      { A procedure with no parameters at all must still read sensibly. }
+      EnsureTransaction;
+      Q.SQL.Text := 'create or alter procedure ibx_smoke_noargs as begin end';
+      Q.ExecSQL;
+      if Tr.Active then
+        Tr.Commit;
+      Script := RoutineSignature(Ctx, 'IBX_SMOKE_NOARGS', False);
+      if Script <> 'IBX_SMOKE_NOARGS()' then
+      begin
+        WriteLn('FAIL: a parameterless procedure reads as "', Script, '"');
+        Halt(1);
+      end;
+      EnsureTransaction;
+      Q.SQL.Text := 'drop procedure ibx_smoke_noargs';
+      Q.ExecSQL;
+      if Tr.Active then
+        Tr.Commit;
 
       { MERGE. The join condition has to come from the real primary key - an ON
         clause that never matches would turn every MERGE into an INSERT - and

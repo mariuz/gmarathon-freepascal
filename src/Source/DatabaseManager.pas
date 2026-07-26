@@ -51,7 +51,7 @@ interface
 uses {$IFDEF FPC}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetaDataSearchObject, GimbalToolsAPI, GimbalToolsAPIImpl;
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetaDataSearchObject, ScriptAs, GimbalToolsAPI, GimbalToolsAPIImpl;
 
 type
 	TfrmDatabaseExplorer = class(TfrmBaseDocumentForm, IMarathonBrowser, IGimbalIDEBrowserWindow)
@@ -231,6 +231,10 @@ type
 
 		function CanScriptCreate : Boolean; override;
 		procedure DoScriptCreate; override;
+
+		{ Takes TObject because the cache types are only visible to this unit's
+		  implementation section. }
+		procedure ShowRoutineSignature(Item: TObject);
 
 		function CanScriptAlter : Boolean; override;
 		procedure DoScriptAlter; override;
@@ -460,6 +464,38 @@ begin
 	end;
 end;
 
+{ Puts the selected routine's call signature in the status bar, so its
+  parameters can be read without opening it or scripting an EXECUTE. Anything
+  that is not a procedure or function clears the panel rather than leaving the
+  last routine's signature under an unrelated node. }
+procedure TfrmDatabaseExplorer.ShowRoutineSignature(Item: TObject);
+var
+	Conn: TMarathonCacheConnection;
+	Signature: String;
+begin
+	Signature := '';
+	if Assigned(Item) and (Item is TMarathonCacheObject) and
+		(TMarathonCacheObject(Item).CacheType in [ctSP, ctUDF]) then
+	begin
+		Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[
+			TMarathonCacheObject(Item).ConnectionName];
+		if Assigned(Conn) and Conn.Connected then
+			try
+				Signature := RoutineSignature(
+					ScriptAsContext(Conn.Connection, Conn.Transaction, Conn.IsIB6,
+						Conn.SQLDialect, Conn.ServerMajorVersion),
+					TMarathonCacheObject(Item).ObjectName,
+					TMarathonCacheObject(Item).CacheType = ctUDF);
+			except
+				{ A signature is a convenience; failing to read one must not stop
+				  the node being selected. }
+				on E: Exception do
+					Signature := '';
+			end;
+	end;
+	stsDatabase.Panels[0].Text := ' ' + Signature;
+end;
+
 procedure TfrmDatabaseExplorer.tvDatabaseChange(Sender: TObject; Node: TTreeNode);
 var
 	WNode: TTreeNode;
@@ -472,6 +508,7 @@ begin
 		Screen.Cursor := crHourGlass;
 
 		tscObj := TMarathonCacheBaseNode(TMarathonTreeNode(Node.Data).Data);
+		ShowRoutineSignature(tscObj);
 		if Assigned(tscObj) then
 		begin
 			if tscObj.ContentStr = '' then
