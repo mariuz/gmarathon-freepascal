@@ -603,10 +603,14 @@ begin
     Check(Node.CanDoOperation(opOpen, False), 'a package node can be opened');
     Check(Node.CanDoOperation(opScriptCreate, False), 'a package node can be scripted');
     Check(Node.CanDoOperation(opExtractDDL, False), 'a package node can be extracted');
-    { These have no handler for a package - offering them would be a menu item
-      that does nothing. }
-    Check(not Node.CanDoOperation(opDrop, False), 'a package node does not offer Drop');
+    { The drop dialog does know how to drop a package, so this one is offered. }
+    Check(Node.CanDoOperation(opDrop, False), 'a package node can be dropped');
+    { These three have no ctPackage branch in the dispatch - offering them would
+      be a menu item that does nothing at all. }
     Check(not Node.CanDoOperation(opNew, False), 'a package node does not offer New');
+    Check(not Node.CanDoOperation(opPrint, False), 'a package node does not offer Print');
+    Check(not Node.CanDoOperation(opPrintPreview, False),
+      'a package node does not offer Print Preview');
   finally
     Node.Free;
   end;

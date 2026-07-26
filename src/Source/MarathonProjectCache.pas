@@ -4614,16 +4614,17 @@ begin
 end;
 
 { TMarathonCachePublicationsHeader }
-{ The base class advertises New and Drop for every object, but neither has a
-  handler for a package - they would sit enabled in the menu and do nothing.
-  A package is also viewed rather than edited, so what is left is opening it,
-  scripting it and extracting it. }
+{ The base class advertises New, Print and Print Preview for every object, and
+  none of the three has a ctPackage branch in the dispatch - they would sit
+  enabled in the menu and do nothing at all, not even report that printing is
+  unavailable on this build. Drop is offered because the drop dialog does know
+  how to drop a package. }
 function TMarathonCachePackage.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
 begin
 	if Multiple then
-		Result := Op in [opExtractDDL, opAddToProject]
+		Result := Op in [opDrop, opExtractDDL, opAddToProject]
 	else
-		Result := Op in [opOpen, opScriptCreate, opExtractDDL, opAddToProject];
+		Result := Op in [opOpen, opDrop, opScriptCreate, opExtractDDL, opAddToProject];
 end;
 
 constructor TMarathonCachePublicationsHeader.Create;

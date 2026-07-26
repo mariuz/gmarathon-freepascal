@@ -1029,6 +1029,23 @@ begin
       end;
       WriteLn('Script As OK (DROP: ', ScriptAsDrop(Ctx, 'IBX_SMOKE_TEST', ctTable), ')');
 
+      { DROP PACKAGE takes the body with it, so one statement covers a package
+        whether or not it has one - prepared against both to prove it. }
+      if EngineMajor >= 3 then
+      begin
+        Script := ScriptAsDrop(Ctx, 'IBX_SMOKE_PKG', ctPackage);
+        if Pos('PACKAGE BODY', UpperCase(Script)) > 0 then
+        begin
+          WriteLn('FAIL: the package DROP names the body separately:');
+          WriteLn(Script);
+          Halt(1);
+        end;
+        PrepareOnly(Script, 'DROP PACKAGE (with a body)');
+        PrepareOnly(ScriptAsDrop(Ctx, 'IBX_SMOKE_PKG_NOBODY', ctPackage),
+          'DROP PACKAGE (header only)');
+        WriteLn('Script As OK (DROP PACKAGE: ', Trim(Script), ')');
+      end;
+
       { ALTER. These are executed, not just prepared: restating an object
         exactly as it already is is harmless, and it is the only way to prove
         the ALTER forms are right. The trigger is the one that matters - ALTER

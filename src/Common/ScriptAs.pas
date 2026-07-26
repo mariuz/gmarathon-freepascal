@@ -310,11 +310,10 @@ begin
 			else
 				Result := 'drop external function ' + Ident + ';';
 		ctPackage:
-			{ The body is a separate object and must go first - dropping the
-			  package alone leaves nothing behind, but naming both makes the
-			  order explicit if the user runs only part of the script. }
-			Result := 'drop package body ' + Ident + ';' + #13#10 +
-				'drop package ' + Ident + ';';
+			{ One statement is enough: DROP PACKAGE takes the body with it
+			  (verified), so naming the body separately only adds a statement
+			  that can fail on its own. }
+			Result := 'drop package ' + Ident + ';';
 	else
 		Result := '/* No DROP statement applies to this object. */';
 	end;

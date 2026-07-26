@@ -205,6 +205,15 @@ begin
             DoDrop(Item, SQL);
           end;
 
+        ctPackage:
+          begin
+            { DROP PACKAGE removes the body as well, so one statement covers a
+              package with or without one. }
+            SQL := 'drop package ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
+              MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            DoDrop(Item, SQL);
+          end;
+
         ctUDF:
           begin
             SQL := 'drop external function ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
