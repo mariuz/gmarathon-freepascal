@@ -54,6 +54,11 @@ jobs:
       - name: Run IBX smoke test against live Firebird
         run: ./test/ibx_smoke_test "localhost:/tmp/ibx_smoke_test.fdb" SYSDBA "${FIREBIRD_SYSDBA_PASSWORD}"
 
+      # The smoke test writes a workbook; whether it is a valid .xlsx can only
+      # be told by taking the file apart again.
+      - name: Validate the exported XLSX workbook
+        run: python3 test/validate_xlsx.py /tmp/ibx_smoke_export.xlsx
+
       # Needs no database, but does need the LCL linked - the nogui widgetset
       # lets it run without a display.
       - name: Build keyword highlighting test

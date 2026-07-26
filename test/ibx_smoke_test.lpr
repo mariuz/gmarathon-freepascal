@@ -17,7 +17,7 @@ program ibx_smoke_test;
 
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
-  MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText;
+  MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter;
 
 var
   DB: TIBDatabase;
@@ -33,6 +33,7 @@ var
   Script: String;
   Single: TBufDataset;
   ParamMeta: TIBSQL;
+  Cols: TStringList;
 
 { The generators end their statements the way a user would type them; the API
   takes one statement without the terminator. }
@@ -1322,6 +1323,92 @@ begin
           Halt(1);
         end;
       end;
+
+      { XLSX export. The file is a zip of XML parts, so the only way to know
+        it is right is to write one and take it apart again - which the test
+        harness does after this run. Here we write it from a real result set
+        containing the things most likely to break the writer: a NULL, a
+        number, and text needing XML escaping. }
+      EnsureTransaction;
+      try
+        Q.SQL.Text := 'delete from ibx_smoke_test where id in (9001, 9002)';
+        Q.ExecSQL;
+        Q.SQL.Text := 'insert into ibx_smoke_test (id, note) values ' +
+                      '(9001, ''a & b <c> "d"'')';
+        Q.ExecSQL;
+        Q.SQL.Text := 'insert into ibx_smoke_test (id, note) values (9002, null)';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+
+        EnsureTransaction;
+        Q.SQL.Text := 'select id, note from ibx_smoke_test where id in (9001, 9002) order by id';
+        Q.Open;
+        Cols := TStringList.Create;
+        try
+          Cols.Add('ID');
+          Cols.Add('NOTE');
+          WriteXlsx(Q, Cols, 'Results', GetTempDir + 'ibx_smoke_export.xlsx');
+        finally
+          Cols.Free;
+        end;
+        Q.Close;
+
+        if not FileExists(GetTempDir + 'ibx_smoke_export.xlsx') then
+        begin
+          WriteLn('FAIL: no workbook was written');
+          Halt(1);
+        end;
+
+        EnsureTransaction;
+        Q.SQL.Text := 'delete from ibx_smoke_test where id in (9001, 9002)';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('XLSX export OK (written to ', GetTempDir, 'ibx_smoke_export.xlsx)');
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: XLSX export raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      { Cell references are base-26 with no zero digit, which is the part of
+        the format most easily got wrong past column Z. }
+      if XlsxCellRef(0, 0) <> 'A1' then
+      begin
+        WriteLn('FAIL: cell (0,0) is ', XlsxCellRef(0, 0), ', expected A1');
+        Halt(1);
+      end;
+      if XlsxCellRef(25, 0) <> 'Z1' then
+      begin
+        WriteLn('FAIL: cell (25,0) is ', XlsxCellRef(25, 0), ', expected Z1');
+        Halt(1);
+      end;
+      if XlsxCellRef(26, 1) <> 'AA2' then
+      begin
+        WriteLn('FAIL: cell (26,1) is ', XlsxCellRef(26, 1), ', expected AA2');
+        Halt(1);
+      end;
+      if XlsxCellRef(701, 0) <> 'ZZ1' then
+      begin
+        WriteLn('FAIL: cell (701,0) is ', XlsxCellRef(701, 0), ', expected ZZ1');
+        Halt(1);
+      end;
+      if XlsxCellRef(702, 0) <> 'AAA1' then
+      begin
+        WriteLn('FAIL: cell (702,0) is ', XlsxCellRef(702, 0), ', expected AAA1');
+        Halt(1);
+      end;
+      if XlsxEscape('a & b <c>') <> 'a &amp; b &lt;c&gt;' then
+      begin
+        WriteLn('FAIL: XML escaping is wrong: ', XlsxEscape('a & b <c>'));
+        Halt(1);
+      end;
+      WriteLn('XLSX cell references and escaping OK');
 
       { EXPLAIN. It is a client-side command that isql implements itself, not
         server DSQL - preparing "explain select ..." through IBX fails with

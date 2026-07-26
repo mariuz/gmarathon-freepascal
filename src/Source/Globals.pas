@@ -302,7 +302,7 @@ var
 
 implementation
 
-uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter;
 
 const
   // Firebird BLR type constants (from ibase.h), as stored in
@@ -1807,6 +1807,18 @@ begin
           end;
         finally
           CloseFile(F);
+        end;
+      end;
+
+    5 :
+      begin  //xlsx workbook
+        Q.DisableControls;
+        try
+          Q.First;
+          WriteXlsx(Q, FieldList, 'Results', FileName);
+        finally
+          Q.First;
+          Q.EnableControls;
         end;
       end;
   end;

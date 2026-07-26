@@ -229,7 +229,8 @@ object frmSaveFileFormat: TfrmSaveFileFormat
           'Insert Statement'
           'JSON'
           'Markdown Table'
-          'Tab Separated Values')
+          'Tab Separated Values'
+      'Excel Workbook (XLSX)')
       end
       object edFileName: TrmBtnEdit
         Left = 48
@@ -294,7 +295,7 @@ object frmSaveFileFormat: TfrmSaveFileFormat
     Filter =
       'SQL Files (*.sql)|*.sql|Text Files (*.txt)|*.txt|JSON Files (*' +
       '.json)|*.json|Markdown Files (*.md)|*.md|Tab Separated Values (' +
-      '*.tsv)|*.tsv|All Files (*.*)|*.*'
+      '*.tsv)|*.tsv|Excel Workbooks (*.xlsx)|*.xlsx|All Files (*.*)|*.*'
     Options = [ofOverwritePrompt, ofHideReadOnly]
     Title = 'Save File'
     Left = 12
