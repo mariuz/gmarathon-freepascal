@@ -95,6 +95,7 @@ type
 		function FunctionListSQL: String;
 		function ProcedureListSQL: String;
 		function PackagesSupported: Boolean;
+		function SchemaClause: String;
 		procedure PopulateObjectLists;
 		function GetChecklistFor(CacheType: TGSSCacheType): TCheckListBox;
 		function CurrentChecklist: TCheckListBox;
@@ -297,6 +298,21 @@ begin
   end;
 end;
 
+{ See TMarathonCacheConnection.SchemaFilterClause - same rule, same reason: the
+  wizard extracts unqualified DDL, so it must offer only what an unqualified
+  name reaches. }
+function TfrmMetaExtractWizard.SchemaClause: String;
+begin
+  Result := '';
+  if Assigned(FDatabase) and FDatabase.Connected then
+    try
+      if FDatabase.Attachment.GetODSMajorVersion >= 14 then
+        Result := ' and (rdb$schema_name = current_schema or current_schema is null)';
+    except
+      Result := '';
+    end;
+end;
+
 function TfrmMetaExtractWizard.FunctionListSQL: String;
 var
   ODSMajor: Integer;
@@ -317,7 +333,7 @@ begin
             '((rdb$system_flag = 0) or (rdb$system_flag is null))';
   if ODSMajor >= 12 then
     Result := Result + ' and rdb$package_name is null';
-  Result := Result + ' order by rdb$function_name asc';
+  Result := Result + SchemaClause + ' order by rdb$function_name asc';
 end;
 
 { The same exclusion for packaged procedures, which cannot be created or
@@ -328,7 +344,7 @@ begin
             '((rdb$system_flag = 0) or (rdb$system_flag is null))';
   if PackagesSupported then
     Result := Result + ' and rdb$package_name is null';
-  Result := Result + ' order by rdb$procedure_name asc';
+  Result := Result + SchemaClause + ' order by rdb$procedure_name asc';
 end;
 
 procedure TfrmMetaExtractWizard.PopulateObjectLists;
@@ -338,13 +354,13 @@ begin
 	  etc.) - kept identical so this wizard's object lists always match what the
 	  Database Explorer tree shows. }
 	RunObjectQuery(lstDomains,
-		'select rdb$field_name from rdb$fields where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$field_name asc',
+		'select rdb$field_name from rdb$fields where ((rdb$system_flag = 0) or (rdb$system_flag is null))' + SchemaClause + ' order by rdb$field_name asc',
 		'rdb$field_name', 'RDB$');
 	RunObjectQuery(lstTables,
-		'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is null order by rdb$relation_name asc',
+		'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is null' + SchemaClause + ' order by rdb$relation_name asc',
 		'rdb$relation_name', 'RDB$');
 	RunObjectQuery(lstViews,
-		'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is not null order by rdb$relation_name asc',
+		'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is not null' + SchemaClause + ' order by rdb$relation_name asc',
 		'rdb$relation_name', '');
 	RunObjectQuery(lstProcedures,
 		ProcedureListSQL,
@@ -353,10 +369,10 @@ begin
 		'select rdb$trigger_name from rdb$triggers where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and (rdb$trigger_source is not null) order by rdb$trigger_name asc',
 		'rdb$trigger_name', 'CHECK_');
 	RunObjectQuery(lstGenerators,
-		'select rdb$generator_name from rdb$generators where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$generator_name asc',
+		'select rdb$generator_name from rdb$generators where ((rdb$system_flag = 0) or (rdb$system_flag is null))' + SchemaClause + ' order by rdb$generator_name asc',
 		'rdb$generator_name', '');
 	RunObjectQuery(lstExceptions,
-		'select rdb$exception_name from rdb$exceptions where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$exception_name asc',
+		'select rdb$exception_name from rdb$exceptions where ((rdb$system_flag = 0) or (rdb$system_flag is null))' + SchemaClause + ' order by rdb$exception_name asc',
 		'rdb$exception_name', '');
 	RunObjectQuery(lstUDFs,
 		FunctionListSQL,

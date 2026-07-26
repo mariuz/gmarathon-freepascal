@@ -307,6 +307,7 @@ type
 		  Use this for "does this RDB$ column exist", since an old database on a
 		  new server keeps its old ODS. }
 		function IsODSAtLeast(Major, Minor: Integer): Boolean;
+		function SchemaFilterClause: String;
 		function GetDBCharSetName(CharSetID: Integer): String;
 		function GetDBCollationName(CollationID, CharSetID: Integer): String;
 		procedure GetCharSetNames(S: TStrings);
@@ -2161,7 +2162,7 @@ begin
 			  happen to be flagged system, and the RDB$ name check below does not
 			  catch them. This list feeds the New Trigger dialog's table
 			  dropdown, where they have no business appearing. }
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
+			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null' + SchemaFilterClause + ' order by RDB$RELATION_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -2196,7 +2197,7 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc');
+			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null' + SchemaFilterClause + ' order by RDB$RELATION_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -2231,7 +2232,7 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc');
+			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + SchemaFilterClause + ' order by RDB$FIELD_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -2381,6 +2382,28 @@ end;
 function TMarathonCacheConnection.IsFirebirdAtLeast(MajorVersion: Integer): Boolean;
 begin
   Result := Connected and (ServerMajorVersion >= MajorVersion);
+end;
+
+{ Restricts an object list to the schema unqualified names resolve to.
+
+  Firebird 6 introduced schemas, and a database can hold objects the user never
+  created: the profiler plugin, for one, puts its tables in a PLG$PROFILER
+  schema of its own, and they are not flagged as system so no system filter
+  excludes them. Listing those beside the user's own tables is not just noise -
+  Marathon generates unqualified DDL and unqualified scripts, so an object the
+  tree offers from another schema produces a script that does not run. The tree
+  therefore shows exactly what an unqualified name reaches.
+
+  Empty on anything before Firebird 6, where RDB$SCHEMA_NAME does not exist and
+  naming it is a hard error. The CURRENT_SCHEMA null guard matters because it
+  is null when the search path is empty, and without it the tree would come
+  back empty rather than unfiltered. }
+function TMarathonCacheConnection.SchemaFilterClause: String;
+begin
+	if IsODSAtLeast(ODS_FB6_MAJOR, 0) then
+		Result := ' and (rdb$schema_name = current_schema or current_schema is null)'
+	else
+		Result := '';
 end;
 
 function TMarathonCacheConnection.IsODSAtLeast(Major, Minor: Integer): Boolean;
@@ -3996,7 +4019,7 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc;');
+			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4043,7 +4066,7 @@ begin
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
 
-		Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FIELD_NAME asc;');
+		Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
 		Q.Open;
 		while not Q.EOF do
 		begin
@@ -4095,9 +4118,9 @@ begin
 			  be created or dropped standalone, so listing them at top level is
 			  wrong. RDB$PACKAGE_NAME only exists from Firebird 3 (ODS 12) on. }
 			if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
-				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null order by RDB$FUNCTION_NAME asc;')
+				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FUNCTION_NAME asc;')
 			else
-				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$FUNCTION_NAME asc;');
+				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FUNCTION_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4145,7 +4168,7 @@ begin
     TIBTransaction(Q.Transaction).StartTransaction;
     try
 
-			Q.SQL.Add('select RDB$EXCEPTION_NAME from RDB$EXCEPTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$EXCEPTION_NAME asc;');
+			Q.SQL.Add('select RDB$EXCEPTION_NAME from RDB$EXCEPTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$EXCEPTION_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin  
@@ -4193,7 +4216,7 @@ begin
     TIBTransaction(Q.Transaction).StartTransaction;
     try
 
-			Q.SQL.Add('select RDB$GENERATOR_NAME from RDB$GENERATORS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$GENERATOR_NAME asc;');
+			Q.SQL.Add('select RDB$GENERATOR_NAME from RDB$GENERATORS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$GENERATOR_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4349,9 +4372,9 @@ begin
 			  dropped standalone. RDB$PACKAGE_NAME only exists from Firebird 3
 			  (ODS 12) on. }
 			if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
-				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null order by RDB$PROCEDURE_NAME asc;')
+				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$PROCEDURE_NAME asc;')
 			else
-				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PROCEDURE_NAME asc;');
+				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$PROCEDURE_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4400,7 +4423,7 @@ begin
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc;');
+			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$RELATION_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4448,7 +4471,7 @@ begin
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
 
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
+			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$RELATION_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4594,7 +4617,7 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$PACKAGE_NAME from RDB$PACKAGES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PACKAGE_NAME asc;');
+			Q.SQL.Add('select RDB$PACKAGE_NAME from RDB$PACKAGES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$PACKAGE_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin

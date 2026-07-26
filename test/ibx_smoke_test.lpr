@@ -1556,6 +1556,46 @@ begin
         end;
         if Tr.Active then
           Tr.Commit;
+        { Firebird 6 schemas. A database can hold objects the user never made -
+          the profiler plugin puts its tables in a PLG$PROFILER schema of its
+          own, and they are not flagged system, so no system filter excludes
+          them. Marathon generates unqualified DDL, so the object lists show
+          only what an unqualified name reaches. }
+        if EngineMajor >= 6 then
+        begin
+          EnsureTransaction;
+          Q.SQL.Text := 'select count(*) from rdb$relations ' +
+            'where ((rdb$system_flag = 0) or (rdb$system_flag is null)) ' +
+            'and (rdb$schema_name = current_schema or current_schema is null) ' +
+            'and rdb$relation_name starting with ''PLG$''';
+          Q.Open;
+          if Q.Fields[0].AsInteger <> 0 then
+          begin
+            WriteLn('FAIL: the schema filter still admits another schema''s tables');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+
+          { And it must not hide the user's own. }
+          EnsureTransaction;
+          Q.SQL.Text := 'select count(*) from rdb$relations ' +
+            'where ((rdb$system_flag = 0) or (rdb$system_flag is null)) ' +
+            'and (rdb$schema_name = current_schema or current_schema is null) ' +
+            'and rdb$relation_name = ''IBX_SMOKE_TEST''';
+          Q.Open;
+          if Q.Fields[0].AsInteger <> 1 then
+          begin
+            WriteLn('FAIL: the schema filter hides the user''s own table');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+          if Tr.Active then
+            Tr.Commit;
+          WriteLn('Schema filter OK (other schemas excluded, own schema kept)');
+        end;
+
         WriteLn('Object list filters OK (no MON$ relations, no packaged procedures)');
       except
         on E: Exception do
