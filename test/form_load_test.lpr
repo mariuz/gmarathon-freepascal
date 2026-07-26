@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
   BaseDocumentForm, BlobViewer, CodeSnippets, CompileDBObject,
@@ -490,6 +490,76 @@ begin
     Dlg.SetParameters(Names);
     Check(Dlg.ValueOf(0) = '', 'values are cleared when the dialog is reused');
     Check(not Dlg.IsNullAt(1), 'NULL flags are cleared when the dialog is reused');
+
+    { Per-type checking. The dialog must reject what the database is certain to
+      refuse, and must not block anything it cannot judge. }
+    Names.Clear;
+    Names.Add('N_INT');
+    Names.Add('N_DEC');
+    Names.Add('N_DATE');
+    Names.Add('N_BOOL');
+    Names.Add('N_TEXT');
+    Dlg.SetParameters(Names, [pkInteger, pkDecimal, pkDate, pkBoolean, pkText], nil);
+    Check(Dlg.KindOf(0) = pkInteger, 'the integer parameter keeps its kind');
+    Check(Dlg.KindOf(4) = pkText, 'the text parameter keeps its kind');
+    Check(Dlg.KindOf(99) = pkText, 'an out-of-range index is treated as text');
+
+    Dlg.SetValue(0, '12', False);
+    Check(Dlg.AcceptsValues, 'a whole number is accepted for an integer');
+    Dlg.SetValue(0, 'twelve', False);
+    Check(not Dlg.AcceptsValues, 'a word is rejected for an integer');
+    Dlg.SetValue(0, '12.5', False);
+    Check(not Dlg.AcceptsValues, 'a decimal is rejected for an integer');
+
+    { NULL wins over whatever is in the value cell - a ticked row is not
+      validated at all. }
+    Dlg.SetValue(0, 'nonsense', True);
+    Check(Dlg.AcceptsValues, 'a ticked NULL is not validated');
+
+    Dlg.SetValue(0, '', False);
+    Check(Dlg.AcceptsValues, 'an empty value is left for the database to judge');
+
+    Dlg.SetValue(1, '12.5', False);
+    Check(Dlg.AcceptsValues, 'a decimal is accepted for a decimal');
+    Dlg.SetValue(1, 'x', False);
+    Check(not Dlg.AcceptsValues, 'a word is rejected for a decimal');
+    Dlg.SetValue(1, '', False);
+
+    Dlg.SetValue(3, 'true', False);
+    Check(Dlg.AcceptsValues, 'true is accepted for a boolean');
+    Dlg.SetValue(3, '0', False);
+    Check(Dlg.AcceptsValues, '0 is accepted for a boolean');
+    Dlg.SetValue(3, 'maybe', False);
+    Check(not Dlg.AcceptsValues, 'maybe is rejected for a boolean');
+    Dlg.SetValue(3, '', False);
+
+    { Free text must never be rejected, whatever it contains. }
+    Dlg.SetValue(4, 'anything at all !@#', False);
+    Check(Dlg.AcceptsValues, 'free text is never rejected');
+
+    Names.Clear;
+    Names.Add('ID');
+    Names.Add('NOTE');
+    Dlg.SetParameters(Names);
+    Check(Dlg.KindOf(0) = pkText, 'without kinds every parameter is free text');
+
+    { The map from Firebird's type codes. The scale rule is the interesting
+      one: the same SQL_INT64 is a whole number at scale 0 and a decimal below
+      it, which is how NUMERIC(10,2) arrives. }
+    Check(SQLParamKindOf(SQL_SHORT, 0) = pkInteger, 'SQL_SHORT is a whole number');
+    Check(SQLParamKindOf(SQL_LONG, 0) = pkInteger, 'SQL_LONG is a whole number');
+    Check(SQLParamKindOf(SQL_INT64, 0) = pkInteger, 'SQL_INT64 at scale 0 is a whole number');
+    Check(SQLParamKindOf(SQL_INT64, -2) = pkDecimal, 'SQL_INT64 at scale -2 is a decimal');
+    Check(SQLParamKindOf(SQL_SHORT, -1) = pkDecimal, 'a scaled SQL_SHORT is a decimal');
+    Check(SQLParamKindOf(SQL_DOUBLE, 0) = pkDecimal, 'SQL_DOUBLE is a decimal');
+    Check(SQLParamKindOf(SQL_FLOAT, 0) = pkDecimal, 'SQL_FLOAT is a decimal');
+    Check(SQLParamKindOf(SQL_TYPE_DATE, 0) = pkDate, 'SQL_TYPE_DATE is a date');
+    Check(SQLParamKindOf(SQL_TYPE_TIME, 0) = pkTime, 'SQL_TYPE_TIME is a time');
+    Check(SQLParamKindOf(SQL_TIMESTAMP, 0) = pkDateTime, 'SQL_TIMESTAMP is a date and time');
+    Check(SQLParamKindOf(SQL_BOOLEAN, 0) = pkBoolean, 'SQL_BOOLEAN is a boolean');
+    Check(SQLParamKindOf(SQL_VARYING, 0) = pkText, 'SQL_VARYING is free text');
+    Check(SQLParamKindOf(SQL_TEXT, 0) = pkText, 'SQL_TEXT is free text');
+    Check(SQLParamKindOf(SQL_BLOB, 0) = pkText, 'anything unrecognised is free text');
 
     Names.Add('EXTRA');
     Dlg.SetParameters(Names);

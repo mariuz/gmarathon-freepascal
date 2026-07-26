@@ -30,6 +30,7 @@ uses
   StatementHistory in 'StatementHistory.pas' {frmStatementHistory},
   SessionMonitor in 'SessionMonitor.pas' {frmSessionMonitor},
   SQLParamsDialog in 'SQLParamsDialog.pas' {frmSQLParams},
+  SQLParamTypes in 'SQLParamTypes.pas',
   MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},

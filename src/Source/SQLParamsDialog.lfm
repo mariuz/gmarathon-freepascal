@@ -31,7 +31,7 @@ object frmSQLParams: TfrmSQLParams
     Width = 476
     Height = 205
     Anchors = [akTop, akLeft, akRight, akBottom]
-    ColCount = 4
+    ColCount = 5
     FixedCols = 1
     RowCount = 1
     TabOrder = 0
@@ -44,8 +44,8 @@ object frmSQLParams: TfrmSQLParams
     Anchors = [akRight, akBottom]
     Caption = 'OK'
     Default = True
-    ModalResult = 1
     TabOrder = 1
+    OnClick = btnOKClick
   end
   object btnCancel: TButton
     Left = 404

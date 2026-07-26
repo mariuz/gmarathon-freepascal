@@ -352,7 +352,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL;
 
 {$R *.lfm}
 
@@ -2067,7 +2067,9 @@ end;
 function TfrmSQLForm.BindStatementParameters: Boolean;
 var
 	Dlg: TfrmSQLParams;
-	Names: TStringList;
+	Names, TypeNames: TStringList;
+	Kinds: array of TSQLParamKind;
+	Meta: TIBSQL;
 	Idx: Integer;
 begin
 	Result := True;
@@ -2075,13 +2077,43 @@ begin
 		Exit;
 
 	Names := TStringList.Create;
+	TypeNames := TStringList.Create;
 	try
 		for Idx := 0 to qrySQLStatement.ParamCount - 1 do
 			Names.Add(qrySQLStatement.Params[Idx].Name);
+		SetLength(Kinds, Names.Count);
+
+		{ TIBQuery keeps its parameters as FCL TParams, whose DataType comes back
+		  ftUnknown - the declared types live on the statement itself, which only
+		  TIBSQL exposes. Preparing a second time to read them is cheap and needs
+		  no extra round trip once the statement is in the cache. }
+		Meta := TIBSQL.Create(nil);
+		try
+			try
+				Meta.Database := qrySQLStatement.Database;
+				Meta.Transaction := qrySQLStatement.Transaction;
+				Meta.SQL.Text := qrySQLStatement.SQL.Text;
+				Meta.Prepare;
+				for Idx := 0 to Names.Count - 1 do
+					if Idx < Meta.Params.GetCount then
+					begin
+						Kinds[Idx] := SQLParamKindOf(Meta.Params[Idx].SQLType,
+							Meta.Params[Idx].getScale);
+						TypeNames.Add(Meta.Params[Idx].GetSQLTypeName);
+					end;
+			except
+				{ Types are a convenience; without them every parameter is free
+				  text, which still works. }
+				on E: Exception do
+					TypeNames.Clear;
+			end;
+		finally
+			Meta.Free;
+		end;
 
 		Dlg := TfrmSQLParams.Create(Self);
 		try
-			Dlg.SetParameters(Names);
+			Dlg.SetParameters(Names, Kinds, TypeNames);
 			if Dlg.ShowModal <> mrOK then
 			begin
 				Result := False;
@@ -2098,6 +2130,7 @@ begin
 			Dlg.Free;
 		end;
 	finally
+		TypeNames.Free;
 		Names.Free;
 	end;
 end;

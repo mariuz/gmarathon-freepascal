@@ -32,6 +32,7 @@ var
   Ctx: TScriptAsContext;
   Script: String;
   Single: TBufDataset;
+  ParamMeta: TIBSQL;
 
 { The generators end their statements the way a user would type them; the API
   takes one statement without the terminator. }
@@ -1192,6 +1193,48 @@ begin
         if Tr.Active then
           Tr.Commit;
         WriteLn('Parameter binding OK (bound as text, converted by Firebird)');
+
+        { The declared types of a statement's parameters, which the SQL editor
+          reads to decide what to validate. They are NOT available from
+          TIBQuery - its TParams come back ftUnknown - so it prepares a TIBSQL
+          alongside; this checks that route still yields real types, and pins
+          the codes SQLParamTypes.pas maps. The one that matters is
+          NUMERIC(10,2): it arrives as SQL_INT64 with a negative scale, so
+          scale is what separates a whole number from a decimal. }
+        EnsureTransaction;
+        ParamMeta := TIBSQL.Create(nil);
+        try
+          ParamMeta.Database := DB;
+          ParamMeta.Transaction := Tr;
+          ParamMeta.SQL.Text := 'select * from ibx_smoke_test where id = :P_INT ' +
+                                'and note = :P_TEXT';
+          ParamMeta.Prepare;
+          if ParamMeta.Params.GetCount <> 2 then
+          begin
+            WriteLn('FAIL: expected 2 typed parameters, got ', ParamMeta.Params.GetCount);
+            Halt(1);
+          end;
+          if ParamMeta.Params[0].SQLType <> SQL_LONG then
+          begin
+            WriteLn('FAIL: an integer parameter came back as SQLType ',
+              ParamMeta.Params[0].SQLType, ', expected SQL_LONG');
+            Halt(1);
+          end;
+          if ParamMeta.Params[0].getScale <> 0 then
+          begin
+            WriteLn('FAIL: an integer parameter has scale ', ParamMeta.Params[0].getScale);
+            Halt(1);
+          end;
+          if ParamMeta.Params[1].SQLType <> SQL_VARYING then
+          begin
+            WriteLn('FAIL: a varchar parameter came back as SQLType ',
+              ParamMeta.Params[1].SQLType, ', expected SQL_VARYING');
+            Halt(1);
+          end;
+          WriteLn('Parameter metadata OK (typed via TIBSQL: SQL_LONG scale 0, SQL_VARYING)');
+        finally
+          ParamMeta.Free;
+        end;
       except
         on E: Exception do
         begin
