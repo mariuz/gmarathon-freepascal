@@ -95,6 +95,12 @@ type
 
     function CanScriptDelete: Boolean; virtual;
     procedure DoScriptDelete; virtual;
+    function CanScriptAlter: Boolean; virtual;
+    procedure DoScriptAlter; virtual;
+    function CanScriptDrop: Boolean; virtual;
+    procedure DoScriptDrop; virtual;
+    function CanScriptMerge: Boolean; virtual;
+    procedure DoScriptMerge; virtual;
 
     function CanScriptCreate: Boolean; virtual;
     procedure DoScriptCreate; virtual;
@@ -420,6 +426,21 @@ begin
   Result := False;
 end;
 
+function TfrmBaseDocumentForm.CanScriptAlter: Boolean;
+begin
+  Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanScriptDrop: Boolean;
+begin
+  Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanScriptMerge: Boolean;
+begin
+  Result := False;
+end;
+
 function TfrmBaseDocumentForm.CanScriptExecute: Boolean;
 begin
   Result := False;
@@ -580,6 +601,21 @@ begin
 end;
 
 procedure TfrmBaseDocumentForm.DoScriptCreate;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptAlter;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptDrop;
+begin
+  //
+end;
+
+procedure TfrmBaseDocumentForm.DoScriptMerge;
 begin
   //
 end;

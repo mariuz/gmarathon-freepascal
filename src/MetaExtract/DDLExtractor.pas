@@ -49,7 +49,9 @@ type
     ddlstProc,
     ddlstHeader,
     ddlstDoco,
-    ddlstGrants
+    ddlstGrants,
+    { Appended for the same reason as the object types above. }
+    ddlstAlter
     );
 
   TDDLObjectAtom = class(TObject)
@@ -100,13 +102,13 @@ type
     function ExtractTableFK(ObjectName : String) : String;
     function ExtractTableIDX(ObjectName : String) : String;
     function ExtractTableData(ObjectName : String) : String;
-    function ExtractView(ObjectName : String) : String;
+    function ExtractView(ObjectName : String; AsAlter : Boolean = False) : String;
     function ExtractException(ObjectName : String) : String;
     function ExtractUDF(ObjectName : String) : String;
     function ExtractStoredProcedure(ObjectName : String) : String;
     function ExtractStoredProcedureHeader(ObjectName : String) : String;
     function ExtractStoredProcedureDoco(ObjectName : String) : String;
-    function ExtractTrigger(ObjectName : String) : String;
+    function ExtractTrigger(ObjectName : String; AsAlter : Boolean = False) : String;
     function ExtractTriggerDoco(ObjectName : String) : String;
     function ExtractRelationGrants(ObjectName : String) : String;
     function ExtractProcedureGrants(ObjectName : String) : String;
@@ -313,6 +315,7 @@ begin
         begin
           case ObjectSubType of
             ddlstGrants : Result := ExtractRelationGrants(ObjectName);
+            ddlstAlter : Result := ExtractView(ObjectName, True);
           else
             Result := ExtractView(ObjectName);
           end;
@@ -355,6 +358,8 @@ begin
           case ObjectSubType of
             ddlstNone :
               Result := ExtractTrigger(ObjectName);
+            ddlstAlter :
+              Result := ExtractTrigger(ObjectName, True);
             ddlstDoco :
               Result := ExtractTriggerDoco(ObjectName);
           end;
@@ -2555,7 +2560,7 @@ begin
 end;
 
 
-function TDDLExtractor.ExtractTrigger(ObjectName: String): String;
+function TDDLExtractor.ExtractTrigger(ObjectName: String; AsAlter: Boolean): String;
 var
   EventClause : String;
   Q : TIBDataSet;
@@ -2574,10 +2579,19 @@ begin
     If Not (Q.EOF and Q.BOF) Then
     begin
 
-      Tmp := 'create trigger ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$trigger_name').AsString), FIsIB6, FSQLDialect);
+      if AsAlter then
+        Tmp := 'alter trigger '
+      else
+        Tmp := 'create trigger ';
+      Tmp := Tmp + MakeQuotedIdent(Trim(Q.FieldByName('rdb$trigger_name').AsString), FIsIB6, FSQLDialect);
       { A database-level trigger has no relation, and emitting "for " with an
-        empty name produced a syntax error. }
-      if Trim(Q.FieldByName('rdb$relation_name').AsString) <> '' then
+        empty name produced a syntax error. ALTER TRIGGER takes no relation at
+        all - a trigger cannot be moved between tables, so Firebird rejects the
+        clause outright rather than ignoring it (verified live: "Token unknown
+        - for"). }
+      if AsAlter then
+        Tmp := Tmp + ' '
+      else if Trim(Q.FieldByName('rdb$relation_name').AsString) <> '' then
         Tmp := Tmp + ' for ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$relation_name').AsString), FIsIB6, FSQLDialect) + ' '
       else
         Tmp := Tmp + ' ';
@@ -2868,7 +2882,7 @@ begin
   end;
 end;
 
-function TDDLExtractor.ExtractView(ObjectName: String): String;
+function TDDLExtractor.ExtractView(ObjectName: String; AsAlter: Boolean): String;
 var
   Q : TIBDataSet;
   Q1 : TIBDataSet;
@@ -2914,7 +2928,11 @@ begin
         end;
         Q1.Open;
         First := True;
-        Line := 'create view ' + MakeQuotedIdent(Trim(Q.FieldByName('rdb$relation_name').AsString), FIsIB6, FSQLDialect) + '(' + #13#10;
+        if AsAlter then
+          Line := 'alter view '
+        else
+          Line := 'create view ';
+        Line := Line + MakeQuotedIdent(Trim(Q.FieldByName('rdb$relation_name').AsString), FIsIB6, FSQLDialect) + '(' + #13#10;
         While not Q1.EOF do
         begin
         if First then

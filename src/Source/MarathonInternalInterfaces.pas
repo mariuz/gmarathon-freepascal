@@ -217,6 +217,15 @@ type
     function CanScriptCreate: Boolean;
     procedure DoScriptCreate;
 
+    function CanScriptAlter: Boolean;
+    procedure DoScriptAlter;
+
+    function CanScriptDrop: Boolean;
+    procedure DoScriptDrop;
+
+    function CanScriptMerge: Boolean;
+    procedure DoScriptMerge;
+
     function CanScriptExecute: Boolean;
     procedure DoScriptExecute;
 

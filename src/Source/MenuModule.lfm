@@ -440,6 +440,15 @@ object dmMenus: TdmMenus
       object ObjectScriptExecute1: TMenuItem
         Action = frmMarathonMain.ObjectScriptExecute
       end
+      object ObjectScriptAlter1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptAlter
+      end
+      object ObjectScriptDrop1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptDrop
+      end
+      object ObjectScriptMerge1: TMenuItem
+        Action = frmMarathonMain.ObjectScriptMerge
+      end
     end
     object N17: TMenuItem
       Caption = '-'

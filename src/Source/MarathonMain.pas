@@ -140,6 +140,9 @@ type
     ObjectScriptInsert: TAction;
     ObjectScriptUpdate: TAction;
     ObjectScriptDelete: TAction;
+    ObjectScriptAlter: TAction;
+    ObjectScriptDrop: TAction;
+    ObjectScriptMerge: TAction;
     ObjectScriptExecute: TAction;
     ToolsSessionMonitor: TAction;
     ToolsMaintenance: TAction;
@@ -544,6 +547,12 @@ type
     procedure ObjectScriptUpdateUpdate(Sender: TObject);
     procedure ObjectScriptDeleteExecute(Sender: TObject);
     procedure ObjectScriptDeleteUpdate(Sender: TObject);
+    procedure ObjectScriptAlterExecute(Sender: TObject);
+    procedure ObjectScriptAlterUpdate(Sender: TObject);
+    procedure ObjectScriptDropExecute(Sender: TObject);
+    procedure ObjectScriptDropUpdate(Sender: TObject);
+    procedure ObjectScriptMergeExecute(Sender: TObject);
+    procedure ObjectScriptMergeUpdate(Sender: TObject);
     procedure ObjectScriptExecuteExecute(Sender: TObject);
     procedure ObjectScriptExecuteUpdate(Sender: TObject);
     procedure ToolsSessionMonitorExecute(Sender: TObject);
@@ -2035,6 +2044,72 @@ begin
 		ObjectScriptDelete.Enabled := F.CanScriptDelete
 	else
 		ObjectScriptDelete.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptAlterExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptAlter;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptAlterUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptAlter.Enabled := F.CanScriptAlter
+	else
+		ObjectScriptAlter.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptDropExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptDrop;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptDropUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptDrop.Enabled := F.CanScriptDrop
+	else
+		ObjectScriptDrop.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptMergeExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoScriptMerge;
+end;
+
+procedure TfrmMarathonMain.ObjectScriptMergeUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectScriptMerge.Enabled := F.CanScriptMerge
+	else
+		ObjectScriptMerge.Enabled := False;
 end;
 
 procedure TfrmMarathonMain.ObjectScriptExecuteExecute(Sender: TObject);

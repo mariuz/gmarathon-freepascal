@@ -232,6 +232,15 @@ type
 		function CanScriptCreate : Boolean; override;
 		procedure DoScriptCreate; override;
 
+		function CanScriptAlter : Boolean; override;
+		procedure DoScriptAlter; override;
+
+		function CanScriptDrop : Boolean; override;
+		procedure DoScriptDrop; override;
+
+		function CanScriptMerge : Boolean; override;
+		procedure DoScriptMerge; override;
+
 		function CanScriptExecute : Boolean; override;
 		procedure DoScriptExecute; override;
 
@@ -1112,6 +1121,36 @@ end;
 procedure TfrmDatabaseExplorer.DoScriptCreate;
 begin
 	DoBrowserOperation(opScriptCreate);
+end;
+
+function TfrmDatabaseExplorer.CanScriptAlter: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptAlter);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptAlter;
+begin
+	DoBrowserOperation(opScriptAlter);
+end;
+
+function TfrmDatabaseExplorer.CanScriptDrop: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptDrop);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptDrop;
+begin
+	DoBrowserOperation(opScriptDrop);
+end;
+
+function TfrmDatabaseExplorer.CanScriptMerge: Boolean;
+begin
+	Result := CanDoBrowserOperation(opScriptMerge);
+end;
+
+procedure TfrmDatabaseExplorer.DoScriptMerge;
+begin
+	DoBrowserOperation(opScriptMerge);
 end;
 
 function TfrmDatabaseExplorer.CanScriptExecute: Boolean;

@@ -16,7 +16,8 @@ program ibx_smoke_test;
 {$MODE Delphi}
 
 uses
-  SysUtils, Classes, IBDatabase, IBQuery, DDLExtractor, MarathonProjectCacheTypes;
+  SysUtils, Classes, IBDatabase, IBQuery, IBSQL, DDLExtractor, MarathonProjectCacheTypes,
+  ScriptAs;
 
 var
   DB: TIBDatabase;
@@ -28,6 +29,55 @@ var
   DDL: String;
   EngineVersion: String;
   EngineMajor: Integer;
+  Ctx: TScriptAsContext;
+  Script: String;
+
+{ The generators end their statements the way a user would type them; the API
+  takes one statement without the terminator. }
+function StripTrailingSemicolon(const SQLText: String): String;
+begin
+  Result := TrimRight(SQLText);
+  while (Result <> '') and (Result[Length(Result)] = ';') do
+    Result := TrimRight(Copy(Result, 1, Length(Result) - 1));
+end;
+
+{ The Script As generators run their own metadata queries and commit the
+  transaction when they are done, so a caller cannot assume one is still open
+  afterwards. }
+procedure EnsureTransaction;
+begin
+  if not Tr.Active then
+    Tr.StartTransaction;
+end;
+
+{ Compiles a statement without running it. Firebird still parses it and
+  resolves every name, so a wrong verb or a bad identifier fails here - which
+  is what we want for DROP, where actually executing would destroy the objects
+  the rest of the run depends on. }
+procedure PrepareOnly(const SQLText, What: String);
+var
+  S: TIBSQL;
+begin
+  S := TIBSQL.Create(nil);
+  try
+    EnsureTransaction;
+    S.Database := DB;
+    S.Transaction := Tr;
+    S.SQL.Text := StripTrailingSemicolon(SQLText);
+    try
+      S.Prepare;
+    except
+      on E: Exception do
+      begin
+        WriteLn('FAIL: generated ', What, ' did not compile: ', E.Message);
+        WriteLn(SQLText);
+        Halt(1);
+      end;
+    end;
+  finally
+    S.Free;
+  end;
+end;
 
 { Fails the test run unless Needle appears in the extracted DDL. }
 procedure RequireInDDL(const DDLText, Needle, What: String);
@@ -793,6 +843,150 @@ begin
         RequireInDDL(DDL, 'where note is not null', 'WHERE clause for the partial index (Firebird 5)');
       WriteLn('DDL extraction OK (indexes):');
       WriteLn(DDL);
+
+      { The object tree's "Script As" generators. They live in ScriptAs.pas
+        rather than MarathonIDE.pas precisely so they can be reached from here:
+        MarathonProjectCache pulls in the LCL, which a console test cannot
+        initialise. Each generated statement is either executed or prepared,
+        so this checks the SQL is real rather than merely that the text looks
+        plausible. }
+      Ctx := ScriptAsContext(DB, Tr, False, DB.SQLDialect);
+
+      try
+        { SELECT/INSERT/UPDATE/DELETE all have to parse. The SELECT is the only
+          one safe to run as-is; the rest are prepared, which still makes
+          Firebird compile them and resolve every name. }
+        Script := ScriptAsSelect(Ctx, 'IBX_SMOKE_TEST');
+        RequireInDDL(Script, 'select first 100', 'SELECT template');
+        EnsureTransaction;
+        Q.SQL.Text := StripTrailingSemicolon(Script);
+        Q.Open;
+        Q.Close;
+
+        Script := ScriptAsInsert(Ctx, 'IBX_SMOKE_TEST');
+        RequireInDDL(Script, 'insert into', 'INSERT template');
+        RequireInDDL(Script, ':ID', 'INSERT parameter');
+        PrepareOnly(Script, 'INSERT template');
+
+        Script := ScriptAsUpdate(Ctx, 'IBX_SMOKE_TEST');
+        RequireInDDL(Script, 'update ', 'UPDATE template');
+        PrepareOnly(Script, 'UPDATE template');
+
+        Script := ScriptAsDelete(Ctx, 'IBX_SMOKE_TEST');
+        RequireInDDL(Script, 'delete from', 'DELETE template');
+        PrepareOnly(Script, 'DELETE template');
+
+        Script := ScriptAsExecute(Ctx, 'IBX_SMOKE_TEST_PROC');
+        RequireInDDL(Script, 'ibx_smoke_test_proc', 'EXECUTE template');
+        PrepareOnly(Script, 'EXECUTE template');
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: a Script As DML template did not compile: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      WriteLn('Script As OK (SELECT/INSERT/UPDATE/DELETE/EXECUTE)');
+
+      { MERGE. The join condition has to come from the real primary key - an ON
+        clause that never matches would turn every MERGE into an INSERT - and
+        the key columns must not appear in the UPDATE SET list, since they are
+        what the rows were matched on. }
+      Script := ScriptAsMerge(Ctx, 'IBX_SMOKE_TEST');
+      RequireInDDL(Script, 'merge into', 'MERGE statement');
+      RequireInDDL(Script, 't.ID = s.ID', 'MERGE join on the primary key');
+      RequireInDDL(Script, 't.NOTE = s.NOTE', 'MERGE update of a non-key column');
+      if Pos('T.ID = S.ID', UpperCase(Copy(Script, Pos('UPDATE SET', UpperCase(Script)), MaxInt))) > 0 then
+      begin
+        WriteLn('FAIL: MERGE updates the key columns it matched on:');
+        WriteLn(Script);
+        Halt(1);
+      end;
+      { The source table is a TODO placeholder by design; falling back to the
+        keyless ON clause on a table that has a primary key would not be. }
+      if Pos('NO PRIMARY KEY', UpperCase(Script)) > 0 then
+      begin
+        WriteLn('FAIL: MERGE fell back to the no-primary-key template on a keyed table:');
+        WriteLn(Script);
+        Halt(1);
+      end;
+      WriteLn('Script As OK (MERGE):');
+      WriteLn(Script);
+
+      { DROP, for every object type the tree offers it on. Prepared rather than
+        executed, which still resolves the object name - a wrong verb or a name
+        that does not exist fails here. }
+      try
+        PrepareOnly(ScriptAsDrop(Ctx, 'IBX_SMOKE_TEST_VIEW', ctView), 'DROP VIEW');
+        PrepareOnly(ScriptAsDrop(Ctx, 'IBX_SMOKE_TEST_PROC', ctSP), 'DROP PROCEDURE');
+        PrepareOnly(ScriptAsDrop(Ctx, 'IBX_SMOKE_TEST_TRIG', ctTrigger), 'DROP TRIGGER');
+        PrepareOnly(ScriptAsDrop(Ctx, 'IBX_SMOKE_TEST', ctTable), 'DROP TABLE');
+        if EngineMajor >= 3 then
+          PrepareOnly(ScriptAsDrop(Ctx, 'IBX_SMOKE_FN', ctUDF), 'DROP FUNCTION');
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: a generated DROP statement did not compile: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      WriteLn('Script As OK (DROP: ', ScriptAsDrop(Ctx, 'IBX_SMOKE_TEST', ctTable), ')');
+
+      { ALTER. These are executed, not just prepared: restating an object
+        exactly as it already is is harmless, and it is the only way to prove
+        the ALTER forms are right. The trigger is the one that matters - ALTER
+        TRIGGER rejects the "for <table>" clause that CREATE TRIGGER requires,
+        so an extractor that simply swapped the verb would emit invalid SQL. }
+      try
+        Script := ScriptAsAlter(Ctx, 'IBX_SMOKE_TEST_VIEW', ctView);
+        RequireInDDL(Script, 'alter view', 'ALTER VIEW form');
+        EnsureTransaction;
+        Q.SQL.Text := StripTrailingSemicolon(Script);
+        Q.ExecSQL;
+
+        Script := ScriptAsAlter(Ctx, 'IBX_SMOKE_TEST_TRIG', ctTrigger);
+        RequireInDDL(Script, 'alter trigger', 'ALTER TRIGGER form');
+        if Pos(' FOR ', UpperCase(Copy(Script, 1, Pos(#10, Script + #10)))) > 0 then
+        begin
+          WriteLn('FAIL: ALTER TRIGGER kept the FOR clause, which Firebird rejects:');
+          WriteLn(Script);
+          Halt(1);
+        end;
+        EnsureTransaction;
+        Q.SQL.Text := StripTrailingSemicolon(Script);
+        Q.ExecSQL;
+
+        Script := ScriptAsAlter(Ctx, 'IBX_SMOKE_TEST_PROC', ctSP);
+        RequireInDDL(Script, 'alter procedure', 'ALTER PROCEDURE form');
+        EnsureTransaction;
+        Q.SQL.Text := StripTrailingSemicolon(Script);
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: a generated ALTER statement did not run: ', E.Message);
+          Halt(1);
+        end;
+      end;
+      WriteLn('Script As OK (ALTER: view, trigger, procedure)');
+
+      { A table has no whole-table ALTER, so that path emits a template rather
+        than executable DDL - check it is the template and not silently empty. }
+      Script := ScriptAsAlter(Ctx, 'IBX_SMOKE_TEST', ctTable);
+      RequireInDDL(Script, 'alter table', 'ALTER TABLE template');
+      RequireInDDL(Script, 'Current columns', 'the template''s column inventory');
     finally
       Extractor.Free;
     end;

@@ -62,7 +62,13 @@ type
     opScriptUpdate,
     opScriptDelete,
     opScriptCreate,
-    opScriptExecute);
+    opScriptExecute,
+    { Appended: TGSSCacheOp is only ever passed around at run time, never
+      persisted, but keeping additions at the end keeps the existing values
+      stable for any plugin compiled against an older build. }
+    opScriptAlter,
+    opScriptDrop,
+    opScriptMerge);
 
   TGSSCacheType = (
     ctDontCare,

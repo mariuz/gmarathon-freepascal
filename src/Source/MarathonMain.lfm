@@ -2378,6 +2378,24 @@ object frmMarathonMain: TfrmMarathonMain
       OnExecute = ObjectScriptExecuteExecute
       OnUpdate = ObjectScriptExecuteUpdate
     end
+    object ObjectScriptAlter: TAction
+      Category = 'Object'
+      Caption = 'Script as A&LTER'
+      OnExecute = ObjectScriptAlterExecute
+      OnUpdate = ObjectScriptAlterUpdate
+    end
+    object ObjectScriptDrop: TAction
+      Category = 'Object'
+      Caption = 'Script as DR&OP'
+      OnExecute = ObjectScriptDropExecute
+      OnUpdate = ObjectScriptDropUpdate
+    end
+    object ObjectScriptMerge: TAction
+      Category = 'Object'
+      Caption = 'Script as &MERGE'
+      OnExecute = ObjectScriptMergeExecute
+      OnUpdate = ObjectScriptMergeUpdate
+    end
     object ProjectCreateFolder: TAction
       Category = 'Project'
       Caption = '&Create Folder...'

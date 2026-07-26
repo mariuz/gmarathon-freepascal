@@ -28,7 +28,7 @@ uses Classes, {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}
   ComObj, {$ENDIF}
   {$IFDEF D6_or_higher}
 	Variants, {$ENDIF}
-	IBDatabase, IBQuery, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
+	IBDatabase, IBQuery, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, ScriptAs, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
 
 type
   {$IFDEF FPC}
@@ -491,195 +491,11 @@ begin
 	inherited;
 end;
 
-{ "Script as ..." helpers: build column-list-driven SELECT/INSERT/UPDATE/DELETE
-  templates and CREATE DDL for the object tree's "Script As" submenu. }
-
-function ScriptAsColumnNames(Conn: TMarathonCacheConnection; ObjectName: String): TStringList;
-var
-	Q: TIBQuery;
+{ Bridge from the IDE's connection object to the LCL-free generators in
+  ScriptAs.pas. }
+function ConnScriptContext(Conn: TMarathonCacheConnection): TScriptAsContext;
 begin
-	Result := TStringList.Create;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.Database := Conn.Connection;
-		Q.Transaction := Conn.Transaction;
-		Q.SQL.Text := 'select rdb$field_name from rdb$relation_fields where rdb$relation_name = ' +
-			AnsiQuotedStr(ObjectName, '''') + ' order by rdb$field_position asc';
-		Q.Open;
-		while not Q.EOF do
-		begin
-			Result.Add(Trim(Q.FieldByName('rdb$field_name').AsString));
-			Q.Next;
-		end;
-		Q.Close;
-		if Assigned(Q.Transaction) and Q.Transaction.Active then
-			Q.Transaction.Commit;
-	finally
-		Q.Free;
-	end;
-end;
-
-function ScriptAsSelect(Conn: TMarathonCacheConnection; ObjectName: String): String;
-var
-	Cols: TStringList;
-	Idx: Integer;
-	ColList: String;
-begin
-	Cols := ScriptAsColumnNames(Conn, ObjectName);
-	try
-		ColList := '';
-		for Idx := 0 to Cols.Count - 1 do
-		begin
-			if Idx > 0 then
-				ColList := ColList + ',' + #13#10 + '    ';
-			ColList := ColList + MakeQuotedIdent(Cols[Idx], Conn.IsIB6, Conn.SQLDialect);
-		end;
-	finally
-		Cols.Free;
-	end;
-	Result := 'select first 100' + #13#10 + '    ' + ColList + #13#10 +
-		'from ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect) + ';';
-end;
-
-function ScriptAsInsert(Conn: TMarathonCacheConnection; ObjectName: String): String;
-var
-	Cols: TStringList;
-	Idx: Integer;
-	ColList, ValList: String;
-begin
-	Cols := ScriptAsColumnNames(Conn, ObjectName);
-	try
-		ColList := '';
-		ValList := '';
-		for Idx := 0 to Cols.Count - 1 do
-		begin
-			if Idx > 0 then
-			begin
-				ColList := ColList + ',' + #13#10 + '    ';
-				ValList := ValList + ',' + #13#10 + '    ';
-			end;
-			ColList := ColList + MakeQuotedIdent(Cols[Idx], Conn.IsIB6, Conn.SQLDialect);
-			ValList := ValList + ':' + Cols[Idx];
-		end;
-	finally
-		Cols.Free;
-	end;
-	Result := 'insert into ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect) + ' (' + #13#10 +
-		'    ' + ColList + #13#10 + ')' + #13#10 + 'values (' + #13#10 + '    ' + ValList + #13#10 + ');';
-end;
-
-function ScriptAsUpdate(Conn: TMarathonCacheConnection; ObjectName: String): String;
-var
-	Cols: TStringList;
-	Idx: Integer;
-	SetList: String;
-begin
-	Cols := ScriptAsColumnNames(Conn, ObjectName);
-	try
-		SetList := '';
-		for Idx := 0 to Cols.Count - 1 do
-		begin
-			if Idx > 0 then
-				SetList := SetList + ',' + #13#10 + '    ';
-			SetList := SetList + MakeQuotedIdent(Cols[Idx], Conn.IsIB6, Conn.SQLDialect) + ' = :' + Cols[Idx];
-		end;
-	finally
-		Cols.Free;
-	end;
-	Result := 'update ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect) + #13#10 +
-		'set ' + SetList + #13#10 + 'where /* TODO: add your criteria */ 1 = 0;';
-end;
-
-function ScriptAsDelete(Conn: TMarathonCacheConnection; ObjectName: String): String;
-begin
-	Result := 'delete from ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect) + #13#10 +
-		'where /* TODO: add your criteria */ 1 = 0;';
-end;
-
-function ScriptAsCreate(Conn: TMarathonCacheConnection; ObjectName: String; CacheType: TGSSCacheType): String;
-var
-	Extractor: TDDLExtractor;
-	ObjType: TDDLObjectType;
-begin
-	case CacheType of
-		ctView:        ObjType := ddlView;
-		ctSP:          ObjType := ddlStoredProc;
-		ctPackage:     ObjType := ddlPackage;
-		ctPublication: ObjType := ddlPublication;
-	else
-		ObjType := ddlTable;
-	end;
-
-	Extractor := TDDLExtractor.Create(nil);
-	try
-		Extractor.Database := Conn.Connection;
-		Extractor.Transaction := Conn.Transaction;
-		Extractor.SQLDialect := Conn.SQLDialect;
-		Extractor.IsInterbase6 := Conn.IsIB6;
-		if CacheType = ctPackage then
-			{ Header and body together - recreating a package takes both, and a
-			  package may legitimately have a header and no body. }
-			Result := Extractor.Extract(ddlPackage, ddlstHeader, ObjectName) + #13#10 +
-				Extractor.Extract(ddlPackage, ddlstProc, ObjectName)
-		else
-			Result := Extractor.Extract(ObjType, ddlstNone, ObjectName);
-	finally
-		Extractor.Free;
-	end;
-end;
-
-function ScriptAsExecute(Conn: TMarathonCacheConnection; ObjectName: String): String;
-var
-	Q: TIBQuery;
-	InParams: TStringList;
-	HasOutput: Boolean;
-	Idx: Integer;
-	ParamList: String;
-begin
-	InParams := TStringList.Create;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.Database := Conn.Connection;
-		Q.Transaction := Conn.Transaction;
-
-		Q.SQL.Text := 'select rdb$parameter_name from rdb$procedure_parameters where rdb$procedure_name = ' +
-			AnsiQuotedStr(ObjectName, '''') + ' and rdb$parameter_type = 0 order by rdb$parameter_number asc';
-		Q.Open;
-		while not Q.EOF do
-		begin
-			InParams.Add(Trim(Q.FieldByName('rdb$parameter_name').AsString));
-			Q.Next;
-		end;
-		Q.Close;
-
-		Q.SQL.Text := 'select rdb$parameter_name from rdb$procedure_parameters where rdb$procedure_name = ' +
-			AnsiQuotedStr(ObjectName, '''') + ' and rdb$parameter_type = 1';
-		Q.Open;
-		HasOutput := not Q.EOF;
-		Q.Close;
-
-		if Assigned(Q.Transaction) and Q.Transaction.Active then
-			Q.Transaction.Commit;
-
-		ParamList := '';
-		for Idx := 0 to InParams.Count - 1 do
-		begin
-			if Idx > 0 then
-				ParamList := ParamList + ', ';
-			ParamList := ParamList + ':' + InParams[Idx];
-		end;
-	finally
-		Q.Free;
-		InParams.Free;
-	end;
-
-	if HasOutput then
-		Result := 'select *' + #13#10 + 'from ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect)
-	else
-		Result := 'execute procedure ' + MakeQuotedIdent(ObjectName, Conn.IsIB6, Conn.SQLDialect);
-	if ParamList <> '' then
-		Result := Result + '(' + ParamList + ')';
-	Result := Result + ';';
+	Result := ScriptAsContext(Conn.Connection, Conn.Transaction, Conn.IsIB6, Conn.SQLDialect);
 end;
 
 procedure ScriptAsOpenEditor(ConnName, SQLText: String);
@@ -1163,7 +979,8 @@ begin
 				end;
 			end;
 
-		opScriptSelect, opScriptInsert, opScriptUpdate, opScriptDelete, opScriptCreate, opScriptExecute:
+		opScriptSelect, opScriptInsert, opScriptUpdate, opScriptDelete, opScriptCreate,
+		opScriptExecute, opScriptAlter, opScriptDrop, opScriptMerge:
 			begin
 				ConnectName := TMarathonCacheObject(Item).ConnectionName;
 				if not CheckConnected(ConnectName) then
@@ -1172,17 +989,23 @@ begin
 				try
 					case Event of
 						opScriptSelect:
-							ScriptAsOpenEditor(ConnectName, ScriptAsSelect(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsSelect(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
 						opScriptInsert:
-							ScriptAsOpenEditor(ConnectName, ScriptAsInsert(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsInsert(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
 						opScriptUpdate:
-							ScriptAsOpenEditor(ConnectName, ScriptAsUpdate(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsUpdate(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
 						opScriptDelete:
-							ScriptAsOpenEditor(ConnectName, ScriptAsDelete(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsDelete(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
 						opScriptCreate:
-							ScriptAsOpenEditor(ConnectName, ScriptAsCreate(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+							ScriptAsOpenEditor(ConnectName, ScriptAsCreate(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
 						opScriptExecute:
-							ScriptAsOpenEditor(ConnectName, ScriptAsExecute(FCurrentProject.Cache.ConnectionByName[ConnectName], TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsExecute(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+						opScriptAlter:
+							ScriptAsOpenEditor(ConnectName, ScriptAsAlter(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+						opScriptDrop:
+							ScriptAsOpenEditor(ConnectName, ScriptAsDrop(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+						opScriptMerge:
+							ScriptAsOpenEditor(ConnectName, ScriptAsMerge(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
 					end;
 				finally
 					Screen.Cursor := crDefault;
