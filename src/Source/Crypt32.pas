@@ -37,6 +37,8 @@ unit Crypt32;
 }
 interface
 
+uses SysUtils;
+
 const
   E_START_KEY   = 967;  	{Start default key}
   E_MULT_KEY	= 12679;	{Mult default key}
@@ -45,6 +47,20 @@ const
 function Encrypt(const InString:string; StartKey, MultKey, AddKey:Integer): string;
 function Decrypt(const InString:string; StartKey, MultKey, AddKey:Integer): string;
 
+{ As Encrypt/Decrypt, but with the ciphertext carried as hex.
+
+  The cipher's output is arbitrary bytes: Encrypt('masterkey') contains $15 and
+  $04, and XML forbids those characters outright, so writing the raw ciphertext
+  into an attribute made saving the whole project fail with "Illegal
+  character". Hex is the smallest change that keeps the stored form printable -
+  it is not extra protection, and this cipher offers very little to begin with. }
+function EncryptToHex(const InString:string; StartKey, MultKey, AddKey:Integer): string;
+
+{ Returns an empty string when InString is not valid hex, so a value written by
+  an older build - raw ciphertext - is rejected rather than decoded into
+  nonsense. Callers fall back to the legacy attribute in that case. }
+function DecryptFromHex(const InString:string; StartKey, MultKey, AddKey:Integer): string;
+
 implementation
 
 {$R-}
@@ -52,6 +68,37 @@ implementation
 {*******************************************************
  * Standard Encryption algorithm - Copied from Borland *
  *******************************************************}
+function EncryptToHex(const InString:string; StartKey, MultKey, AddKey:Integer): string;
+var
+  Raw: String;
+  Idx: Integer;
+begin
+  Raw := Encrypt(InString, StartKey, MultKey, AddKey);
+  Result := '';
+  for Idx := 1 to Length(Raw) do
+    Result := Result + IntToHex(Byte(Raw[Idx]), 2);
+end;
+
+function DecryptFromHex(const InString:string; StartKey, MultKey, AddKey:Integer): string;
+var
+  Raw: String;
+  Idx, Value: Integer;
+begin
+  Result := '';
+  if (InString = '') or (Length(InString) mod 2 <> 0) then
+    Exit;
+  Raw := '';
+  Idx := 1;
+  while Idx < Length(InString) do
+  begin
+    if not TryStrToInt('$' + Copy(InString, Idx, 2), Value) then
+      Exit;
+    Raw := Raw + Chr(Value);
+    Inc(Idx, 2);
+  end;
+  Result := Decrypt(Raw, StartKey, MultKey, AddKey);
+end;
+
 function Encrypt(const InString:string; StartKey,MultKey,AddKey:Integer): string;
 var
   I : Byte;
