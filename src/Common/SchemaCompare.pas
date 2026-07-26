@@ -280,11 +280,40 @@ begin
   end;
 end;
 
+{ Removes the name from a constraint Firebird named for itself.
+
+  A table's extracted DDL carries its CHECK constraints in full, including the
+  name - and an unnamed CHECK is INTEG_3 in one database and INTEG_5 in another
+  holding the identical schema, because the engine numbers them per database as
+  it goes. Comparing that text reported every such table as differing. Dropping
+  the name leaves 'add check (...)', which is both what the two schemas actually
+  have in common and a statement Firebird accepts, naming it itself. }
+function WithoutGeneratedConstraintNames(const DDL: String): String;
+var
+  Idx, Stop: Integer;
+  Upper: String;
+begin
+  Result := DDL;
+  repeat
+    Upper := UpperCase(Result);
+    Idx := Pos('CONSTRAINT INTEG_', Upper);
+    if Idx = 0 then
+      Break;
+    { Past the digits, and past the space that follows them. }
+    Stop := Idx + Length('CONSTRAINT INTEG_');
+    while (Stop <= Length(Result)) and (Result[Stop] >= '0') and (Result[Stop] <= '9') do
+      Inc(Stop);
+    while (Stop <= Length(Result)) and (Result[Stop] = ' ') do
+      Inc(Stop);
+    Delete(Result, Idx, Stop - Idx);
+  until False;
+end;
+
 { The whole DDL for one object, which is what the comparison is made on. }
 function ObjectDDL(const Ctx: TScriptAsContext; const Name: String;
   CacheType: TGSSCacheType): String;
 begin
-  Result := ScriptAsCreate(Ctx, Name, CacheType);
+  Result := WithoutGeneratedConstraintNames(ScriptAsCreate(Ctx, Name, CacheType));
 end;
 
 { The index name out of a CREATE INDEX statement, for writing the DROP that

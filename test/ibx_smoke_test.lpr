@@ -143,18 +143,31 @@ procedure RequireGeneratedNamesOnlyCommented(const Script: String);
 var
   Lines: TStringList;
   Idx: Integer;
+  InComment: Boolean;
 begin
   Lines := TStringList.Create;
   try
     Lines.Text := Script;
+    InComment := False;
     for Idx := 0 to Lines.Count - 1 do
-      if (Pos('INTEG_', UpperCase(Lines[Idx])) > 0) and
+    begin
+      { A line inside a /* */ block is no more run than one behind --, and the
+        script uses those blocks to report what it could not migrate. Tracking
+        them is what makes this check mean what it says rather than fire on any
+        mention at all. }
+      if not InComment then
+        InComment := (Pos('/*', Lines[Idx]) > 0) and
+                     (Pos('*/', Lines[Idx]) < Pos('/*', Lines[Idx]));
+      if (not InComment) and (Pos('INTEG_', UpperCase(Lines[Idx])) > 0) and
          (Copy(TrimLeft(Lines[Idx]), 1, 2) <> '--') then
       begin
         WriteLn('FAIL: a generated constraint name appears on a line the script would run:');
         WriteLn(Lines[Idx]);
         Halt(1);
       end;
+      if InComment and (Pos('*/', Lines[Idx]) > 0) then
+        InComment := False;
+    end;
   finally
     Lines.Free;
   end;
@@ -558,6 +571,10 @@ begin
     'create generator G_SEQ',
     'create exception E_BAD ''something went wrong''',
     'create table BOTH_TBL (ID integer not null primary key, NOTE varchar(10))',
+    { The same unnamed CHECK on both sides. Firebird names it INTEG_nnn on each,
+      and the numbers do not match, so anything comparing the name reports a
+      difference that is not there. }
+    'alter table BOTH_TBL add check (ID > 0)',
     'create table ONLY_SRC (ID integer not null primary key, CODE D_CODE)',
     'create view V_SHARED as select ID from BOTH_TBL',
     { A view over a view, named so that the dependent sorts first. Emitted in
@@ -585,8 +602,14 @@ begin
     'create table PK_DIFF (A integer not null, B integer not null, primary key (A))']);
 
   Build(TgtDB, TgtTr, '/tmp/marathon_cmp_tgt.fdb', [
-    'create table BOTH_TBL (ID integer not null primary key, NOTE varchar(10))',
+    { ONLY_TGT first, deliberately. Firebird numbers generated constraint names
+      per database as it goes, so building the shared table after a different
+      number of constraints is what makes the two sides' INTEG_ numbers
+      disagree - which is the whole point of the check below. Built the other
+      way round the numbers coincide and the test proves nothing. }
     'create table ONLY_TGT (ID integer not null primary key)',
+    'create table BOTH_TBL (ID integer not null primary key, NOTE varchar(10))',
+    'alter table BOTH_TBL add check (ID > 0)',
     { Same name, different body - the case a comparison exists to catch. }
     'create view V_SHARED as select ID + 0 as ID from BOTH_TBL',
     'create table PK_DIFF (A integer not null, B integer not null, primary key (B))']);
@@ -651,6 +674,11 @@ begin
       name still appears - the view and trigger select from it - so the test is
       that no CREATE TABLE names it. }
     RequireNotInDDL(MigrationScript, 'create table BOTH_TBL', 'an unchanged table');
+    { BOTH_TBL carries the same CHECK on both sides, but Firebird named it
+      INTEG_3 in one database and INTEG_5 in the other. Reporting it as
+      differing on that basis alone would bury the real differences. }
+    RequireNotInDDL(MigrationScript, 'BOTH_TBL differs',
+      'a table reported as differing only because a generated name differs');
 
     { Two: the table only the target has, and the target's own primary key on
       PK_DIFF - which is the other half of the report above, since adding the
