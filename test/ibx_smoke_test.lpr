@@ -17,7 +17,8 @@ program ibx_smoke_test;
 
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
-  MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter;
+  MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
+  ProfilerQueries;
 
 var
   DB: TIBDatabase;
@@ -34,6 +35,8 @@ var
   Single: TBufDataset;
   ParamMeta: TIBSQL;
   Cols: TStringList;
+  ProfileId: Int64;
+  Prefix: String;
 
 { The generators end their statements the way a user would type them; the API
   takes one statement without the terminator. }
@@ -1410,6 +1413,77 @@ begin
       end;
       WriteLn('XLSX cell references and escaping OK');
 
+      { The built-in profiler (Firebird 5). Driven end to end here because the
+        interesting part is not the SQL but where the PLG$PROF_* tables live:
+        Firebird 6 puts them in a schema of their own, earlier versions did
+        not, and ProfilerQueries resolves that from the catalogue rather than
+        from a version test. }
+      if ProfilerAvailable(DB, Tr) then
+      begin
+        EnsureTransaction;
+        try
+          ProfileId := StartProfilerSession(DB, Tr, 'ibx smoke test');
+          if ProfileId < 0 then
+          begin
+            WriteLn('FAIL: START_SESSION returned no session id');
+            Halt(1);
+          end;
+
+          { Something for it to record. }
+          Q.SQL.Text := 'select count(*) from ibx_smoke_test';
+          Q.Open;
+          Q.Close;
+
+          FinishProfilerSession(DB, Tr);
+          if Tr.Active then
+            Tr.Commit;
+
+          { Where the PLG$PROF_* tables live is the part that varies: Firebird 6
+            puts them in a schema of their own, earlier versions did not. This
+            reads RDB$RELATIONS, not the profiler tables, so it is safe - see
+            the note below about what is not. }
+          EnsureTransaction;
+          Prefix := ProfilerSchemaPrefix(DB, Tr);
+          if EngineMajor >= 6 then
+          begin
+            if Prefix = '' then
+            begin
+              WriteLn('FAIL: no schema prefix resolved on a server that uses schemas');
+              Halt(1);
+            end;
+          end;
+          if (Prefix <> '') and (Copy(Prefix, Length(Prefix), 1) <> '.') then
+          begin
+            WriteLn('FAIL: the prefix is not dot-terminated: "', Prefix, '"');
+            Halt(1);
+          end;
+          if Pos(Prefix + 'plg$prof_sessions', ProfilerSessionsSQL(Prefix)) = 0 then
+          begin
+            WriteLn('FAIL: the sessions query does not use the resolved prefix');
+            Halt(1);
+          end;
+          if Tr.Active then
+            Tr.Commit;
+          WriteLn('Profiler OK (session ', ProfileId, ' recorded; tables prefix "',
+            Prefix, '")');
+
+          { Deliberately NOT reading the PLG$PROF_* tables here. Doing so leaves
+            this IBX version's attachment in a state where disconnecting raises
+            EObjectCheck from inside its own EndAllTransactions - reproducible
+            in twenty lines, and not fixable from this side. See ROADMAP.md. }
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: profiler raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+      end
+      else
+        WriteLn('Profiler not available on this server - skipped');
+
       { EXPLAIN. It is a client-side command that isql implements itself, not
         server DSQL - preparing "explain select ..." through IBX fails with
         "Token unknown - explain" - so the editor recognises it, strips it and
@@ -1478,6 +1552,10 @@ begin
           end;
           Q.Open;
           Q.Close;
+          { Unprepared before the commit, not after: a prepared statement holds
+            a transaction interface, and touching it once that transaction has
+            ended dereferences nil. }
+          Q.Prepared := False;
           if Tr.Active then
             Tr.Commit;
           WriteLn('Multi-row RETURNING OK (reports SQLSelect, opens as a cursor)');
@@ -1495,6 +1573,8 @@ begin
       Extractor.Free;
     end;
 
+    if Tr.Active then
+      Tr.Commit;
     DB.Connected := False;
     WriteLn('PASS: IBX round-trip against a live Firebird server succeeded.');
   finally
