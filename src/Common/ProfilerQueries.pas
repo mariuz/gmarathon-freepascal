@@ -212,9 +212,16 @@ end;
 
 function ProfilerSessionsSQL(const Prefix: String): String;
 begin
+  { The two timestamps are TIMESTAMP WITH TIME ZONE, and are cast to text on
+    the server for the same two reasons the Session Monitor does it: IBX would
+    otherwise reduce the zone to a numeric offset, and handing a WITH TIME ZONE
+    value to this IBX version leaves the attachment unable to disconnect
+    afterwards. See test/timezone_disconnect_repro.lpr. The stats views have no
+    such column, so they are selected as they are. }
   Result :=
     'select profile_id, attachment_id, user_name, description, ' +
-    'start_timestamp, finish_timestamp ' +
+    'cast(start_timestamp as varchar(64)) as START_TIMESTAMP, ' +
+    'cast(finish_timestamp as varchar(64)) as FINISH_TIMESTAMP ' +
     'from ' + Prefix + 'plg$prof_sessions order by profile_id desc';
 end;
 

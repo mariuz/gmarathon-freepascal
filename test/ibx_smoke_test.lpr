@@ -1532,15 +1532,89 @@ begin
             WriteLn('FAIL: the sessions query does not use the resolved prefix');
             Halt(1);
           end;
+          { Reading these was what faulted before the cause was understood: the
+            sessions view has TIMESTAMP WITH TIME ZONE columns, and handing one
+            to this IBX version breaks the later disconnect. ProfilerSessionsSQL
+            casts them, so the whole set is readable again - and if that
+            regresses, this run ends with the fault rather than a pass. }
+          Q.SQL.Text := ProfilerSessionsSQL(Prefix);
+          Q.Open;
+          if Q.EOF then
+          begin
+            WriteLn('FAIL: no profiler session was recorded');
+            Halt(1);
+          end;
+          if Q.FieldByName('description').AsString <> 'ibx smoke test' then
+          begin
+            WriteLn('FAIL: session description came back "',
+              Q.FieldByName('description').AsString, '"');
+            Halt(1);
+          end;
+          { The cast keeps the zone name here too. }
+          if Pos('/', Q.FieldByName('start_timestamp').AsString) = 0 then
+          begin
+            WriteLn('FAIL: the session start time lost its zone name: "',
+              Q.FieldByName('start_timestamp').AsString, '"');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+
+          EnsureTransaction;
+          Q.SQL.Text := ProfilerStatementStatsSQL(Prefix);
+          Q.Open;
+          if Q.EOF then
+          begin
+            WriteLn('FAIL: the profiler recorded no statement statistics');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+
+          EnsureTransaction;
+          Q.SQL.Text := ProfilerRecordSourceStatsSQL(Prefix);
+          Q.Open;
+          Q.Close;
+          Q.Prepared := False;
+
+          { DISCARD does not remove anything already flushed, despite the name,
+            so a session survives it - a "clear" button wired to DISCARD would
+            look broken. }
+          EnsureTransaction;
+          DiscardProfilerData(DB, Tr);
           if Tr.Active then
             Tr.Commit;
-          WriteLn('Profiler OK (session ', ProfileId, ' recorded; tables prefix "',
-            Prefix, '")');
+          EnsureTransaction;
+          Q.SQL.Text := ProfilerSessionsSQL(Prefix);
+          Q.Open;
+          if Q.EOF then
+          begin
+            WriteLn('FAIL: DISCARD removed flushed sessions - it is not supposed to');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
 
-          { Deliberately NOT reading the PLG$PROF_* tables here. Doing so leaves
-            this IBX version's attachment in a state where disconnecting raises
-            EObjectCheck from inside its own EndAllTransactions - reproducible
-            in twenty lines, and not fixable from this side. See ROADMAP.md. }
+          { Deleting the session is what clears it, and the dependent rows go
+            with it. }
+          EnsureTransaction;
+          ClearProfilerData(DB, Tr, Prefix);
+          if Tr.Active then
+            Tr.Commit;
+          EnsureTransaction;
+          Q.SQL.Text := 'select count(*) from ' + Prefix + 'plg$prof_statements';
+          Q.Open;
+          if Q.Fields[0].AsInteger <> 0 then
+          begin
+            WriteLn('FAIL: clearing the sessions left statement rows behind');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+          if Tr.Active then
+            Tr.Commit;
+          WriteLn('Profiler OK (session ', ProfileId, ' recorded; prefix "', Prefix,
+            '"; stats readable; clearing cascades)');
         except
           on E: Exception do
           begin
