@@ -274,7 +274,17 @@ begin
 		tranMonitor.Commit;
 	tranMonitor.StartTransaction;
 
-	{ MON$STATE, MON$ISOLATION_MODE and MON$OBJECT_TYPE are raw code numbers.
+	{ MON$TIMESTAMP is TIMESTAMP WITH TIME ZONE from Firebird 4 on, and is cast
+	  to text on the server for two reasons. It preserves the IANA zone name -
+	  IBX surfaces the column as a plain ftDateTime and reduces the zone to a
+	  numeric offset, so "Europe/Berlin" arrives as "+02:00". And it steps
+	  around a defect in this IBX version, where reading a WITH TIME ZONE
+	  column leaves the attachment unable to disconnect afterwards; see
+	  test/timezone_disconnect_repro.lpr. 64 characters, not 40: the longest
+	  IANA names plus a timestamp with fractional seconds overflow a smaller
+	  cast, and Firebird raises a truncation error rather than shortening it.
+
+	  MON$STATE, MON$ISOLATION_MODE and MON$OBJECT_TYPE are raw code numbers.
 	  Rather than hard-code a decode table that would go stale on a newer
 	  server, join RDB$TYPES, which is where Firebird itself publishes the
 	  meaning of each code - a code the running server does not know about
@@ -283,7 +293,7 @@ begin
 	  anyway, so a prettier quoted alias would not survive to the grid. }
 	qryAttachments.SQL.Text :=
 		'select a.mon$attachment_id, a.mon$user, a.mon$remote_address, a.mon$remote_process, ' +
-		'a.mon$timestamp, ' +
+		'cast(a.mon$timestamp as varchar(64)) as MON$TIMESTAMP, ' +
 		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(a.mon$state as varchar(11))) as STATE ' +
 		'from mon$attachments a ' +
 		'left join rdb$types st on st.rdb$field_name = ''MON$STATE'' and st.rdb$type = a.mon$state ' +
@@ -293,7 +303,7 @@ begin
 	qryStatements.SQL.Text :=
 		'select s.mon$statement_id, s.mon$attachment_id, s.mon$transaction_id, ' +
 		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(s.mon$state as varchar(11))) as STATE, ' +
-		's.mon$timestamp, s.mon$sql_text ' +
+		'cast(s.mon$timestamp as varchar(64)) as MON$TIMESTAMP, s.mon$sql_text ' +
 		'from mon$statements s ' +
 		'left join rdb$types st on st.rdb$field_name = ''MON$STATE'' and st.rdb$type = s.mon$state ' +
 		'order by s.mon$statement_id';
@@ -307,7 +317,7 @@ begin
 	qryTransactions.SQL.Text :=
 		'select t.mon$transaction_id, t.mon$attachment_id, ' +
 		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(t.mon$state as varchar(11))) as STATE, ' +
-		't.mon$timestamp, ' +
+		'cast(t.mon$timestamp as varchar(64)) as MON$TIMESTAMP, ' +
 		'coalesce(replace(trim(iso.rdb$type_name), ''_'', '' ''), cast(t.mon$isolation_mode as varchar(11))) as ISOLATION, ' +
 		'case when t.mon$read_only <> 0 then ''Yes'' else ''No'' end as READ_ONLY, ' +
 		't.mon$lock_timeout ' +

@@ -24,4 +24,4 @@ test/lib/
 
 # Local toolchain installers (fpc/lazarus .deb packages etc.)
 *.deb
-test/profiler_disconnect_repro
+test/timezone_disconnect_repro

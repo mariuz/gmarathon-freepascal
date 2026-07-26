@@ -9,7 +9,7 @@
       </Flags>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="profiler_disconnect_repro"/>
+      <Title Value="timezone_disconnect_repro"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
     </General>
@@ -32,7 +32,7 @@
     </RequiredPackages>
     <Units>
       <Unit>
-        <Filename Value="profiler_disconnect_repro.lpr"/>
+        <Filename Value="timezone_disconnect_repro.lpr"/>
         <IsPartOfProject Value="True"/>
       </Unit>
     </Units>
@@ -40,7 +40,7 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="profiler_disconnect_repro"/>
+      <Filename Value="timezone_disconnect_repro"/>
     </Target>
     <SearchPaths>
       <OtherUnitFiles Value="../src/Common;../src/MetaExtract;../src/Source"/>

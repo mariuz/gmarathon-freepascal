@@ -217,6 +217,11 @@ begin
       Q.ExecSQL;
     except
     end;
+    try
+      Q.SQL.Text := 'drop table ibx_smoke_tz';
+      Q.ExecSQL;
+    except
+    end;
     Tr.Commit;
 
     Tr.StartTransaction;
@@ -1412,6 +1417,71 @@ begin
         Halt(1);
       end;
       WriteLn('XLSX cell references and escaping OK');
+
+      { Firebird 4 WITH TIME ZONE columns. Two things are wrong with reading one
+        directly through IBX, and one cast fixes both: IBX surfaces the column
+        as a plain ftDateTime and reduces the zone to a numeric offset, losing
+        the IANA name; and doing so leaves the attachment unable to disconnect
+        afterwards (see test/timezone_disconnect_repro.lpr). Marathon's MON$
+        queries therefore cast on the server, and this pins that the cast
+        really does carry the zone name. }
+      if EngineMajor >= 4 then
+      begin
+        EnsureTransaction;
+        try
+          Q.SQL.Text := 'recreate table ibx_smoke_tz (id integer, ts timestamp with time zone)';
+          Q.ExecSQL;
+          if Tr.Active then
+            Tr.Commit;
+          EnsureTransaction;
+          Q.SQL.Text := 'insert into ibx_smoke_tz values ' +
+                        '(1, timestamp ''2026-07-26 14:30:00 Europe/Berlin'')';
+          Q.ExecSQL;
+          if Tr.Active then
+            Tr.Commit;
+
+          EnsureTransaction;
+          Q.SQL.Text := 'select cast(ts as varchar(64)) as TS_TEXT from ibx_smoke_tz';
+          Q.Open;
+          if Q.EOF then
+          begin
+            WriteLn('FAIL: no time zone row came back');
+            Halt(1);
+          end;
+          if Pos('Europe/Berlin', Q.Fields[0].AsString) = 0 then
+          begin
+            WriteLn('FAIL: the cast lost the zone name: "', Q.Fields[0].AsString, '"');
+            Halt(1);
+          end;
+          WriteLn('Time zone OK (cast keeps the name: ', Trim(Q.Fields[0].AsString), ')');
+          Q.Close;
+          Q.Prepared := False;
+
+          { And the cast is wide enough for the longest names Firebird ships. }
+          EnsureTransaction;
+          Q.SQL.Text := 'select max(char_length(trim(rdb$time_zone_name))) from rdb$time_zones';
+          Q.Open;
+          if not Q.EOF then
+            if Q.Fields[0].AsInteger + 25 > 64 then
+            begin
+              WriteLn('FAIL: varchar(64) is too narrow for the longest zone name (',
+                Q.Fields[0].AsInteger, ' chars)');
+              Halt(1);
+            end;
+          Q.Close;
+          Q.Prepared := False;
+          if Tr.Active then
+            Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: time zone handling raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+      end;
 
       { The built-in profiler (Firebird 5). Driven end to end here because the
         interesting part is not the SQL but where the PLG$PROF_* tables live:
