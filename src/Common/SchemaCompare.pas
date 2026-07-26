@@ -65,7 +65,7 @@ function CompareSchemas(const Source, Target: TScriptAsContext;
 
 implementation
 
-uses IBDatabase, IBQuery;
+uses IBDatabase, IBQuery, DDLExtractor;
 
 type
   TComparedKind = record
@@ -187,6 +187,65 @@ begin
   Result := ScriptAsCreate(Ctx, Name, CacheType);
 end;
 
+{ The index statements of one table, one per entry, as the extractor renders
+  them. Splitting the block up is what makes a useful comparison possible: both
+  databases are rendered by the same code, so a statement present in one list
+  and not the other is exactly one index's worth of difference, and only those
+  need be emitted - re-running the whole block would fail on the indexes that
+  are already there. }
+function TableIndexStatements(const Ctx: TScriptAsContext; const TableName: String): TStringList;
+var
+  Extractor: TDDLExtractor;
+  Block, Statement: String;
+  Parts: TStringList;
+  Idx: Integer;
+begin
+  Result := TStringList.Create;
+  Extractor := TDDLExtractor.Create(nil);
+  Parts := TStringList.Create;
+  try
+    Extractor.Database := Ctx.Database;
+    Extractor.Transaction := Ctx.Transaction;
+    Extractor.SQLDialect := Ctx.Dialect;
+    Extractor.IsInterbase6 := Ctx.IsIB6;
+    Block := Extractor.Extract(ddlTable, ddlstIndex, TableName);
+    Parts.Text := StringReplace(Block, ';', ';' + #13#10, [rfReplaceAll]);
+    for Idx := 0 to Parts.Count - 1 do
+    begin
+      Statement := Trim(Parts[Idx]);
+      if Statement <> '' then
+        Result.Add(Statement);
+    end;
+  finally
+    Parts.Free;
+    Extractor.Free;
+  end;
+end;
+
+{ The index name out of a CREATE INDEX statement, for writing the DROP that
+  removes it. Returns an empty string for anything that is not one, so an
+  unrecognised statement is skipped rather than turned into a wrong DROP. }
+function IndexNameOf(const Statement: String): String;
+var
+  Words: TStringList;
+  Idx: Integer;
+begin
+  Result := '';
+  Words := TStringList.Create;
+  try
+    Words.Delimiter := ' ';
+    Words.DelimitedText := StringReplace(Trim(Statement), #9, ' ', [rfReplaceAll]);
+    for Idx := 0 to Words.Count - 2 do
+      if SameText(Words[Idx], 'index') then
+      begin
+        Result := Words[Idx + 1];
+        Break;
+      end;
+  finally
+    Words.Free;
+  end;
+end;
+
 function CompareSchemas(const Source, Target: TScriptAsContext;
   out Differences: TSchemaDifferences): String;
 var
@@ -194,7 +253,9 @@ var
   SourceKinds, TargetKinds: TComparedKinds;
   K, Idx: Integer;
   InSource, InTarget: TStringList;
-  SourceDDL, TargetDDL: String;
+  SourceDDL, TargetDDL, IndexName: String;
+  SourceIdx, TargetIdx: TStringList;
+  I2: Integer;
   Header: Boolean;
 
   procedure Section(const Caption: String; var Emitted: Boolean);
@@ -278,6 +339,43 @@ begin
                 Script.Add(SourceDDL);
                 Script.Add('*/');
                 Inc(Differences.NeedingAttention);
+              end;
+            end;
+
+            { Indexes, whether or not the columns matched. A table whose columns
+              are identical can still have different indexes, and unlike a
+              column change an index can be added or removed safely - so these
+              are migrated rather than merely reported. }
+            if SourceKinds[K].CacheType = ctTable then
+            begin
+              SourceIdx := TableIndexStatements(Source, InSource[Idx]);
+              TargetIdx := TableIndexStatements(Target, InSource[Idx]);
+              try
+                for I2 := 0 to SourceIdx.Count - 1 do
+                  if TargetIdx.IndexOf(SourceIdx[I2]) < 0 then
+                  begin
+                    Section(SourceKinds[K].Caption, Header);
+                    Script.Add('');
+                    Script.Add('/* index missing from target */');
+                    Script.Add(SourceIdx[I2]);
+                    Inc(Differences.ToCreate);
+                  end;
+                for I2 := 0 to TargetIdx.Count - 1 do
+                  if SourceIdx.IndexOf(TargetIdx[I2]) < 0 then
+                  begin
+                    IndexName := IndexNameOf(TargetIdx[I2]);
+                    if IndexName <> '' then
+                    begin
+                      Section(SourceKinds[K].Caption, Header);
+                      Script.Add('');
+                      Script.Add('/* index only in target - uncomment to remove */');
+                      Script.Add('-- drop index ' + IndexName + ';');
+                      Inc(Differences.ToDrop);
+                    end;
+                  end;
+              finally
+                TargetIdx.Free;
+                SourceIdx.Free;
               end;
             end;
           end;

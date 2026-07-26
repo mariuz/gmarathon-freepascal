@@ -523,7 +523,11 @@ begin
     'create procedure P_ONLY_SRC (A integer) returns (R integer) as ' +
       'begin R = A + 1; suspend; end',
     'create function F_ONLY_SRC (A integer) returns integer as begin return A * 2; end',
-    'create trigger TR_BOTH for BOTH_TBL after insert as begin end']);
+    'create trigger TR_BOTH for BOTH_TBL after insert as begin end',
+    { BOTH_TBL is otherwise identical on the two sides, so an index only here
+      is the case that used to be invisible: comparing tables by their column
+      DDL alone said they matched. }
+    'create index IDX_BOTH_ID on BOTH_TBL (ID)']);
 
   Build(TgtDB, TgtTr, '/tmp/marathon_cmp_tgt.fdb', [
     'create table BOTH_TBL (ID integer not null primary key)',
@@ -561,6 +565,10 @@ begin
     RequireInDDL(MigrationScript, 'TR_BOTH', 'the missing trigger');
     RequireInDDL(MigrationScript, '/* differs - redefining */', 'the changed view');
     RequireInDDL(MigrationScript, '-- drop table', 'the commented-out drop');
+    RequireInDDL(MigrationScript, 'IDX_BOTH_ID',
+      'an index missing from an otherwise identical table');
+    RequireInDDL(MigrationScript, 'index missing from target',
+      'the index difference is reported as such');
 
     { BOTH_TBL is identical on both sides, so it must not be recreated. Its
       name still appears - the view and trigger select from it - so the test is
