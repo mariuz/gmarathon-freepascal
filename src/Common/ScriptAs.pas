@@ -277,6 +277,7 @@ begin
 		ctUDF:         ObjType := ddlUDF;
 		ctPackage:     ObjType := ddlPackage;
 		ctPublication: ObjType := ddlPublication;
+		ctSchema:      ObjType := ddlSchema;
 	else
 		ObjType := ddlTable;
 	end;
@@ -341,6 +342,11 @@ begin
 				Result := 'drop function ' + Ident + ';'
 			else
 				Result := 'drop external function ' + Ident + ';';
+		ctSchema:
+			{ Firebird refuses this while the schema still holds objects. That
+			  is the right behaviour to generate anyway - the alternative is a
+			  script that empties a schema as a side effect of dropping it. }
+			Result := 'drop schema ' + Ident + ';';
 		ctPackage:
 			{ One statement is enough: DROP PACKAGE takes the body with it
 			  (verified), so naming the body separately only adds a statement

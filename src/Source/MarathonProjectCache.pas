@@ -528,6 +528,22 @@ type
     function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
   end;
 
+  TMarathonCacheSchemasHeader = class(TMarathonCacheHeader)
+  private
+
+  public
+    procedure Expand(Recursive: Boolean); override;
+    constructor Create; override;
+  end;
+
+  TMarathonCacheSchema = class(TMarathonCacheObject)
+  private
+
+  public
+    constructor Create; override;
+    function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
+  end;
+
   TMarathonCachePublicationsHeader = class(TMarathonCacheHeader)
   private
 
@@ -1977,6 +1993,14 @@ begin
 
 	NV := FRootItem.FCache.AddPathNode(fContainerNode, 'Packages');
 	wNode := TMarathonCachePackagesHeader.Create;
+	wNode.ContainerNode := NV;
+	wNode.RootItem := FRootItem;
+	wNode.Caption := NV.Text;
+	wNode.ConnectionName := FCaption;
+	NV.Data := wNode;
+
+	NV := FRootItem.FCache.AddPathNode(fContainerNode, 'Schemas');
+	wNode := TMarathonCacheSchemasHeader.Create;
 	wNode.ContainerNode := NV;
 	wNode.RootItem := FRootItem;
 	wNode.Caption := NV.Text;
@@ -4672,6 +4696,87 @@ begin
 		Result := Op in [opDrop, opExtractDDL, opAddToProject]
 	else
 		Result := Op in [opOpen, opDrop, opScriptCreate, opExtractDDL, opAddToProject];
+end;
+
+constructor TMarathonCacheSchemasHeader.Create;
+begin
+	inherited;
+	FCacheType := ctSchemaHeader;
+end;
+
+procedure TMarathonCacheSchemasHeader.Expand(Recursive: Boolean);
+var
+	wNode: TMarathonCacheSchema;
+	NV: TMarathonTreeNode;
+	Q: TIBQuery;
+
+begin
+	FContainerNode.DeleteChildren;
+	{ SQL schemas are Firebird 6 (ODS 14). RDB$SCHEMAS does not exist earlier
+	  and querying a missing table is a hard error, so leave the branch empty
+	  rather than let it raise on every older server. }
+	if not FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB6_MAJOR, 0) then
+	begin
+		FExpanded := True;
+		Exit;
+	end;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
+		try
+			{ Deliberately not filtered by SchemaFilterClause - a schema is not
+			  *in* a schema, and filtering the list by the current one would
+			  reduce it to the single entry the user is already in, which is the
+			  one thing this branch exists to see past. SYSTEM is excluded by
+			  the system flag; PLG$PROFILER is not flagged and does show, which
+			  is correct - it is a real schema holding real tables. }
+			Q.SQL.Add('select RDB$SCHEMA_NAME from RDB$SCHEMAS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$SCHEMA_NAME asc;');
+			Q.Open;
+			while not Q.EOF do
+			begin
+				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$SCHEMA_NAME').AsString);
+				wNode := TMarathonCacheSchema.Create;
+				wNode.ContainerNode := NV;
+				wNode.RootItem := FRootItem;
+				wNode.Caption := Q.FieldByName('RDB$SCHEMA_NAME').AsString;
+				wNode.ObjectName := Q.FieldByName('RDB$SCHEMA_NAME').AsString;
+				wNode.ConnectionName := FConnectionName;
+				wNode.System := False;
+				NV.Data := wNode;
+				Q.Next;
+			end;
+			FExpanded := True;
+		finally
+			TIBTransaction(Q.Transaction).Commit;
+		end;
+	finally
+		Q.Free;
+	end;
+end;
+
+constructor TMarathonCacheSchema.Create;
+begin
+	inherited;
+	FImageIndex := 9;
+	FCacheType := ctSchema;
+end;
+
+{ No editor form and no New: creating a schema is a one-line statement with
+  nothing to fill in a dialog with, and the base class would otherwise
+  advertise New, Print and Print Preview, none of which has a ctSchema branch
+  in the dispatch - they would sit enabled and do nothing at all. Drop is
+  offered; Firebird refuses it while the schema still holds objects, which is
+  the engine's job to say rather than this list's. }
+function TMarathonCacheSchema.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
+begin
+	if Multiple then
+		Result := Op in [opDrop, opExtractDDL]
+	else
+		Result := Op in [opDrop, opScriptCreate, opExtractDDL];
 end;
 
 constructor TMarathonCachePublicationsHeader.Create;

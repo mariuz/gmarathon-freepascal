@@ -36,7 +36,8 @@ type
     { Appended deliberately: callers pass this enum by value, so adding in the
       middle would silently renumber the existing ones. }
     ddlPackage,
-    ddlPublication
+    ddlPublication,
+    ddlSchema
     );
 
   TDDLSubType = (
@@ -92,8 +93,10 @@ type
     function ExtractPackageHeader(ObjectName : String) : String;
     function ExtractPackageBody(ObjectName : String) : String;
     function ExtractPublication(ObjectName : String) : String;
+    function ExtractSchema(ObjectName : String) : String;
     function TriggerEventClause(TriggerType: Integer): String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
+    function SchemaClause(const Alias: String; const Column: String = 'rdb$schema_name'): String;
     function ExtractGenerator(ObjectName : String) : String;
     function ExtractGeneratorValue(ObjectName : String) : String;
     function ExtractDomain(ObjectName : String) : String;
@@ -375,6 +378,10 @@ begin
               Result := ExtractPackageBody(ObjectName);
           end;
         end;
+      ddlSchema:
+        begin
+          Result := ExtractSchema(ObjectName);
+        end;
       ddlPublication:
         begin
           Result := ExtractPublication(ObjectName);
@@ -412,7 +419,7 @@ begin
     Q1.Transaction := FTransaction;
     Q.Close;
     Q.SelectSQL.Clear;
-    Q.SelectSQL.Add('select * from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(ObjectName, ''''));
+    Q.SelectSQL.Add('select * from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q.Open;
     if Not Q.EOF and Q.BOF then
     begin
@@ -450,7 +457,7 @@ begin
           Q1.Close;
           Q1.SelectSQL.Clear;
           Q1.SelectSQL.Add('select rdb$lower_bound, rdb$upper_bound from rdb$field_dimensions where ' +
-                        'rdb$dimension = ' + IntToStr(Idx)  + 'and rdb$field_name = ' + AnsiQuotedStr(ObjectName,''''));
+                        'rdb$dimension = ' + IntToStr(Idx)  + 'and rdb$field_name = ' + AnsiQuotedStr(ObjectName,'''') + SchemaClause(''));
           Q1.Open;
           if not (Q1.EOF and Q1.BOF) then
           begin
@@ -499,7 +506,7 @@ begin
           oStatement := Doc.CreateElement('statement');
           oXML.AppendChild(oStatement);
 
-          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$fields set rdb$description = ?desc where rdb$field_name = ' + AnsiQuotedStr(ObjectName,''''));
+          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$fields set rdb$description = ?desc where rdb$field_name = ' + AnsiQuotedStr(ObjectName,'''') + SchemaClause(''));
 
           oData := Doc.CreateElement('data-value');
           oXML.AppendChild(oData);
@@ -573,7 +580,7 @@ begin
   try
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
-    Q.SelectSQL.Add('select * from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+    Q.SelectSQL.Add('select * from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q.Open;
     if Not Q.EOF and Q.BOF then
     begin
@@ -591,7 +598,7 @@ begin
           oStatement := Doc.CreateElement('statement');
           oXML.AppendChild(oStatement);
 
-          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$exceptions set rdb$description = ?desc where rdb$exception_name = ' + AnsiQuotedStr(ObjectName, ''''));
+          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$exceptions set rdb$description = ?desc where rdb$exception_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
 
           oData := Doc.CreateElement('data-value');
           oXML.AppendChild(oData);
@@ -718,7 +725,7 @@ begin
 
     UserList := TStringList.Create;
     try
-      Q.SelectSQL.Add('select rdb$user, rdb$privilege, rdb$grant_option from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+      Q.SelectSQL.Add('select rdb$user, rdb$privilege, rdb$grant_option from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('', 'rdb$relation_schema_name') + ';');
       Q.Open;
       While not Q.EOF do
       begin
@@ -770,7 +777,7 @@ begin
 
     UserList := TStringList.Create;
     try
-      Q.SelectSQL.Add('select rdb$user, rdb$privilege, rdb$grant_option from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+      Q.SelectSQL.Add('select rdb$user, rdb$privilege, rdb$grant_option from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('', 'rdb$relation_schema_name') + ';');
       Q.Open;
       While not Q.EOF do
       begin
@@ -794,7 +801,7 @@ begin
         begin
           ColList := '';
           Q.SelectSQL.Clear;
-          Q.SelectSQL.Add('select rdb$field_name from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ' and rdb$privilege = ''' + Priv + ''' and rdb$user = ''' + User + ''';');
+          Q.SelectSQL.Add('select rdb$field_name from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('', 'rdb$relation_schema_name') + ' and rdb$privilege = ''' + Priv + ''' and rdb$user = ''' + User + ''';');
           Q.Open;
           While not Q.EOF do
           begin
@@ -851,7 +858,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
 
-    Q.SelectSQL.Add('select rdb$procedure_name, rdb$procedure_source, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+    Q.SelectSQL.Add('select rdb$procedure_name, rdb$procedure_source, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q.Open;
     If Not (Q.EOF and Q.BOF) then
     begin
@@ -937,7 +944,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
 
-    Q.SelectSQL.Add('select rdb$procedure_name, rdb$procedure_source, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+    Q.SelectSQL.Add('select rdb$procedure_name, rdb$procedure_source, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q.Open;
     If Not (Q.EOF and Q.BOF) then
     begin
@@ -1095,7 +1102,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
 
-    Q.SelectSQL.Add('select rdb$procedure_name, rdb$procedure_source, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+    Q.SelectSQL.Add('select rdb$procedure_name, rdb$procedure_source, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q.Open;
     If Not (Q.EOF and Q.BOF) then
     begin
@@ -1318,7 +1325,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
     Q.SelectSQL.Add('select rdb$sql_security from rdb$relations where rdb$relation_name = ' +
-               AnsiQuotedStr(ObjectName, ''''));
+               AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     try
       Q.Open;
       if not Q.EOF then
@@ -1399,6 +1406,31 @@ begin
     Result := 'before ' + Actions;
 end;
 
+{ Restricts a catalogue query to the schema the caller can actually reach by an
+  unqualified name.
+
+  Object names are unique per schema, not per database, so filtering on the name
+  alone matches every schema that happens to use it. That is not a hypothetical:
+  with a T_AMBIG in both PUBLIC and APPX, the column query matched four rows and
+  ExtractTable emitted one table carrying both schemas' columns and a duplicated
+  ID (verified). Since the object tree only ever offers what an unqualified name
+  reaches, restricting extraction the same way makes the DDL match the object the
+  user picked.
+
+  Alias is the table alias with its dot ('a.'), or empty for an unaliased query.
+  Empty before Firebird 6 (ODS 14): RDB$SCHEMA_NAME does not exist there and
+  naming it is a hard error rather than a null. The CURRENT_SCHEMA null guard is
+  the same one the object tree needs - with an empty search path CURRENT_SCHEMA
+  is null, and without the guard every query would return nothing at all rather
+  than everything. }
+function TDDLExtractor.SchemaClause(const Alias: String; const Column: String): String;
+begin
+  if ODSAtLeast(14, 0) then
+    Result := ' and (' + Alias + Column + ' = current_schema or current_schema is null)'
+  else
+    Result := '';
+end;
+
 function TDDLExtractor.SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
 var
   Q : TIBDataSet;
@@ -1414,7 +1446,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
     Q.SelectSQL.Add('select rdb$sql_security from ' + SysTable + ' where ' + NameColumn +
-               ' = ' + AnsiQuotedStr(ObjectName, ''''));
+               ' = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     try
       Q.Open;
       if not Q.EOF then
@@ -1451,7 +1483,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
     Q.SelectSQL.Add('select rdb$package_header_source from rdb$packages where rdb$package_name = ' +
-               AnsiQuotedStr(ObjectName, ''''));
+               AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q.Open;
     if not Q.EOF then
     begin
@@ -1480,7 +1512,7 @@ begin
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
     Q.SelectSQL.Add('select rdb$package_body_source from rdb$packages where rdb$package_name = ' +
-               AnsiQuotedStr(ObjectName, ''''));
+               AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q.Open;
     if not Q.EOF then
     begin
@@ -1491,6 +1523,51 @@ begin
         Result := 'recreate package body ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) +
                   #13#10 + 'as' + #13#10 + Src + #13#10;
     end;
+    Q.Close;
+  finally
+    Q.Free;
+  end;
+end;
+
+function TDDLExtractor.ExtractSchema(ObjectName: String): String;
+var
+  Q : TIBDataSet;
+  Line : String;
+begin
+  { SQL schemas are Firebird 6 (ODS 14). RDB$SCHEMAS does not exist earlier and
+    naming it is a hard error, not an empty result. }
+  Result := '';
+  if not ODSAtLeast(14, 0) then
+    Exit;
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$schema_name, rdb$character_set_name, rdb$sql_security ' +
+                    'from rdb$schemas where rdb$schema_name = ' +
+                    AnsiQuotedStr(ObjectName, ''''));
+    Q.Open;
+    if Q.EOF then
+    begin
+      Q.Close;
+      Exit;
+    end;
+    Line := 'create schema ' +
+      MakeQuotedIdent(Trim(Q.FieldByName('rdb$schema_name').AsString), FIsIB6, FSQLDialect);
+    { Null rather than the database default when the schema was created without
+      one - PUBLIC is the case in point - and writing a DEFAULT CHARACTER SET
+      clause naming nothing would not compile. }
+    if not Q.FieldByName('rdb$character_set_name').IsNull then
+      Line := Line + ' default character set ' +
+        MakeQuotedIdent(Trim(Q.FieldByName('rdb$character_set_name').AsString), FIsIB6, FSQLDialect);
+    if not Q.FieldByName('rdb$sql_security').IsNull then
+    begin
+      if Q.FieldByName('rdb$sql_security').AsInteger <> 0 then
+        Line := Line + ' sql security definer'
+      else
+        Line := Line + ' sql security invoker';
+    end;
+    Result := Line + ';' + #13#10;
     Q.Close;
   finally
     Q.Free;
@@ -1666,7 +1743,7 @@ begin
                    'b.rdb$field_sub_type, b.rdb$segment_length, ' +
                    'b.rdb$field_type, b.rdb$dimensions from rdb$relation_fields a, rdb$fields b where ' +
                    'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
-                    AnsiQuotedStr(ObjectName, '''') + ' order by a.rdb$field_position asc;');
+                    AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') + ' order by a.rdb$field_position asc;');
       end
       else
       begin
@@ -1677,7 +1754,7 @@ begin
                    'b.rdb$field_sub_type, b.rdb$segment_length, ' +
                    'b.rdb$field_type, b.rdb$dimensions from rdb$relation_fields a, rdb$fields b where ' +
                    'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
-                    AnsiQuotedStr(ObjectName, '''') + ' order by a.rdb$field_position asc;');
+                    AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') + ' order by a.rdb$field_position asc;');
 
       end;
       Q1.Open;
@@ -1818,7 +1895,7 @@ begin
       Q1.Database := FDatabase;
       Q1.Transaction := FTransaction;
       Q1.SelectSQL.Add('select * from rdb$relation_constraints where (rdb$constraint_type = ''CHECK'') ' +
-                 'and rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+                 'and rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
       Q1.Open;
       if Not (Q1.EOF and Q1.BOF) then
       begin
@@ -1842,7 +1919,7 @@ begin
       end;
 
       Q1.Close;
-      Q1.SelectSQL.Text := 'select rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';';
+      Q1.SelectSQL.Text := 'select rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';';
       Q1.Open;
       OutPut.Add('');
       OutPut.Add('');
@@ -1858,7 +1935,7 @@ begin
           oStatement := Doc.CreateElement('statement');
           oXML.AppendChild(oStatement);
 
-          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$relations set rdb$description = ?desc where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, ''''));
+          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$relations set rdb$description = ?desc where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
 
           oData := Doc.CreateElement('data-value');
           oXML.AppendChild(oData);
@@ -1948,7 +2025,7 @@ begin
     //get calc column names....
 
     Q1.SQL.Text := 'select a.rdb$field_name from rdb$relation_fields a, rdb$fields b ' +
-                   'where a.rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') +
+                   'where a.rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') +
                    ' and a.rdb$field_source = b.rdb$field_name and ' +
                    'b.rdb$computed_source is not null';
     Q1.ExecQuery;
@@ -2243,7 +2320,7 @@ begin
     Q1.Database := FDatabase;
     Q1.Transaction := FTransaction;
     Q1.SelectSQL.Add('select * from rdb$relation_constraints where (rdb$constraint_type = ''FOREIGN KEY'') ' +
-               'and rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+               'and rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q1.Open;
     Line := '';
     While Not Q1.EOF do
@@ -2348,9 +2425,9 @@ begin
   try
     Q1.Database := FDatabase;
     Q1.Transaction := FTransaction;
-    Q1.SelectSQL.Add('select * from rdb$indices where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, ''''));
+    Q1.SelectSQL.Add('select * from rdb$indices where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q1.SelectSQL.Add('and not (rdb$index_name in (select rdb$index_name from rdb$relation_constraints where');
-    Q1.SelectSQL.Add('rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ' and ');
+    Q1.SelectSQL.Add('rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ' and ');
     Q1.SelectSQL.Add('((rdb$constraint_type = ''PRIMARY KEY'') or (rdb$constraint_type = ''FOREIGN KEY''))))');
     Q1.Open;
     While Not Q1.EOF do
@@ -2437,7 +2514,7 @@ begin
     Q1.Database := FDatabase;
     Q1.Transaction := FTransaction;
     Q1.SelectSQL.Add('select * from rdb$relation_constraints where (rdb$constraint_type = ''PRIMARY KEY'') ' +
-               'and rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+               'and rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q1.Open;
     if Not (Q1.EOF and Q1.BOF) then
     begin
@@ -2490,7 +2567,7 @@ begin
   try
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
-    Q.SelectSQL.Add('select * from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(ObjectName, ''''));
+    Q.SelectSQL.Add('select * from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q.Open;
     If Not (Q.EOF and Q.BOF) Then
     begin
@@ -2505,7 +2582,7 @@ begin
           oStatement := Doc.CreateElement('statement');
           oXML.AppendChild(oStatement);
 
-          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$triggers set rdb$description = ?desc where rdb$trigger_name = ' + AnsiQuotedStr(ObjectName, ''''));
+          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$triggers set rdb$description = ?desc where rdb$trigger_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
 
           oData := Doc.CreateElement('data-value');
           oXML.AppendChild(oData);
@@ -2574,7 +2651,7 @@ begin
   try
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
-    Q.SelectSQL.Add('select * from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(ObjectName, ''''));
+    Q.SelectSQL.Add('select * from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q.Open;
     If Not (Q.EOF and Q.BOF) Then
     begin
@@ -2724,7 +2801,7 @@ begin
   try
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
-    Q.SelectSQL.Add('select * from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(ObjectName, ''''));
+    Q.SelectSQL.Add('select * from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
     Q.Open;
 
     { Firebird 3 replaced external UDFs with PSQL functions, and the two share
@@ -2828,7 +2905,7 @@ begin
           oStatement := Doc.CreateElement('statement');
           oXML.AppendChild(oStatement);
 
-          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$functions set rdb$description = ?desc where rdb$function_name = ' + AnsiQuotedStr(ObjectName, ''''));
+          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$functions set rdb$description = ?desc where rdb$function_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
 
           oData := Doc.CreateElement('data-value');
           oXML.AppendChild(oData);
@@ -2904,7 +2981,7 @@ begin
   try
     Q.Database := FDatabase;
     Q.Transaction := FTransaction;
-    Q.SelectSQL.Add('select * from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + ';');
+    Q.SelectSQL.Add('select * from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('') + ';');
     Q.Open;
     if Not Q.EOF and Q.BOF then
     begin
@@ -2960,7 +3037,7 @@ begin
           oStatement := Doc.CreateElement('statement');
           oXML.AppendChild(oStatement);
 
-          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$relations set rdb$description = ?desc where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, ''''));
+          TDOMElement(oStatement).SetAttribute('sql', 'update rdb$relations set rdb$description = ?desc where rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause(''));
 
           oData := Doc.CreateElement('data-value');
           oXML.AppendChild(oData);

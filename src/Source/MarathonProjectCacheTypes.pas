@@ -105,7 +105,9 @@ type
     ctPackageHeader,
     ctPackage,
     ctPublicationHeader,
-    ctPublication);
+    ctPublication,
+    ctSchemaHeader,
+    ctSchema);
 
   { What a connection points at. Purely advisory - Marathon never changes
     behaviour based on it - but it drives a colour band in the SQL editor so

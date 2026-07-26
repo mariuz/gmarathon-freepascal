@@ -214,6 +214,17 @@ begin
             DoDrop(Item, SQL);
           end;
 
+        ctSchema:
+          begin
+            { Firebird refuses this while the schema still holds objects, and
+              reports so itself - which is what should happen. Dropping the
+              contents first is a decision for the user, not a side effect of
+              confirming this dialog. }
+            SQL := 'drop schema ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
+              MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            DoDrop(Item, SQL);
+          end;
+
         ctUDF:
           begin
             SQL := 'drop external function ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,

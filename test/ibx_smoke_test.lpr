@@ -146,6 +146,174 @@ begin
   end;
 end;
 
+{ Schema DDL, round-tripped: extract it, drop the schema, run what was
+  extracted, and require the schema back with the same attributes. Anything
+  less only proves a string was produced. }
+procedure TestSchemaDDL;
+var
+  Ex: TDDLExtractor;
+  SchemaDDL: String;
+  Probe: TIBQuery;
+  Found: Boolean;
+
+  procedure Run(const SQLText: String; const What: String);
+  var
+    S: TIBSQL;
+  begin
+    EnsureTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := StripTrailingSemicolon(SQLText);
+      try
+        S.ExecQuery;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: ', What, ' raised: ', E.Message);
+          WriteLn(SQLText);
+          Halt(1);
+        end;
+      end;
+    finally
+      S.Free;
+    end;
+    if Tr.Active then
+      Tr.Commit;
+  end;
+
+  { Runs a statement whose failure is not a test failure - clearing away what a
+    halted earlier run may have left behind. A failed DDL statement leaves the
+    transaction unusable, so it is rolled back rather than committed. }
+  procedure Discard(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    EnsureTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := StripTrailingSemicolon(SQLText);
+      try
+        S.ExecQuery;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+          if Tr.Active then
+            Tr.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+begin
+  { SQL schemas are Firebird 6. On anything older there is nothing to test and
+    RDB$SCHEMAS does not exist to ask. }
+  if EngineMajor < 6 then
+  begin
+    WriteLn('Schema DDL skipped (server is Firebird ', EngineMajor, ')');
+    Exit;
+  end;
+
+  { Leftovers from a run that halted part-way. Failure here is the normal case
+    on a clean database, so it is swallowed - unlike Run, which halts. }
+  Discard('drop table SMOKE_OTHER.SMOKE_DUP');
+  Discard('drop table SMOKE_DUP');
+  Discard('drop schema SMOKE_OTHER');
+  Discard('drop schema SMOKE_SCH');
+
+  Run('create schema SMOKE_SCH default character set WIN1252', 'creating a schema');
+
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    EnsureTransaction;
+    SchemaDDL := Ex.Extract(ddlSchema, ddlstNone, 'SMOKE_SCH');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+
+  RequireInDDL(SchemaDDL, 'create schema', 'the CREATE SCHEMA verb');
+  RequireInDDL(SchemaDDL, 'SMOKE_SCH', 'the schema name');
+  RequireInDDL(SchemaDDL, 'WIN1252', 'the default character set');
+
+  Run('drop schema SMOKE_SCH', 'dropping the schema before recreating it');
+  Run(SchemaDDL, 'the extracted schema DDL');
+
+  { Back, and with the character set it was declared with - which is the part
+    a CREATE SCHEMA that merely compiles would not prove. }
+  EnsureTransaction;
+  Probe := TIBQuery.Create(nil);
+  try
+    Probe.Database := DB;
+    Probe.Transaction := Tr;
+    Probe.SQL.Text := 'select rdb$character_set_name from rdb$schemas ' +
+      'where rdb$schema_name = ''SMOKE_SCH''';
+    Probe.Open;
+    Found := (not Probe.EOF) and
+      (Trim(Probe.Fields[0].AsString) = 'WIN1252');
+    Probe.Close;
+  finally
+    Probe.Free;
+  end;
+  if Tr.Active then
+    Tr.Commit;
+  if not Found then
+  begin
+    WriteLn('FAIL: the extracted schema DDL did not recreate the schema as declared');
+    WriteLn(SchemaDDL);
+    Halt(1);
+  end;
+
+  Run('drop schema SMOKE_SCH', 'cleaning up the schema');
+  WriteLn('Schema DDL OK (round-trips with its default character set)');
+
+  { The same table name in two schemas. Object names are unique per schema, not
+    per database, so a catalogue query filtering on the name alone matches both
+    - and ExtractTable used to emit one table carrying both schemas' columns
+    and a duplicated ID. What must come back is the current schema's table
+    only. }
+  Run('create schema SMOKE_OTHER', 'creating a second schema');
+  Run('create table SMOKE_DUP (ID integer, IN_CURRENT_SCHEMA varchar(5))',
+    'creating the table in the current schema');
+  Run('create table SMOKE_OTHER.SMOKE_DUP (ID integer, IN_OTHER_SCHEMA varchar(5))',
+    'creating the same-named table in the other schema');
+
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    EnsureTransaction;
+    SchemaDDL := Ex.Extract(ddlTable, ddlstNone, 'SMOKE_DUP');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+
+  RequireInDDL(SchemaDDL, 'IN_CURRENT_SCHEMA', 'the current schema''s column');
+  RequireNotInDDL(SchemaDDL, 'IN_OTHER_SCHEMA',
+    'a column belonging to the same-named table in another schema');
+
+  Run('drop table SMOKE_OTHER.SMOKE_DUP', 'dropping the other schema''s table');
+  Run('drop table SMOKE_DUP', 'dropping the table');
+  Run('drop schema SMOKE_OTHER', 'dropping the second schema');
+  WriteLn('Schema-scoped extraction OK (a name shared across schemas is not merged)');
+end;
+
 { Two throwaway databases with known differences, compared, and then the
   generated script run against the target to see whether it actually closes
   them. Anything less proves only that a script was produced. }
@@ -2283,6 +2451,7 @@ begin
 
     { Left until last: it makes and drops databases of its own, so a failure
       earlier in the run is not hidden behind it. }
+    TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));
 
     DB.Connected := False;
