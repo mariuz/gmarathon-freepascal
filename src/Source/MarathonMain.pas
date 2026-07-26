@@ -145,6 +145,7 @@ type
     ObjectScriptMerge: TAction;
     ObjectScriptExecute: TAction;
     ToolsSessionMonitor: TAction;
+    ToolsProfiler: TAction;
     ToolsMaintenance: TAction;
     ProjectCreateFolder: TAction;
     ProjectAddToProject: TAction;
@@ -438,6 +439,7 @@ type
     Tools1: TMenuItem;
     SQLEditor1: TMenuItem;
     ToolsSessionMonitor1: TMenuItem;
+    ToolsProfiler1: TMenuItem;
     ToolsMaintenance1: TMenuItem;
     UserEditor1: TMenuItem;
     N16: TMenuItem;
@@ -556,6 +558,7 @@ type
     procedure ObjectScriptExecuteExecute(Sender: TObject);
     procedure ObjectScriptExecuteUpdate(Sender: TObject);
     procedure ToolsSessionMonitorExecute(Sender: TObject);
+    procedure ToolsProfilerExecute(Sender: TObject);
     procedure ToolsMaintenanceExecute(Sender: TObject);
 		procedure ProjectCreateFolderExecute(Sender: TObject);
     procedure ProjectCreateFolderUpdate(Sender: TObject);
@@ -1320,6 +1323,11 @@ end;
 procedure TfrmMarathonMain.ToolsSQLEditorExecute(Sender: TObject);
 begin
 	MarathonIDEInstance.ToolsSQLEditor;
+end;
+
+procedure TfrmMarathonMain.ToolsProfilerExecute(Sender: TObject);
+begin
+	MarathonIDEInstance.ToolsProfiler;
 end;
 
 procedure TfrmMarathonMain.ToolsSessionMonitorExecute(Sender: TObject);

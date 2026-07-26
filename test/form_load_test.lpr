@@ -21,7 +21,7 @@ uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics,
   GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB,
-  EditorPackage,
+  EditorPackage, ProfilerWindow,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
   BaseDocumentForm, BlobViewer, CodeSnippets, CompileDBObject,
@@ -677,6 +677,43 @@ begin
   end;
 end;
 
+{ The profiler window. Its buttons are a small state machine - a session can be
+  paused only while recording, resumed only while paused - and getting that
+  wrong leaves buttons that do nothing or double-start a session. }
+procedure CheckProfilerWindow;
+var
+  F: TfrmProfiler;
+begin
+  WriteLn('Profiler window:');
+  F := TfrmProfiler.Create(nil);
+  try
+    Check(F.pgProfiler.PageCount = 3, 'has Sessions, Statements and Record Sources tabs');
+    Check(F.tsSessions.Caption = 'Sessions', 'sessions tab');
+    Check(F.tsStatements.Caption = 'Statements', 'statements tab');
+    Check(F.tsRecordSources.Caption = 'Record Sources', 'record sources tab');
+    Check(F.grdSessions.DataSource = F.dsSessions, 'sessions grid is bound');
+    Check(F.dsSessions.DataSet = F.qrySessions, 'sessions datasource is bound');
+    Check(F.grdStatements.DataSource = F.dsStatements, 'statements grid is bound');
+    Check(F.grdRecordSources.DataSource = F.dsRecordSources, 'record sources grid is bound');
+
+    { Nothing is recording yet, so only Start applies. }
+    Check(not F.Recording, 'a new window is not recording');
+    Check(F.btnStart.Enabled, 'Start is available');
+    Check(not F.btnPause.Enabled, 'Pause is unavailable before recording');
+    Check(not F.btnResume.Enabled, 'Resume is unavailable before recording');
+    Check(not F.btnFinish.Enabled, 'Finish is unavailable before recording');
+
+    Check(Assigned(F.btnStart.OnClick), 'Start is hooked up');
+    Check(Assigned(F.btnPause.OnClick), 'Pause is hooked up');
+    Check(Assigned(F.btnResume.OnClick), 'Resume is hooked up');
+    Check(Assigned(F.btnFinish.OnClick), 'Finish is hooked up');
+    Check(Assigned(F.btnClear.OnClick), 'Clear is hooked up');
+    Check(Assigned(F.btnRefresh.OnClick), 'Refresh is hooked up');
+  finally
+    F.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -791,6 +828,7 @@ begin
   CheckParameterDialog;
   CheckPackageEditor;
   CheckNodeOperations;
+  CheckProfilerWindow;
 
   if Failures > 0 then
   begin

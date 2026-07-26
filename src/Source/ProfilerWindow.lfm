@@ -1,0 +1,201 @@
+object frmProfiler: TfrmProfiler
+  Left = 200
+  Top = 150
+  Width = 820
+  Height = 500
+  Caption = 'SQL Profiler'
+  Color = clBtnFace
+  Constraints.MinHeight = 320
+  Constraints.MinWidth = 640
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  Position = poScreenCenter
+  OnClose = FormClose
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pnlTop: TPanel
+    Left = 0
+    Top = 0
+    Width = 812
+    Height = 56
+    Align = alTop
+    BevelOuter = bvNone
+    TabOrder = 0
+    object lblConnection: TLabel
+      Left = 8
+      Top = 6
+      Width = 68
+      Height = 13
+      Caption = 'Connection:'
+    end
+    object btnStart: TButton
+      Left = 8
+      Top = 26
+      Width = 90
+      Height = 25
+      Caption = '&Start'
+      TabOrder = 0
+      OnClick = btnStartClick
+    end
+    object btnPause: TButton
+      Left = 104
+      Top = 26
+      Width = 90
+      Height = 25
+      Caption = '&Pause'
+      TabOrder = 1
+      OnClick = btnPauseClick
+    end
+    object btnResume: TButton
+      Left = 200
+      Top = 26
+      Width = 90
+      Height = 25
+      Caption = 'Res&ume'
+      TabOrder = 2
+      OnClick = btnResumeClick
+    end
+    object btnFinish: TButton
+      Left = 296
+      Top = 26
+      Width = 90
+      Height = 25
+      Caption = '&Finish'
+      TabOrder = 3
+      OnClick = btnFinishClick
+    end
+    object btnRefresh: TButton
+      Left = 408
+      Top = 26
+      Width = 90
+      Height = 25
+      Caption = '&Refresh'
+      TabOrder = 4
+      OnClick = btnRefreshClick
+    end
+    object btnClear: TButton
+      Left = 504
+      Top = 26
+      Width = 90
+      Height = 25
+      Caption = '&Clear All'
+      TabOrder = 5
+      OnClick = btnClearClick
+    end
+  end
+  object pgProfiler: TPageControl
+    Left = 0
+    Top = 56
+    Width = 812
+    Height = 396
+    ActivePage = tsSessions
+    Align = alClient
+    TabOrder = 1
+    object tsSessions: TTabSheet
+      Caption = 'Sessions'
+      object grdSessions: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 804
+        Height = 368
+        Align = alClient
+        DataSource = dsSessions
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
+    object tsStatements: TTabSheet
+      Caption = 'Statements'
+      object grdStatements: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 804
+        Height = 368
+        Align = alClient
+        DataSource = dsStatements
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
+    object tsRecordSources: TTabSheet
+      Caption = 'Record Sources'
+      object grdRecordSources: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 804
+        Height = 368
+        Align = alClient
+        DataSource = dsRecordSources
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
+  end
+  object stsProfiler: TStatusBar
+    Left = 0
+    Top = 452
+    Width = 812
+    Height = 19
+    Panels = <
+      item
+        Width = 400
+      end
+      item
+        Width = 120
+      end
+      item
+        Width = 280
+      end>
+    SimplePanel = False
+  end
+  object dsSessions: TDataSource
+    DataSet = qrySessions
+    Left = 620
+    Top = 8
+  end
+  object dsStatements: TDataSource
+    DataSet = qryStatements
+    Left = 656
+    Top = 8
+  end
+  object dsRecordSources: TDataSource
+    DataSet = qryRecordSources
+    Left = 692
+    Top = 8
+  end
+  object qrySessions: TIBQuery
+    Params = <>
+    Left = 620
+    Top = 32
+  end
+  object qryStatements: TIBQuery
+    Params = <>
+    Left = 656
+    Top = 32
+  end
+  object qryRecordSources: TIBQuery
+    Params = <>
+    Left = 692
+    Top = 32
+  end
+  object tranProfiler: TIBTransaction
+    Left = 728
+    Top = 32
+  end
+end
