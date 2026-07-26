@@ -828,17 +828,17 @@ begin
   try
 		B.LoadFromResourceName(hInstance, 'TREE_IMAGES_STRIP');
     ilMarathonImages.Clear;
-		ilMarathonImages.AddMasked(B, B.TransparentColor);
+		AddStripMasked(ilMarathonImages, B, B.TransparentColor);
     ilMarathonImages.Overlay(13,0); //First overlay imageindex = 0  // Connected
     ilMarathonImages.Overlay(14,1); //Second overlay imageindex = 1 // Inactive/Warning
 
 		B.LoadFromResourceName(hInstance, 'ERROR_INFO_STRIP');
     ilErrorInfo.Clear;
-    ilErrorInfo.AddMasked(B, B.TransparentColor);
+    AddStripMasked(ilErrorInfo, B, B.TransparentColor);
 
 		B.LoadFromResourceName(hInstance, 'TOOL_BAR_STRIP');
     imgMenuTools.Clear;
-		imgMenuTools.AddMasked(B, B.TransparentColor);
+		AddStripMasked(imgMenuTools, B, B.TransparentColor);
 	finally
 		B.Free;
 	end;

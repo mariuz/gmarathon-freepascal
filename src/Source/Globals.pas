@@ -19,7 +19,7 @@ unit Globals;
 
 interface
 
-uses {$IFDEF WINDOWS}Windows,{$ENDIF} Classes, SysUtils, Graphics, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
+uses {$IFDEF WINDOWS}Windows,{$ENDIF} Classes, SysUtils, Graphics, ImgList, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, IBCustomDataSet, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
 
 const
   WM_USER = 1024;
@@ -203,6 +203,32 @@ function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision: Integer; Is
   units both export a ConvertFieldType with different arities, and pulling one
   into the other's clients would change which of those a call resolves to. }
 function DeclaredFieldLength(Q: TDataSet): Integer;
+
+{ Adds every icon of a horizontal image strip to an image list, one image per
+  cell, with MaskColor taken as transparent.
+
+  Delphi's TImageList.AddMasked split a bitmap wider than the list's image size
+  into as many images as it held; LCL's adds the whole bitmap as a *single*
+  image - and swallows the exception if anything goes wrong, returning -1, so
+  nothing said the strips had not loaded. Every list built from a strip
+  therefore held one image, and every icon index above 0 was out of range. That
+  is not a cosmetic fault: gtk2's ItemSetImage writes
+  Widgets^.Images.Items[AImageIndex] with no bound check of its own, so
+  selecting a connection in the object browser raised "List index (1) out of
+  bounds" from inside the widgetset. }
+procedure AddStripMasked(IL: TCustomImageList; Strip: TBitmap; MaskColor: TColor);
+
+{ Lets every IBX dataset owned by AOwner start a transaction for itself when it
+  is opened without one.
+
+  The editors share one metadata transaction per connection, and plenty of code
+  commits it - the object tree's own queries do, and so does saving. Opening a
+  dataset afterwards then fails with "Transaction is not active", because IBX
+  will not start one on its own unless told it may: switching tabs in the table
+  editor raised exactly that. Rather than guard every Open in every editor, the
+  permission is granted once here, which is the behaviour this Delphi-era code
+  was written against. }
+procedure AllowAutoTransactions(AOwner: TComponent);
 function BracketNear(StartCh: Integer; s: String): Boolean;
 function DoNiftyWrap(St: String; Width: Integer): String;
 procedure ExportGrid(ExType : TExportType; Q : TDataSet; FieldList : TStringList; TableName: String; FileName: String);
@@ -817,6 +843,14 @@ begin
 		try
 			Q.Database := DB.Connection;
 			Q.Transaction := DB.Transaction;
+			{ Assigning a transaction does not start one, and the tree's own
+			  queries commit when they finish - so by the time a user opens an
+			  object there is often none open, and IBX answers that with
+			  "Transaction is not active" rather than starting one itself. Every
+			  branch below opens a query, so the guard belongs here rather than
+			  in each. Same rule as ScriptAs.EnsureActive. }
+			if Assigned(Q.Transaction) and not TIBTransaction(Q.Transaction).Active then
+				TIBTransaction(Q.Transaction).StartTransaction;
 
 			case ObjType of
 				ctTable :
@@ -1018,6 +1052,58 @@ begin
       Q.Free;
     end;
   end;
+end;
+
+procedure AllowAutoTransactions(AOwner: TComponent);
+var
+	Idx: Integer;
+	Child: TComponent;
+begin
+	if not Assigned(AOwner) then
+		Exit;
+	for Idx := 0 to AOwner.ComponentCount - 1 do
+	begin
+		Child := AOwner.Components[Idx];
+		if Child is TIBCustomDataSet then
+			TIBCustomDataSet(Child).AllowAutoActivateTransaction := True;
+		{ Recursive because a form does not own the components on its frames -
+		  each frame owns its own. The editors put their Dependencies, Metadata
+		  and Description tabs on frames, and a first version of this walked only
+		  the form's own list, so every one of those tabs still failed. }
+		if Child.ComponentCount > 0 then
+			AllowAutoTransactions(Child);
+	end;
+end;
+
+procedure AddStripMasked(IL: TCustomImageList; Strip: TBitmap; MaskColor: TColor);
+var
+	Cols, Rows, Col, Row: Integer;
+	Tile: TBitmap;
+begin
+	if (IL = nil) or (Strip = nil) or (IL.Width <= 0) or (IL.Height <= 0) then
+		Exit;
+	Cols := Strip.Width div IL.Width;
+	Rows := Strip.Height div IL.Height;
+	{ A strip narrower than one cell is not a strip - add it as it is rather
+	  than silently adding nothing. }
+	if (Cols < 1) or (Rows < 1) then
+	begin
+		IL.AddMasked(Strip, MaskColor);
+		Exit;
+	end;
+	for Row := 0 to Rows - 1 do
+		for Col := 0 to Cols - 1 do
+		begin
+			Tile := TBitmap.Create;
+			try
+				Tile.SetSize(IL.Width, IL.Height);
+				Tile.Canvas.CopyRect(Rect(0, 0, IL.Width, IL.Height), Strip.Canvas,
+					Bounds(Col * IL.Width, Row * IL.Height, IL.Width, IL.Height));
+				IL.AddMasked(Tile, MaskColor);
+			finally
+				Tile.Free;
+			end;
+		end;
 end;
 
 function DeclaredFieldLength(Q: TDataSet): Integer;

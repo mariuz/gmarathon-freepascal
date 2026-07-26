@@ -59,7 +59,7 @@ begin
 	B := TBitmap.Create;
 	try
     B.LoadFromResourceName(hInstance, 'WINDOW_LIST_STRIP');
-    ilWindows.AddMasked(B, B.TransparentColor);
+    AddStripMasked(ilWindows, B, B.TransparentColor);
   finally
     B.Free;
   end;
