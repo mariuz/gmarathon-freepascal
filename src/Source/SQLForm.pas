@@ -86,6 +86,7 @@ type
 	TfrmSQLForm = class(TfrmBaseDocumentDataAwareForm, IMarathonSQLForm, IGimbalIDESQLTextEditor)
 		stsSQLStatement: TStatusBar;
 		dsSQLStatement: TDataSource;
+		pnlEnvironment: TPanel;
 		dlgSave: TSaveDialog;
     qrySQLStatement: TIBQuery;
     qryUtil: TIBQuery;
@@ -195,6 +196,7 @@ type
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
+		procedure UpdateEnvironmentBand;
 		function ExecuteSingletonOutput(const SQLText: String): Boolean;
 		procedure ResetResultSet;
 		function ActiveResultSet: TDataSet;
@@ -340,7 +342,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes;
 
 {$R *.lfm}
 
@@ -2008,6 +2010,35 @@ end;
 procedure TfrmSQLForm.SetConnectionName(Value: String);
 begin
 	ConnectionName := Value;
+	UpdateEnvironmentBand;
+end;
+
+{ Shows which environment this editor is pointed at, in the environment's
+  colour. Hidden entirely when the connection has none set, so nothing changes
+  for anyone who does not use the feature. The point is that a window about to
+  run DDL against production should not look like one pointed at a scratch
+  database. }
+procedure TfrmSQLForm.UpdateEnvironmentBand;
+var
+	Conn: TMarathonCacheConnection;
+	Env: TConnectionEnvironment;
+begin
+	Env := envUnset;
+	if (ConnectionName <> '') and Assigned(MarathonIDEInstance.CurrentProject) then
+	begin
+		Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ConnectionName];
+		if Assigned(Conn) then
+			Env := Conn.Environment;
+	end;
+
+	pnlEnvironment.Visible := Env <> envUnset;
+	if not pnlEnvironment.Visible then
+		Exit;
+
+	pnlEnvironment.Caption := '  ' + UpperCase(EnvironmentDisplayName(Env)) +
+		'  -  ' + ConnectionName;
+	pnlEnvironment.Color := EnvironmentColor(Env);
+	pnlEnvironment.Font.Color := EnvironmentTextColor(Env);
 end;
 
 procedure TfrmSQLForm.NewFile;

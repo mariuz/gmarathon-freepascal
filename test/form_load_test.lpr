@@ -19,8 +19,9 @@ program form_load_test;
 
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
-  ActnList, Menus, DB, DBGrids, Registry,
-  GSSRegistry, MenuModule, MarathonMain,
+  ActnList, Menus, DB, DBGrids, Registry, Graphics,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache,
+  MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
   BaseDocumentForm, BlobViewer, CodeSnippets, CompileDBObject,
   DatabaseManager, DebugAddBreakPoint, DebugBreakPoints, DebugCallStack,
@@ -196,6 +197,12 @@ begin
     Check(F.grdSQLStatement.DataSource = F.dsSQLStatement, 'grid is bound via dsSQLStatement');
     Check(Assigned(F.edPlan), 'the Plan tab memo exists (EXPLAIN writes to it)');
     Check(Assigned(F.tsPlan), 'the Plan tab exists');
+
+    { The environment band. It starts hidden, which is what an editor with no
+      connection - or a connection with no environment set - must look like. }
+    Check(Assigned(F.pnlEnvironment), 'the environment band exists');
+    Check(not F.pnlEnvironment.Visible, 'the band is hidden until an environment is set');
+    Check(F.pnlEnvironment.Align = alTop, 'the band sits at the top of the window');
   finally
     F.Free;
   end;
@@ -263,6 +270,116 @@ begin
       Check(True, Name + ' streams (OnCreate needs a connection: ' + E.ClassName + ')');
     end;
   end;
+end;
+
+{ The environment colours are the whole point of the feature: they have to be
+  distinct from each other and readable, and "not set" has to stay the plain
+  system colour so that anyone not using the feature sees no change. }
+procedure CheckEnvironmentColours;
+var
+  Env: TConnectionEnvironment;
+  Seen: array[TConnectionEnvironment] of TColor;
+  A, B: TConnectionEnvironment;
+begin
+  WriteLn('Environment colour coding:');
+  Check(EnvironmentColor(envUnset) = clBtnFace, 'unset uses the default window colour');
+  Check(EnvironmentTextColor(envUnset) = clWindowText, 'unset uses the default text colour');
+  Check(EnvironmentDisplayName(envUnset) = '', 'unset has no label');
+  for Env := Low(TConnectionEnvironment) to High(TConnectionEnvironment) do
+  begin
+    Seen[Env] := EnvironmentColor(Env);
+    if Env <> envUnset then
+    begin
+      Check(EnvironmentDisplayName(Env) <> '', EnvironmentDisplayName(Env) + ' has a label');
+      Check(Seen[Env] <> clBtnFace,
+        EnvironmentDisplayName(Env) + ' has a colour of its own');
+    end;
+  end;
+  for A := Low(TConnectionEnvironment) to High(TConnectionEnvironment) do
+    for B := Succ(A) to High(TConnectionEnvironment) do
+      if A <> B then
+        Check(Seen[A] <> Seen[B],
+          'colours differ: ' + IntToStr(Ord(A)) + ' vs ' + IntToStr(Ord(B)));
+end;
+
+{ The load side of environment persistence, which is the half that can quietly
+  lose the setting. Two cases matter: a project that names an environment, and
+  one written before the feature existed, which must come back as "not set"
+  rather than as whatever enum value happens to sit at ordinal zero of some
+  garbage read. }
+procedure CheckEnvironmentPersistence;
+
+  function WriteProject(const EnvAttr: String): String;
+  var
+    L: TStringList;
+  begin
+    Result := GetTempDir + 'marathon_env_test.xmpr';
+    L := TStringList.Create;
+    try
+      L.Add('<?xml version="1.0" encoding="utf-8"?>');
+      L.Add('<marathon-project>');
+      L.Add('  <project name="EnvTest" encoding="1" showsystem="0" resultpanelheight="0"' +
+            ' viewsystemdomains="0" viewsystemtriggers="0" savewindowpositions="1">');
+      L.Add('    <connections>');
+      L.Add('      <connection name="EnvRoundTrip" databasefilename="/tmp/nowhere.fdb"' +
+            ' servername="" username="SYSDBA" rememberpassword="0" charset=""' +
+            ' sqlrole="" sqldialect="3"' + EnvAttr + '/>');
+      L.Add('    </connections>');
+      L.Add('    <servers/><windows/><recentitems/><sqlhistory/><custom-properties/>');
+      L.Add('  </project>');
+      L.Add('</marathon-project>');
+      L.SaveToFile(Result);
+    finally
+      L.Free;
+    end;
+  end;
+
+  function LoadAndFindEnvironment(const FileName: String;
+    out Env: TConnectionEnvironment): Boolean;
+  var
+    Idx: Integer;
+  begin
+    Result := False;
+    Env := envUnset;
+    MarathonIDEInstance.CurrentProject.LoadFromFile(FileName);
+    for Idx := 0 to MarathonIDEInstance.CurrentProject.Cache.ConnectionCount - 1 do
+      if MarathonIDEInstance.CurrentProject.Cache.Connections[Idx].Caption = 'EnvRoundTrip' then
+      begin
+        Env := MarathonIDEInstance.CurrentProject.Cache.Connections[Idx].Environment;
+        Result := True;
+      end;
+  end;
+
+var
+  FileName, SavedName: String;
+  Env: TConnectionEnvironment;
+  Written: TStringList;
+begin
+  WriteLn('Environment persistence:');
+
+  FileName := WriteProject(' environment="envProduction"');
+  Check(LoadAndFindEnvironment(FileName, Env), 'a project with an environment loads');
+  Check(Env = envProduction, 'the environment is read back as Production');
+
+  { And writing it back out must carry the environment with it. }
+  SavedName := GetTempDir + 'marathon_env_saved.xmpr';
+  MarathonIDEInstance.CurrentProject.SaveToFile(SavedName);
+  Written := TStringList.Create;
+  try
+    Written.LoadFromFile(SavedName);
+    Check(Pos('environment="envProduction"', Written.Text) > 0,
+      'saving writes the environment back out');
+  finally
+    Written.Free;
+  end;
+  DeleteFile(SavedName);
+
+  { A project saved by any earlier build has no environment attribute at all. }
+  FileName := WriteProject('');
+  Check(LoadAndFindEnvironment(FileName, Env), 'a project without the attribute still loads');
+  Check(Env = envUnset, 'a missing environment reads back as unset');
+
+  DeleteFile(FileName);
 end;
 
 { Some forms read a data file from the executable's directory on create and
@@ -373,6 +490,8 @@ begin
   CheckScriptAsWiring;
   CheckSQLForm;
   CheckEveryFormConstructs;
+  CheckEnvironmentColours;
+  CheckEnvironmentPersistence;
 
   if Failures > 0 then
   begin

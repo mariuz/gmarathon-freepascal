@@ -107,6 +107,14 @@ type
     ctPublicationHeader,
     ctPublication);
 
+  { What a connection points at. Purely advisory - Marathon never changes
+    behaviour based on it - but it drives a colour band in the SQL editor so
+    that running DDL against production looks different from running it
+    against a scratch database. Persisted to the project XML by name, so
+    adding values here cannot invalidate a saved project. }
+  TConnectionEnvironment = (envUnset, envDevelopment, envTest, envStaging,
+    envProduction);
+
   TSortOrder = (srtAsc, srtDesc);
 
   TSPPrintOption = (prSPCode, prSPDoco);
@@ -215,7 +223,22 @@ type
     property SepChar: Char read FSepChar write FSepChar;
   end;
 
+{ Human-readable label, empty when no environment has been chosen. }
+function EnvironmentDisplayName(Env: TConnectionEnvironment): String;
+
 implementation
+
+function EnvironmentDisplayName(Env: TConnectionEnvironment): String;
+begin
+  case Env of
+    envDevelopment: Result := 'Development';
+    envTest: Result := 'Test';
+    envStaging: Result := 'Staging';
+    envProduction: Result := 'Production';
+  else
+    Result := '';
+  end;
+end;
 
 { TMarathonTreeNode }
 

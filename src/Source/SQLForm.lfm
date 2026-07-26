@@ -47,6 +47,26 @@ object frmSQLForm: TfrmSQLForm
         Width = 50
       end>
   end
+  object pnlEnvironment: TPanel
+    Left = 0
+    Top = 0
+    Width = 631
+    Height = 18
+    Align = alTop
+    Alignment = taLeftJustify
+    BevelOuter = bvNone
+    Caption = ' '
+    Color = clBtnFace
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsBold]
+    ParentColor = False
+    ParentFont = False
+    TabOrder = 2
+    Visible = False
+  end
   object pnlBase: TPanel
     Left = 0
     Top = 0

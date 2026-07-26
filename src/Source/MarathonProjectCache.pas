@@ -248,6 +248,7 @@ type
 	TMarathonCacheConnection = class(TMarathonCacheBaseNode)
 	private
 		FDBFileName: String;
+		FEnvironment: TConnectionEnvironment;
 		FUserName: String;
 		FServerName: String;
 		FConnection: TIBDatabase;
@@ -314,6 +315,8 @@ type
 		property Connection: TIBDatabase read FConnection write FConnection;
 		property Transaction: TIBTransaction read FTransaction write FTransaction;
 		property DBFileName: String read FDBFileName write SetDBFileName;
+		{ Advisory only - see TConnectionEnvironment. }
+		property Environment: TConnectionEnvironment read FEnvironment write FEnvironment;
 		property ServerName: String read FServerName write SetServerName;
 		property UserName: String read FUserName write SetUserName;
 		property SQLRole: String read FSQLRole write SetSQLRole;
@@ -3230,6 +3233,16 @@ begin
 									RememberPassword := False;
 								LangDriver := oConnection.Attributes.GetNamedItem('charset').NodeValue;
 								SQLRole := oConnection.Attributes.GetNamedItem('sqlrole').NodeValue;
+								{ Stored by name, and absent from any project saved before
+								  environments existed. }
+								Environment := envUnset;
+								if Assigned(oConnection.Attributes.GetNamedItem('environment')) then
+									try
+										Environment := TConnectionEnvironment(GetEnumValue(TypeInfo(TConnectionEnvironment),
+											oConnection.Attributes.GetNamedItem('environment').NodeValue));
+									except
+										Environment := envUnset;
+									end;
 
 								if Assigned(oConnection.Attributes.GetNamedItem('sqldialect')) then
 								begin
@@ -3539,6 +3552,8 @@ begin
 					TDOMElement(oConnection).SetAttribute('password', Cache.Connections[Idx].EncPassword);
 				TDOMElement(oConnection).SetAttribute('charset', Cache.Connections[Idx].LangDriver);
 				TDOMElement(oConnection).SetAttribute('sqlrole', Cache.Connections[Idx].SQLRole);
+				TDOMElement(oConnection).SetAttribute('environment',
+					GetEnumName(TypeInfo(TConnectionEnvironment), Ord(Cache.Connections[Idx].Environment)));
 				TDOMElement(oConnection).SetAttribute('sqldialect', IntToStr(Cache.Connections[Idx].SQLDialect));
 				oConnections.AppendChild(oConnection);
 			end;

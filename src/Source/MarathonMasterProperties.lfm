@@ -175,6 +175,29 @@ object frmMasterProperties: TfrmMasterProperties
         Height = 21
         TabOrder = 0
       end
+      object lblEnvironment: TLabel
+        Left = 265
+        Top = 222
+        Width = 63
+        Height = 13
+        Caption = '&Environment:'
+        FocusControl = cmbEnvironment
+      end
+      object cmbEnvironment: TComboBox
+        Left = 265
+        Top = 238
+        Width = 130
+        Height = 21
+        Style = csDropDownList
+        ItemHeight = 13
+        TabOrder = 9
+        Items.Strings = (
+          '(not set)'
+          'Development'
+          'Test'
+          'Staging'
+          'Production')
+      end
       object cmbDialect: TComboBox
         Left = 265
         Top = 238

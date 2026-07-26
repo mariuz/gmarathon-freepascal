@@ -50,6 +50,8 @@ type
     edConnectionName: TEdit;
     Label7: TLabel;
     cmbDialect: TComboBox;
+    lblEnvironment: TLabel;
+    cmbEnvironment: TComboBox;
     tsProject: TTabSheet;
     Label8: TLabel;
     cmbEditorEncoding: TComboBox;
@@ -179,6 +181,9 @@ begin
 	inherited Create(AOwner);
 	DialogType := ptNewConnection;
 	Caption := 'New Connection';
+	{ Without this the combo has no selection and reading ItemIndex on OK would
+	  cast -1 to the enum. }
+	cmbEnvironment.ItemIndex := Ord(envUnset);
 end;
 
 constructor TfrmMasterProperties.CreateModifyConnection(const AOwner: TComponent; const Connection: TMarathonCacheConnection);
@@ -197,6 +202,7 @@ begin
 	edPassword.Text := Connection.Password;
 	chkRememberPassword.Checked := Connection.RememberPassword;
 	edRole.Text := Connection.SQLRole;
+	cmbEnvironment.ItemIndex := Ord(Connection.Environment);
 	cmbDialect.ItemIndex := Connection.SQLDialect - 1;
 
 	if Connection.Connected then
@@ -446,6 +452,7 @@ begin
 					Connection.Password := edPassword.Text;
 					Connection.RememberPassword := chkRememberPassword.Checked;
 					Connection.SQLRole := edRole.Text;
+					Connection.Environment := TConnectionEnvironment(cmbEnvironment.ItemIndex);
 					Connection.SQLDialect := cmbDialect.ItemIndex + 1;
 					Item := Connection.GetParentObject;
 					if Assigned(Item) then
@@ -494,6 +501,7 @@ begin
 					FConnection.Password := edPassword.Text;
 					FConnection.RememberPassword := chkRememberPassword.Checked;
 					FConnection.SQLRole := edRole.Text;
+					FConnection.Environment := TConnectionEnvironment(cmbEnvironment.ItemIndex);
 					FConnection.SQLDialect := cmbDialect.ItemIndex + 1;
 					FConnection.ErrorOnConnection := False;
 					Item := FConnection.GetParentObject;

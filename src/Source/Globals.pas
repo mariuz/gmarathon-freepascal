@@ -240,6 +240,12 @@ function NoLangFormatDateTime(const Format: string; DateTime: TDateTime): string
 
 procedure GlobalFormatFields(DataSet : TDataSet);
 
+{ Background and text colour for a connection's environment band. Deliberately
+  fixed rather than user-configurable: the value of the feature is that "red
+  means production" reads the same in every window and on every machine. }
+function EnvironmentColor(Env: TConnectionEnvironment): TColor;
+function EnvironmentTextColor(Env: TConnectionEnvironment): TColor;
+
 type
 	TMarathonScreen = class(TObject)
   private
@@ -3184,7 +3190,29 @@ begin
    result := MarathonIDEInstance.MainForm.MainFormMonitor; 
 end;
 
+function EnvironmentColor(Env: TConnectionEnvironment): TColor;
+begin
+  { TColor is $00BBGGRR, not RGB. }
+  case Env of
+    envDevelopment: Result := $0060C060;   // green
+    envTest:        Result := $00C08000;   // blue
+    envStaging:     Result := $0020A0E0;   // amber
+    envProduction:  Result := $003030C0;   // red
+  else
+    Result := clBtnFace;
+  end;
+end;
+
+function EnvironmentTextColor(Env: TConnectionEnvironment): TColor;
+begin
+  if Env = envUnset then
+    Result := clWindowText
+  else
+    Result := clWhite;
+end;
+
 initialization
+
 
 end.
 
