@@ -616,6 +616,67 @@ begin
   end;
 end;
 
+{ What each kind of tree node claims it can do. The failure this guards
+  against is a node advertising an operation the dispatch in MarathonIDE has no
+  branch for: the menu item appears, the user clicks it, and nothing happens.
+  Adding a cache type without wiring the dispatch should fail here.
+
+  The expectations below were checked against the dispatch by hand: opDrop
+  reaches every leaf through the drop dialog's else-branch, opOpen covers every
+  type but publications, and opNew/opPrint/opPrintPreview cover the eight
+  classic object types only. }
+procedure CheckNodeOperations;
+
+  procedure Expect(Node: TMarathonCacheBaseNode; const What: String;
+    Op: TGSSCacheOp; Wanted: Boolean);
+  begin
+    Check(Node.CanDoOperation(Op, False) = Wanted, What);
+  end;
+
+var
+  Table: TMarathonCacheTable;
+  Proc: TMarathonCacheProcedure;
+  Pkg: TMarathonCachePackage;
+  Pub: TMarathonCachePublication;
+begin
+  WriteLn('Tree node operations:');
+  Table := TMarathonCacheTable.Create;
+  Proc := TMarathonCacheProcedure.Create;
+  Pkg := TMarathonCachePackage.Create;
+  Pub := TMarathonCachePublication.Create;
+  try
+    { A classic object type: the dispatch covers all of these. }
+    Expect(Table, 'a table can be opened', opOpen, True);
+    Expect(Table, 'a table can be dropped', opDrop, True);
+    Expect(Table, 'a table offers New', opNew, True);
+    Expect(Table, 'a table can be scripted as SELECT', opScriptSelect, True);
+    Expect(Table, 'a table can be scripted as MERGE', opScriptMerge, True);
+    Expect(Table, 'a table cannot be scripted as EXECUTE', opScriptExecute, False);
+
+    Expect(Proc, 'a procedure can be scripted as EXECUTE', opScriptExecute, True);
+    Expect(Proc, 'a procedure cannot be scripted as SELECT', opScriptSelect, False);
+    Expect(Proc, 'a procedure cannot be scripted as MERGE', opScriptMerge, False);
+
+    { Packages: droppable through the dialog, but New/Print have no branch. }
+    Expect(Pkg, 'a package can be opened', opOpen, True);
+    Expect(Pkg, 'a package can be dropped', opDrop, True);
+    Expect(Pkg, 'a package does not offer New', opNew, False);
+    Expect(Pkg, 'a package does not offer Print', opPrint, False);
+
+    { Publications are an attribute of the database, not an object: scripting
+      is the only thing that applies. }
+    Expect(Pub, 'a publication can be scripted', opScriptCreate, True);
+    Expect(Pub, 'a publication cannot be opened', opOpen, False);
+    Expect(Pub, 'a publication cannot be dropped', opDrop, False);
+    Expect(Pub, 'a publication does not offer New', opNew, False);
+  finally
+    Pub.Free;
+    Pkg.Free;
+    Proc.Free;
+    Table.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -729,6 +790,7 @@ begin
   CheckConnectionSwitcher;
   CheckParameterDialog;
   CheckPackageEditor;
+  CheckNodeOperations;
 
   if Failures > 0 then
   begin
