@@ -51,11 +51,9 @@ object frmSQLForm: TfrmSQLForm
     Left = 0
     Top = 0
     Width = 631
-    Height = 18
+    Height = 25
     Align = alTop
-    Alignment = taLeftJustify
     BevelOuter = bvNone
-    Caption = ' '
     Color = clBtnFace
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -65,7 +63,34 @@ object frmSQLForm: TfrmSQLForm
     ParentColor = False
     ParentFont = False
     TabOrder = 2
-    Visible = False
+    object lblConnectionCaption: TLabel
+      Left = 6
+      Top = 5
+      Width = 62
+      Height = 13
+      Caption = 'Connection:'
+      ParentColor = False
+      Transparent = True
+    end
+    object lblEnvironmentName: TLabel
+      Left = 250
+      Top = 5
+      Width = 3
+      Height = 13
+      ParentColor = False
+      Transparent = True
+    end
+    object cmbConnection: TComboBox
+      Left = 74
+      Top = 2
+      Width = 165
+      Height = 21
+      Style = csDropDownList
+      ItemHeight = 13
+      TabOrder = 0
+      OnChange = cmbConnectionChange
+      OnDropDown = cmbConnectionDropDown
+    end
   end
   object pnlBase: TPanel
     Left = 0

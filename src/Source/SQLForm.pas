@@ -87,6 +87,9 @@ type
 		stsSQLStatement: TStatusBar;
 		dsSQLStatement: TDataSource;
 		pnlEnvironment: TPanel;
+		lblConnectionCaption: TLabel;
+		lblEnvironmentName: TLabel;
+		cmbConnection: TComboBox;
 		dlgSave: TSaveDialog;
     qrySQLStatement: TIBQuery;
     qryUtil: TIBQuery;
@@ -170,12 +173,17 @@ type
 		procedure qrySQLStatementBeforePrepare(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure edFilterChange(Sender: TObject);
+    procedure cmbConnectionChange(Sender: TObject);
+    procedure cmbConnectionDropDown(Sender: TObject);
     procedure qrySQLStatementFilterRecord(DataSet: TDataSet; var Accept: Boolean);
 	private
 		{ Private declarations }
 		{ Holds the single output row of a statement Firebird executes with
 		  output rather than through a cursor - see ExecuteSingletonOutput. }
 		FSingletonResult: TBufDataset;
+		{ Set while the connection combo is being repopulated, so that doing so
+		  does not look like the user picking a different connection. }
+		FLoadingConnections: Boolean;
 		LinePos: LongInt;
 		It: TMenuItem;
 		// Context sensitive keyword help
@@ -197,6 +205,7 @@ type
 		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
 		procedure UpdateEnvironmentBand;
+		procedure FillConnectionList;
 		function ExecuteSingletonOutput(const SQLText: String): Boolean;
 		procedure ResetResultSet;
 		function ActiveResultSet: TDataSet;
@@ -949,6 +958,9 @@ begin
 		SQLDialect := TIBDatabase(qrySQLStatement.Database).SQLDialect;
 		stsSQLStatement.Panels[4].Text := Value;
 	end;
+	{ Driven from the setter rather than from any one caller, so that every path
+	  that repoints this editor refreshes the strip. }
+	UpdateEnvironmentBand;
 end;
 
 function TfrmSQLForm.CanCaptureSnippet: Boolean;
@@ -2010,19 +2022,90 @@ end;
 procedure TfrmSQLForm.SetConnectionName(Value: String);
 begin
 	ConnectionName := Value;
-	UpdateEnvironmentBand;
 end;
 
-{ Shows which environment this editor is pointed at, in the environment's
-  colour. Hidden entirely when the connection has none set, so nothing changes
-  for anyone who does not use the feature. The point is that a window about to
-  run DDL against production should not look like one pointed at a scratch
-  database. }
+{ Repopulates the connection dropdown from the project. Done on drop-down
+  rather than once at create time, because connections can be added, renamed or
+  removed while an editor is open. }
+procedure TfrmSQLForm.FillConnectionList;
+var
+	Idx: Integer;
+begin
+	FLoadingConnections := True;
+	try
+		cmbConnection.Items.BeginUpdate;
+		try
+			cmbConnection.Items.Clear;
+			if Assigned(MarathonIDEInstance.CurrentProject) then
+				for Idx := 0 to MarathonIDEInstance.CurrentProject.Cache.ConnectionCount - 1 do
+					cmbConnection.Items.Add(MarathonIDEInstance.CurrentProject.Cache.Connections[Idx].Caption);
+		finally
+			cmbConnection.Items.EndUpdate;
+		end;
+		cmbConnection.ItemIndex := cmbConnection.Items.IndexOf(ConnectionName);
+	finally
+		FLoadingConnections := False;
+	end;
+end;
+
+procedure TfrmSQLForm.cmbConnectionDropDown(Sender: TObject);
+begin
+	FillConnectionList;
+end;
+
+{ Repoints this editor at another connection without closing it. The script
+  itself is untouched - only what it will run against changes. }
+procedure TfrmSQLForm.cmbConnectionChange(Sender: TObject);
+var
+	NewName: String;
+begin
+	if FLoadingConnections then
+		Exit;
+	if cmbConnection.ItemIndex < 0 then
+		Exit;
+	NewName := cmbConnection.Items[cmbConnection.ItemIndex];
+	if NewName = ConnectionName then
+		Exit;
+
+	{ Work in flight belongs to the connection being left, so it has to be
+	  settled before the datasets are repointed - the same question closing the
+	  editor asks. }
+	if transSQLStatement.Active then
+	begin
+		case MessageDlg('This editor has uncommitted work on ' + ConnectionName + '.' +
+			#13#10#13#10 + 'Commit it before switching to ' + NewName + '?',
+			mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
+			mrYes:
+				transSQLStatement.Commit;
+			mrNo:
+				transSQLStatement.Rollback;
+		else
+			{ Put the combo back where it was and leave everything alone. }
+			FillConnectionList;
+			Exit;
+		end;
+	end;
+
+	qrySQLStatement.Close;
+	ResetResultSet;
+	edPlan.Text := '';
+	dtPlan.Clear;
+
+	ConnectionName := NewName;
+end;
+
+{ Shows which connection this editor is pointed at and, when that connection
+  has been tagged, which environment - in the environment's colour. The point
+  is that a window about to run DDL against production should not look like one
+  pointed at a scratch database. }
 procedure TfrmSQLForm.UpdateEnvironmentBand;
 var
 	Conn: TMarathonCacheConnection;
 	Env: TConnectionEnvironment;
 begin
+	{ SetDatabaseName can run before the strip's controls have streamed. }
+	if not Assigned(cmbConnection) then
+		Exit;
 	Env := envUnset;
 	if (ConnectionName <> '') and Assigned(MarathonIDEInstance.CurrentProject) then
 	begin
@@ -2031,14 +2114,13 @@ begin
 			Env := Conn.Environment;
 	end;
 
-	pnlEnvironment.Visible := Env <> envUnset;
-	if not pnlEnvironment.Visible then
-		Exit;
+	FillConnectionList;
+	lblEnvironmentName.Caption := UpperCase(EnvironmentDisplayName(Env));
 
-	pnlEnvironment.Caption := '  ' + UpperCase(EnvironmentDisplayName(Env)) +
-		'  -  ' + ConnectionName;
 	pnlEnvironment.Color := EnvironmentColor(Env);
 	pnlEnvironment.Font.Color := EnvironmentTextColor(Env);
+	lblConnectionCaption.Font.Color := EnvironmentTextColor(Env);
+	lblEnvironmentName.Font.Color := EnvironmentTextColor(Env);
 end;
 
 procedure TfrmSQLForm.NewFile;

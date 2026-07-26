@@ -198,11 +198,23 @@ begin
     Check(Assigned(F.edPlan), 'the Plan tab memo exists (EXPLAIN writes to it)');
     Check(Assigned(F.tsPlan), 'the Plan tab exists');
 
-    { The environment band. It starts hidden, which is what an editor with no
-      connection - or a connection with no environment set - must look like. }
-    Check(Assigned(F.pnlEnvironment), 'the environment band exists');
-    Check(not F.pnlEnvironment.Visible, 'the band is hidden until an environment is set');
-    Check(F.pnlEnvironment.Align = alTop, 'the band sits at the top of the window');
+    { The connection strip: which connection this editor runs against, and the
+      environment colouring. }
+    Check(Assigned(F.pnlEnvironment), 'the connection strip exists');
+    Check(F.pnlEnvironment.Align = alTop, 'the strip sits at the top of the window');
+    Check(Assigned(F.cmbConnection), 'the connection switcher exists');
+    Check(F.cmbConnection.Style = csDropDownList,
+      'the switcher only offers connections that exist');
+    Check(Assigned(F.cmbConnection.OnChange), 'switching connection is hooked up');
+    Check(Assigned(F.cmbConnection.OnDropDown),
+      'the list refreshes on drop-down, so connections added since do appear');
+    Check(F.cmbConnection.Parent = F.pnlEnvironment, 'the switcher lives on the strip');
+    Check(Assigned(F.lblEnvironmentName), 'the environment label exists');
+    Check(F.lblEnvironmentName.Caption = '',
+      'no environment is named for an editor with no connection');
+    { With no connection the strip must look like ordinary chrome. }
+    Check(F.pnlEnvironment.Color = EnvironmentColor(envUnset),
+      'the strip is the default colour with no connection');
   finally
     F.Free;
   end;
@@ -382,6 +394,67 @@ begin
   DeleteFile(FileName);
 end;
 
+{ The connection switcher, driven the way the user drives it. Needs a project
+  with more than one connection, so it builds one and loads it - no server is
+  contacted, since pointing an editor at a connection does not open it. }
+procedure CheckConnectionSwitcher;
+var
+  FileName: String;
+  L: TStringList;
+  F: TfrmSQLForm;
+begin
+  WriteLn('Connection switcher:');
+  FileName := GetTempDir + 'marathon_switch_test.xmpr';
+  L := TStringList.Create;
+  try
+    L.Add('<?xml version="1.0" encoding="utf-8"?>');
+    L.Add('<marathon-project>');
+    L.Add('  <project name="SwitchTest" encoding="1" showsystem="0" resultpanelheight="0"' +
+          ' viewsystemdomains="0" viewsystemtriggers="0" savewindowpositions="1">');
+    L.Add('    <connections>');
+    L.Add('      <connection name="DevBox" databasefilename="/tmp/dev.fdb" servername=""' +
+          ' username="SYSDBA" rememberpassword="0" charset="" sqlrole="" sqldialect="3"' +
+          ' environment="envDevelopment"/>');
+    L.Add('      <connection name="LiveBox" databasefilename="/tmp/live.fdb" servername=""' +
+          ' username="SYSDBA" rememberpassword="0" charset="" sqlrole="" sqldialect="3"' +
+          ' environment="envProduction"/>');
+    L.Add('    </connections>');
+    L.Add('    <servers/><windows/><recentitems/><sqlhistory/><custom-properties/>');
+    L.Add('  </project>');
+    L.Add('</marathon-project>');
+    L.SaveToFile(FileName);
+  finally
+    L.Free;
+  end;
+  MarathonIDEInstance.CurrentProject.LoadFromFile(FileName);
+
+  F := TfrmSQLForm.Create(nil);
+  try
+    { Assigning the property is all it takes - the strip is driven from the
+      setter, not from any one caller. }
+    F.ConnectionName := 'DevBox';
+    Check(F.cmbConnection.Items.IndexOf('DevBox') >= 0, 'the switcher lists DevBox');
+    Check(F.cmbConnection.Items.IndexOf('LiveBox') >= 0, 'the switcher lists LiveBox');
+    Check(F.cmbConnection.Text = 'DevBox', 'the switcher shows the current connection');
+    Check(F.pnlEnvironment.Color = EnvironmentColor(envDevelopment),
+      'the strip takes the development colour');
+    Check(F.lblEnvironmentName.Caption = 'DEVELOPMENT', 'the strip names the environment');
+
+    { Now switch, exactly as picking from the dropdown does. Nothing is in
+      flight, so no commit prompt can appear. }
+    F.cmbConnection.ItemIndex := F.cmbConnection.Items.IndexOf('LiveBox');
+    F.cmbConnectionChange(F.cmbConnection);
+    Check(F.ConnectionName = 'LiveBox', 'the editor is repointed at LiveBox');
+    Check(F.pnlEnvironment.Color = EnvironmentColor(envProduction),
+      'the strip turns the production colour');
+    Check(F.lblEnvironmentName.Caption = 'PRODUCTION', 'the strip names the new environment');
+    Check(F.cmbConnection.Text = 'LiveBox', 'the switcher still shows the current connection');
+  finally
+    F.Free;
+  end;
+  DeleteFile(FileName);
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -492,6 +565,7 @@ begin
   CheckEveryFormConstructs;
   CheckEnvironmentColours;
   CheckEnvironmentPersistence;
+  CheckConnectionSwitcher;
 
   if Failures > 0 then
   begin
