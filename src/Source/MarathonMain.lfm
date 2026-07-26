@@ -910,6 +910,10 @@ object frmMarathonMain: TfrmMarathonMain
           Tag = -2
           Action = ToolsMetaSearch
         end
+        object CompareSchemas1: TMenuItem
+          Tag = -2
+          Action = ToolsCompareSchemas
+        end
         object N13: TMenuItem
           Tag = -2
         end
@@ -1863,6 +1867,12 @@ object frmMarathonMain: TfrmMarathonMain
       Caption = '&Metadata Extract...'
       Hint = 'Extract Metadata from Database'
       OnExecute = ToolsMetaExtractExecute
+    end
+    object ToolsCompareSchemas: TAction
+      Category = 'Tools'
+      Caption = '&Compare Schemas...'
+      Hint = 'Compare two databases and generate a migration script'
+      OnExecute = ToolsCompareSchemasExecute
     end
     object ToolsMetaSearch: TAction
       Category = 'Tools'

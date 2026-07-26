@@ -389,14 +389,14 @@ begin
 			begin
 				if FIsInterbase6 then
 					edRtnParam.Text := ConvertFieldType(qryUtil.FieldByName('rdb$field_type').AsInteger,
-						qryUtil.FieldByName('rdb$field_length').AsInteger,
+						DeclaredFieldLength(qryUtil),
 						qryUtil.FieldByName('rdb$field_scale').AsInteger,
 						qryUtil.FieldByName('rdb$field_sub_type').AsInteger,
 						qryUtil.FieldByName('rdb$field_precision').AsInteger,
 						True, FSQLDialect)
 				else
 					edRtnParam.Text := ConvertFieldType(qryUtil.FieldByName('rdb$field_type').AsInteger,
-						qryUtil.FieldByName('rdb$field_length').AsInteger,
+						DeclaredFieldLength(qryUtil),
 						qryUtil.FieldByName('rdb$field_scale').AsInteger,
 						-1, -1, False, FSQLDialect);
 				cmbRtnType.ItemIndex := qryUtil.FieldByName('rdb$mechanism').AsInteger;
@@ -407,14 +407,14 @@ begin
 
 				if FIsInterbase6 then
 					L.Caption := ConvertFieldType(qryUtil.FieldByName('rdb$field_type').AsInteger,
-						qryUtil.FieldByName('rdb$field_length').AsInteger,
+						DeclaredFieldLength(qryUtil),
 						qryUtil.FieldByName('rdb$field_scale').AsInteger,
 						qryUtil.FieldByName('rdb$field_sub_type').AsInteger,
 						qryUtil.FieldByName('rdb$field_precision').AsInteger,
 						True, FSQLDialect)
 				else
 					L.Caption := ConvertFieldType(qryUtil.FieldByName('rdb$field_type').AsInteger,
-						qryUtil.FieldByName('rdb$field_length').AsInteger,
+						DeclaredFieldLength(qryUtil),
 						qryUtil.FieldByName('rdb$field_scale').AsInteger,
 						-1, -1, False, FSQLDialect);
 

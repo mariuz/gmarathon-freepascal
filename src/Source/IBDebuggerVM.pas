@@ -1631,15 +1631,15 @@ begin
     if FIsinterbase6 then
     begin
       if ShouldBeQuoted(ProcName) then
-        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                   'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(ProcName, '''') + ' order by rdb$parameter_number asc;')
       else
-        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                   'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
     end
     else
 		begin
-      Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+      Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                 'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
     end;
     Q.Open;
@@ -1649,7 +1649,7 @@ begin
       if FIsInterbase6 then
       begin
         tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                           Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                           DeclaredFieldLength(Q),
                                                                                            Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                            Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                            Q.FieldByName('rdb$field_precision').AsInteger,
@@ -1659,7 +1659,7 @@ begin
       else
       begin
         tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                           Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                           DeclaredFieldLength(Q),
                                                                                            Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                            -1,
                                                                                            -1,
@@ -1678,7 +1678,7 @@ begin
         if FIsInterbase6 then
         begin
 					tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                             Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                             DeclaredFieldLength(Q),
                                                                                              Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                              Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                              Q.FieldByName('rdb$field_precision').AsInteger,
@@ -1688,7 +1688,7 @@ begin
         else
         begin
           tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                             Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                             DeclaredFieldLength(Q),
                                                                                              Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                              -1,
                                                                                              -1,
@@ -1711,15 +1711,15 @@ begin
     if FIsInterbase6 then
     begin
       if ShouldBeQuoted(ProcName) then
-        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                   'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(ProcName, '''') + ' order by rdb$parameter_number asc;')
       else
-        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+        Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                   'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
 		end
     else
     begin
-      Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+      Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                             'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
     end;
     Q.Open;
@@ -1730,7 +1730,7 @@ begin
       if FIsInterbase6 then
       begin
         tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                           Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                           DeclaredFieldLength(Q),
                                                                                            Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                            Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                            Q.FieldByName('rdb$field_precision').AsInteger,
@@ -1740,7 +1740,7 @@ begin
       else
       begin
         tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                           Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                           DeclaredFieldLength(Q),
                                                                                            Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                            -1,
                                                                                            -1,
@@ -1760,7 +1760,7 @@ begin
         if FIsInterbase6 then
         begin
           tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                             Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                             DeclaredFieldLength(Q),
                                                                                              Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                              Q.FieldByName('rdb$field_sub_type').AsInteger,
                                                                                              Q.FieldByName('rdb$field_precision').AsInteger,
@@ -1770,7 +1770,7 @@ begin
         else
         begin
           tmp := tmp + Q.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                                                                             Q.FieldByName('rdb$field_length').AsInteger,
+                                                                                             DeclaredFieldLength(Q),
                                                                                              Q.FieldByName('rdb$field_scale').AsInteger,
                                                                                              -1,
                                                                                              -1,

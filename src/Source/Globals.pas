@@ -192,6 +192,17 @@ const
 	G_INTERNAL_VERSION = 6;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision: Integer; IsInterbase6: Boolean; Dialect: Integer): String;
+
+{ The length to declare a field with, from a row of RDB$FIELDS or a join onto
+  it. Pass this to ConvertFieldType instead of RDB$FIELD_LENGTH: for text in a
+  multi-byte character set the two differ - a UTF8 varchar(10) has
+  RDB$FIELD_LENGTH 40 and RDB$CHARACTER_LENGTH 10 - so the byte length showed
+  the user a type four times wider than the one they declared. Null for
+  everything else, hence the fallback. Deliberately a second copy of the
+  MetaExtractGlobals function of the same name rather than an import: the two
+  units both export a ConvertFieldType with different arities, and pulling one
+  into the other's clients would change which of those a call resolves to. }
+function DeclaredFieldLength(Q: TDataSet): Integer;
 function BracketNear(StartCh: Integer; s: String): Boolean;
 function DoNiftyWrap(St: String; Width: Integer): String;
 procedure ExportGrid(ExType : TExportType; Q : TDataSet; FieldList : TStringList; TableName: String; FileName: String);
@@ -1007,6 +1018,17 @@ begin
       Q.Free;
     end;
   end;
+end;
+
+function DeclaredFieldLength(Q: TDataSet): Integer;
+var
+	Fld: TField;
+begin
+	Fld := Q.FindField('rdb$character_length');
+	if Assigned(Fld) and not Fld.IsNull and (Fld.AsInteger > 0) then
+		Result := Fld.AsInteger
+	else
+		Result := Q.FieldByName('rdb$field_length').AsInteger;
 end;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision: Integer; IsInterbase6: Boolean; Dialect: Integer): String;
@@ -2714,7 +2736,7 @@ begin
 
           qryUtil.Close;
           qryUtil.SQL.Clear;
-          qryUtil.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale from rdb$procedure_parameters a, rdb$fields b where ' +
+          qryUtil.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale from rdb$procedure_parameters a, rdb$fields b where ' +
                         'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ''' + AnsiUpperCase(FData) +
                         ''' order by rdb$parameter_number asc;');
           qryUtil.Open;
@@ -2722,14 +2744,14 @@ begin
           begin
             Tmp := Tmp + '(';
             Tmp := Tmp + qryUtil.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(qryUtil.FieldByName('rdb$field_type').AsInteger,
-                                                                                                     qryUtil.FieldByName('rdb$field_length').AsInteger,
+                                                                                                     DeclaredFieldLength(qryUtil),
                                                                                                      qryUtil.FieldByName('rdb$field_scale').AsInteger);
             qryUtil.Next;
             while not qryUtil.EOF do
             begin
               Tmp := Tmp + ', ';
               Tmp := Tmp + qryUtil.FieldByName('rdb$parameter_name').AsString + ' ' + ConvertFieldType(qryUtil.FieldByName('rdb$field_type').AsInteger,
-                                                                                                       qryUtil.FieldByName('rdb$field_length').AsInteger,
+                                                                                                       DeclaredFieldLength(qryUtil),
                                                                                                        qryUtil.FieldByName('rdb$field_scale').AsInteger);
               qryUtil.Next;
             end;

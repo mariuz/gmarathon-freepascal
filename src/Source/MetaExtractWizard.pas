@@ -354,7 +354,7 @@ begin
 	  etc.) - kept identical so this wizard's object lists always match what the
 	  Database Explorer tree shows. }
 	RunObjectQuery(lstDomains,
-		'select rdb$field_name from rdb$fields where ((rdb$system_flag = 0) or (rdb$system_flag is null))' + SchemaClause + ' order by rdb$field_name asc',
+		'select rdb$field_name from rdb$fields where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and (rdb$field_name not starting with ''RDB$'')' + SchemaClause + ' order by rdb$field_name asc',
 		'rdb$field_name', 'RDB$');
 	RunObjectQuery(lstTables,
 		'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is null' + SchemaClause + ' order by rdb$relation_name asc',

@@ -168,6 +168,7 @@ type
     procedure ToolsProfiler;
     procedure ToolsMaintenance;
 		procedure ToolsMetadataExtract;
+    procedure ToolsCompareSchemas;
     procedure ToolsSearchMetadata;
     procedure ToolsSyntaxHelp;
     procedure ToolsCodeSnippets;
@@ -232,7 +233,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -1710,6 +1711,46 @@ begin
 	F := TfrmMaintenance.Create(nil);
 	F.ConnectionName := ConnectName;
 	F.Show;
+end;
+
+procedure TMarathonIDE.ToolsCompareSchemas;
+var
+	Dlg: TfrmSchemaCompare;
+	SourceName, TargetName: String;
+	Diff: TSchemaDifferences;
+	MigrationScript: String;
+begin
+	Dlg := TfrmSchemaCompare.Create(Self);
+	try
+		if Dlg.ShowModal <> mrOK then
+			Exit;
+		SourceName := Dlg.SourceConnection;
+		TargetName := Dlg.TargetConnection;
+	finally
+		Dlg.Free;
+	end;
+
+	Screen.Cursor := crHourGlass;
+	try
+		{ Both catalogues are read in full, which on a large database is slow
+		  enough that the cursor is the only sign anything is happening. }
+		MigrationScript := CompareSchemas(
+			ConnScriptContext(FCurrentProject.Cache.ConnectionByName[SourceName]),
+			ConnScriptContext(FCurrentProject.Cache.ConnectionByName[TargetName]),
+			Diff);
+	finally
+		Screen.Cursor := crDefault;
+	end;
+
+	{ Opened against the target: that is the database the script would change,
+	  and an editor pointed at the source would run it against the wrong one. }
+	ScriptAsOpenEditor(TargetName,
+		'/* ' + SourceName + ' -> ' + TargetName + ': ' +
+		IntToStr(Diff.ToCreate) + ' to create, ' +
+		IntToStr(Diff.Changed) + ' to redefine, ' +
+		IntToStr(Diff.ToDrop) + ' to drop, ' +
+		IntToStr(Diff.NeedingAttention) + ' needing attention. */' + #13#10 +
+		MigrationScript);
 end;
 
 procedure TMarathonIDE.ToolsMetadataExtract;

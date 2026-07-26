@@ -595,14 +595,14 @@ begin
 
 		if FIsInterbase6 and (FSQLDialect = 3) then
 			DataTypeText := ConvertFieldType(qryTable.FieldByName('rdb$field_type').AsInteger,
-				qryTable.FieldByName('rdb$field_length').AsInteger,
+				DeclaredFieldLength(qryTable),
 				qryTable.FieldByName('rdb$field_scale').AsInteger,
 				qryTable.FieldByName('rdb$field_sub_type').AsInteger,
 				qryTable.FieldByName('rdb$field_precision').AsInteger,
 				True, FSQLDialect)
 		else
 			DataTypeText := ConvertFieldType(qryTable.FieldByName('rdb$field_type').AsInteger,
-				qryTable.FieldByName('rdb$field_length').AsInteger,
+				DeclaredFieldLength(qryTable),
 				qryTable.FieldByName('rdb$field_scale').AsInteger,
 				-1, -1, False, FSQLDialect);
 		if qryTable.FieldByName('rdb$dimensions').AsInteger > 0 then

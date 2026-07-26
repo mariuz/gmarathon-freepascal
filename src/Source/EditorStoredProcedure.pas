@@ -314,10 +314,10 @@ begin
 	else
 		tmp := 'create procedure ' + FObjectName + ' ';
 	if FIsinterbase6 {and (FSQLDialect = 3)} then
-		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;')
 	else
-		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;');
 	qryStoredProc.Open;
 	if not (qryStoredProc.EOF and qryStoredProc.BOF) Then
@@ -326,14 +326,14 @@ begin
 		if FIsInterbase6 {and (FSQLDialect = 3)} then
 			tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 				+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-				qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+				DeclaredFieldLength(qryStoredProc),
 				qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger,
 				qryStoredProc.FieldByName('RDB$FIELD_SUB_TYPE').AsInteger,
 				qryStoredProc.FieldByName('RDB$FIELD_PRECISION').AsInteger, True, FSQLDialect)
 		else
 			tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 				+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-				qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+				DeclaredFieldLength(qryStoredProc),
 				qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger, -1, -1, False, FSQLDialect);
 
 		CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(qryStoredProc.FieldByName('RDB$CHARACTER_SET_ID').AsInteger);
@@ -347,14 +347,14 @@ begin
 			if FIsInterbase6 {and (FSQLDialect = 3)} then
 				tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 					+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-					qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+					DeclaredFieldLength(qryStoredProc),
 					qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger,
 					qryStoredProc.FieldByName('RDB$FIELD_SUB_TYPE').AsInteger,
 					qryStoredProc.FieldByName('RDB$FIELD_PRECISION').AsInteger, True, FSQLDialect)
 			else
 				tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 					+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-					qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+					DeclaredFieldLength(qryStoredProc),
 					qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger, -1, -1, False, FSQLDialect);
 			CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(qryStoredProc.FieldByName('rdb$character_set_id').AsInteger);
 			if CharSet <> '' then
@@ -368,10 +368,10 @@ begin
 		TIBTransaction(qryStoredProc.Transaction).Commit;
 	qryStoredProc.SQL.Clear;
 	if FIsInterbase6 {and (FSQLDialect = 3)} then
-		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 1 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;')
 	else
-		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 1 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;');
 	qryStoredProc.Open;
 	if not (qryStoredProc.EOF and qryStoredProc.BOF) Then
@@ -382,7 +382,7 @@ begin
 		begin
 			tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 			+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-			qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+			DeclaredFieldLength(qryStoredProc),
 			qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger,
 			qryStoredProc.FieldByName('RDB$FIELD_SUB_TYPE').AsInteger,
 			qryStoredProc.FieldByName('RDB$FIELD_PRECISION').AsInteger,	True, FSQLDialect);
@@ -391,7 +391,7 @@ begin
 		begin
 			tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 			+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-			qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+			DeclaredFieldLength(qryStoredProc),
 			qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger,
 			-1, -1, False, FSQLDialect);
 		end;
@@ -406,14 +406,14 @@ begin
 			if FIsInterbase6 {and (FSQLDialect = 3)} then
 				tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 				+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-				qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+				DeclaredFieldLength(qryStoredProc),
 				qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger,
 				qryStoredProc.FieldByName('RDB$FIELD_SUB_TYPE').AsInteger,
 				qryStoredProc.FieldByName('RDB$FIELD_PRECISION').AsInteger, True, FSQLDialect)
 			else
 				tmp := tmp + '		' + qryStoredProc.FieldByName('RDB$PARAMETER_NAME').AsString + ' '
 				+ ConvertFieldType(qryStoredProc.FieldByName('RDB$FIELD_TYPE').AsInteger,
-				qryStoredProc.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+				DeclaredFieldLength(qryStoredProc),
 				qryStoredProc.FieldByName('RDB$FIELD_SCALE').AsInteger, -1, -1, False, FSQLDialect);
 			CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(qryStoredProc.FieldByName('rdb$character_set_id').AsInteger);
 			if CharSet <> '' then
@@ -597,10 +597,10 @@ begin
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		if FIsInterbase6 then
-			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;')
 		else
-			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE FROM RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE FROM RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;');
 		qryUtil.Open;
 		FAppendFlag := True;
@@ -611,13 +611,13 @@ begin
 
 			if FIsInterbase6 then
 				txtParameters.FieldByName('PARAM_TYPE').AsString := ConvertFieldType(qryUtil.FieldByName('RDB$FIELD_TYPE').AsInteger,
-					qryUtil.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+					DeclaredFieldLength(qryUtil),
 					qryUtil.FieldByName('RDB$FIELD_SCALE').AsInteger,
 					qryUtil.FieldByName('RDB$FIELD_SUB_TYPE').AsInteger,
 					qryUtil.FieldByName('RDB$FIELD_PRECISION').AsInteger, True, FSQLDialect)
 			else
 				txtParameters.FieldByName('PARAM_TYPE').AsString := ConvertFieldType(qryUtil.FieldByName('RDB$FIELD_TYPE').AsInteger,
-				qryUtil.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+				DeclaredFieldLength(qryUtil),
 				qryUtil.FieldByName('RDB$FIELD_SCALE').AsInteger, -1, -1, False, FSQLDialect);
 
 			txtParameters.FieldByName('PARAM_VALUE').AsString := '';
@@ -912,10 +912,10 @@ begin
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		if FIsInterbase6 then
-			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ''' + FObjectName + ''' order by RDB$PARAMETER_NUMBER asc;')
 		else
-			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE FROM RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE FROM RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ''' + FObjectName + ''' order by RDB$PARAMETER_NUMBER asc;');
 		qryUtil.Open;
 		FAppendFlag := True;
@@ -925,13 +925,13 @@ begin
 			txtParameters.FieldByName('PARAM_NAME').AsString := qryUtil.FieldByName('RDB$PARAMETER_NAME').AsString;
 			if FIsInterbase6 then
 				txtParameters.FieldByName('PARAM_TYPE').AsString := ConvertFieldType(qryUtil.FieldByName('RDB$FIELD_TYPE').AsInteger,
-					qryUtil.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+					DeclaredFieldLength(qryUtil),
 					qryUtil.FieldByName('RDB$FIELD_SCALE').AsInteger,
 					qryUtil.FieldByName('RDB$FIELD_SUB_TYPE').AsInteger,
 					qryUtil.FieldByName('RDB$FIELD_PRECISION').AsInteger, True, FSQLDialect)
 			else
 				txtParameters.FieldByName('PARAM_TYPE').AsString := ConvertFieldType(qryUtil.FieldByName('RDB$FIELD_TYPE').AsInteger,
-					qryUtil.FieldByName('RDB$FIELD_LENGTH').AsInteger,
+					DeclaredFieldLength(qryUtil),
 					qryUtil.FieldByName('RDB$FIELD_SCALE').AsInteger, -1, -1, False, FSQLDialect);
 
 			txtParameters.FieldByName('PARAM_VALUE').AsString := '';
@@ -1646,7 +1646,7 @@ begin
 
 				// Get a list from the database
 				qryStoredProc.SQL.Clear;
-				qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
+				qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
 					'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ''' + FObjectName + ''' order by RDB$PARAMETER_NUMBER asc;');
 				qryStoredProc.Open;
 				if not (qryStoredProc.EOF and qryStoredProc.BOF) Then

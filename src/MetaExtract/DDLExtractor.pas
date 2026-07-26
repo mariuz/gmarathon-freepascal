@@ -420,7 +420,7 @@ begin
       if FIsIB6 and (FSQLDIalect = 3) then
       begin
         Line := Line + (ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                         Q.FieldByName('rdb$field_length').AsInteger,
+                                         DeclaredFieldLength(Q),
                                          Q.FieldByName('rdb$field_scale').AsInteger,
                                          Q.FieldByName('rdb$field_sub_type').AsInteger,
                                          Q.FieldByName('rdb$field_precision').AsInteger,
@@ -429,7 +429,7 @@ begin
       else
       begin
         Line := Line + (ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger,
-                                         Q.FieldByName('rdb$field_length').AsInteger,
+                                         DeclaredFieldLength(Q),
                                          Q.FieldByName('rdb$field_scale').AsInteger,
                                          -1,
                                          -1,
@@ -951,12 +951,12 @@ begin
 
         if FIsIB6 and (FSQLDIalect = 3) then
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                     'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                     'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
@@ -975,7 +975,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                               Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -985,7 +985,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               -1,
                                               -1,
@@ -1006,12 +1006,12 @@ begin
         Q1.SelectSQL.Clear;
         if FIsIB6 and (FSQLDialect = 3) then
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                            'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                            'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
@@ -1031,7 +1031,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                               Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -1041,7 +1041,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               -1,
                                               -1,
@@ -1109,12 +1109,12 @@ begin
 
         if FIsIB6 and (FSQLDialect = 3) then
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                     'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                     'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
@@ -1133,7 +1133,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                               Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -1143,7 +1143,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               -1,
                                               -1,
@@ -1164,12 +1164,12 @@ begin
         Q1.SelectSQL.Clear;
         if FIsIB6 and (FSQLDialect = 3) then
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                            'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
-          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
+          Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
                            'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
@@ -1189,7 +1189,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                               Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -1199,7 +1199,7 @@ begin
             begin
               Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$parameter_name').AsString), FIsIB6, FSQLDialect) + ' ' +
                              ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               -1,
                                               -1,
@@ -1662,7 +1662,7 @@ begin
         Q1.SelectSQL.Add('select ' + IdentityCols + 'a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
                    'b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, ' +
                    'b.rdb$character_set_id, b.rdb$collation_id as fcollate, a.rdb$collation_id as tcollate, ' +
-                   'b.rdb$computed_source, b.rdb$field_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, ' +
+                   'b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, ' +
                    'b.rdb$field_sub_type, b.rdb$segment_length, ' +
                    'b.rdb$field_type, b.rdb$dimensions from rdb$relation_fields a, rdb$fields b where ' +
                    'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
@@ -1673,7 +1673,7 @@ begin
         Q1.SelectSQL.Add('select ' + IdentityCols + 'a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
                    'b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, ' +
                    'b.rdb$character_set_id, b.rdb$collation_id as fcollate, a.rdb$collation_id as tcollate, ' +
-                   'b.rdb$computed_source, b.rdb$field_length, b.rdb$field_scale, ' +
+                   'b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, ' +
                    'b.rdb$field_sub_type, b.rdb$segment_length, ' +
                    'b.rdb$field_type, b.rdb$dimensions from rdb$relation_fields a, rdb$fields b where ' +
                    'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
@@ -1718,7 +1718,7 @@ begin
             if FIsIB6 and (FSQLDialect = 3) then
             begin
               Line := Line + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                               Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -1727,7 +1727,7 @@ begin
             else
             begin
               Line := Line + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                              Q1.FieldByName('rdb$field_length').AsInteger,
+                                              DeclaredFieldLength(Q1),
                                               Q1.FieldByName('rdb$field_scale').AsInteger,
                                               -1,
                                               -1,
@@ -2647,7 +2647,7 @@ begin
     Q1.Transaction := FTransaction;
     { Argument types live on the linked domain, not inline. }
     Q1.SelectSQL.Add('select a.rdb$argument_name, a.rdb$argument_position, ' +
-               'f.rdb$field_type, f.rdb$field_length, f.rdb$field_scale, ' +
+               'f.rdb$field_type, f.rdb$field_length, f.rdb$character_length, f.rdb$field_scale, ' +
                'f.rdb$field_sub_type, f.rdb$field_precision ' +
                'from rdb$function_arguments a join rdb$fields f ' +
                'on f.rdb$field_name = a.rdb$field_source ' +
@@ -2665,7 +2665,7 @@ begin
       First := False;
       Line := Line + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$argument_name').AsString), FIsIB6, FSQLDialect) +
               ' ' + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                     Q1.FieldByName('rdb$field_length').AsInteger,
+                                     DeclaredFieldLength(Q1),
                                      Q1.FieldByName('rdb$field_scale').AsInteger,
                                      Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                      Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -2677,7 +2677,7 @@ begin
     Q1.Close;
 
     Q1.SelectSQL.Clear;
-    Q1.SelectSQL.Add('select f.rdb$field_type, f.rdb$field_length, f.rdb$field_scale, ' +
+    Q1.SelectSQL.Add('select f.rdb$field_type, f.rdb$field_length, f.rdb$character_length, f.rdb$field_scale, ' +
                'f.rdb$field_sub_type, f.rdb$field_precision ' +
                'from rdb$function_arguments a join rdb$fields f ' +
                'on f.rdb$field_name = a.rdb$field_source ' +
@@ -2687,7 +2687,7 @@ begin
     if not Q1.EOF then
       Line := Line + #13#10 + 'returns ' +
               ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                               Q1.FieldByName('rdb$field_length').AsInteger,
+                               DeclaredFieldLength(Q1),
                                Q1.FieldByName('rdb$field_scale').AsInteger,
                                Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -2765,7 +2765,7 @@ begin
           if FIsIB6 and (FSQLDialect = 3) then
           begin
             Line := Line + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                            Q1.FieldByName('rdb$field_length').AsInteger,
+                                            DeclaredFieldLength(Q1),
                                             Q1.FieldByName('rdb$field_scale').AsInteger,
                                             Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                             Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -2774,7 +2774,7 @@ begin
           else
           begin
             Line := Line + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                            Q1.FieldByName('rdb$field_length').AsInteger,
+                                            DeclaredFieldLength(Q1),
                                             Q1.FieldByName('rdb$field_scale').AsInteger,
                                             -1,
                                             -1,
@@ -2794,7 +2794,7 @@ begin
         if FIsIB6 and (FSQLDialect = 3) then
         begin
           Line := Line + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                          Q1.FieldByName('rdb$field_length').AsInteger,
+                                          DeclaredFieldLength(Q1),
                                           Q1.FieldByName('rdb$field_scale').AsInteger,
                                           Q1.FieldByName('rdb$field_sub_type').AsInteger,
                                           Q1.FieldByName('rdb$field_precision').AsInteger,
@@ -2803,7 +2803,7 @@ begin
         else
         begin
           Line := Line + ConvertFieldType(Q1.FieldByName('rdb$field_type').AsInteger,
-                                          Q1.FieldByName('rdb$field_length').AsInteger,
+                                          DeclaredFieldLength(Q1),
                                           Q1.FieldByName('rdb$field_scale').AsInteger,
                                           -1,
                                           -1,
@@ -2916,13 +2916,13 @@ begin
         Q1.SelectSQL.Clear;
         if FIsIB6 and (FSQLDialect = 3) then
         begin
-          Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, ' +
+          Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, ' +
                     'b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$field_type from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$relation_name').AsString), '''') + ' ' +
                     ' order by a.rdb$field_position asc;');
         end
         else
         begin
-          Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, ' +
+          Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, ' +
                     'b.rdb$field_scale, b.rdb$field_type from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$relation_name').AsString), '''') + ' ' +
                     ' order by a.rdb$field_position asc;');
         end;

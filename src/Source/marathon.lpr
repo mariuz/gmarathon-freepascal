@@ -35,6 +35,7 @@ uses
   ProfilerWindow in 'ProfilerWindow.pas' {frmProfiler},
   MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
+  SchemaCompareDialog in 'SchemaCompareDialog.pas' {frmSchemaCompare},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},
   WindowList in 'WindowList.pas' {frmWindowList},
   UDFInputParam in 'UDFInputParam.pas' {frmUDFAddInput},

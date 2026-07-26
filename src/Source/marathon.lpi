@@ -756,6 +756,12 @@
         <HasResources Value="True"/>
         <UnitName Value="MetaExtractWizard"/>
       </Unit111>
+      <Unit112>
+        <Filename Value="SchemaCompareDialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="SchemaCompareDialog"/>
+      </Unit112>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

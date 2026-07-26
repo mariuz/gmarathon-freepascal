@@ -263,9 +263,18 @@ var
 	ObjType: TDDLObjectType;
 begin
 	EnsureActive(Ctx);
+	{ Every object kind the extractor knows, not just the four the object tree
+	  offers "Script as > Create" on: SchemaCompare asks for the DDL of domains,
+	  generators, exceptions, triggers and functions too, and falling those
+	  through to ddlTable would quietly return a table's DDL. }
 	case CacheType of
+		ctDomain:      ObjType := ddlDomain;
 		ctView:        ObjType := ddlView;
 		ctSP:          ObjType := ddlStoredProc;
+		ctTrigger:     ObjType := ddlTrigger;
+		ctGenerator:   ObjType := ddlGenerator;
+		ctException:   ObjType := ddlException;
+		ctUDF:         ObjType := ddlUDF;
 		ctPackage:     ObjType := ddlPackage;
 		ctPublication: ObjType := ddlPublication;
 	else
@@ -283,6 +292,17 @@ begin
 			  package may legitimately have a header and no body. }
 			Result := Extractor.Extract(ddlPackage, ddlstHeader, ObjectName) + #13#10 +
 				Extractor.Extract(ddlPackage, ddlstProc, ObjectName)
+		else if CacheType = ctSP then
+			{ Also two statements, but for a different reason than a package's.
+			  The extractor renders a procedure's body as "alter procedure",
+			  because the bulk export it was written for creates every stub
+			  first and then fills the bodies in - which is how a procedure that
+			  calls another one extracts without a forward reference. On its own
+			  that "alter" fails against a database where the procedure does not
+			  exist yet, which is exactly what CREATE is asked for. Emitting the
+			  header stub ahead of it makes the pair stand alone. }
+			Result := Extractor.Extract(ddlStoredProc, ddlstHeader, ObjectName) + #13#10 +
+				Extractor.Extract(ddlStoredProc, ddlstProc, ObjectName)
 		else
 			Result := Extractor.Extract(ObjType, ddlstNone, ObjectName);
 	finally
@@ -509,7 +529,7 @@ begin
 				Result := Result + ', ';
 			TypeName := ConvertFieldType(
 				Q.FieldByName('rdb$field_type').AsInteger,
-				Q.FieldByName('rdb$field_length').AsInteger,
+				DeclaredFieldLength(Q),
 				Q.FieldByName('rdb$field_scale').AsInteger,
 				Q.FieldByName('rdb$field_sub_type').AsInteger,
 				Q.FieldByName('rdb$field_precision').AsInteger,
@@ -537,14 +557,14 @@ begin
 	if IsFunction then
 	begin
 		Args := SignatureParamList(Ctx,
-			'select a.rdb$argument_name as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'select a.rdb$argument_name as param_name, f.rdb$field_type, f.rdb$field_length, f.rdb$character_length, ' +
 			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
 			'from rdb$function_arguments a ' +
 			'join rdb$fields f on f.rdb$field_name = a.rdb$field_source ' +
 			'where a.rdb$function_name = ' + Name +
 			' and a.rdb$argument_position > 0 order by a.rdb$argument_position');
 		Returns := SignatureParamList(Ctx,
-			'select cast(null as varchar(1)) as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'select cast(null as varchar(1)) as param_name, f.rdb$field_type, f.rdb$field_length, f.rdb$character_length, ' +
 			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
 			'from rdb$function_arguments a ' +
 			'join rdb$fields f on f.rdb$field_name = a.rdb$field_source ' +
@@ -554,14 +574,14 @@ begin
 	else
 	begin
 		Args := SignatureParamList(Ctx,
-			'select p.rdb$parameter_name as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'select p.rdb$parameter_name as param_name, f.rdb$field_type, f.rdb$field_length, f.rdb$character_length, ' +
 			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
 			'from rdb$procedure_parameters p ' +
 			'join rdb$fields f on f.rdb$field_name = p.rdb$field_source ' +
 			'where p.rdb$procedure_name = ' + Name +
 			' and p.rdb$parameter_type = 0 order by p.rdb$parameter_number');
 		Returns := SignatureParamList(Ctx,
-			'select p.rdb$parameter_name as param_name, f.rdb$field_type, f.rdb$field_length, ' +
+			'select p.rdb$parameter_name as param_name, f.rdb$field_type, f.rdb$field_length, f.rdb$character_length, ' +
 			'f.rdb$field_scale, f.rdb$field_sub_type, f.rdb$field_precision ' +
 			'from rdb$procedure_parameters p ' +
 			'join rdb$fields f on f.rdb$field_name = p.rdb$field_source ' +

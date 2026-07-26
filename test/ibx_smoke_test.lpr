@@ -18,7 +18,7 @@ program ibx_smoke_test;
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  ProfilerQueries, SafeDisconnect;
+  ProfilerQueries, SafeDisconnect, SchemaCompare, ibxscript;
 
 var
   DB: TIBDatabase;
@@ -118,6 +118,243 @@ begin
     WriteLn('FAIL: extracted DDL is missing ', What, ' (expected "', Needle, '"):');
     WriteLn(DDLText);
     Halt(1);
+  end;
+end;
+
+{ 'localhost:' out of 'localhost:/tmp/db.fdb', so the databases this test makes
+  are reached the same way as the one it was pointed at - a local path when the
+  caller used one, and over the network when they did not. Matched on ':/'
+  rather than ':' so a Windows drive letter is not mistaken for a host. }
+function HostPrefixOf(const FullName: String): String;
+var
+  P: Integer;
+begin
+  P := Pos(':/', FullName);
+  if P > 1 then
+    Result := Copy(FullName, 1, P)
+  else
+    Result := '';
+end;
+
+procedure RequireNotInDDL(const DDLText, Needle, What: String);
+begin
+  if Pos(UpperCase(Needle), UpperCase(DDLText)) <> 0 then
+  begin
+    WriteLn('FAIL: ', What, ' should not appear ("', Needle, '"):');
+    WriteLn(DDLText);
+    Halt(1);
+  end;
+end;
+
+{ Two throwaway databases with known differences, compared, and then the
+  generated script run against the target to see whether it actually closes
+  them. Anything less proves only that a script was produced. }
+procedure TestSchemaCompare(const HostPrefix: String);
+var
+  SrcDB, TgtDB: TIBDatabase;
+  SrcTr, TgtTr: TIBTransaction;
+  SrcCtx, TgtCtx: TScriptAsContext;
+  Diff, Diff2: TSchemaDifferences;
+  MigrationScript: String;
+  Runner: TIBXScript;
+  Lines: TStringList;
+
+  { A leftover from an aborted run has to go through the server: the file
+    belongs to the account Firebird runs as, so deleting it from here fails and
+    the CreateDatabase that follows then fails on "file already exists". }
+  procedure DropIfExists(const Path: String);
+  var
+    Old: TIBDatabase;
+  begin
+    Old := TIBDatabase.Create(nil);
+    try
+      Old.DatabaseName := HostPrefix + Path;
+      Old.Params.Values['user_name'] := UserName;
+      Old.Params.Values['password'] := Password;
+      Old.LoginPrompt := False;
+      try
+        Old.Connected := True;
+        Old.DropDatabase;
+      except
+        { Not there, or not ours to drop - either way CreateDatabase is about
+          to say so far more precisely than this could. }
+        on E: Exception do ;
+      end;
+    finally
+      Old.Free;
+    end;
+  end;
+
+  procedure Build(var ADB: TIBDatabase; var ATr: TIBTransaction;
+    const Path: String; Statements: array of String);
+  var
+    Idx: Integer;
+    S: TIBSQL;
+  begin
+    DropIfExists(Path);
+    ADB := TIBDatabase.Create(nil);
+    ATr := TIBTransaction.Create(nil);
+    ADB.DatabaseName := HostPrefix + Path;
+    ADB.Params.Values['user_name'] := UserName;
+    ADB.Params.Values['password'] := Password;
+    ADB.Params.Values['lc_ctype'] := 'UTF8';
+    ADB.LoginPrompt := False;
+    ADB.SQLDialect := 3;
+    ATr.DefaultDatabase := ADB;
+    ADB.DefaultTransaction := ATr;
+    ADB.CreateDatabase;
+    for Idx := 0 to High(Statements) do
+    begin
+      if not ATr.Active then
+        ATr.StartTransaction;
+      S := TIBSQL.Create(nil);
+      try
+        S.Database := ADB;
+        S.Transaction := ATr;
+        S.SQL.Text := Statements[Idx];
+        try
+          S.ExecQuery;
+        except
+          on E: Exception do
+          begin
+            WriteLn('FAIL: could not build comparison database ', Path, ': ', E.Message);
+            WriteLn(Statements[Idx]);
+            Halt(1);
+          end;
+        end;
+      finally
+        S.Free;
+      end;
+      if ATr.Active then
+        ATr.Commit;
+    end;
+  end;
+
+begin
+  { The source has objects of every compared kind. The target shares BOTH_TBL
+    unchanged, redefines V_SHARED, is missing everything else, and has one
+    table of its own to be offered for dropping. }
+  Build(SrcDB, SrcTr, '/tmp/marathon_cmp_src.fdb', [
+    'create domain D_CODE as varchar(10) not null',
+    'create generator G_SEQ',
+    'create exception E_BAD ''something went wrong''',
+    'create table BOTH_TBL (ID integer not null primary key)',
+    'create table ONLY_SRC (ID integer not null primary key, CODE D_CODE)',
+    'create view V_SHARED as select ID from BOTH_TBL',
+    'create procedure P_ONLY_SRC (A integer) returns (R integer) as ' +
+      'begin R = A + 1; suspend; end',
+    'create function F_ONLY_SRC (A integer) returns integer as begin return A * 2; end',
+    'create trigger TR_BOTH for BOTH_TBL after insert as begin end']);
+
+  Build(TgtDB, TgtTr, '/tmp/marathon_cmp_tgt.fdb', [
+    'create table BOTH_TBL (ID integer not null primary key)',
+    'create table ONLY_TGT (ID integer not null primary key)',
+    { Same name, different body - the case a comparison exists to catch. }
+    'create view V_SHARED as select ID + 0 as ID from BOTH_TBL']);
+
+  try
+    SrcCtx := ScriptAsContext(SrcDB, SrcTr, True, 3, EngineMajor);
+    TgtCtx := ScriptAsContext(TgtDB, TgtTr, True, 3, EngineMajor);
+
+    { These two databases are UTF8, so they also pin the character-length fix.
+      D_CODE was declared varchar(10); the catalogue stores RDB$FIELD_LENGTH =
+      40 and RDB$CHARACTER_LENGTH = 10, and reading the byte length rendered it
+      as varchar(40) - which made a DDL round trip quadruple every string
+      column, and stopped the comparison below from ever converging. }
+    RequireInDDL(ScriptAsCreate(SrcCtx, 'D_CODE', ctDomain), 'varchar(10)',
+      'the domain''s length in characters rather than bytes');
+    RequireNotInDDL(ScriptAsCreate(SrcCtx, 'ONLY_SRC', ctTable), 'varchar(40)',
+      'a column widened by reading the byte length');
+
+    MigrationScript := CompareSchemas(SrcCtx, TgtCtx, Diff);
+
+    { The implicit RDB$n domains must not be in here. Every table column makes
+      one, so if they leaked in they would swamp the script - and each would be
+      emitted as a CREATE DOMAIN that then fails on the reserved name. }
+    RequireNotInDDL(MigrationScript, 'create domain RDB$', 'an implicit domain');
+
+    RequireInDDL(MigrationScript, 'D_CODE', 'the missing domain');
+    RequireInDDL(MigrationScript, 'G_SEQ', 'the missing generator');
+    RequireInDDL(MigrationScript, 'E_BAD', 'the missing exception');
+    RequireInDDL(MigrationScript, 'ONLY_SRC', 'the missing table');
+    RequireInDDL(MigrationScript, 'P_ONLY_SRC', 'the missing procedure');
+    RequireInDDL(MigrationScript, 'F_ONLY_SRC', 'the missing function');
+    RequireInDDL(MigrationScript, 'TR_BOTH', 'the missing trigger');
+    RequireInDDL(MigrationScript, '/* differs - redefining */', 'the changed view');
+    RequireInDDL(MigrationScript, '-- drop table', 'the commented-out drop');
+
+    { BOTH_TBL is identical on both sides, so it must not be recreated. Its
+      name still appears - the view and trigger select from it - so the test is
+      that no CREATE TABLE names it. }
+    RequireNotInDDL(MigrationScript, 'create table BOTH_TBL', 'an unchanged table');
+
+    if Diff.ToDrop <> 1 then
+    begin
+      WriteLn('FAIL: expected exactly one object to drop, got ', Diff.ToDrop);
+      Halt(1);
+    end;
+    if Diff.Changed <> 1 then
+    begin
+      WriteLn('FAIL: expected exactly one redefinition, got ', Diff.Changed);
+      Halt(1);
+    end;
+    WriteLn('Schema comparison OK (', Diff.ToCreate, ' to create, ',
+      Diff.Changed, ' to redefine, ', Diff.ToDrop, ' to drop, ',
+      Diff.NeedingAttention, ' needing attention)');
+
+    { Now the part that matters: run it, and compare again. The drops stay
+      commented out, so the one remaining difference afterwards should be
+      exactly that - which is also what proves the drops really were inert. }
+    Runner := TIBXScript.Create(nil);
+    Lines := TStringList.Create;
+    try
+      Runner.Database := TgtDB;
+      Runner.Transaction := TgtTr;
+      Runner.Echo := False;
+      Runner.StopOnFirstError := True;
+      Lines.Text := MigrationScript;
+      if not Runner.RunScript(Lines) then
+      begin
+        WriteLn('FAIL: the generated migration script did not run against the target:');
+        WriteLn(MigrationScript);
+        Halt(1);
+      end;
+    finally
+      Lines.Free;
+      Runner.Free;
+    end;
+
+    if TgtTr.Active then
+      TgtTr.Commit;
+
+    MigrationScript := CompareSchemas(SrcCtx, TgtCtx, Diff2);
+    if (Diff2.ToCreate <> 0) or (Diff2.Changed <> 0) or
+       (Diff2.NeedingAttention <> 0) then
+    begin
+      WriteLn('FAIL: the migration did not converge - still ', Diff2.ToCreate,
+        ' to create, ', Diff2.Changed, ' to redefine, ', Diff2.NeedingAttention,
+        ' needing attention');
+      WriteLn(MigrationScript);
+      Halt(1);
+    end;
+    if Diff2.ToDrop <> 1 then
+    begin
+      WriteLn('FAIL: the commented-out drop was not inert - ', Diff2.ToDrop,
+        ' objects to drop, expected the same 1');
+      Halt(1);
+    end;
+    WriteLn('Migration script converges (only the commented-out drop remains)');
+  finally
+    if SrcTr.Active then
+      SrcTr.Rollback;
+    if TgtTr.Active then
+      TgtTr.Rollback;
+    SrcDB.DropDatabase;
+    TgtDB.DropDatabase;
+    SrcTr.Free;
+    SrcDB.Free;
+    TgtTr.Free;
+    TgtDB.Free;
   end;
 end;
 
@@ -2043,6 +2280,11 @@ begin
 
     if Tr.Active then
       Tr.Commit;
+
+    { Left until last: it makes and drops databases of its own, so a failure
+      earlier in the run is not hidden behind it. }
+    TestSchemaCompare(HostPrefixOf(DatabaseName));
+
     DB.Connected := False;
     WriteLn('PASS: IBX round-trip against a live Firebird server succeeded.');
   finally

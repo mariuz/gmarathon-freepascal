@@ -33,6 +33,7 @@ uses
   EditorUDF, EditorView, GlobalPrintDialog, GlobalPrintingRoutines,
   InputDialog, Login, MaintenanceDialog, ManageBrowserItems,
   MarathonMasterProperties, MarathonOptions, MarathonToolsAPIDocForm, MetaExtractWizard,
+  SchemaCompareDialog,
   NewObjectDialog, NewTrigger, PluginsDialog, PrintPreviewForm,
   QBAppendTo, QBCriteria, QBLnkFrm, ReorderColumns,
   SQLAssistantDragAndDrop, SQLForm, SQLInsightItem, SQLTrace,
@@ -741,6 +742,28 @@ begin
   end;
 end;
 
+{ The schema comparison dialog. Its FormCreate lists only connected databases,
+  and with no project loaded there are none - so what can be checked here is
+  the wiring rather than the contents: both sides present, OK guarded by a
+  handler (it refuses an empty side and a self-comparison), and Cancel able to
+  close the form without one. }
+procedure CheckSchemaCompareDialog;
+var
+  F: TfrmSchemaCompare;
+begin
+  WriteLn('Schema compare dialog:');
+  F := TfrmSchemaCompare.Create(nil);
+  try
+    Check(Assigned(F.cmbSource), 'the source side exists');
+    Check(Assigned(F.cmbTarget), 'the target side exists');
+    Check(Assigned(F.btnOK.OnClick), 'OK is guarded by a handler');
+    Check(F.btnCancel.ModalResult = mrCancel, 'Cancel closes the dialog');
+    Check(F.SourceConnection = '', 'no connection is chosen with none open');
+  finally
+    F.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -803,6 +826,7 @@ begin
   TryConstruct(TfrmMarathonOptions, 'TfrmMarathonOptions');
   TryConstruct(TfrmMarathonToolsDocForm, 'TfrmMarathonToolsDocForm');
   TryConstruct(TfrmMetaExtractWizard, 'TfrmMetaExtractWizard');
+  TryConstruct(TfrmSchemaCompare, 'TfrmSchemaCompare');
   TryConstruct(TfrmNewObject, 'TfrmNewObject');
   TryConstruct(TfrmNewTrigger, 'TfrmNewTrigger');
   TryConstruct(TfrmPlugins, 'TfrmPlugins');
@@ -857,6 +881,7 @@ begin
   CheckNodeOperations;
   CheckProfilerWindow;
   CheckMaintenanceParallelWorkers;
+  CheckSchemaCompareDialog;
 
   if Failures > 0 then
   begin

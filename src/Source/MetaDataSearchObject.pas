@@ -152,7 +152,7 @@ begin
                     begin
                       Q.Close;
                       Q.SQL.Clear;
-                      Q.SQL.Add('select rdb$field_name from rdb$fields where (rdb$system_flag <> 1 or rdb$system_flag is null);');
+                      Q.SQL.Add('select rdb$field_name from rdb$fields where (rdb$system_flag <> 1 or rdb$system_flag is null) and (rdb$field_name not starting with ''RDB$'');');
                       Q.Open;
                       while not Q.EOF do
                       begin

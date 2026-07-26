@@ -51,6 +51,7 @@ type
     ScriptStartRecord: TAction;
     ScriptStopRecord: TAction;
     ToolsMetaExtract: TAction;
+    ToolsCompareSchemas: TAction;
     ToolsMetaSearch: TAction;
     ToolsSyntaxHelp: TAction;
     ToolsSQLCodeSnippets: TAction;
@@ -487,6 +488,7 @@ type
     procedure ProjectProjectOptionsExecute(Sender: TObject);
     procedure ViewNextWindowExecute(Sender: TObject);
     procedure ToolsMetaExtractExecute(Sender: TObject);
+    procedure ToolsCompareSchemasExecute(Sender: TObject);
     procedure ToolsMetaSearchExecute(Sender: TObject);
     procedure ToolsSQLCodeSnippetsExecute(Sender: TObject);
 		procedure ToolsSQLTraceExecute(Sender: TObject);
@@ -1353,6 +1355,11 @@ end;
 procedure TfrmMarathonMain.ToolsMetaExtractExecute(Sender: TObject);
 begin
 	MarathonIDEInstance.ToolsMetadataExtract;
+end;
+
+procedure TfrmMarathonMain.ToolsCompareSchemasExecute(Sender: TObject);
+begin
+	MarathonIDEInstance.ToolsCompareSchemas;
 end;
 
 procedure TfrmMarathonMain.ToolsMetaSearchExecute(Sender: TObject);

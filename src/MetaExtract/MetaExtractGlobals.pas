@@ -18,9 +18,21 @@ unit MetaExtractGlobals;
 interface
 
 uses
-	Classes, SysUtils, {$IFDEF MSWINDOWS} Windows, {$ENDIF} IBHeader;
+	Classes, SysUtils, DB, {$IFDEF MSWINDOWS} Windows, {$ENDIF} IBHeader;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision : Integer; IsInterbase6 : Boolean) : String;
+
+{ The length to declare a field with, taken from a row of RDB$FIELDS (or of a
+  join onto it). Pass this to ConvertFieldType rather than RDB$FIELD_LENGTH.
+
+  For a text field the two differ whenever the character set needs more than
+  one byte per character: a UTF8 varchar(10) is stored as RDB$FIELD_LENGTH = 40
+  and RDB$CHARACTER_LENGTH = 10, so reading the byte length declared it four
+  times too wide and a DDL round trip grew every string column. For everything
+  else RDB$CHARACTER_LENGTH is null and the byte length is the right answer, so
+  the fallback is not just defensive - it is the normal path for numerics. It
+  also covers a catalogue too old to have the column at all. }
+function DeclaredFieldLength(Q : TDataSet) : Integer;
 function GetDBCharSetNameByID(ID : Integer) : String;
 function GetDBCharSetIndexByID(ID : Integer) : Integer;
 function ParseSection (ParseLine : String; ParseNum : Integer; ParseSep : Char) : String;
@@ -614,6 +626,17 @@ begin
   else
     Result := '';
   end;
+end;
+
+function DeclaredFieldLength(Q : TDataSet) : Integer;
+var
+  Fld : TField;
+begin
+  Fld := Q.FindField('rdb$character_length');
+  if Assigned(Fld) and not Fld.IsNull and (Fld.AsInteger > 0) then
+    Result := Fld.AsInteger
+  else
+    Result := Q.FieldByName('rdb$field_length').AsInteger;
 end;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision : Integer; IsInterbase6 : Boolean) : String;

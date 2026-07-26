@@ -68,7 +68,7 @@ begin
 					case lvRelations.Selected.ImageIndex of
 						2, 5 : //table, view
 							begin
-								Q.SQL.Add('select a.rdb$field_name, a.rdb$field_position, a.rdb$field_source, b.rdb$field_length, b.rdb$field_scale, ' +
+								Q.SQL.Add('select a.rdb$field_name, a.rdb$field_position, a.rdb$field_source, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, ' +
 													'b.rdb$field_type from rdb$relation_fields a, rdb$fields b where ' +
                           'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ''' +
                           AnsiUpperCase(lvRelations.Selected.Caption) + ''' order by a.rdb$field_position asc;');
@@ -81,7 +81,7 @@ begin
                     Item := lvColumns.Items.Add;
                     Item.Caption := Q.FieldByName('rdb$field_name').AsString;
                     Item.SubItems.Add(Q.FieldByName('rdb$field_position').AsString);
-                    Item.SubItems.Add(AnsiUpperCase(ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger, Q.FieldByName('rdb$field_length').AsInteger,
+                    Item.SubItems.Add(AnsiUpperCase(ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger, DeclaredFieldLength(Q),
 																	Q.FieldByName('rdb$field_scale').AsInteger)));
 
                     Item.SubItems.Add(Q.FieldByName('rdb$field_source').AsString);
@@ -96,7 +96,7 @@ begin
 
 						3 : //SP
               begin
-                Q.SQL.Add('select a.rdb$parameter_name, a.rdb$parameter_number, b.rdb$field_type, b.rdb$field_length, b.rdb$field_scale from rdb$procedure_parameters a, rdb$fields b where ' +
+                Q.SQL.Add('select a.rdb$parameter_name, a.rdb$parameter_number, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale from rdb$procedure_parameters a, rdb$fields b where ' +
                           'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ''' + AnsiUpperCase(lvRelations.Selected.Caption) + ''' order by rdb$parameter_number asc;');
                 Q.Open;
                 lvColumns.Items.BeginUpdate;
@@ -107,7 +107,7 @@ begin
                     Item := lvColumns.Items.Add;
                     Item.Caption := Q.FieldByName('rdb$parameter_name').AsString;
                     Item.SubItems.Add(Q.FieldByName('rdb$parameter_number').AsString);
-                    Item.SubItems.Add(AnsiUpperCase(ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger, Q.FieldByName('rdb$field_length').AsInteger,
+                    Item.SubItems.Add(AnsiUpperCase(ConvertFieldType(Q.FieldByName('rdb$field_type').AsInteger, DeclaredFieldLength(Q),
                                   Q.FieldByName('rdb$field_scale').AsInteger)));
 
                     Item.SubItems.Add('');

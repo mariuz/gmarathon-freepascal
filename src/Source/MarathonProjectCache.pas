@@ -2238,7 +2238,13 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + SchemaFilterClause + ' order by RDB$FIELD_NAME asc');
+			{ The RDB$ name test is not redundant with the system flag. Firebird
+			  puts one row in RDB$FIELDS for every column of every table, named
+			  RDB$1, RDB$2 and so on, and flags them 0 exactly as it flags a
+			  domain the user wrote - so without this the Domains node listed
+			  those too (148 of them on the smoke-test database, against no real
+			  domains at all). }
+			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$FIELD_NAME not starting with ''RDB$'')' + SchemaFilterClause + ' order by RDB$FIELD_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4025,7 +4031,7 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
+			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$FIELD_NAME not starting with ''RDB$'')' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4072,7 +4078,7 @@ begin
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
 
-		Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
+		Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$FIELD_NAME not starting with ''RDB$'')' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
 		Q.Open;
 		while not Q.EOF do
 		begin
