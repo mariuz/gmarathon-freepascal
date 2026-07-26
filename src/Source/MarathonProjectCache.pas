@@ -64,7 +64,7 @@ interface
 
 uses SysUtils, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	IBDatabase, IBQuery, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, WindowLists, ScriptRecorder, GimbalToolsAPI;
+	IBDatabase, IBQuery, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, SafeDisconnect, WindowLists, ScriptRecorder, GimbalToolsAPI;
 
 const
    cSepChar = #2;
@@ -249,6 +249,7 @@ type
 	private
 		FDBFileName: String;
 		FEnvironment: TConnectionEnvironment;
+		FDisconnectError: String;
 		FUserName: String;
 		FServerName: String;
 		FConnection: TIBDatabase;
@@ -318,6 +319,8 @@ type
 		property DBFileName: String read FDBFileName write SetDBFileName;
 		{ Advisory only - see TConnectionEnvironment. }
 		property Environment: TConnectionEnvironment read FEnvironment write FEnvironment;
+		{ Empty unless the last disconnect faulted inside the database layer. }
+		property DisconnectError: String read FDisconnectError;
 		property ServerName: String read FServerName write SetServerName;
 		property UserName: String read FUserName write SetUserName;
 		property SQLRole: String read FSQLRole write SetSQLRole;
@@ -1843,7 +1846,10 @@ begin
 		+ #13 +  'to this connection will close. Are you sure you wish to do this?',
 		mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		FConnection.Connected := False;
+		{ A fault while closing must not abandon the cleanup below, or the tree
+		  goes on showing a connection that is actually gone. See
+		  SafeDisconnect.pas for the defect this guards against. }
+		FDisconnectError := DisconnectQuietly(FConnection);
 		FVersionRead := False;
 		FContainerNode.DeleteChildren;
 		FExpanded := False;

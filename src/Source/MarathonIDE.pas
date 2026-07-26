@@ -2631,6 +2631,14 @@ begin
           Connection.DisConnect;
           Connection.FireEvent(opRefresh);
           Connection.FireEvent(opExpandNode);
+          { The connection is closed either way - see SafeDisconnect.pas - but
+            say so rather than leaving the user to wonder, since a fault here
+            usually means a query in this session read a WITH TIME ZONE column
+            and hit the IBX defect recorded in ROADMAP.md. }
+          if Connection.DisconnectError <> '' then
+            MessageDlg('The connection was closed, but the database layer reported '
+              + 'an error while closing it:' + #13#10#13#10 + Connection.DisconnectError,
+              mtWarning, [mbOK], 0);
        finally
 			    Connection.ErrorOnConnection := false;
        end;

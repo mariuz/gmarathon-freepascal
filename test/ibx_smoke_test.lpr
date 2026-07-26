@@ -18,7 +18,7 @@ program ibx_smoke_test;
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  ProfilerQueries;
+  ProfilerQueries, SafeDisconnect;
 
 var
   DB: TIBDatabase;
@@ -37,6 +37,9 @@ var
   Cols: TStringList;
   ProfileId: Int64;
   Prefix: String;
+  FaultDB: TIBDatabase;
+  FaultTr: TIBTransaction;
+  FaultQ: TIBQuery;
 
 { The generators end their statements the way a user would type them; the API
   takes one statement without the terminator. }
@@ -1417,6 +1420,69 @@ begin
         Halt(1);
       end;
       WriteLn('XLSX cell references and escaping OK');
+
+      { Disconnect hardening. A user's own query in the SQL editor can still
+        select a WITH TIME ZONE column - Marathon casts its own, but cannot
+        rewrite the user's - and this IBX version then faults while closing the
+        attachment. DisconnectQuietly turns that into a message so the caller's
+        cleanup still runs instead of the application going down.
+
+        Driven on a throwaway connection so the fault is real rather than
+        simulated: if IBX is ever fixed, TookFault goes false and this test
+        says so rather than silently passing. }
+      if EngineMajor >= 4 then
+      begin
+        EnsureTransaction;
+        Q.SQL.Text := 'recreate table ibx_smoke_tz2 (id integer, ts timestamp with time zone)';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+        EnsureTransaction;
+        Q.SQL.Text := 'insert into ibx_smoke_tz2 values (1, current_timestamp)';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+
+        FaultDB := TIBDatabase.Create(nil);
+        FaultTr := TIBTransaction.Create(nil);
+        FaultQ := TIBQuery.Create(nil);
+        try
+          FaultDB.DatabaseName := DatabaseName;
+          FaultDB.Params.Values['user_name'] := UserName;
+          FaultDB.Params.Values['password'] := Password;
+          FaultDB.LoginPrompt := False;
+          FaultTr.DefaultDatabase := FaultDB;
+          FaultDB.DefaultTransaction := FaultTr;
+          FaultDB.Connected := True;
+          FaultTr.StartTransaction;
+          FaultQ.Database := FaultDB;
+          FaultQ.Transaction := FaultTr;
+          { Read the column raw - exactly what a user's own query does. }
+          FaultQ.SQL.Text := 'select ts from ibx_smoke_tz2';
+          FaultQ.Open;
+          FaultQ.Close;
+          if FaultTr.Active then
+            FaultTr.Commit;
+
+          { Must return rather than raise, whichever way it goes. }
+          Value := DisconnectQuietly(FaultDB);
+          if Value <> '' then
+            WriteLn('Disconnect hardening OK (contained: ', Value, ')')
+          else
+            WriteLn('Disconnect hardening OK (clean - the IBX defect appears fixed, ' +
+                    'so the WITH TIME ZONE casts and this guard could be revisited)');
+        finally
+          FaultQ.Free;
+          FaultTr.Free;
+          FaultDB.Free;
+        end;
+
+        EnsureTransaction;
+        Q.SQL.Text := 'drop table ibx_smoke_tz2';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+      end;
 
       { Firebird 4 WITH TIME ZONE columns. Two things are wrong with reading one
         directly through IBX, and one cast fixes both: IBX surfaces the column

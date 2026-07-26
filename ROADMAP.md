@@ -105,9 +105,16 @@ disconnecting faulted. Its queries now cast that column to text on the server,
 which sidesteps the defect and shows the IANA zone name into the bargain.
 
 **What is still exposed:** arbitrary SQL in the editor. A user query selecting
-a `WITH TIME ZONE` column is not rewritten, so the connection it ran on may
-fault when closed. Fixing that properly needs the IBX layer, not this
-codebase.
+a `WITH TIME ZONE` column is not rewritten, so the connection it ran on still
+faults when closed. Fixing that properly needs the IBX layer, not this
+codebase — but the consequence is now contained rather than fatal.
+`src/Common/SafeDisconnect.pas` closes a connection without letting a fault in
+the database layer propagate: the message is handed back, the caller's cleanup
+still runs (before this, the fault abandoned the tree cleanup and left a closed
+connection displayed as open), and disconnecting from the tree reports it once
+rather than taking the application down. `test/ibx_smoke_test.lpr` drives a
+throwaway connection into the fault deliberately and checks it is contained —
+and if IBX is ever fixed, that test says so instead of quietly passing.
 
 ## Phase 7 — Firebird 3/4/5/6 Engine Feature Support
 
