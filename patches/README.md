@@ -11,15 +11,15 @@ files so they stay readable, and so they can be applied by hand to any other
 checkout:
 
 ```sh
-git -C lib/fbintf      apply ../../patches/fbintf-transaction-and-parallel-workers.patch
-git -C lib/ibx4lazarus apply ../../patches/ibx4lazarus-parallel-workers.patch
+git -C lib/fbintf      apply ../../patches/fbintf-transaction-and-fb5-service-options.patch
+git -C lib/ibx4lazarus apply ../../patches/ibx4lazarus-fb5-service-options.patch
 ```
 
 | Change | Upstream PR | Submodule branch |
 | --- | --- | --- |
 | Transaction use-after-free | [MWASoftware/fbintf#7](https://github.com/MWASoftware/fbintf/pull/7) | `fbintf: marathon-integration` |
-| Parallel workers SPB constants | [MWASoftware/fbintf#8](https://github.com/MWASoftware/fbintf/pull/8) | as above |
-| Parallel workers property | [MWASoftware/ibx4lazarus#23](https://github.com/MWASoftware/ibx4lazarus/pull/23) | `ibx4lazarus: add-parallel-workers` |
+| Firebird 5 service parameter constants | [MWASoftware/fbintf#8](https://github.com/MWASoftware/fbintf/pull/8) | as above |
+| Parallel workers and ODS upgrade options | [MWASoftware/ibx4lazarus#23](https://github.com/MWASoftware/ibx4lazarus/pull/23) | `ibx4lazarus: add-parallel-workers` |
 
 The fbintf fork keeps each change on its own branch so the two pull requests
 stay independent (`fix-use-after-free-in-transaction-end` and
@@ -82,13 +82,30 @@ Firebird 6.0.0 server: with one worker the parameter is not sent, with four it
 is, the server accepts it, and the resulting backup restores to a working
 database.
 
+## Inline ODS upgrade (both submodules)
+
+Firebird 5 can upgrade a database's on-disk structure in place, as
+`gfix -upgrade` does, instead of requiring a backup and restore. Neither
+submodule could ask for it: `consts_pub.inc` defines no
+`isc_spb_rpr_upgrade_db`, and `TIBXValidationService` maps its options onto the
+`isc_spb_rpr_*` bits with no entry for it. `UpgradeODS` is appended to
+`TValidateOption` rather than inserted, so existing values keep their ordinals.
+
+An earlier note here claimed no such constant existed anywhere. That was wrong,
+and worth recording: the search had been against the vendored `consts_pub.inc`,
+which predates Firebird 5, rather than against Firebird's own shipped header,
+where `isc_spb_rpr_upgrade_db` is `0x1000`.
+
+Marathon offers it as its own button on the Database Maintenance dialog, not as
+another checkbox beside Mend - it rewrites the database irreversibly and is not
+something to tick by accident. Verified against a live Firebird 6.0.0 server:
+the assembled repair parameter is `0x1000` and the request completes, leaving a
+database already at the server's format unchanged. It has *not* been exercised
+against a genuinely old-ODS database, because the test server cannot create
+one - so what is proven is the plumbing, not the upgrade itself.
+
 ## Not patched, and why
 
-- **Inline ODS upgrade** still has nothing to drive it: it is a Services API
-  repair action, and neither the vendored headers nor Firebird's own define an
-  `isc_spb_rpr_*` constant for it. Unlike parallel workers there is also no way
-  to exercise it here - the test server has no old-ODS database to upgrade - so
-  it is left as a roadmap item rather than an untested patch.
 - **`TIBQuery.Params[i].DataType` is always `ftUnknown`**, so a caller cannot
   learn a parameter's declared type from a `TIBQuery`; the types are only
   reachable by preparing a `TIBSQL` alongside, which is what

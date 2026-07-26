@@ -99,6 +99,15 @@ object frmMaintenance: TfrmMaintenance
         Caption = 'Read-only check (do not fix anything)'
         TabOrder = 5
       end
+      object btnUpgradeODS: TButton
+        Left = 160
+        Top = 184
+        Width = 150
+        Height = 25
+        Caption = 'Upgrade &ODS...'
+        TabOrder = 7
+        OnClick = btnUpgradeODSClick
+      end
       object btnValidate: TButton
         Left = 8
         Top = 184

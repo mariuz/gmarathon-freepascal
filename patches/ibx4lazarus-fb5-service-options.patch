@@ -1,7 +1,7 @@
 From 2d98e88d0d41eefeb1c4f1c1f3108e809d4e1f74 Mon Sep 17 00:00:00 2001
 From: Popa Adrian Marius <mapopa@gmail.com>
 Date: Sun, 26 Jul 2026 21:33:18 +0300
-Subject: [PATCH] Allow a backup or restore to request parallel workers
+Subject: [PATCH 1/2] Allow a backup or restore to request parallel workers
 
 Firebird 5 can run a backup or restore with several workers, as
 gbak -par does, but there was no way to ask for it: TIBXBackupService
@@ -64,6 +64,66 @@ index 4f9b8c4..9a1371d 100644
    with ServicesConnection do
    {Firebird 2.5.5 and later}
    if (ServerVersionNo[1] < 2) or
+-- 
+2.43.0
+
+
+From ee9027ccf7c6a67df0059976cef067d0751ac94e Mon Sep 17 00:00:00 2001
+From: Popa Adrian Marius <mapopa@gmail.com>
+Date: Sun, 26 Jul 2026 21:41:23 +0300
+Subject: [PATCH 2/2] Allow an in-place ODS upgrade through the validation
+ service
+
+Firebird 5 can upgrade a database's on-disk structure in place, as
+gfix -upgrade does, instead of requiring a backup and restore. There was
+no way to ask for it: TIBXValidationService maps its options onto the
+isc_spb_rpr_* bits and had no entry for it.
+
+Adds UpgradeODS to TValidateOption, appended rather than inserted so the
+existing values keep their ordinals, and sends isc_spb_rpr_upgrade_db
+only when the server is Firebird 5 or later - an older one rejects the
+option.
+
+Requires the isc_spb_rpr_upgrade_db constant, which fbintf does not
+currently define.
+
+Verified against a live Firebird 6.0.0 server: the assembled repair
+parameter is 0x1000 and the request completes, leaving a database
+already at the server's format unchanged.
+---
+ runtime/nongui/IBXServices.pas | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/runtime/nongui/IBXServices.pas b/runtime/nongui/IBXServices.pas
+index 9a1371d..c9f7cf9 100644
+--- a/runtime/nongui/IBXServices.pas
++++ b/runtime/nongui/IBXServices.pas
+@@ -485,8 +485,10 @@ end;
+     property DatabaseName;
+   end;
+ 
++  {UpgradeODS is appended rather than inserted so that the existing values keep
++   their ordinals for anything already compiled against this unit.}
+   TValidateOption = (CheckDB, IgnoreChecksum, KillShadows, MendDB,
+-    SweepDB, ValidateDB, ValidateFull);
++    SweepDB, ValidateDB, ValidateFull, UpgradeODS);
+   TValidateOptions = set of TValidateOption;
+ 
+   { TIBXValidationService }
+@@ -1700,6 +1702,13 @@ begin
+      if not (MendDB in Options) then
+        param := param or isc_spb_rpr_validate_db;
+   end;
++  {Firebird 5 and later: upgrade the on-disk structure in place, as
++   gfix -upgrade does, rather than by backup and restore. Only sent to a
++   server that knows the option, since an older one rejects it.}
++  if (UpgradeODS in Options) then
++  with ServicesConnection do
++    if ServerVersionNo[1] >= 5 then
++      param := param or isc_spb_rpr_upgrade_db;
+   if param > 0 then
+    SRB.Add(isc_spb_options).AsInteger := param;
+ end;
 -- 
 2.43.0
 

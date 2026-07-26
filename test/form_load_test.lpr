@@ -729,6 +729,13 @@ begin
     Check(F.edParallelWorkers.Value = 1, 'it defaults to one worker');
     Check(F.edParallelWorkers.MinValue = 1, 'it cannot be set below one');
     Check(F.edParallelWorkers.MaxValue > 1, 'it allows more than one');
+
+    { The in-place ODS upgrade is irreversible, so it gets its own button
+      rather than a checkbox alongside the validate options. }
+    Check(Assigned(F.btnUpgradeODS), 'the ODS upgrade button exists');
+    Check(Assigned(F.btnUpgradeODS.OnClick), 'it is hooked up');
+    Check(Pos('...', F.btnUpgradeODS.Caption) > 0,
+      'its caption marks it as asking before acting');
   finally
     F.Free;
   end;

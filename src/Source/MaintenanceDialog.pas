@@ -21,6 +21,7 @@ type
 		chkMendDatabase: TCheckBox;
 		chkKillShadows: TCheckBox;
 		chkReadOnlyValidation: TCheckBox;
+		btnUpgradeODS: TButton;
 		btnValidate: TButton;
 		tsStatistics: TTabSheet;
 		lstIndexes: TCheckListBox;
@@ -56,6 +57,7 @@ type
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure btnSweepClick(Sender: TObject);
 		procedure btnValidateClick(Sender: TObject);
+		procedure btnUpgradeODSClick(Sender: TObject);
 		procedure btnRefreshIndexesClick(Sender: TObject);
 		procedure btnRecomputeSelectivityClick(Sender: TObject);
 		procedure btnBrowseBackupClick(Sender: TObject);
@@ -236,6 +238,44 @@ begin
 			Log('Sweep FAILED: ' + E.Message);
 			MessageDlg('Sweep failed: ' + E.Message, mtError, [mbOK], 0);
 		end;
+	end;
+end;
+
+{ Firebird 5's in-place on-disk-structure upgrade, the alternative to a backup
+  and restore. Deliberately its own button rather than another checkbox beside
+  Mend: it rewrites the database's structure, cannot be undone, and is not
+  something to tick by accident while validating. }
+procedure TfrmMaintenance.btnUpgradeODSClick(Sender: TObject);
+begin
+	if MessageDlg('Upgrade the on-disk structure of ' + FConnectionName + '?' +
+		#13#10#13#10 +
+		'This rewrites the database to the format of the server it is attached to, ' +
+		'and cannot be undone. Older Firebird versions will no longer be able to ' +
+		'open it. Take a backup first, and close other windows using this ' +
+		'connection - the upgrade needs exclusive access.',
+		mtWarning, [mbYes, mbNo], 0) <> mrYes then
+		Exit;
+
+	Screen.Cursor := crHourGlass;
+	try
+		try
+			EnsureServicesConnected;
+			svcValidate.DatabaseName := FDatabase.DatabaseName;
+			svcValidate.Options := [UpgradeODS];
+			Log('ODS upgrade started');
+			svcValidate.Execute(mmoLog.Lines);
+			Log('ODS upgrade finished');
+			MessageDlg('The upgrade request completed. A database already at the ' +
+				'server''s format is left unchanged.', mtInformation, [mbOK], 0);
+		except
+			on E: Exception do
+			begin
+				Log('ODS upgrade failed: ' + E.Message);
+				MessageDlg('ODS upgrade failed: ' + E.Message, mtError, [mbOK], 0);
+			end;
+		end;
+	finally
+		Screen.Cursor := crDefault;
 	end;
 end;
 
