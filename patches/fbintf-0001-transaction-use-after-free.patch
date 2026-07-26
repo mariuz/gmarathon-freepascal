@@ -1,0 +1,58 @@
+From 16e49b4633c3e04aec673714e821b1e3444992ba Mon Sep 17 00:00:00 2001
+From: Popa Adrian Marius <mapopa@gmail.com>
+Date: Sun, 26 Jul 2026 20:53:12 +0300
+Subject: [PATCH] Hold a reference to the transaction while ending it
+
+Reading a WITH TIME ZONE column and then disconnecting raises
+EObjectCheck: Object reference is Nil from inside
+TFBTransaction.DoDefaultTransactionEnd, reached via
+TFBAttachment.EndAllTransactions during Disconnect.
+
+The sequence: reading a time zone value creates TFB30TimeZoneServices,
+which starts an internal transaction for the rdb$time_zone_util lookups
+and registers itself on it with AddObject. At disconnect,
+EndAllTransactions calls DoDefaultTransactionEnd on that transaction,
+whose loop calls TransactionEnding on each registered user. The time
+zone services then clears its own FTransaction, and since the interface
+list holds raw object pointers rather than counted references, that was
+the last reference - so the transaction is destroyed while
+DoDefaultTransactionEnd is still running, and the Commit at the end of
+that method operates on a freed object.
+
+Holding an ITransaction reference to self for the duration of the method
+keeps it alive until the work is finished.
+
+Reproduced against Firebird 6.0.0 with a twenty-line program: an integer
+column and a plain TIMESTAMP disconnect cleanly, TIMESTAMP WITH TIME
+ZONE and TIME WITH TIME ZONE do not. With this change all four
+disconnect cleanly.
+---
+ client/FBTransaction.pas | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/client/FBTransaction.pas b/client/FBTransaction.pas
+index 626803b..e30a5d4 100644
+--- a/client/FBTransaction.pas
++++ b/client/FBTransaction.pas
+@@ -330,7 +330,17 @@ procedure TFBTransaction.DoDefaultTransactionEnd(Force: boolean);
+ var i: integer;
+     intf: IUnknown;
+     user: ITransactionUser;
+-begin
++    SelfRef: ITransaction;
++begin
++  {A transaction user's TransactionEnding may release the last interface
++   reference to this transaction, which would free it while this method is
++   still running and leave the Commit/Rollback below operating on a destroyed
++   object. TFB30TimeZoneServices does exactly that: it starts an internal
++   transaction for the time zone lookups, registers itself on it, and clears
++   its own reference in TransactionEnding. Nothing else holds one - the
++   interface list stores raw object pointers, not counted references - so the
++   object went away mid-call. Hold a reference for the duration.}
++  SelfRef := self;
+   if InTransaction and not FForeignHandle then
+   begin
+     for i := 0 to InterfaceCount - 1 do
+-- 
+2.43.0
+
