@@ -48,6 +48,26 @@ lazbuild --build-mode=Debug src/Source/marathon.lpi
 lazbuild --build-mode=Release src/Source/marathon.lpi
 ```
 
+### Running
+
+```bash
+cd src/Source && ./marathon
+```
+
+Setting `MARATHON_TRACE_EXCEPTIONS` makes Marathon print a Pascal backtrace —
+unit names and line numbers — to stderr for every exception, as well as showing
+the usual dialog:
+
+```bash
+cd src/Source && MARATHON_TRACE_EXCEPTIONS=1 ./marathon
+```
+
+Worth reaching for whenever a dialog reports something a message alone cannot
+place, because `gdb` is of limited help here: the FPC RTL is compiled without
+frame pointers, so a fault raised inside it (a list index check, say) unwinds
+to `#2 0x0` and the calling code is lost. The variable costs a normal run
+nothing when unset.
+
 ### Requirements
 
 - Lazarus / FreePascal (developed against FPC 3.2.2, Lazarus 4.8.0)
