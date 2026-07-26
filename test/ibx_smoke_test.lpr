@@ -31,6 +31,7 @@ var
   EngineVersion: String;
   EngineMajor: Integer;
   Ctx: TScriptAsContext;
+  PositionalCtx: TScriptAsContext;
   Script: String;
   Single: TBufDataset;
   ParamMeta: TIBSQL;
@@ -951,7 +952,7 @@ begin
         initialise. Each generated statement is either executed or prepared,
         so this checks the SQL is real rather than merely that the text looks
         plausible. }
-      Ctx := ScriptAsContext(DB, Tr, False, DB.SQLDialect);
+      Ctx := ScriptAsContext(DB, Tr, False, DB.SQLDialect, EngineMajor);
 
       try
         { SELECT/INSERT/UPDATE/DELETE all have to parse. The SELECT is the only
@@ -980,6 +981,32 @@ begin
         Script := ScriptAsExecute(Ctx, 'IBX_SMOKE_TEST_PROC');
         RequireInDDL(Script, 'ibx_smoke_test_proc', 'EXECUTE template');
         PrepareOnly(Script, 'EXECUTE template');
+
+        { Named arguments where the engine takes them - clearer for a routine
+          with several parameters, and unaffected by a later reordering. The
+          context carries the engine version so an older server still gets a
+          positional call, which is the only form it will parse. }
+        if EngineMajor >= 6 then
+        begin
+          RequireInDDL(Script, '=>', 'named arguments on Firebird 6');
+          { Both forms have to compile, so build the positional one explicitly
+            and prepare that too rather than assuming it still works. }
+          PositionalCtx := ScriptAsContext(DB, Tr, False, DB.SQLDialect, 5);
+          Script := ScriptAsExecute(PositionalCtx, 'IBX_SMOKE_TEST_PROC');
+          if Pos('=>', Script) > 0 then
+          begin
+            WriteLn('FAIL: a pre-6 engine was given named arguments:');
+            WriteLn(Script);
+            Halt(1);
+          end;
+          PrepareOnly(Script, 'positional EXECUTE template');
+        end
+        else
+          if Pos('=>', Script) > 0 then
+          begin
+            WriteLn('FAIL: named arguments generated for engine major ', EngineMajor);
+            Halt(1);
+          end;
         if Tr.Active then
           Tr.Commit;
       except
@@ -1469,8 +1496,12 @@ begin
           if Value <> '' then
             WriteLn('Disconnect hardening OK (contained: ', Value, ')')
           else
-            WriteLn('Disconnect hardening OK (clean - the IBX defect appears fixed, ' +
-                    'so the WITH TIME ZONE casts and this guard could be revisited)');
+            { Both workarounds stay regardless. The casts are not only a
+              workaround - they are how the IANA zone name reaches the grid at
+              all - and the guard still earns its place for anyone running an
+              unpatched fbintf. }
+            WriteLn('Disconnect hardening OK (clean - this fbintf has the fix from ' +
+                    'MWASoftware/fbintf#7 or equivalent)');
         finally
           FaultQ.Free;
           FaultTr.Free;

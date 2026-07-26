@@ -36,10 +36,13 @@ type
     Transaction: TIBTransaction;
     IsIB6: Boolean;
     Dialect: Integer;
+    { Engine major version, or 0 when the caller does not know. Only consulted
+      for syntax the older engines reject outright. }
+    EngineMajor: Integer;
   end;
 
 function ScriptAsContext(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  AIsIB6: Boolean; ADialect: Integer): TScriptAsContext;
+  AIsIB6: Boolean; ADialect: Integer; AEngineMajor: Integer = 0): TScriptAsContext;
 
 function ScriptAsColumnNames(const Ctx: TScriptAsContext; ObjectName: String): TStringList;
 function ScriptAsPrimaryKeyColumns(const Ctx: TScriptAsContext; ObjectName: String): TStringList;
@@ -57,12 +60,13 @@ function ScriptAsExecute(const Ctx: TScriptAsContext; ObjectName: String): Strin
 implementation
 
 function ScriptAsContext(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  AIsIB6: Boolean; ADialect: Integer): TScriptAsContext;
+  AIsIB6: Boolean; ADialect: Integer; AEngineMajor: Integer): TScriptAsContext;
 begin
   Result.Database := ADatabase;
   Result.Transaction := ATransaction;
   Result.IsIB6 := AIsIB6;
   Result.Dialect := ADialect;
+  Result.EngineMajor := AEngineMajor;
 end;
 
 { "Script as ..." helpers: build column-list-driven SELECT/INSERT/UPDATE/DELETE
@@ -510,11 +514,21 @@ begin
 		if Assigned(Q.Transaction) and Q.Transaction.Active then
 			Q.Transaction.Commit;
 
+		{ Named arguments where the engine takes them. For a routine with more
+		  than a couple of parameters "P(A => :A, B => :B)" says which value
+		  goes where, and survives the parameters being reordered later, which
+		  a positional call does not. Gated on Firebird 6 because that is the
+		  engine this was verified against - an older one rejects the syntax
+		  outright, and a script that will not parse is worse than a positional
+		  one that does. }
 		ParamList := '';
 		for Idx := 0 to InParams.Count - 1 do
 		begin
 			if Idx > 0 then
 				ParamList := ParamList + ', ';
+			if Ctx.EngineMajor >= 6 then
+				ParamList := ParamList +
+					MakeQuotedIdent(InParams[Idx], Ctx.IsIB6, Ctx.Dialect) + ' => ';
 			ParamList := ParamList + ':' + InParams[Idx];
 		end;
 	finally

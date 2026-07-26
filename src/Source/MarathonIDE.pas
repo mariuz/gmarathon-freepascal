@@ -497,7 +497,8 @@ end;
   ScriptAs.pas. }
 function ConnScriptContext(Conn: TMarathonCacheConnection): TScriptAsContext;
 begin
-	Result := ScriptAsContext(Conn.Connection, Conn.Transaction, Conn.IsIB6, Conn.SQLDialect);
+	Result := ScriptAsContext(Conn.Connection, Conn.Transaction, Conn.IsIB6, Conn.SQLDialect,
+		Conn.ServerMajorVersion);
 end;
 
 procedure ScriptAsOpenEditor(ConnName, SQLText: String);
