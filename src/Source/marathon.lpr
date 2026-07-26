@@ -31,6 +31,7 @@ uses
   SessionMonitor in 'SessionMonitor.pas' {frmSessionMonitor},
   SQLParamsDialog in 'SQLParamsDialog.pas' {frmSQLParams},
   SQLParamTypes in 'SQLParamTypes.pas',
+  EditorPackage in 'EditorPackage.pas' {frmPackageEditor},
   MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},

@@ -204,6 +204,11 @@ begin
     except
     end;
     try
+      Q.SQL.Text := 'drop package ibx_smoke_pkg_nobody';
+      Q.ExecSQL;
+    except
+    end;
+    try
       Q.SQL.Text := 'drop procedure ibx_smoke_out';
       Q.ExecSQL;
     except
@@ -618,6 +623,62 @@ begin
         RequireInDDL(DDL, 'return a + 1', 'package body source');
         WriteLn('DDL extraction OK (package body):');
         WriteLn(DDL);
+
+        { The query the package viewer loads from. A package may legitimately
+          be declared and left unimplemented, and the viewer reports that
+          rather than treating it as an error - so the body of such a package
+          has to come back NULL, not empty-and-indistinguishable. }
+        Tr.StartTransaction;
+        try
+          Q.SQL.Text := 'create or alter package ibx_smoke_pkg_nobody as begin ' +
+                        'procedure declared_only(a integer); end';
+          Q.ExecSQL;
+          Tr.Commit;
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: could not create a header-only package: ', E.Message);
+            Halt(1);
+          end;
+        end;
+
+        EnsureTransaction;
+        Q.SQL.Text := 'select rdb$package_header_source, rdb$package_body_source ' +
+                      'from rdb$packages where rdb$package_name = ''IBX_SMOKE_PKG_NOBODY''';
+        Q.Open;
+        if Q.EOF then
+        begin
+          WriteLn('FAIL: the header-only package was not found');
+          Halt(1);
+        end;
+        if Trim(Q.FieldByName('rdb$package_header_source').AsString) = '' then
+        begin
+          WriteLn('FAIL: the header source came back empty');
+          Halt(1);
+        end;
+        if not Q.FieldByName('rdb$package_body_source').IsNull then
+        begin
+          WriteLn('FAIL: a package with no body did not report a NULL body');
+          Halt(1);
+        end;
+        Q.Close;
+
+        { And one that does have a body reports both. }
+        EnsureTransaction;
+        Q.SQL.Text := 'select rdb$package_header_source, rdb$package_body_source ' +
+                      'from rdb$packages where rdb$package_name = ''IBX_SMOKE_PKG''';
+        Q.Open;
+        if Q.EOF or Q.FieldByName('rdb$package_body_source').IsNull then
+        begin
+          WriteLn('FAIL: a package with a body reported no body');
+          Halt(1);
+        end;
+        Q.Close;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('Package viewer query OK (header-only reports a NULL body)');
       end;
 
       { Replication publications (Firebird 4). Every FB4+ database owns exactly

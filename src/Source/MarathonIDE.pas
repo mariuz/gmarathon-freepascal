@@ -202,6 +202,7 @@ type
 		function OpenView(ViewName: String; Connection: String): TForm;
 		procedure NewUDF(Connection: String);
 		function OpenUDF(UDFName: String; Connection: String): TForm;
+		function OpenPackage(PackageName: String; Connection: String): TForm;
 
 		//stuff for external Tools API
 		//actual
@@ -230,7 +231,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -592,6 +593,9 @@ begin
 					ctUDF:
 						OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
+					ctPackage:
+						OpenPackage(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+
 					ctRecentItem:
 						begin
 							case TMarathonCacheRecentItem(Item).ActualCacheType of
@@ -618,6 +622,9 @@ begin
 
 								ctUDF:
 									OpenUDF(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
+
+								ctPackage:
+									OpenPackage(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
 							end;
 						end;
 				end;
@@ -2458,6 +2465,44 @@ begin
 		F.LoadUDF(UDFName);
 		F.Show;
 		FCurrentProject.Cache.AddRecentObjectOpen(UDFName, ctUDF, Connection);
+		Result := F;
+	end;
+end;
+
+{ Packages are read-only, so this opens a viewer rather than an editor - see
+  EditorPackage.pas for why. }
+function TMarathonIDE.OpenPackage(PackageName, Connection: String): TForm;
+var
+	Idx: Integer;
+	Found: Boolean;
+	F: TfrmPackageEditor;
+
+begin
+	Result := nil;
+	if not CheckConnected(Connection) then
+		Exit;
+	Found := False;
+	for Idx := 0 to Screen.FormCount - 1 do
+		if Screen.Forms[Idx] is TfrmPackageEditor then
+			if (TfrmPackageEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
+				(TfrmPackageEditor(Screen.Forms[Idx]).ObjectName = PackageName) then
+			begin
+				Found := True;
+				Screen.Forms[Idx].BringToFront;
+				Break;
+			end;
+	if not Found then
+	begin
+		if not DoesObjectExist(PackageName, ctPackage, Connection) then
+		begin
+			Result := nil;
+			Exit;
+		end;
+		F := TfrmPackageEditor.Create(nil);
+		F.ConnectionName := Connection;
+		F.LoadPackage(PackageName);
+		F.Show;
+		FCurrentProject.Cache.AddRecentObjectOpen(PackageName, ctPackage, Connection);
 		Result := F;
 	end;
 end;

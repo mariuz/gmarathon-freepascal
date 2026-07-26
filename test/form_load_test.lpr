@@ -21,6 +21,7 @@ uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics,
   GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB,
+  EditorPackage,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
   BaseDocumentForm, BlobViewer, CodeSnippets, CompileDBObject,
@@ -573,6 +574,44 @@ begin
   end;
 end;
 
+{ The package viewer, and what the tree node offers for a package. Packages are
+  read-only, so the node must not advertise operations that have no handler. }
+procedure CheckPackageEditor;
+var
+  F: TfrmPackageEditor;
+  Node: TMarathonCachePackage;
+begin
+  WriteLn('Package viewer:');
+  F := TfrmPackageEditor.Create(nil);
+  try
+    Check(F.pgObjectEditor.PageCount = 3, 'has Header, Body and DDL tabs');
+    Check(F.tsHeader.Caption = 'Header', 'header tab');
+    Check(F.tsBody.Caption = 'Body', 'body tab');
+    Check(F.tsDDL.Caption = 'DDL', 'DDL tab');
+    { Header and body are separate because a package may have a header and no
+      body; both are read-only because a package is edited as a whole. }
+    Check(F.edHeader.ReadOnly, 'the header view is read-only');
+    Check(F.edBody.ReadOnly, 'the body view is read-only');
+    Check(Assigned(F.framDDL), 'the DDL frame is present');
+    Check(F.GetActiveObjectType = ctPackage, 'the form identifies as a package');
+  finally
+    F.Free;
+  end;
+
+  Node := TMarathonCachePackage.Create;
+  try
+    Check(Node.CanDoOperation(opOpen, False), 'a package node can be opened');
+    Check(Node.CanDoOperation(opScriptCreate, False), 'a package node can be scripted');
+    Check(Node.CanDoOperation(opExtractDDL, False), 'a package node can be extracted');
+    { These have no handler for a package - offering them would be a menu item
+      that does nothing. }
+    Check(not Node.CanDoOperation(opDrop, False), 'a package node does not offer Drop');
+    Check(not Node.CanDoOperation(opNew, False), 'a package node does not offer New');
+  finally
+    Node.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -685,6 +724,7 @@ begin
   CheckEnvironmentPersistence;
   CheckConnectionSwitcher;
   CheckParameterDialog;
+  CheckPackageEditor;
 
   if Failures > 0 then
   begin

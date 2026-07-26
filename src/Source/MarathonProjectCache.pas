@@ -521,6 +521,7 @@ type
 
   public
     constructor Create; override;
+    function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
   end;
 
   TMarathonCachePublicationsHeader = class(TMarathonCacheHeader)
@@ -4613,6 +4614,18 @@ begin
 end;
 
 { TMarathonCachePublicationsHeader }
+{ The base class advertises New and Drop for every object, but neither has a
+  handler for a package - they would sit enabled in the menu and do nothing.
+  A package is also viewed rather than edited, so what is left is opening it,
+  scripting it and extracting it. }
+function TMarathonCachePackage.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
+begin
+	if Multiple then
+		Result := Op in [opExtractDDL, opAddToProject]
+	else
+		Result := Op in [opOpen, opScriptCreate, opExtractDDL, opAddToProject];
+end;
+
 constructor TMarathonCachePublicationsHeader.Create;
 begin
 	inherited;

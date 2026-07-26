@@ -934,6 +934,30 @@ begin
               Result := True;
             Q.Close;
           end;
+        ctPackage :
+          begin
+            { Packages are Firebird 3 (ODS 12); on an older server RDB$PACKAGES
+              does not exist and the query is a hard error, so treat that as
+              "no such object" rather than letting it escape. }
+            try
+              Q.SQL.Text := 'select rdb$package_name from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+              Q.Open;
+              Result := not (Q.BOF and Q.EOF);
+              Q.Close;
+              if not Result then
+              begin
+                Q.SQL.Text := 'select rdb$package_name from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(S, '''');
+                Q.Open;
+                Result := not (Q.BOF and Q.EOF);
+                Q.Close;
+              end;
+            except
+              on E: Exception do
+                Result := False;
+            end;
+            if not Result then
+              MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
+          end;
         ctUDF :
           begin
             Q.SQL.Text := 'select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');

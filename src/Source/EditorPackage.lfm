@@ -1,0 +1,96 @@
+object frmPackageEditor: TfrmPackageEditor
+  Left = 220
+  Top = 160
+  Width = 640
+  Height = 460
+  Caption = 'Package'
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pgObjectEditor: TPageControl
+    Left = 0
+    Top = 0
+    Width = 632
+    Height = 413
+    ActivePage = tsHeader
+    Align = alClient
+    TabOrder = 0
+    OnChange = pgObjectEditorChange
+    object tsHeader: TTabSheet
+      Caption = 'Header'
+      object edHeader: TSyntaxMemoWithStuff2
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 385
+        Align = alClient
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Courier New'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 0
+        ReadOnly = True
+      end
+    end
+    object tsBody: TTabSheet
+      Caption = 'Body'
+      object edBody: TSyntaxMemoWithStuff2
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 385
+        Align = alClient
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Courier New'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 0
+        ReadOnly = True
+      end
+    end
+    object tsDDL: TTabSheet
+      Caption = 'DDL'
+      inline framDDL: TframDisplayDDL
+        Left = 0
+        Top = 0
+        Width = 624
+        Height = 385
+        Align = alClient
+        TabOrder = 0
+        inherited edDDL: TSyntaxMemoWithStuff2
+          Width = 624
+          Height = 385
+        end
+      end
+    end
+  end
+  object stsEditor: TStatusBar
+    Left = 0
+    Top = 413
+    Width = 632
+    Height = 19
+    Panels = <
+      item
+        Width = 300
+      end
+      item
+        Width = 200
+      end>
+    SimplePanel = False
+  end
+  object qryPackage: TIBQuery
+    Params = <>
+    Left = 560
+    Top = 8
+  end
+end
