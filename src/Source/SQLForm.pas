@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -172,6 +172,9 @@ type
     procedure qrySQLStatementFilterRecord(DataSet: TDataSet; var Accept: Boolean);
 	private
 		{ Private declarations }
+		{ Holds the single output row of a statement Firebird executes with
+		  output rather than through a cursor - see ExecuteSingletonOutput. }
+		FSingletonResult: TBufDataset;
 		LinePos: LongInt;
 		It: TMenuItem;
 		// Context sensitive keyword help
@@ -192,6 +195,9 @@ type
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
+		function ExecuteSingletonOutput(const SQLText: String): Boolean;
+		procedure ResetResultSet;
+		function ActiveResultSet: TDataSet;
 		procedure AddError(Info: String);
 		procedure UpdateEncoding;
 		procedure OpenError;
@@ -708,6 +714,34 @@ begin
 end;
 {$ENDIF}
 
+{ Whatever the results grid is currently showing. Normally qrySQLStatement,
+  but a statement executed with output (below) is displayed from an in-memory
+  dataset instead, and export and the "can I export?" test have to follow. }
+function TfrmSQLForm.ActiveResultSet: TDataSet;
+begin
+	Result := dsSQLStatement.DataSet;
+	if not Assigned(Result) then
+		Result := qrySQLStatement;
+end;
+
+procedure TfrmSQLForm.ResetResultSet;
+begin
+	dsSQLStatement.DataSet := qrySQLStatement;
+	FreeAndNil(FSingletonResult);
+end;
+
+{ Delegates to SingletonQuery.pas, which is kept LCL-free so the smoke test
+  can cover it; see the explanation of the SQLExecProcedure case there. }
+function TfrmSQLForm.ExecuteSingletonOutput(const SQLText: String): Boolean;
+begin
+	FreeAndNil(FSingletonResult);
+	FSingletonResult := SingletonQuery.ExecuteSingletonOutput(
+		qrySQLStatement.Database, qrySQLStatement.Transaction, SQLText, Self);
+	Result := Assigned(FSingletonResult);
+	if Result then
+		dsSQLStatement.DataSet := FSingletonResult;
+end;
+
 procedure TfrmSQLForm.qrySQLStatementAfterOpen(DataSet: TDataSet);
 begin
 	GlobalFormatFields(DataSet);
@@ -717,6 +751,10 @@ end;
 
 procedure TfrmSQLForm.edFilterChange(Sender: TObject);
 begin
+	{ The filter is qrySQLStatement's own OnFilterRecord; it does not apply to
+	  the in-memory singleton result the grid may be showing instead. }
+	if not qrySQLStatement.Active then
+		Exit;
 	qrySQLStatement.Filtered := (Trim(edFilter.Text) <> '');
 	qrySQLStatement.First;
 end;
@@ -1223,6 +1261,7 @@ begin
 				end;
 
 				qrySQLStatement.Close;
+				ResetResultSet;
 				qrySQLStatement.SQL.Clear;
 				if edSQLStatement.SelText <> '' then
 					qrySQLStatement.SQL.Text := edSQLStatement.SelText
@@ -1244,6 +1283,28 @@ begin
 							qrySQLStatement.Open;
 							pgSQLStatement.ActivePage := tsResultsView;
 							pgSQLStatementChange(pgSQLStatement);
+							stsSQLStatement.Panels[3].Text := '      Statement Execution Successful';
+							imgSuccess.Picture.Bitmap.LoadFromResourceName(HInstance, 'SQL_ED_OK');
+						end;
+
+					SQLExecProcedure:
+						begin
+							{ Only when the statement actually has output columns -
+							  an EXECUTE PROCEDURE on a procedure with no output
+							  parameters is an ordinary execute. ExecuteSingletonOutput
+							  runs the statement itself, so it must not also be run
+							  below or an INSERT would happen twice. }
+							if ExecuteSingletonOutput(qrySQLStatement.SQL.Text) then
+							begin
+								MarathonIDEInstance.RecordToScript(qrySQLStatement.SQL.Text, GetActiveConnectionName);
+								pgSQLStatement.ActivePage := tsResultsView;
+								pgSQLStatementChange(pgSQLStatement);
+							end
+							else
+							begin
+								qrySQLStatement.ExecSQL;
+								MarathonIDEInstance.RecordToScript(qrySQLStatement.SQL.Text, GetActiveConnectionName);
+							end;
 							stsSQLStatement.Panels[3].Text := '      Statement Execution Successful';
 							imgSuccess.Picture.Bitmap.LoadFromResourceName(HInstance, 'SQL_ED_OK');
 						end;
@@ -2033,7 +2094,8 @@ end;
 
 function TfrmSQLForm.CanExport: Boolean;
 begin
-	Result := (pgSQLStatement.ActivePage = tsResultsView) and (not (qrySQLStatement.EOF and qrySQLStatement.BOF));
+	Result := (pgSQLStatement.ActivePage = tsResultsView) and
+		(not (ActiveResultSet.EOF and ActiveResultSet.BOF));
 end;
 
 procedure TfrmSQLForm.DoExport;
@@ -2048,8 +2110,8 @@ begin
 	inherited;
 	F := TfrmSaveFileFormat.Create(Self);
 	try
-			for idx := 0 to qrySQLStatement.Fields.Count - 1 do
-				  f.chklistColumns.Items.Add(qrySQLStatement.Fields[idx].FieldName);
+			for idx := 0 to ActiveResultSet.Fields.Count - 1 do
+				  f.chklistColumns.Items.Add(ActiveResultSet.Fields[idx].FieldName);
 
 			// Default all to true
 			for Idx := 0 to f.chkListColumns.Items.Count - 1 do
@@ -2091,7 +2153,7 @@ begin
 
 					FName := F.edFileName.Text;
 
-					ExportGrid(Ex, qrySQLStatement, FList, TableName, FName);
+					ExportGrid(Ex, ActiveResultSet, FList, TableName, FName);
 				finally
 					FList.Free;
 				end;

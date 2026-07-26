@@ -16,8 +16,8 @@ program ibx_smoke_test;
 {$MODE Delphi}
 
 uses
-  SysUtils, Classes, IBDatabase, IBQuery, IBSQL, DDLExtractor, MarathonProjectCacheTypes,
-  ScriptAs;
+  SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
+  MarathonProjectCacheTypes, ScriptAs, SingletonQuery;
 
 var
   DB: TIBDatabase;
@@ -31,6 +31,7 @@ var
   EngineMajor: Integer;
   Ctx: TScriptAsContext;
   Script: String;
+  Single: TBufDataset;
 
 { The generators end their statements the way a user would type them; the API
   takes one statement without the terminator. }
@@ -177,6 +178,11 @@ begin
     end;
     try
       Q.SQL.Text := 'drop package ibx_smoke_pkg';
+      Q.ExecSQL;
+    except
+    end;
+    try
+      Q.SQL.Text := 'drop procedure ibx_smoke_out';
       Q.ExecSQL;
     except
     end;
@@ -987,6 +993,158 @@ begin
       Script := ScriptAsAlter(Ctx, 'IBX_SMOKE_TEST', ctTable);
       RequireInDDL(Script, 'alter table', 'ALTER TABLE template');
       RequireInDDL(Script, 'Current columns', 'the template''s column inventory');
+
+      { Statements Firebird executes "with output" rather than through a
+        cursor. TIBQuery.Open returns nothing for these, so the SQL editor used
+        to execute them and silently drop what they returned. }
+      EnsureTransaction;
+      try
+        { Singleton INSERT ... RETURNING. }
+        Q.SQL.Text := 'delete from ibx_smoke_test where id = 4242';
+        Q.ExecSQL;
+        Single := ExecuteSingletonOutput(DB, Tr,
+          'insert into ibx_smoke_test (id, note) values (4242, ''returned'') returning id, note', nil);
+        if not Assigned(Single) then
+        begin
+          WriteLn('FAIL: singleton INSERT ... RETURNING produced no output row');
+          Halt(1);
+        end;
+        try
+          if Single.FieldByName('ID').AsString <> '4242' then
+          begin
+            WriteLn('FAIL: RETURNING gave ID=', Single.FieldByName('ID').AsString, ', expected 4242');
+            Halt(1);
+          end;
+          if Trim(Single.FieldByName('NOTE').AsString) <> 'returned' then
+          begin
+            WriteLn('FAIL: RETURNING gave NOTE=', Single.FieldByName('NOTE').AsString);
+            Halt(1);
+          end;
+          WriteLn('Singleton output OK (INSERT ... RETURNING): ID=',
+            Single.FieldByName('ID').AsString, ' NOTE=', Trim(Single.FieldByName('NOTE').AsString));
+        finally
+          Single.Free;
+        end;
+
+        { A statement with no output columns must come back nil, and - the part
+          that matters - must not have been executed, or the caller running it
+          itself would run it twice. }
+        EnsureTransaction;
+        Single := ExecuteSingletonOutput(DB, Tr,
+          'insert into ibx_smoke_test (id, note) values (4243, ''must not run'')', nil);
+        if Assigned(Single) then
+        begin
+          WriteLn('FAIL: a statement with no output columns returned a dataset');
+          Single.Free;
+          Halt(1);
+        end;
+        EnsureTransaction;
+        Q.SQL.Text := 'select count(*) from ibx_smoke_test where id = 4243';
+        Q.Open;
+        if Q.Fields[0].AsInteger <> 0 then
+        begin
+          WriteLn('FAIL: ExecuteSingletonOutput executed a statement it reported as having no output');
+          Halt(1);
+        end;
+        Q.Close;
+        WriteLn('Singleton output OK (no output columns: nil, and not executed)');
+
+        { EXECUTE PROCEDURE with output parameters takes the same path. }
+        EnsureTransaction;
+        Q.SQL.Text := 'create or alter procedure ibx_smoke_out (a integer) ' +
+                      'returns (b integer, c varchar(10)) as begin b = a * 2; c = ''ok''; end';
+        Q.ExecSQL;
+        Tr.Commit;
+        EnsureTransaction;
+        Single := ExecuteSingletonOutput(DB, Tr, 'execute procedure ibx_smoke_out(21)', nil);
+        if not Assigned(Single) then
+        begin
+          WriteLn('FAIL: EXECUTE PROCEDURE with output parameters produced no row');
+          Halt(1);
+        end;
+        try
+          if (Single.FieldByName('B').AsString <> '42') or
+             (Trim(Single.FieldByName('C').AsString) <> 'ok') then
+          begin
+            WriteLn('FAIL: EXECUTE PROCEDURE returned B=', Single.FieldByName('B').AsString,
+              ' C=', Single.FieldByName('C').AsString);
+            Halt(1);
+          end;
+          WriteLn('Singleton output OK (EXECUTE PROCEDURE): B=', Single.FieldByName('B').AsString,
+            ' C=', Trim(Single.FieldByName('C').AsString));
+        finally
+          Single.Free;
+        end;
+
+        { NULLs must stay NULL rather than becoming empty strings. }
+        EnsureTransaction;
+        Q.SQL.Text := 'delete from ibx_smoke_test where id = 4244';
+        Q.ExecSQL;
+        Single := ExecuteSingletonOutput(DB, Tr,
+          'insert into ibx_smoke_test (id, note) values (4244, null) returning id, note', nil);
+        if not Assigned(Single) then
+        begin
+          WriteLn('FAIL: RETURNING with a NULL column produced no row');
+          Halt(1);
+        end;
+        try
+          if not Single.FieldByName('NOTE').IsNull then
+          begin
+            WriteLn('FAIL: a NULL RETURNING column came back as non-NULL: "',
+              Single.FieldByName('NOTE').AsString, '"');
+            Halt(1);
+          end;
+        finally
+          Single.Free;
+        end;
+        WriteLn('Singleton output OK (NULL stays NULL)');
+
+        EnsureTransaction;
+        Q.SQL.Text := 'delete from ibx_smoke_test where id in (4242, 4244)';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: singleton-output handling raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
+      { Multi-row RETURNING is the case the roadmap asked about, and it needs
+        no special handling: Firebird gives it a real cursor and reports it as
+        SQLSelect, so the editor's ordinary Open path shows every row. Assert
+        that, so a future IBX bump that changes it is caught here. }
+      if EngineMajor >= 5 then
+      begin
+        EnsureTransaction;
+        try
+          Q.SQL.Text := 'update ibx_smoke_test set note = note returning id, note';
+          Q.Prepare;
+          if Q.StatementType <> SQLSelect then
+          begin
+            WriteLn('FAIL: multi-row RETURNING no longer reports SQLSelect - the SQL ' +
+                    'editor would stop showing its rows');
+            Halt(1);
+          end;
+          Q.Open;
+          Q.Close;
+          if Tr.Active then
+            Tr.Commit;
+          WriteLn('Multi-row RETURNING OK (reports SQLSelect, opens as a cursor)');
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: multi-row RETURNING raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+      end;
     finally
       Extractor.Free;
     end;
