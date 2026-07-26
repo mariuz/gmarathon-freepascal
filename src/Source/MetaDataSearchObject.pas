@@ -113,6 +113,9 @@ begin
     try
       Halted := False;
       DB := TIBDatabase.Create(nil);
+      { Credentials come from the connection being searched - see the note in
+        TMarathonCacheConnection.Create. }
+      DB.LoginPrompt := False;
       Xact := TIBTransaction.Create(nil);
       try
         Xact.DefaultDatabase := DB;

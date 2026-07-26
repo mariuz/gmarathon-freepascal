@@ -925,6 +925,32 @@ implementation
 
 uses Globals, MarathonIDE, Login, Crypt32;
 
+{ Reads a stored password, preferring the hex form this build writes and falling
+  back to the raw ciphertext older projects carry.
+
+  The raw form is why this exists: the cipher emits arbitrary bytes, XML forbids
+  most control characters, and a password containing one made saving the whole
+  project fail with "Illegal character". New projects therefore store hex under
+  a new attribute name, which also means an older build simply finds no password
+  rather than reading a corrupt one. }
+function ReadStoredPassword(Node: TDOMNode; const HexAttr, LegacyAttr: String): String;
+var
+  Attr: TDOMNode;
+begin
+  Result := '';
+  if not Assigned(Node) or not Assigned(Node.Attributes) then
+    Exit;
+  Attr := Node.Attributes.GetNamedItem(HexAttr);
+  if Assigned(Attr) then
+  begin
+    Result := DecryptFromHex(Attr.NodeValue, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+    Exit;
+  end;
+  Attr := Node.Attributes.GetNamedItem(LegacyAttr);
+  if Assigned(Attr) then
+    Result := Decrypt(Attr.NodeValue, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+end;
+
 function GetImageIndexForCacheType(CT: TGSSCacheType): Integer;
 begin
 	case CT of
@@ -1835,6 +1861,13 @@ begin
 	FImageIndex := 0;
 	FStatic := True;
 	FConnection := TIBDatabase.Create(nil);
+	{ Marathon asks for credentials itself - from the connection's properties,
+	  and through TfrmConnect when those do not work. Left at its default of
+	  True, IBX tries to raise a login dialog of its own before the connection
+	  is even attempted, and that dialog only exists in the GUI half of the
+	  package, so the attempt failed with "Default Login Dialog not found. Have
+	  you included ibexpress in your program uses list?" instead of connecting. }
+	FConnection.LoginPrompt := False;
 	FTransaction := TIBTransaction.Create(nil);
 	FTransaction.DefaultDatabase := FConnection;
 	FCacheType := ctConnection;
@@ -2159,7 +2192,8 @@ end;
 
 function TMarathonCacheConnection.GetEncPassword: String;
 begin
-	Result := Encrypt(FPassword, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+	{ Hex, not raw ciphertext - see ReadStoredPassword. }
+	Result := EncryptToHex(FPassword, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
 end;
 
 function TMarathonCacheConnection.GetSQLDialect: Integer;
@@ -3288,10 +3322,7 @@ begin
 								DBFileName := oConnection.Attributes.GetNamedItem('databasefilename').NodeValue;
 								ServerName := oConnection.Attributes.GetNamedItem('servername').NodeValue;
 								UserName := oConnection.Attributes.GetNamedItem('username').NodeValue;
-								if Assigned(oConnection.Attributes.GetNamedItem('password')) then
-									Password := Decrypt(oConnection.Attributes.GetNamedItem('password').NodeValue, E_START_KEY, E_MULT_KEY, E_ADD_KEY)
-								else
-									Password := '';
+								Password := ReadStoredPassword(oConnection, 'passwordhex', 'password');
 								if Assigned(oConnection.Attributes.GetNamedItem('rememberpassword')) then
 									RememberPassword := oConnection.Attributes.GetNamedItem('rememberpassword').NodeValue = '1'
 								else
@@ -3339,7 +3370,7 @@ begin
 								UserName := oServer.Attributes.GetNamedItem('username').NodeValue;
 								RememberPassword := oServer.Attributes.GetNamedItem('rememberpassword').NodeValue = '1';
 								if RememberPassword then
-									Password := Decrypt(oServer.Attributes.GetNamedItem('password').NodeValue, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+									Password := ReadStoredPassword(oServer, 'passwordhex', 'password');
 								if oServer.Attributes.GetNamedItem('local').NodeValue = '1' then
 									Local := True
 								else
@@ -3352,7 +3383,11 @@ begin
 								SecureDatabaseUserName := oServer.Attributes.GetNamedItem('securedatabaseusername').NodeValue;
 								SecureDatabaseRememberPassword := oServer.Attributes.GetNamedItem('securedatabaserememberpassword').NodeValue = '1';
 								if SecureDatabaseRememberPassword then
-									SecureDatabasePassword := Decrypt(oServer.Attributes.GetNamedItem('password').NodeValue, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+									{ Read from its own attribute. This used to read 'password',
+									  so a server's own password was loaded as the security
+									  database's. }
+									SecureDatabasePassword := ReadStoredPassword(oServer,
+										'securedatabasepasswordhex', 'securedatabasepassword');
 							end;
 						end;
 						oServer := oServer.NextSibling;
@@ -3614,7 +3649,7 @@ begin
 					TDOMElement(oConnection).SetAttribute('rememberpassword', '0');
 
 				if Cache.Connections[Idx].RememberPassword then
-					TDOMElement(oConnection).SetAttribute('password', Cache.Connections[Idx].EncPassword);
+					TDOMElement(oConnection).SetAttribute('passwordhex', Cache.Connections[Idx].EncPassword);
 				TDOMElement(oConnection).SetAttribute('charset', Cache.Connections[Idx].LangDriver);
 				TDOMElement(oConnection).SetAttribute('sqlrole', Cache.Connections[Idx].SQLRole);
 				TDOMElement(oConnection).SetAttribute('environment',
@@ -3637,7 +3672,7 @@ begin
 				else
 					TDOMElement(oServer).SetAttribute('rememberpassword', '0');
 				if Cache.Servers[Idx].RememberPassword then
-					TDOMElement(oServer).SetAttribute('password', Cache.Servers[Idx].EncPassword);
+					TDOMElement(oServer).SetAttribute('passwordhex', Cache.Servers[Idx].EncPassword);
 				if Cache.Servers[Idx].Local then
 					TDOMElement(oServer).SetAttribute('local', '1')
 				else
@@ -3653,7 +3688,7 @@ begin
 				else
 					TDOMElement(oServer).SetAttribute('securedatabaserememberpassword', '0');
 				if Cache.Servers[Idx].SecureDatabaseRememberPassword then
-					TDOMElement(oServer).SetAttribute('securedatabasepassword', Cache.Servers[Idx].SecureDatabaseEncPassword);
+					TDOMElement(oServer).SetAttribute('securedatabasepasswordhex', Cache.Servers[Idx].SecureDatabaseEncPassword);
 
 				oServers.AppendChild(oServer);
 			end;
@@ -3750,7 +3785,13 @@ begin
 			WriteXMLFile(Doc, FileName);
 		except
 			on E: Exception do
-				raise Exception.Create('Unable to save project.');
+				{ The original message used to be discarded and replaced with
+				  "Unable to save project.", which says nothing about whether the
+				  path is wrong, the disk is full, or the document could not be
+				  built - and leaves nothing to act on. Keep what actually
+				  failed. }
+				raise Exception.Create('Unable to save project ' + FileName + ':' +
+					#13#10#13#10 + E.ClassName + ': ' + E.Message);
 		end;
 	finally
 		Doc.Free;
@@ -5108,12 +5149,13 @@ end;
 
 function TMarathonCacheServer.GetEncPassword: String;
 begin
-	Result := Encrypt(FPassword, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+	{ Hex, as for a connection - see ReadStoredPassword. }
+	Result := EncryptToHex(FPassword, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
 end;
 
 function TMarathonCacheServer.GetSecureDatabaseEncPassword: String;
 begin
-	Result := Encrypt(FSecureDatabasePassword, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
+	Result := EncryptToHex(FSecureDatabasePassword, E_START_KEY, E_MULT_KEY, E_ADD_KEY);
 end;
 
 function TMarathonCacheServer.IsIB5: Boolean;

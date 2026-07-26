@@ -100,6 +100,8 @@ begin
   inherited Initialize;
   FExtractor := TDDLExtractor.Create(nil);
   FDatabase := TIBDatabase.Create(nil);
+  { The caller supplies the credentials; see TMarathonCacheConnection.Create. }
+  FDatabase.LoginPrompt := False;
   FDatabase.LoginPrompt := False;
   FTransaction := TIBTransaction.Create(nil);
   FDatabase.DefaultTransaction := FTransaction;

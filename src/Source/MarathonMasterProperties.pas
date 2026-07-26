@@ -304,10 +304,18 @@ begin
 	for Idx := 0 to pgProperties.PageCount - 1 do
 		pgProperties.Pages[Idx].TabVisible := False;
 
+	{ Making a page's tab visible does not make it the active one, and the .lfm
+	  stores ActivePage as tsConnection. So every dialog except the connection
+	  ones drew the right tab over the wrong - and hidden - page, which is to
+	  say over nothing: New Project and New Server both opened completely empty.
+	  The connection dialogs only ever worked because tsConnection is where
+	  ActivePage already pointed. Set it explicitly, and before ActiveControl,
+	  since focusing a control on an inactive page does not stick. }
 	case FDialogType of
 		ptNewServer, ptModifyServer:
 			begin
 				tsServer.TabVisible := True;
+				pgProperties.ActivePage := tsServer;
 				ActiveControl := edServerName;
 				rbServerLocal.OnClick(rbServerLocal);
 			end;
@@ -315,6 +323,7 @@ begin
 		ptNewConnection, ptModifyConnection:
 			begin
 				tsConnection.TabVisible := True;
+				pgProperties.ActivePage := tsConnection;
 				ActiveControl := edConnectionName;
 				cmbCharSet.ItemIndex := 0;
 				// Fill all actual registered server names
@@ -326,6 +335,7 @@ begin
 		ptNewProject, ptModifyProject:
 			begin
 				tsProject.TabVisible := True;
+				pgProperties.ActivePage := tsProject;
 				HelpContext := IDH_Project_Properties;
 				GetCharSetNames(cmbEditorEncoding.Items);
 				ActiveControl := edProjectName;

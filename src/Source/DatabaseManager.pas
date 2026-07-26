@@ -507,7 +507,16 @@ begin
 	begin
 		Screen.Cursor := crHourGlass;
 
-		tscObj := TMarathonCacheBaseNode(TMarathonTreeNode(Node.Data).Data);
+		{ OnChange fires with no node at all when the selection is cleared, which
+		  happens whenever the tree is rebuilt or a node is deleted, and it fires
+		  for nodes carrying no cache object. Both were dereferenced here before
+		  anything checked them - a segfault, confirmed under gdb with Node nil.
+		  The guard further down the same routine shows nil was expected; it just
+		  came too late to help. }
+		if (Node = nil) or (Node.Data = nil) then
+			tscObj := nil
+		else
+			tscObj := TMarathonCacheBaseNode(TMarathonTreeNode(Node.Data).Data);
 		ShowRoutineSignature(tscObj);
 		if Assigned(tscObj) then
 		begin
@@ -601,8 +610,14 @@ begin
 		begin
       tvDatabase.Items.BeginUpdate;
       try
+         { Same shape as the caption above: tnvNode.data was read before
+           anything established tnvNode was there. A tree node without a cache
+           node behind it is not an error, it is just nothing to expand. }
          tnvNode := TMarathonTreeNode(Node.Data);
-         tscObj := TMarathonCacheBaseNode(tnvNode.data);
+         if Assigned(tnvNode) then
+           tscObj := TMarathonCacheBaseNode(tnvNode.data)
+         else
+           tscObj := nil;
          if assigned(tscObj) then
          begin
            if not tscObj.Expanded then
@@ -613,7 +628,15 @@ begin
              wtnvNode := tnvNode.GetFirstChild;
              while wtnvNode <> nil do
              begin
-               WNode := tvDatabase.Items.AddChild(Node, TMarathonCacheBaseNode(wtnvNode.data).Caption);
+               { The caption used to be read straight off wtnvNode.Data, three
+                 lines above the Assigned check that guards the image indexes -
+                 so a child carrying no cache object crashed here rather than
+                 being skipped by the test already written for it. }
+               if Assigned(wtnvNode.Data) then
+                 WNode := tvDatabase.Items.AddChild(Node,
+                   TMarathonCacheBaseNode(wtnvNode.data).Caption)
+               else
+                 WNode := tvDatabase.Items.AddChild(Node, '');
                WNode.Data := wtnvNode;
                WNode.HasChildren := true;
                WNode.Expanded := false;
