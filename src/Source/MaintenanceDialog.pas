@@ -5,7 +5,7 @@ unit MaintenanceDialog;
 interface
 
 uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF}
-	SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, CheckLst,
+	SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, Spin, ExtCtrls, CheckLst,
 	DB, IBDatabase, IBQuery, IBXServices;
 
 type
@@ -32,6 +32,8 @@ type
 		edBackupFile: TEdit;
 		btnBrowseBackup: TButton;
 		chkBackupMetadataOnly: TCheckBox;
+		lblParallelWorkers: TLabel;
+		edParallelWorkers: TSpinEdit;
 		btnBackup: TButton;
 		dlgSaveBackup: TSaveDialog;
 		tsRestore: TTabSheet;
@@ -299,6 +301,11 @@ begin
 			svcBackup.Options := [MetadataOnly]
 		else
 			svcBackup.Options := [];
+		{ Firebird 5 and later; the service only sends the parameter when the
+		  server can take it, so an older server simply backs up as before. }
+		svcBackup.ParallelWorkers := edParallelWorkers.Value;
+		if edParallelWorkers.Value > 1 then
+			Log(Format('Requesting %d parallel workers', [edParallelWorkers.Value]));
 		Log('Backup started: ' + edBackupFile.Text);
 		svcBackup.BackupToFile(edBackupFile.Text, BytesWritten);
 		Log(Format('Backup complete: %d bytes written to %s', [BytesWritten, edBackupFile.Text]));

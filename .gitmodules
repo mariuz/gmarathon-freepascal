@@ -1,7 +1,8 @@
 [submodule "lib/ibx4lazarus"]
 	path = lib/ibx4lazarus
-	url = https://github.com/MWASoftware/ibx4lazarus.git
+	url = https://github.com/mariuz/ibx4lazarus.git
+	branch = add-parallel-workers
 [submodule "lib/fbintf"]
 	path = lib/fbintf
 	url = https://github.com/mariuz/fbintf.git
-	branch = fix-use-after-free-in-transaction-end
+	branch = marathon-integration

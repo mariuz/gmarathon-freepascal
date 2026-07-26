@@ -1,7 +1,7 @@
 From 16e49b4633c3e04aec673714e821b1e3444992ba Mon Sep 17 00:00:00 2001
 From: Popa Adrian Marius <mapopa@gmail.com>
 Date: Sun, 26 Jul 2026 20:53:12 +0300
-Subject: [PATCH] Hold a reference to the transaction while ending it
+Subject: [PATCH 1/2] Hold a reference to the transaction while ending it
 
 Reading a WITH TIME ZONE column and then disconnecting raises
 EObjectCheck: Object reference is Nil from inside
@@ -53,6 +53,51 @@ index 626803b..e30a5d4 100644
    if InTransaction and not FForeignHandle then
    begin
      for i := 0 to InterfaceCount - 1 do
+-- 
+2.43.0
+
+
+From 5cd92a426a932ded4fe249db6f7162665e3df071 Mon Sep 17 00:00:00 2001
+From: Popa Adrian Marius <mapopa@gmail.com>
+Date: Sun, 26 Jul 2026 21:31:23 +0300
+Subject: [PATCH 2/2] Add the Firebird 5 parallel workers service parameter
+
+isc_spb_bkp_parallel_workers (21) and isc_spb_res_parallel_workers,
+which is the same code, are what gbak -par passes to run a backup or
+restore with several workers. They are in Firebird's own
+firebird/impl/consts_pub.h but not in this copy, which predates
+Firebird 5, so a caller cannot request parallel workers at all.
+
+Values taken from the shipped Firebird 6.0.0 header. Verified by sending
+the parameter through a backup service against a live Firebird 6 server:
+the server accepts it, and the resulting file restores to a working
+database.
+---
+ client/include/consts_pub.inc | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/client/include/consts_pub.inc b/client/include/consts_pub.inc
+index 4d97b22..b6dc956 100644
+--- a/client/include/consts_pub.inc
++++ b/client/include/consts_pub.inc
+@@ -421,6 +421,9 @@
+     isc_spb_bkp_skip_data = 8;    
+     isc_spb_bkp_stat = 15;    
+     isc_spb_bkp_keyholder = 16;    
++    {Firebird 5: number of parallel workers for backup and restore. Values
++     from firebird/impl/consts_pub.h.}
++    isc_spb_bkp_parallel_workers = 21;    
+     isc_spb_bkp_keyname = 17;    
+     isc_spb_bkp_crypt = 18;    
+     isc_spb_bkp_include_data = 19;    
+@@ -532,6 +535,7 @@
+     isc_spb_res_fix_fss_data = 13;    
+     isc_spb_res_fix_fss_metadata = 14;    
+     isc_spb_res_keyholder = isc_spb_bkp_keyholder;    
++    isc_spb_res_parallel_workers = isc_spb_bkp_parallel_workers;    
+     isc_spb_res_keyname = isc_spb_bkp_keyname;    
+     isc_spb_res_crypt = isc_spb_bkp_crypt;    
+     isc_spb_res_stat = isc_spb_bkp_stat;    
 -- 
 2.43.0
 

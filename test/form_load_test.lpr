@@ -21,7 +21,7 @@ uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics,
   GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB,
-  EditorPackage, ProfilerWindow,
+  EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
   BaseDocumentForm, BlobViewer, CodeSnippets, CompileDBObject,
@@ -714,6 +714,26 @@ begin
   end;
 end;
 
+{ The parallel worker control on the Maintenance dialog. Firebird 5 lets a
+  backup or restore use several workers; the service only sends the parameter
+  when the server can take it, so the default has to be the single-worker
+  behaviour an older server expects. }
+procedure CheckMaintenanceParallelWorkers;
+var
+  F: TfrmMaintenance;
+begin
+  WriteLn('Maintenance parallel workers:');
+  F := TfrmMaintenance.Create(nil);
+  try
+    Check(Assigned(F.edParallelWorkers), 'the worker count control exists');
+    Check(F.edParallelWorkers.Value = 1, 'it defaults to one worker');
+    Check(F.edParallelWorkers.MinValue = 1, 'it cannot be set below one');
+    Check(F.edParallelWorkers.MaxValue > 1, 'it allows more than one');
+  finally
+    F.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -829,6 +849,7 @@ begin
   CheckPackageEditor;
   CheckNodeOperations;
   CheckProfilerWindow;
+  CheckMaintenanceParallelWorkers;
 
   if Failures > 0 then
   begin

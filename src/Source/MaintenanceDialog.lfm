@@ -181,13 +181,31 @@ object frmMaintenance: TfrmMaintenance
         Caption = 'Metadata only (no data)'
         TabOrder = 2
       end
+      object lblParallelWorkers: TLabel
+        Left = 232
+        Top = 61
+        Width = 88
+        Height = 13
+        Caption = 'Parallel &workers:'
+        FocusControl = edParallelWorkers
+      end
+      object edParallelWorkers: TSpinEdit
+        Left = 328
+        Top = 57
+        Width = 60
+        Height = 23
+        MaxValue = 64
+        MinValue = 1
+        TabOrder = 3
+        Value = 1
+      end
       object btnBackup: TButton
         Left = 8
         Top = 88
         Width = 100
         Height = 25
         Caption = '&Backup'
-        TabOrder = 3
+        TabOrder = 4
         OnClick = btnBackupClick
       end
     end
