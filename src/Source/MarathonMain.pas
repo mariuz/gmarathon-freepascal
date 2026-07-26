@@ -762,7 +762,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -934,6 +934,9 @@ var
 
 begin
 	dmMenus.synHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, REG_SETTINGS_HIGHLIGHTING);
+	{ After LoadFromRegistry, not before: it restores the attribute colours that
+	  ApplyFirebirdKeywords copies from. }
+	ApplyFirebirdKeywords(dmMenus.synHighlighter);
 	I := TRegistry.Create;
 	try
 		// Create registry entries for the shell extension

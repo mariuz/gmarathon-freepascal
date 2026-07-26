@@ -54,6 +54,14 @@ jobs:
       - name: Run IBX smoke test against live Firebird
         run: ./test/ibx_smoke_test "localhost:/tmp/ibx_smoke_test.fdb" SYSDBA "${FIREBIRD_SYSDBA_PASSWORD}"
 
+      # Needs no database, but does need the LCL linked - the nogui widgetset
+      # lets it run without a display.
+      - name: Build keyword highlighting test
+        run: lazbuild --ws=nogui test/keyword_test.lpi
+
+      - name: Run keyword highlighting test
+        run: ./test/keyword_test
+
   # Windows is compile-only (no Firebird server / smoke test): its purpose is
   # to type-check the {$IFDEF WINDOWS} code paths, which are invisible to the
   # Linux build and so went unchecked for the whole life of this port - they

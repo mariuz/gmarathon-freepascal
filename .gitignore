@@ -14,6 +14,7 @@ packagefiles.xml
 # Build outputs
 src/Source/marathon
 test/ibx_smoke_test
+test/keyword_test
 test/lib/
 
 # Local toolchain installers (fpc/lazarus .deb packages etc.)

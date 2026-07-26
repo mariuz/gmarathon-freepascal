@@ -176,7 +176,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem;
+uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem, FirebirdKeywords;
 
 {$R *.lfm}
 
@@ -226,6 +226,8 @@ begin
 
 	// Editor
 	synOptions.LoadFromRegistry(HKEY_CURRENT_USER, REG_SETTINGS_HIGHLIGHTING);
+	{ So the preview in this dialog highlights the same words the editors do. }
+	ApplyFirebirdKeywords(synOptions);
 
 	// Editor Display
 	FFonts := TStringList.Create;
