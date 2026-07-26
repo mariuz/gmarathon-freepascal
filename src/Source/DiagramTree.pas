@@ -2,7 +2,7 @@ unit DiagramTree;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ImgList, ComCtrls, interbaseexplainplan;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ExtCtrls, ImgList, ComCtrls, InterbaseExplainPlan;
 
 type
   TLayout = (loVertical, loHorizontal);

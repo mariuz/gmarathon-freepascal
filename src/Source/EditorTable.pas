@@ -267,7 +267,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonOptions, DropObject, SaveFileFormat, EditorColumn, CompileDBObject, EditorConstraint, EditorIndex, BlobViewer, ReOrderColumns, EditorGrant, Math;
+uses Globals, HelpMap, MarathonOptions, DropObject, SaveFileFormat, EditorColumn, CompileDBObject, EditorConstraint, EditorIndex, BlobViewer, ReorderColumns, EditorGrant, Math;
 
 {$R *.lfm}
 

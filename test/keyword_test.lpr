@@ -7,7 +7,14 @@ program keyword_test;
   Needs no database. It does need the LCL linked (SynEdit's attributes are
   built on Graphics), but not a display: build it with the nogui widgetset,
     lazbuild --ws=nogui test/keyword_test.lpi
-  and it runs headlessly, which is how CI runs it. }
+  and it runs headlessly, which is how CI runs it.
+
+  The limit of that trick, so nobody spends an afternoon rediscovering it:
+  nogui only supports LCL classes that draw nothing. TSynSQLSyn qualifies -
+  it is a non-visual component. Forms do not. Under nogui even a bare
+  TForm.Create(nil) raises an access violation, as does TDBGrid, so .lfm
+  loading and form construction cannot be tested this way; that needs a real
+  widgetset and a display (Xvfb, say). }
 
 {$MODE Delphi}
 
