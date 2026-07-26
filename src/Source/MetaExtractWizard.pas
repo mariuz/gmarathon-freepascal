@@ -93,6 +93,7 @@ type
 		procedure SetWrapAt(Value: Integer);
 		procedure RunObjectQuery(LB: TCheckListBox; const SQL, FieldName, ExcludePrefix: String);
 		function FunctionListSQL: String;
+		function ProcedureListSQL: String;
 		function PackagesSupported: Boolean;
 		procedure PopulateObjectLists;
 		function GetChecklistFor(CacheType: TGSSCacheType): TCheckListBox;
@@ -319,6 +320,17 @@ begin
   Result := Result + ' order by rdb$function_name asc';
 end;
 
+{ The same exclusion for packaged procedures, which cannot be created or
+  dropped standalone either. }
+function TfrmMetaExtractWizard.ProcedureListSQL: String;
+begin
+  Result := 'select rdb$procedure_name from rdb$procedures where ' +
+            '((rdb$system_flag = 0) or (rdb$system_flag is null))';
+  if PackagesSupported then
+    Result := Result + ' and rdb$package_name is null';
+  Result := Result + ' order by rdb$procedure_name asc';
+end;
+
 procedure TfrmMetaExtractWizard.PopulateObjectLists;
 begin
 	{ Same RDB$*/CHECK_* filtering as DatabaseManager.pas's tree "header" node
@@ -335,7 +347,7 @@ begin
 		'select rdb$relation_name from rdb$relations where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and rdb$view_source is not null order by rdb$relation_name asc',
 		'rdb$relation_name', '');
 	RunObjectQuery(lstProcedures,
-		'select rdb$procedure_name from rdb$procedures where ((rdb$system_flag = 0) or (rdb$system_flag is null)) order by rdb$procedure_name asc',
+		ProcedureListSQL,
 		'rdb$procedure_name', '');
 	RunObjectQuery(lstTriggers,
 		'select rdb$trigger_name from rdb$triggers where ((rdb$system_flag = 0) or (rdb$system_flag is null)) and (rdb$trigger_source is not null) order by rdb$trigger_name asc',

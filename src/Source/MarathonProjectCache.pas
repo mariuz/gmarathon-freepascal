@@ -2156,7 +2156,12 @@ begin
       TIBTransaction(Q.Transaction).Commit;
     TIBTransaction(Q.Transaction).StartTransaction;
     try
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
+			{ Without the system flag this returns every MON$ and SEC$ relation as
+			  well as the user's tables - they are ordinary relations that simply
+			  happen to be flagged system, and the RDB$ name check below does not
+			  catch them. This list feeds the New Trigger dialog's table
+			  dropdown, where they have no business appearing. }
+			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is null order by RDB$RELATION_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -2191,7 +2196,7 @@ begin
 			TIBTransaction(Q.Transaction).Commit;
 		TIBTransaction(Q.Transaction).StartTransaction;
 		try
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc');
+			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null order by RDB$RELATION_NAME asc');
 			Q.Open;
 			while not Q.EOF do
 			begin
@@ -4339,7 +4344,14 @@ begin
     TIBTransaction(Q.Transaction).StartTransaction;
     try
 
-			Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PROCEDURE_NAME asc;');
+			{ Exclude packaged procedures for the same reason as packaged
+			  functions: they belong to their package and cannot be created or
+			  dropped standalone. RDB$PACKAGE_NAME only exists from Firebird 3
+			  (ODS 12) on. }
+			if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
+				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null order by RDB$PROCEDURE_NAME asc;')
+			else
+				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) order by RDB$PROCEDURE_NAME asc;');
 			Q.Open;
 			while not Q.EOF do
 			begin

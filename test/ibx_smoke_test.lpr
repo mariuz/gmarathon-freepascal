@@ -1483,6 +1483,90 @@ begin
         end;
       end;
 
+      { The object-list queries behind the tree and the New Trigger dialog. Two
+        gaps were found by running them against a live server rather than
+        reading them: the table and view lists had no system-object filter, so
+        they returned every MON$ and SEC$ relation - they are ordinary
+        relations that happen to be flagged system, which the RDB$ name check
+        does not catch - and the procedure list did not exclude packaged
+        procedures, though the function list already excluded packaged
+        functions. }
+      EnsureTransaction;
+      try
+        Q.SQL.Text := 'select count(*) from rdb$relations ' +
+          'where ((rdb$system_flag = 0) or (rdb$system_flag is null)) ' +
+          'and rdb$view_source is null ' +
+          'and rdb$relation_name starting with ''MON$''';
+        Q.Open;
+        if Q.Fields[0].AsInteger <> 0 then
+        begin
+          WriteLn('FAIL: the table list filter still admits MON$ relations');
+          Halt(1);
+        end;
+        Q.Close;
+        Q.Prepared := False;
+
+        { And the filter must not throw the baby out - the smoke test's own
+          table has to survive it. }
+        EnsureTransaction;
+        Q.SQL.Text := 'select count(*) from rdb$relations ' +
+          'where ((rdb$system_flag = 0) or (rdb$system_flag is null)) ' +
+          'and rdb$view_source is null ' +
+          'and rdb$relation_name = ''IBX_SMOKE_TEST''';
+        Q.Open;
+        if Q.Fields[0].AsInteger <> 1 then
+        begin
+          WriteLn('FAIL: the table list filter excludes an ordinary user table');
+          Halt(1);
+        end;
+        Q.Close;
+        Q.Prepared := False;
+
+        if EngineMajor >= 3 then
+        begin
+          { A packaged procedure must not appear at top level, and a standalone
+            one must. }
+          EnsureTransaction;
+          Q.SQL.Text := 'select count(*) from rdb$procedures ' +
+            'where ((rdb$system_flag = 0) or (rdb$system_flag is null)) ' +
+            'and rdb$package_name is null ' +
+            'and rdb$procedure_name = ''IBX_SMOKE_TEST_PROC''';
+          Q.Open;
+          if Q.Fields[0].AsInteger <> 1 then
+          begin
+            WriteLn('FAIL: a standalone procedure is missing from the procedure list');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+
+          EnsureTransaction;
+          Q.SQL.Text := 'select count(*) from rdb$procedures ' +
+            'where ((rdb$system_flag = 0) or (rdb$system_flag is null)) ' +
+            'and rdb$package_name is null ' +
+            'and rdb$package_name is distinct from null';
+          Q.Open;
+          if Q.Fields[0].AsInteger <> 0 then
+          begin
+            WriteLn('FAIL: the procedure filter is self-contradictory');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+        end;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('Object list filters OK (no MON$ relations, no packaged procedures)');
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: object list filter check raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
       { Encryption status. The obvious route - the raw fb_info_crypt_state
         information item - reaches the server and the item comes back, but this
         fbintf's parser does not classify that item code, so every accessor
