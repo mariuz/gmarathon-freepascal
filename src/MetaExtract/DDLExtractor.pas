@@ -294,6 +294,17 @@ end;
 function TDDLExtractor.Extract(ObjectType: TDDLObjectType; ObjectSubType : TDDLSubType;
   ObjectName: String): String;
 begin
+    { The transaction belongs to the caller and is shared with everything else
+      on that connection, so by the time an extract is asked for it has often
+      been committed by something unrelated - the object tree's own queries
+      commit, and so does saving an editor. IBX answers a query on a closed
+      transaction with "Transaction is not active" rather than opening one, so
+      the guard belongs here at the single entry point rather than in each of
+      the thirty-odd Extract* routines below. Same rule as ScriptAs.EnsureActive
+      and ProfilerQueries.EnsureActive. }
+    if Assigned(FTransaction) and not FTransaction.Active then
+      FTransaction.StartTransaction;
+
     Result := '';
     case ObjectType of
       ddlDomain :

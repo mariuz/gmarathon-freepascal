@@ -514,6 +514,8 @@ end;
 constructor TfrmBaseDocumentForm.Create(AOwner: TComponent);
 begin
   inherited;
+	{ After inherited, so the .lfm has been streamed in and the datasets exist. }
+	AllowAutoTransactions(Self);
 	MarathonIDEInstance.WindowList.Add(Self);
   MarathonIDEInstance.WindowListChanged := True;
 end;
