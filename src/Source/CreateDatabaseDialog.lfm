@@ -1,0 +1,166 @@
+object frmCreateDatabase: TfrmCreateDatabase
+  Left = 400
+  Top = 240
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Create Database'
+  ClientHeight = 288
+  ClientWidth = 470
+  Color = clBtnFace
+  OldCreateOrder = False
+  Position = poScreenCenter
+  OnCreate = FormCreate
+  object lblServer: TLabel
+    Left = 14
+    Top = 19
+    Width = 90
+    Height = 15
+    Caption = '&Server:'
+    FocusControl = edServer
+  end
+  object lblFile: TLabel
+    Left = 14
+    Top = 51
+    Width = 90
+    Height = 15
+    Caption = 'Database &file:'
+    FocusControl = edFile
+  end
+  object lblUser: TLabel
+    Left = 14
+    Top = 83
+    Width = 90
+    Height = 15
+    Caption = '&User name:'
+    FocusControl = edUser
+  end
+  object lblPassword: TLabel
+    Left = 14
+    Top = 115
+    Width = 90
+    Height = 15
+    Caption = '&Password:'
+    FocusControl = edPassword
+  end
+  object lblPageSize: TLabel
+    Left = 14
+    Top = 147
+    Width = 90
+    Height = 15
+    Caption = 'Page si&ze:'
+    FocusControl = cmbPageSize
+  end
+  object lblCharSet: TLabel
+    Left = 14
+    Top = 179
+    Width = 90
+    Height = 15
+    Caption = 'C&haracter set:'
+    FocusControl = cmbCharSet
+  end
+  object lblDialect: TLabel
+    Left = 14
+    Top = 211
+    Width = 90
+    Height = 15
+    Caption = 'SQL &dialect:'
+    FocusControl = cmbDialect
+  end
+  object edServer: TEdit
+    Left = 112
+    Top = 16
+    Width = 344
+    Height = 23
+    TabOrder = 0
+    TextHint = 'blank for a local file'
+  end
+  object edFile: TEdit
+    Left = 112
+    Top = 48
+    Width = 262
+    Height = 23
+    TabOrder = 1
+  end
+  object btnBrowse: TButton
+    Left = 381
+    Top = 47
+    Width = 75
+    Height = 25
+    Caption = 'B&rowse...'
+    TabOrder = 2
+    OnClick = btnBrowseClick
+  end
+  object edUser: TEdit
+    Left = 112
+    Top = 80
+    Width = 180
+    Height = 23
+    TabOrder = 3
+  end
+  object edPassword: TEdit
+    Left = 112
+    Top = 112
+    Width = 180
+    Height = 23
+    EchoMode = emPassword
+    PasswordChar = '*'
+    TabOrder = 4
+  end
+  object cmbPageSize: TComboBox
+    Left = 112
+    Top = 144
+    Width = 120
+    Height = 23
+    Style = csDropDownList
+    TabOrder = 5
+  end
+  object cmbCharSet: TComboBox
+    Left = 112
+    Top = 176
+    Width = 180
+    Height = 23
+    TabOrder = 6
+  end
+  object cmbDialect: TComboBox
+    Left = 112
+    Top = 208
+    Width = 120
+    Height = 23
+    Style = csDropDownList
+    TabOrder = 7
+  end
+  object chkConnect: TCheckBox
+    Left = 112
+    Top = 240
+    Width = 344
+    Height = 19
+    Caption = 'Add a connection to this database afterwards'
+    Checked = True
+    State = cbChecked
+    TabOrder = 8
+  end
+  object btnOK: TButton
+    Left = 300
+    Top = 257
+    Width = 75
+    Height = 25
+    Caption = 'Create'
+    Default = True
+    TabOrder = 9
+    OnClick = btnOKClick
+  end
+  object btnCancel: TButton
+    Left = 381
+    Top = 257
+    Width = 75
+    Height = 25
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 10
+  end
+  object dlgSave: TSaveDialog
+    Left = 240
+    Top = 240
+  end
+end

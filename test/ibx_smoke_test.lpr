@@ -18,7 +18,7 @@ program ibx_smoke_test;
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  ProfilerQueries, SafeDisconnect, SchemaCompare, ibxscript;
+  ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, ibxscript;
 
 var
   DB: TIBDatabase;
@@ -144,6 +144,117 @@ begin
     WriteLn(DDLText);
     Halt(1);
   end;
+end;
+
+{ File > Create Database, minus the dialog. The wizard it replaces was a
+  Windows COM component that could not run here at all, so this is the first
+  time the feature has worked on this platform - which makes checking that the
+  options actually reach the database the whole point. }
+procedure TestCreateDatabase(const HostPrefix: String);
+var
+  Opts: TCreateDatabaseOptions;
+  Err: String;
+  Made: TIBDatabase;
+  MadeTr: TIBTransaction;
+  MadeQ: TIBQuery;
+  PageSize: Integer;
+  CharSet: String;
+const
+  Path = '/tmp/marathon_create_probe.fdb';
+begin
+  Opts.ServerName := Copy(HostPrefix, 1, Length(HostPrefix) - 1);
+  Opts.FileName := Path;
+  Opts.UserName := UserName;
+  Opts.Password := Password;
+  Opts.CharacterSet := 'WIN1252';
+  Opts.PageSize := 16384;
+  Opts.Dialect := 3;
+
+  if DatabaseConnectString(Opts) <> HostPrefix + Path then
+  begin
+    WriteLn('FAIL: connect string was "', DatabaseConnectString(Opts),
+      '", expected "', HostPrefix + Path, '"');
+    Halt(1);
+  end;
+
+  { Clear a leftover the same way the comparison test does - through the
+    server, since the file belongs to the account Firebird runs as. }
+  Made := TIBDatabase.Create(nil);
+  try
+    Made.DatabaseName := HostPrefix + Path;
+    Made.Params.Values['user_name'] := UserName;
+    Made.Params.Values['password'] := Password;
+    Made.LoginPrompt := False;
+    try
+      Made.Connected := True;
+      Made.DropDatabase;
+    except
+      on E: Exception do ;
+    end;
+  finally
+    Made.Free;
+  end;
+
+  if not CreateFirebirdDatabase(Opts, Err) then
+  begin
+    WriteLn('FAIL: could not create a database: ', Err);
+    Halt(1);
+  end;
+
+  { Refusing to overwrite is the one guard in this path that could otherwise
+    cost somebody a database, so it is checked rather than assumed. }
+  if CreateFirebirdDatabase(Opts, Err) then
+  begin
+    WriteLn('FAIL: creating over an existing database was allowed');
+    Halt(1);
+  end;
+
+  Made := TIBDatabase.Create(nil);
+  MadeTr := TIBTransaction.Create(nil);
+  MadeQ := TIBQuery.Create(nil);
+  try
+    Made.DatabaseName := HostPrefix + Path;
+    Made.Params.Values['user_name'] := UserName;
+    Made.Params.Values['password'] := Password;
+    Made.LoginPrompt := False;
+    MadeTr.DefaultDatabase := Made;
+    Made.DefaultTransaction := MadeTr;
+    Made.Connected := True;
+    MadeTr.StartTransaction;
+    MadeQ.Database := Made;
+    MadeQ.Transaction := MadeTr;
+    MadeQ.SQL.Text := 'select mon$page_size, mon$sql_dialect from mon$database';
+    MadeQ.Open;
+    PageSize := MadeQ.Fields[0].AsInteger;
+    MadeQ.Close;
+    MadeQ.SQL.Text := 'select rdb$character_set_name from rdb$database';
+    MadeQ.Open;
+    CharSet := Trim(MadeQ.Fields[0].AsString);
+    MadeQ.Close;
+    if MadeTr.Active then
+      MadeTr.Commit;
+    Made.DropDatabase;
+  finally
+    MadeQ.Free;
+    MadeTr.Free;
+    Made.Free;
+  end;
+
+  { Page size is checked against what was asked for, not merely for being
+    non-zero: Firebird silently clamps a size outside its range rather than
+    refusing it, so a wrong value here would otherwise pass unnoticed. }
+  if PageSize <> 16384 then
+  begin
+    WriteLn('FAIL: asked for a 16384-byte page, got ', PageSize);
+    Halt(1);
+  end;
+  if CharSet <> 'WIN1252' then
+  begin
+    WriteLn('FAIL: asked for WIN1252, the database default is ', CharSet);
+    Halt(1);
+  end;
+  WriteLn('Create Database OK (page size and character set as asked, ' +
+    'existing file refused)');
 end;
 
 { Schema DDL, round-tripped: extract it, drop the schema, run what was
@@ -2451,6 +2562,7 @@ begin
 
     { Left until last: it makes and drops databases of its own, so a failure
       earlier in the run is not hidden behind it. }
+    TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));
 

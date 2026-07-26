@@ -762,6 +762,12 @@
         <HasResources Value="True"/>
         <UnitName Value="SchemaCompareDialog"/>
       </Unit112>
+      <Unit113>
+        <Filename Value="CreateDatabaseDialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="CreateDatabaseDialog"/>
+      </Unit113>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

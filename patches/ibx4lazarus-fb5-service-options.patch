@@ -1,34 +1,29 @@
-From 2d98e88d0d41eefeb1c4f1c1f3108e809d4e1f74 Mon Sep 17 00:00:00 2001
-From: Popa Adrian Marius <mapopa@gmail.com>
-Date: Sun, 26 Jul 2026 21:33:18 +0300
-Subject: [PATCH 1/2] Allow a backup or restore to request parallel workers
-
-Firebird 5 can run a backup or restore with several workers, as
-gbak -par does, but there was no way to ask for it: TIBXBackupService
-and TIBXRestoreService build their service parameter block without it.
-
-Adds a published ParallelWorkers property to TIBXBackupRestoreService,
-the base both share - isc_spb_bkp_parallel_workers and
-isc_spb_res_parallel_workers are the same parameter code, so one
-property serves both directions.
-
-The parameter is only sent when it is greater than one and the server is
-Firebird 5 or later, so nothing changes for existing callers or older
-servers, which reject the parameter. Zero or one means the default
-single-threaded behaviour.
-
-Requires the isc_spb_bkp_parallel_workers constant, which fbintf does
-not currently define: MWASoftware/fbintf#8.
-
-Verified against a live Firebird 6.0.0 server: with one worker the
-parameter is not sent; with four it is, the server accepts it, and the
-resulting backup restores to a working database.
----
- runtime/nongui/IBXServices.pas | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
-
+diff --git a/runtime/nongui/IBDatabase.pas b/runtime/nongui/IBDatabase.pas
+index ab3ec71..aec2b01 100644
+--- a/runtime/nongui/IBDatabase.pas
++++ b/runtime/nongui/IBDatabase.pas
+@@ -2407,10 +2407,18 @@ begin
+     case DPBItem.getParamType of
+       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
+       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
+-      isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_page_size,
++      isc_dpb_lc_messages, isc_dpb_lc_ctype,
+       isc_dpb_sql_role_name:
+         DPBItem.SetAsString(ParamValue);
+ 
++      {isc_dpb_page_size is an integer parameter, not a string one. Writing it
++       with SetAsString stores the digits as text, which the clumplet writer
++       rejects outright once there are more than four of them - so
++       Params.Values['page_size'] := '16384' failed with "length of integer
++       exceeds 4 bytes (5)", and only the four-digit sizes appeared to work.}
++      isc_dpb_page_size:
++        DPBItem.SetAsInteger(StrToUInt(ParamValue));
++
+       isc_dpb_sql_dialect:
+       begin
+         if (ParamValue = '') or (ParamValue[1] = '3') then
 diff --git a/runtime/nongui/IBXServices.pas b/runtime/nongui/IBXServices.pas
-index 4f9b8c4..9a1371d 100644
+index 4f9b8c4..c9f7cf9 100644
 --- a/runtime/nongui/IBXServices.pas
 +++ b/runtime/nongui/IBXServices.pas
 @@ -341,11 +341,17 @@ end;
@@ -49,7 +44,33 @@ index 4f9b8c4..9a1371d 100644
   end;
  
   TBackupOption = (IgnoreChecksums, IgnoreLimbo, MetadataOnly, NoGarbageCollection,
-@@ -1928,6 +1934,14 @@ begin
+@@ -479,8 +485,10 @@ end;
+     property DatabaseName;
+   end;
+ 
++  {UpgradeODS is appended rather than inserted so that the existing values keep
++   their ordinals for anything already compiled against this unit.}
+   TValidateOption = (CheckDB, IgnoreChecksum, KillShadows, MendDB,
+-    SweepDB, ValidateDB, ValidateFull);
++    SweepDB, ValidateDB, ValidateFull, UpgradeODS);
+   TValidateOptions = set of TValidateOption;
+ 
+   { TIBXValidationService }
+@@ -1694,6 +1702,13 @@ begin
+      if not (MendDB in Options) then
+        param := param or isc_spb_rpr_validate_db;
+   end;
++  {Firebird 5 and later: upgrade the on-disk structure in place, as
++   gfix -upgrade does, rather than by backup and restore. Only sent to a
++   server that knows the option, since an older one rejects it.}
++  if (UpgradeODS in Options) then
++  with ServicesConnection do
++    if ServerVersionNo[1] >= 5 then
++      param := param or isc_spb_rpr_upgrade_db;
+   if param > 0 then
+    SRB.Add(isc_spb_options).AsInteger := param;
+ end;
+@@ -1928,6 +1943,14 @@ begin
    if Verbose then
      SRB.Add(isc_spb_verbose);
  
@@ -64,66 +85,3 @@ index 4f9b8c4..9a1371d 100644
    with ServicesConnection do
    {Firebird 2.5.5 and later}
    if (ServerVersionNo[1] < 2) or
--- 
-2.43.0
-
-
-From ee9027ccf7c6a67df0059976cef067d0751ac94e Mon Sep 17 00:00:00 2001
-From: Popa Adrian Marius <mapopa@gmail.com>
-Date: Sun, 26 Jul 2026 21:41:23 +0300
-Subject: [PATCH 2/2] Allow an in-place ODS upgrade through the validation
- service
-
-Firebird 5 can upgrade a database's on-disk structure in place, as
-gfix -upgrade does, instead of requiring a backup and restore. There was
-no way to ask for it: TIBXValidationService maps its options onto the
-isc_spb_rpr_* bits and had no entry for it.
-
-Adds UpgradeODS to TValidateOption, appended rather than inserted so the
-existing values keep their ordinals, and sends isc_spb_rpr_upgrade_db
-only when the server is Firebird 5 or later - an older one rejects the
-option.
-
-Requires the isc_spb_rpr_upgrade_db constant, which fbintf does not
-currently define.
-
-Verified against a live Firebird 6.0.0 server: the assembled repair
-parameter is 0x1000 and the request completes, leaving a database
-already at the server's format unchanged.
----
- runtime/nongui/IBXServices.pas | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
-
-diff --git a/runtime/nongui/IBXServices.pas b/runtime/nongui/IBXServices.pas
-index 9a1371d..c9f7cf9 100644
---- a/runtime/nongui/IBXServices.pas
-+++ b/runtime/nongui/IBXServices.pas
-@@ -485,8 +485,10 @@ end;
-     property DatabaseName;
-   end;
- 
-+  {UpgradeODS is appended rather than inserted so that the existing values keep
-+   their ordinals for anything already compiled against this unit.}
-   TValidateOption = (CheckDB, IgnoreChecksum, KillShadows, MendDB,
--    SweepDB, ValidateDB, ValidateFull);
-+    SweepDB, ValidateDB, ValidateFull, UpgradeODS);
-   TValidateOptions = set of TValidateOption;
- 
-   { TIBXValidationService }
-@@ -1700,6 +1702,13 @@ begin
-      if not (MendDB in Options) then
-        param := param or isc_spb_rpr_validate_db;
-   end;
-+  {Firebird 5 and later: upgrade the on-disk structure in place, as
-+   gfix -upgrade does, rather than by backup and restore. Only sent to a
-+   server that knows the option, since an older one rejects it.}
-+  if (UpgradeODS in Options) then
-+  with ServicesConnection do
-+    if ServerVersionNo[1] >= 5 then
-+      param := param or isc_spb_rpr_upgrade_db;
-   if param > 0 then
-    SRB.Add(isc_spb_options).AsInteger := param;
- end;
--- 
-2.43.0
-

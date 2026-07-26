@@ -33,7 +33,7 @@ uses
   EditorUDF, EditorView, GlobalPrintDialog, GlobalPrintingRoutines,
   InputDialog, Login, MaintenanceDialog, ManageBrowserItems,
   MarathonMasterProperties, MarathonOptions, MarathonToolsAPIDocForm, MetaExtractWizard,
-  SchemaCompareDialog,
+  SchemaCompareDialog, CreateDatabaseDialog,
   NewObjectDialog, NewTrigger, PluginsDialog, PrintPreviewForm,
   QBAppendTo, QBCriteria, QBLnkFrm, ReorderColumns,
   SQLAssistantDragAndDrop, SQLForm, SQLInsightItem, SQLTrace,
@@ -764,6 +764,35 @@ begin
   end;
 end;
 
+{ The Create Database dialog. The wizard it replaces could not run on this
+  platform at all, so the defaults it opens with are the whole user-facing
+  contract: a page size the server will honour, dialect 3, and a character set
+  that is not NONE. }
+procedure CheckCreateDatabaseDialog;
+var
+  F: TfrmCreateDatabase;
+begin
+  WriteLn('Create Database dialog:');
+  F := TfrmCreateDatabase.Create(nil);
+  try
+    Check(F.cmbPageSize.Items.Count > 0, 'page sizes are offered');
+    Check(F.cmbPageSize.Items.IndexOf('4096') < 0,
+      'no page size the server would silently clamp');
+    Check(F.Options.PageSize = 8192, 'the default page size is 8192');
+    Check(F.Options.Dialect = 3, 'the default dialect is 3');
+    Check(F.Options.CharacterSet = 'UTF8', 'the default character set is UTF8');
+    Check(F.Options.UserName = 'SYSDBA', 'the user name is pre-filled');
+    { Editable, because the database does not exist yet and so the server's
+      real character set list cannot be read to populate it. }
+    Check(F.cmbCharSet.Style <> csDropDownList,
+      'a character set outside the list can be typed');
+    Check(Assigned(F.btnOK.OnClick), 'Create is guarded by a handler');
+    Check(F.Options.FileName = '', 'no file name is assumed');
+  finally
+    F.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -827,6 +856,7 @@ begin
   TryConstruct(TfrmMarathonToolsDocForm, 'TfrmMarathonToolsDocForm');
   TryConstruct(TfrmMetaExtractWizard, 'TfrmMetaExtractWizard');
   TryConstruct(TfrmSchemaCompare, 'TfrmSchemaCompare');
+  TryConstruct(TfrmCreateDatabase, 'TfrmCreateDatabase');
   TryConstruct(TfrmNewObject, 'TfrmNewObject');
   TryConstruct(TfrmNewTrigger, 'TfrmNewTrigger');
   TryConstruct(TfrmPlugins, 'TfrmPlugins');
@@ -882,6 +912,7 @@ begin
   CheckProfilerWindow;
   CheckMaintenanceParallelWorkers;
   CheckSchemaCompareDialog;
+  CheckCreateDatabaseDialog;
 
   if Failures > 0 then
   begin

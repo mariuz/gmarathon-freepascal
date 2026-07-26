@@ -233,7 +233,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, TipOfTheDay, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -1279,11 +1279,56 @@ end;
 
 
 procedure TMarathonIDE.FileCreateDatabase;
+var
+	Dlg: TfrmCreateDatabase;
+	Opts: TCreateDatabaseOptions;
+	WantsConnection: Boolean;
+	Props: TfrmMasterProperties;
 begin
-  {$IFDEF WINDOWS}
-  { Windows COM-based database creation wizard - not available on FPC/Linux }
-  MessageDlg('Create Database wizard not available on this platform.', mtInformation, [mbOK], 0);
-  {$ENDIF}
+	{ The original wizard was a Windows COM component with a Delphi .dfm and no
+	  .lfm, so this whole body used to sit inside an IFDEF and the menu item did
+	  nothing at all on this platform - not even say so. TfrmCreateDatabase
+	  replaces it; the creation itself is IBX's, which needs none of the COM
+	  component. }
+	Dlg := TfrmCreateDatabase.Create(Self);
+	try
+		{ The dialog creates the database itself, so mrOK means the file exists -
+		  a failure leaves it open with the values still in it to correct. }
+		if Dlg.ShowModal <> mrOK then
+			Exit;
+		Opts := Dlg.Options;
+		WantsConnection := Dlg.WantsConnection;
+	finally
+		Dlg.Free;
+	end;
+
+	if not WantsConnection then
+	begin
+		MessageDlg('Created ' + DatabaseConnectString(Opts) + '.',
+			mtInformation, [mbOK], 0);
+		Exit;
+	end;
+
+	{ Registering the connection is left to the dialog that already does it,
+	  pre-filled from what was just created rather than reimplemented here. It
+	  is still shown rather than applied silently: it carries settings this one
+	  does not ask for - role, environment, whether to remember the password -
+	  and the user should see them before a connection is added. }
+	Props := TfrmMasterProperties.CreateNewConnection(Self);
+	try
+		Props.edDatabaseName.Text := Opts.FileName;
+		Props.cmbServerName.ItemIndex := Props.cmbServerName.Items.IndexOf(Opts.ServerName);
+		Props.edUserName.Text := Opts.UserName;
+		Props.edPassword.Text := Opts.Password;
+		Props.cmbCharSet.ItemIndex := Props.cmbCharSet.Items.IndexOf(Opts.CharacterSet);
+		if Opts.Dialect > 0 then
+			Props.cmbDialect.ItemIndex := Opts.Dialect - 1;
+		Props.edConnectionName.Text := ChangeFileExt(ExtractFileName(Opts.FileName), '');
+		if Props.ShowModal = mrOK then
+			UpdateScriptRecorderHost;
+	finally
+		Props.Free;
+	end;
 end;
 
 procedure TMarathonIDE.FilePrintSetup;

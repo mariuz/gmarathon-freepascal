@@ -20,6 +20,7 @@ git -C lib/ibx4lazarus apply ../../patches/ibx4lazarus-fb5-service-options.patch
 | Transaction use-after-free | [MWASoftware/fbintf#7](https://github.com/MWASoftware/fbintf/pull/7) | `fbintf: marathon-integration` |
 | Firebird 5 service parameter constants | [MWASoftware/fbintf#8](https://github.com/MWASoftware/fbintf/pull/8) | as above |
 | Parallel workers and ODS upgrade options | [MWASoftware/ibx4lazarus#23](https://github.com/MWASoftware/ibx4lazarus/pull/23) | `ibx4lazarus: add-parallel-workers` |
+| `page_size` written as a string, not an integer | [MWASoftware/ibx4lazarus#24](https://github.com/MWASoftware/ibx4lazarus/pull/24) | as above (own branch `fix-page-size-dpb-item`) |
 
 The fbintf fork keeps each change on its own branch so the two pull requests
 stay independent (`fix-use-after-free-in-transaction-end` and
@@ -118,3 +119,29 @@ one - so what is proven is the plumbing, not the upgrade itself.
   like a one-line fix but did not take effect in testing and the reason was not
   established, so it is deliberately not proposed. Marathon reads the same
   state from `MON$DATABASE.MON$CRYPT_STATE` instead.
+
+## ibx4lazarus: `page_size` written as a string, not an integer
+
+`isc_dpb_page_size` is an integer DPB parameter, but `TIBDataBase.GenerateDPB`
+grouped it with the string ones and wrote it with `SetAsString`. That stores the
+digits as text, and the clumplet writer refuses an integer parameter carrying
+more than four bytes, so
+
+```pascal
+DB.Params.Values['page_size'] := '16384';
+DB.CreateDatabase;
+```
+
+failed with `Invalid clumplet buffer structure: length of integer exceeds 4
+bytes (5)`.
+
+Of the page sizes Firebird supports, only the four-digit ones got through, and
+those worked by accident rather than by design: the create path reads the item
+back with `AsString` and pastes it into the `PAGE_SIZE` clause, so the text
+happened to round-trip. Setting it as an integer fixes the five-digit sizes and
+leaves the create path unchanged, because `getAsString` on an integer item
+returns `IntToStr` of its value.
+
+Marathon **does** depend on this one, unlike the transaction fix: the Create
+Database dialog offers 8192 / 16384 / 32768, and two of the three are five
+digits. On a stock ibx4lazarus those two fail with the clumplet error above.
