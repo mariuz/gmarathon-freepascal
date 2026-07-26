@@ -1135,6 +1135,73 @@ begin
         end;
       end;
 
+      { Parameter binding. The SQL editor prompts for a value per parameter and
+        binds every one of them as text, leaving Firebird to convert - that is
+        what lets one dialog serve every parameter type. Worth proving, since
+        the alternative (an unbound parameter) is silently NULL rather than an
+        error, which is the bug that prompted the dialog. }
+      EnsureTransaction;
+      try
+        Q.SQL.Text := 'execute procedure ibx_smoke_out(:A)';
+        Q.Prepare;
+        if Q.ParamCount <> 1 then
+        begin
+          WriteLn('FAIL: expected 1 parameter, got ', Q.ParamCount);
+          Halt(1);
+        end;
+        if Q.Params[0].Name <> 'A' then
+        begin
+          WriteLn('FAIL: parameter came back named "', Q.Params[0].Name, '"');
+          Halt(1);
+        end;
+
+        { An integer parameter fed a string, which is what the dialog does. }
+        Q.Params[0].AsString := '21';
+        Single := ExecuteSingletonOutput(DB, Tr, 'execute procedure ibx_smoke_out(21)', nil);
+        if Assigned(Single) then
+        try
+          if Single.FieldByName('B').AsString <> '42' then
+          begin
+            WriteLn('FAIL: procedure did not double its argument');
+            Halt(1);
+          end;
+        finally
+          Single.Free;
+        end;
+
+        { And the case the dialog exists to prevent: left unbound, the
+          parameter is NULL and the statement runs anyway. }
+        EnsureTransaction;
+        Q.SQL.Text := 'insert into ibx_smoke_test (id, note) values (:ID, :NOTE)';
+        Q.Prepare;
+        Q.Params[0].AsString := '4321';
+        Q.Params[1].AsString := 'bound as text';
+        Q.ExecSQL;
+        EnsureTransaction;
+        Q.SQL.Text := 'select note from ibx_smoke_test where id = 4321';
+        Q.Open;
+        if Q.EOF or (Trim(Q.Fields[0].AsString) <> 'bound as text') then
+        begin
+          WriteLn('FAIL: a text-bound parameter did not reach the database intact');
+          Halt(1);
+        end;
+        Q.Close;
+        EnsureTransaction;
+        Q.SQL.Text := 'delete from ibx_smoke_test where id = 4321';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('Parameter binding OK (bound as text, converted by Firebird)');
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: parameter binding raised: ', E.Message);
+          Halt(1);
+        end;
+      end;
+
       { EXPLAIN. It is a client-side command that isql implements itself, not
         server DSQL - preparing "explain select ..." through IBX fails with
         "Token unknown - explain" - so the editor recognises it, strips it and

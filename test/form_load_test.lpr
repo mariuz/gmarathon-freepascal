@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
   BaseDocumentForm, BlobViewer, CodeSnippets, CompileDBObject,
@@ -455,6 +455,54 @@ begin
   DeleteFile(FileName);
 end;
 
+{ The statement-parameter dialog. It is deliberately free of any IBX types -
+  it deals in names and strings and the caller does the binding - which is what
+  makes it checkable here without a database. }
+procedure CheckParameterDialog;
+var
+  Dlg: TfrmSQLParams;
+  Names: TStringList;
+begin
+  WriteLn('Statement parameter dialog:');
+  Names := TStringList.Create;
+  Dlg := TfrmSQLParams.Create(nil);
+  try
+    Names.Add('ID');
+    Names.Add('NOTE');
+    Dlg.SetParameters(Names);
+    Check(Dlg.ParameterCount = 2, 'one row per parameter');
+    Check(Dlg.grdParams.Cells[colParamName, 1] = 'ID', 'first parameter is named');
+    Check(Dlg.grdParams.Cells[colParamName, 2] = 'NOTE', 'second parameter is named');
+
+    { The default must be an empty value that is NOT null: a user who just
+      presses OK should get empty strings, not the silent NULLs this dialog
+      exists to prevent. }
+    Check(not Dlg.IsNullAt(0), 'parameters do not start as NULL');
+    Check(Dlg.ValueOf(0) = '', 'parameters start empty');
+
+    Dlg.SetValue(0, '42', False);
+    Dlg.SetValue(1, '', True);
+    Check(Dlg.ValueOf(0) = '42', 'a typed value reads back');
+    Check(not Dlg.IsNullAt(0), 'a typed value is not NULL');
+    Check(Dlg.IsNullAt(1), 'a ticked NULL reads back as NULL');
+
+    { Re-filling must not leave the previous run's values behind. }
+    Dlg.SetParameters(Names);
+    Check(Dlg.ValueOf(0) = '', 'values are cleared when the dialog is reused');
+    Check(not Dlg.IsNullAt(1), 'NULL flags are cleared when the dialog is reused');
+
+    Names.Add('EXTRA');
+    Dlg.SetParameters(Names);
+    Check(Dlg.ParameterCount = 3, 'the grid grows with the parameter list');
+    Names.Clear;
+    Dlg.SetParameters(Names);
+    Check(Dlg.ParameterCount = 0, 'a statement with no parameters shows no rows');
+  finally
+    Dlg.Free;
+    Names.Free;
+  end;
+end;
+
 { Some forms read a data file from the executable's directory on create and
   pop a modal error dialog when it is missing - which would hang this test with
   nobody to dismiss it. Give them empty files to find. }
@@ -566,6 +614,7 @@ begin
   CheckEnvironmentColours;
   CheckEnvironmentPersistence;
   CheckConnectionSwitcher;
+  CheckParameterDialog;
 
   if Failures > 0 then
   begin

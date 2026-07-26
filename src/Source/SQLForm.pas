@@ -206,6 +206,7 @@ type
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
 		procedure UpdateEnvironmentBand;
 		procedure FillConnectionList;
+		function BindStatementParameters: Boolean;
 		function ExecuteSingletonOutput(const SQLText: String): Boolean;
 		procedure ResetResultSet;
 		function ActiveResultSet: TDataSet;
@@ -351,7 +352,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog;
 
 {$R *.lfm}
 
@@ -1305,6 +1306,18 @@ begin
 					end;
 				end;
 
+				{ A statement with parameters would otherwise execute with every
+				  one of them unbound, which Firebird takes as NULL without
+				  complaint - so the generated "insert ... values (:ID)" and
+				  "execute procedure P(:A)" scripts appeared to run and did
+				  nothing useful. }
+				if not IsExplain then
+					if not BindStatementParameters then
+					begin
+						stsSQLStatement.Panels[3].Text := '      Statement Cancelled';
+						Exit;
+					end;
+
 				if IsExplain then
 				begin
 					edPlan.Text := qrySQLStatement.GetPlan;
@@ -2045,6 +2058,47 @@ begin
 		cmbConnection.ItemIndex := cmbConnection.Items.IndexOf(ConnectionName);
 	finally
 		FLoadingConnections := False;
+	end;
+end;
+
+{ Asks for a value for each parameter the prepared statement has, and binds
+  what comes back. True to go ahead, False if the user cancelled. A statement
+  with no parameters never prompts. }
+function TfrmSQLForm.BindStatementParameters: Boolean;
+var
+	Dlg: TfrmSQLParams;
+	Names: TStringList;
+	Idx: Integer;
+begin
+	Result := True;
+	if qrySQLStatement.ParamCount = 0 then
+		Exit;
+
+	Names := TStringList.Create;
+	try
+		for Idx := 0 to qrySQLStatement.ParamCount - 1 do
+			Names.Add(qrySQLStatement.Params[Idx].Name);
+
+		Dlg := TfrmSQLParams.Create(Self);
+		try
+			Dlg.SetParameters(Names);
+			if Dlg.ShowModal <> mrOK then
+			begin
+				Result := False;
+				Exit;
+			end;
+			for Idx := 0 to qrySQLStatement.ParamCount - 1 do
+				if Dlg.IsNullAt(Idx) then
+					qrySQLStatement.Params[Idx].Clear
+				else
+					{ Bound as text and left to Firebird to convert, which is what
+					  makes one dialog work for every parameter type. }
+					qrySQLStatement.Params[Idx].AsString := Dlg.ValueOf(Idx);
+		finally
+			Dlg.Free;
+		end;
+	finally
+		Names.Free;
 	end;
 end;
 

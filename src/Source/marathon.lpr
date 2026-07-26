@@ -29,6 +29,7 @@ uses
   NewTrigger in 'NewTrigger.pas' {frmNewTrigger},
   StatementHistory in 'StatementHistory.pas' {frmStatementHistory},
   SessionMonitor in 'SessionMonitor.pas' {frmSessionMonitor},
+  SQLParamsDialog in 'SQLParamsDialog.pas' {frmSQLParams},
   MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},
