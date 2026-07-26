@@ -4,7 +4,7 @@ object frmMasterProperties: TfrmMasterProperties
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'Master Properties'
-  ClientHeight = 421
+  ClientHeight = 452
   ClientWidth = 422
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -280,6 +280,23 @@ object frmMasterProperties: TfrmMasterProperties
         ReadOnly = True
         TabStop = False
         TabOrder = 11
+      end
+      object Label22: TLabel
+        Left = 8
+        Top = 358
+        Width = 58
+        Height = 13
+        Caption = 'Encr&yption:'
+        FocusControl = edEncryption
+      end
+      object edEncryption: TEdit
+        Left = 100
+        Top = 354
+        Width = 295
+        Height = 21
+        ReadOnly = True
+        TabStop = False
+        TabOrder = 12
       end
     end
     object tsProject: TTabSheet

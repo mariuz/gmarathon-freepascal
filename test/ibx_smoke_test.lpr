@@ -1483,6 +1483,65 @@ begin
         end;
       end;
 
+      { Encryption status. The obvious route - the raw fb_info_crypt_state
+        information item - reaches the server and the item comes back, but this
+        fbintf's parser does not classify that item code, so every accessor
+        including getAsBytes refuses it. MON$DATABASE carries the same state,
+        needs nothing outside this codebase, and its meanings are published in
+        RDB$TYPES rather than having to be hard-coded. }
+      if EngineMajor >= 3 then
+      begin
+        EnsureTransaction;
+        try
+          Q.SQL.Text :=
+            'select coalesce(replace(trim(t.rdb$type_name), ''_'', '' ''), ' +
+            'cast(d.mon$crypt_state as varchar(11))) as CRYPT_STATE ' +
+            'from mon$database d ' +
+            'left join rdb$types t on t.rdb$field_name = ''MON$CRYPT_STATE'' ' +
+            'and t.rdb$type = d.mon$crypt_state';
+          Q.Open;
+          if Q.EOF then
+          begin
+            WriteLn('FAIL: MON$DATABASE returned no row');
+            Halt(1);
+          end;
+          Value := Trim(Q.Fields[0].AsString);
+          { The smoke-test database is not encrypted, so this is the state it
+            has to report - and it must be the decoded name, not a bare code. }
+          if Value <> 'NOT ENCRYPTED' then
+          begin
+            WriteLn('FAIL: crypt state came back "', Value, '", expected NOT ENCRYPTED');
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+
+          { All four states are published, so a future one shows its own name. }
+          EnsureTransaction;
+          Q.SQL.Text := 'select count(*) from rdb$types where rdb$field_name = ''MON$CRYPT_STATE''';
+          Q.Open;
+          if Q.Fields[0].AsInteger < 4 then
+          begin
+            WriteLn('FAIL: expected at least 4 documented crypt states, got ',
+              Q.Fields[0].AsInteger);
+            Halt(1);
+          end;
+          Q.Close;
+          Q.Prepared := False;
+          if Tr.Active then
+            Tr.Commit;
+          WriteLn('Encryption status OK (', Value, ')');
+        except
+          on E: Exception do
+          begin
+            if Tr.Active then
+              Tr.Rollback;
+            WriteLn('FAIL: encryption status raised: ', E.Message);
+            Halt(1);
+          end;
+        end;
+      end;
+
       { The built-in profiler (Firebird 5). Driven end to end here because the
         interesting part is not the SQL but where the PLG$PROF_* tables live:
         Firebird 6 puts them in a schema of their own, earlier versions did

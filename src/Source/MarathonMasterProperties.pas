@@ -52,6 +52,8 @@ type
     cmbDialect: TComboBox;
     lblEnvironment: TLabel;
     cmbEnvironment: TComboBox;
+    Label22: TLabel;
+    edEncryption: TEdit;
     tsProject: TTabSheet;
     Label8: TLabel;
     cmbEditorEncoding: TComboBox;
@@ -136,9 +138,53 @@ type
 
 implementation
 
-uses Globals, HelpMap, Tools, MarathonIDE, MarathonProjectCacheTypes;
+uses Globals, HelpMap, Tools, MarathonIDE, MarathonProjectCacheTypes, IBQuery;
 
 {$R *.lfm}
+
+{ Whether the attached database is encrypted, from MON$DATABASE.MON$CRYPT_STATE.
+
+  The raw route - IAttachment.GetDBInformation(fb_info_crypt_state) - does
+  reach the server, and the item comes back (type 134, size 4). But this
+  fbintf's DB-information parser does not classify that item code, so it lands
+  untyped and every accessor, getAsBytes included, refuses it. MON$DATABASE
+  carries the same state and needs nothing outside this codebase.
+
+  The value's meaning is read from RDB$TYPES rather than hard-coded, the same
+  way the Session Monitor decodes MON$STATE, so a state added later shows its
+  own name instead of being mislabelled. }
+function DatabaseEncryptionState(Connection: TMarathonCacheConnection): String;
+var
+  Q: TIBQuery;
+begin
+  Result := '(unknown)';
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Connection.Connection;
+    Q.Transaction := Connection.Transaction;
+    try
+      if not Q.Transaction.Active then
+        Q.Transaction.StartTransaction;
+      { MON$CRYPT_STATE does not exist before Firebird 3, and naming a missing
+        column is a hard error rather than a NULL. }
+      Q.SQL.Text :=
+        'select coalesce(replace(trim(t.rdb$type_name), ''_'', '' ''), ' +
+        'cast(d.mon$crypt_state as varchar(11))) as CRYPT_STATE ' +
+        'from mon$database d ' +
+        'left join rdb$types t on t.rdb$field_name = ''MON$CRYPT_STATE'' ' +
+        'and t.rdb$type = d.mon$crypt_state';
+      Q.Open;
+      if not Q.EOF then
+        Result := Trim(Q.Fields[0].AsString);
+      Q.Close;
+    except
+      on E: Exception do
+        Result := '(not reported by this server)';
+    end;
+  finally
+    Q.Free;
+  end;
+end;
 
 constructor TfrmMasterProperties.CreateNewServer(const AOwner: TComponent);
 begin
@@ -215,6 +261,7 @@ begin
 			  newer server, and it is the ODS that decides which RDB$ columns
 			  exist. Show both rather than picking one. }
 			edServerVersion.Text := Connection.ServerVersion;
+			edEncryption.Text := DatabaseEncryptionState(Connection);
 			if edServerVersion.Text = '' then
 				edServerVersion.Text := '(unknown)';
 			edServerVersion.Text := edServerVersion.Text +
