@@ -39,7 +39,7 @@ uses
   SQLAssistantDragAndDrop, SQLForm, SQLInsightItem, SQLTrace,
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
-  StoredProcParamWarn, StoredProcedureParams, SyntaxHelp, TipOfTheDay,
+  StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
   UDFInputParam, UserEditor, WindowList;
 
 var
@@ -222,11 +222,13 @@ begin
   end;
 end;
 
-{ The main form shows a modal Tip of the Day on create when ShowTips is set,
-  and ShowTips defaults to True on a machine that has never run Marathon -
-  which would hang this test forever with nobody to dismiss it. Turn it off
-  before the form is built. Run the test with an isolated HOME (see the
-  workflow) so this cannot disturb a real installation's settings. }
+{ The main form can open a project on create, which this test does not want.
+  Run it with an isolated HOME (see the workflow) so turning that off cannot
+  disturb a real installation's settings.
+
+  It used to turn off a Tip of the Day dialog here too: that was modal on
+  startup and would hang the run with nobody to dismiss it. The dialog is gone,
+  so the setting is not written any more. }
 procedure SuppressStartupDialogs;
 var
   R: TRegistry;
@@ -235,7 +237,6 @@ begin
   try
     if R.OpenKey(REG_SETTINGS_BASE, True) then
     begin
-      R.WriteBool('ShowTips', False);
       R.WriteBool('OpenLastProject', False);
       R.WriteBool('OpenProjectOnStartup', False);
       R.CloseKey;
@@ -1946,7 +1947,6 @@ begin
   TryConstruct(TfrmParameterChange, 'TfrmParameterChange');
   TryConstruct(TfrmStoredProcParameters, 'TfrmStoredProcParameters');
   TryConstruct(TfrmSyntaxHelp, 'TfrmSyntaxHelp');
-  TryConstruct(TfrmTipOfTheDay, 'TfrmTipOfTheDay');
   TryConstruct(TfrmUDFAddInput, 'TfrmUDFAddInput');
   { TfrmUsers is deliberately not constructed: its OnCreate loops until it
     can log in to the security database, prompting modally each time round,

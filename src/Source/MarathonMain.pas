@@ -779,7 +779,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -815,7 +815,6 @@ end;
 
 procedure TfrmMarathonMain.FormCreate(Sender: TObject);
 var
-	F: TfrmTipOfTheDay;
 	Idx: Integer;
 	B: TBitmap;
 begin
@@ -888,15 +887,6 @@ begin
 	for Idx := 0 to actMain.ActionCount - 1 do
 		actMain.Actions[Idx].Update;
 
-	if gShowTips then
-	begin
-		F := TfrmTipOfTheDay.Create(Self);
-		try
-			F.ShowModal;
-		finally
-			F.Free;
-		end;
-	end;
 
 	// Load the MRU Menu
 	LoadMRUMenu;
@@ -1006,8 +996,6 @@ begin
 			// General
 			if not (I.ValueExists('MultiInstances')) or (I.GetDataType('MultiInstances') <> rdInteger) then
 				I.WriteBool('MultiInstances', False);
-			if not (I.ValueExists('ShowTips')) or (I.GetDataType('ShowTips') <> rdInteger) then
-				I.WriteBool('ShowTips', True);
 			if not (I.ValueExists('PromptTrans')) or (I.GetDataType('PromptTrans') <> rdInteger) then
 				I.WriteBool('PromptTrans', True);
 			if not (I.ValueExists('AlwaysSPParams')) or (I.GetDataType('AlwaysSPParams') <> rdInteger) then
@@ -1157,7 +1145,6 @@ begin
 		begin
 			// General
 			gMultiInstances := I.ReadBool('MultiInstances');
-			gShowTips := I.ReadBool('ShowTips');
 			gPromptTrans := I.ReadBool('PromptTrans');
 			gAlwaysSPParams := I.ReadBool('AlwaysSPParams');
 			gSQLSave := I.ReadBool('SQLSave');

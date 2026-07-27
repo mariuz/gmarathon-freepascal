@@ -43,7 +43,6 @@ type
 		Bevel1: TBevel;
     Bevel2: TBevel;
 		tsGeneral: TTabSheet;
-		chkShowTips: TCheckBox;
     tsSQLInsight: TTabSheet;
     Bevel4: TBevel;
     tbDelay: TTrackBar;
@@ -199,7 +198,6 @@ begin
 	// Load options from globals and set current control contents from them
 	// General
 	chkMultiInstances.Checked := gMultiInstances;
-	chkShowTips.Checked := gShowTips;
 	chkPromptTrans.Checked := gPromptTrans;
 	chkSPParams.Checked := gAlwaysSPParams;
 	chkSQLSave.Checked := gSQLSave;
@@ -399,7 +397,6 @@ begin
 			begin
 				// General
 				WriteBool('MultiInstances', chkMultiInstances.Checked);
-				WriteBool('ShowTips', chkShowTips.Checked);
 				WriteBool('PromptTrans', chkPromptTrans.Checked);
 				WriteBool('AlwaysSPParams', chkSPParams.Checked);
 				WriteBool('SQLSave', chkSQLSave.Checked);

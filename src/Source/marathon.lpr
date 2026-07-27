@@ -47,7 +47,6 @@ uses
   EditorConstraint in 'EditorConstraint.pas' {frmEditorConstraint},
   EditorIndex in 'EditorIndex.pas' {frmEditorIndex},
   BlobViewer in 'BlobViewer.pas' {frmBlobViewer},
-  TipOfTheDay in 'TipOfTheDay.pas' {frmTipOfTheDay},
   SyntaxHelp in 'SyntaxHelp.pas' {frmSyntaxHelp},
   CodeSnippets in 'CodeSnippets.pas' {frmCodeSnippets},
   SQLTrace in 'SQLTrace.pas' {frmSQLTrace},

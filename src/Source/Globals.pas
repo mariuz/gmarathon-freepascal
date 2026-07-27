@@ -57,7 +57,6 @@ var
 
 	// General options
 	gMultiInstances: Boolean;
-	gShowTips: Boolean;
 
 	gEditorFontName: String;
 	gEditorFontSize: Integer;
