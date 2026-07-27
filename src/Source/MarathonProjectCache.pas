@@ -553,6 +553,7 @@ type
     FSchema: String;
   public
     constructor Create; override;
+    procedure SetKind(AKind: TSchemaObjectKind);
     function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
     property Schema: String read FSchema write FSchema;
   end;
@@ -4869,7 +4870,28 @@ constructor TMarathonCacheSchemaMember.Create;
 begin
 	inherited;
 	FImageIndex := 2;
+	{ Replaced by SetKind as soon as the header knows what it is listing. The
+	  cache type is what decides how an object is scripted, so leaving every
+	  member a table would have extracted a view or a procedure as one. }
 	FCacheType := ctTable;
+end;
+
+{ The kind the schema's header is listing, which fixes both the cache type and
+  the icon. Kept as a method rather than a published property because the two
+  have to move together. }
+procedure TMarathonCacheSchemaMember.SetKind(AKind: TSchemaObjectKind);
+begin
+	case AKind of
+		sokDomain:    begin FCacheType := ctDomain;    FImageIndex := 6; end;
+		sokTable:     begin FCacheType := ctTable;     FImageIndex := 2; end;
+		sokView:      begin FCacheType := ctView;      FImageIndex := 3; end;
+		sokProcedure: begin FCacheType := ctSP;        FImageIndex := 5; end;
+		sokFunction:  begin FCacheType := ctUDF;       FImageIndex := 9; end;
+		sokTrigger:   begin FCacheType := ctTrigger;   FImageIndex := 4; end;
+		sokGenerator: begin FCacheType := ctGenerator; FImageIndex := 8; end;
+		sokException: begin FCacheType := ctException; FImageIndex := 7; end;
+		sokPackage:   begin FCacheType := ctPackage;   FImageIndex := 9; end;
+	end;
 end;
 
 { Scripting is offered, because those generators now name the schema and so
@@ -4882,7 +4904,10 @@ end;
   into the editor forms and the wizard, not new machinery. }
 function TMarathonCacheSchemaMember.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
 begin
-	Result := (not Multiple) and (Op in [opScriptCreate, opScriptDrop]);
+	{ Drop is offered now that the drop dialog names the schema. Open is not:
+	  the editor forms take an object name and nothing else, so outside the
+	  search path they would load a different object. }
+	Result := (not Multiple) and (Op in [opScriptCreate, opScriptDrop, opDrop]);
 end;
 
 constructor TMarathonCacheSchemaObjectsHeader.Create;
@@ -4924,6 +4949,7 @@ begin
 			wNode.ConnectionName := FConnectionName;
 			wNode.System := False;
 			TMarathonCacheSchemaMember(wNode).Schema := FSchema;
+			TMarathonCacheSchemaMember(wNode).SetKind(FKind);
 			NV.Data := wNode;
 		end;
 		FExpanded := True;

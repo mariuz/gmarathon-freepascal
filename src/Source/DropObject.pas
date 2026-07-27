@@ -50,6 +50,23 @@ type
 
 implementation
 
+{ The identifier a DROP should name. Qualified when the node came from a named
+  schema: an unqualified DROP outside the search path removes a different
+  object, or nothing at all - and this dialog is the one place where getting
+  that wrong destroys something. }
+function DropIdent(Item: TMarathonCacheBaseNode): String;
+var
+  Conn: TMarathonCacheConnection;
+begin
+  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[
+    TMarathonCacheObject(Item).ConnectionName];
+  Result := MakeQuotedIdent(Item.Caption, Conn.IsIB6, Conn.SQLDialect);
+  if (Item is TMarathonCacheSchemaMember) and
+     (TMarathonCacheSchemaMember(Item).Schema <> '') then
+    Result := MakeQuotedIdent(TMarathonCacheSchemaMember(Item).Schema,
+      Conn.IsIB6, Conn.SQLDialect) + '.' + Result;
+end;
+
 {$R *.lfm}
 
 constructor TfrmDropObject.CreateDrop(AOwner : TComponent; DropObjects : TStringList);
@@ -158,50 +175,50 @@ begin
             end;
             if DoIt then
             begin
-              SQL := 'drop domain ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+              SQL := 'drop domain ' + DropIdent(Item) + ';';
               DoDrop(Item, SQL);
             end;
           end;
 
         ctTable:
           begin
-            SQL := 'drop table ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop table ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctView:
           begin
-            SQL := 'drop view ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop view ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctSP:
           begin
-            SQL := 'drop procedure ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop procedure ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctTrigger:
           begin
-            SQL := 'drop trigger ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop trigger ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
 					end;
 
         ctGenerator:
           begin
-            SQL := 'delete from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(Item.Caption, '''') + ';';
+            { DROP GENERATOR rather than a delete from the catalogue. The raw
+              delete matched on name alone, so with schemas it could remove a
+              generator of that name in another one - and it was never the
+              supported way to drop a generator in any case. The older verb is
+              used rather than DROP SEQUENCE because it works on every server
+              this codebase still connects to, and matches ScriptAsDrop. }
+            SQL := 'drop generator ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctException:
           begin
-            SQL := 'drop exception ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop exception ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
@@ -209,8 +226,7 @@ begin
           begin
             { DROP PACKAGE removes the body as well, so one statement covers a
               package with or without one. }
-            SQL := 'drop package ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-              MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop package ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
@@ -220,15 +236,13 @@ begin
               reports so itself - which is what should happen. Dropping the
               contents first is a decision for the user, not a side effect of
               confirming this dialog. }
-            SQL := 'drop schema ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-              MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop schema ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
         ctUDF:
           begin
-            SQL := 'drop external function ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+            SQL := 'drop external function ' + DropIdent(Item) + ';';
             DoDrop(Item, SQL);
           end;
 
@@ -388,7 +402,10 @@ begin
                 SubItems.Add('Generator');
                 ImageIndex := GetImageIndexForCacheType(FDropCacheType);
               end;
-              SQL := 'delete from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(FDropItem, '''') + ';';
+              { This path has only the name, from the caller, so it cannot be
+                qualified - it is the single-object dialog opened by name
+                rather than from a tree node. }
+              SQL := 'drop generator ' + MakeQuotedIdent(FDropItem, True, 3) + ';';
             end
             else
             begin
@@ -534,8 +551,7 @@ begin
                   SubItems.Add('Stored Procedure');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop procedure ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop procedure ' + DropIdent(Item) + ';';
               end;
 
             ctTrigger:
@@ -546,8 +562,7 @@ begin
                   SubItems.Add('Trigger');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop trigger ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop trigger ' + DropIdent(Item) + ';';
               end;
 
             ctTable:
@@ -558,8 +573,7 @@ begin
                   SubItems.Add('Table');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop table ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop table ' + DropIdent(Item) + ';';
               end;
 
             ctException:
@@ -570,8 +584,7 @@ begin
                   SubItems.Add('Exception');
 									ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop exception ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop exception ' + DropIdent(Item) + ';';
               end;
 
             ctUDF:
@@ -582,8 +595,7 @@ begin
                   SubItems.Add('UDF');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop external function ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop external function ' + DropIdent(Item) + ';';
               end;
 
 
@@ -595,8 +607,7 @@ begin
                   SubItems.Add('View');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop view ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-                                        MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop view ' + DropIdent(Item) + ';';
               end;
 
 
@@ -613,7 +624,13 @@ begin
                     SubItems.Add('Generator');
                     ImageIndex := Item.ImageIndex;
                   end;
-                  SQL := 'delete from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(Item.Caption, '''') + ';';
+                  { DROP GENERATOR rather than a delete from the catalogue. The raw
+              delete matched on name alone, so with schemas it could remove a
+              generator of that name in another one - and it was never the
+              supported way to drop a generator in any case. The older verb is
+              used rather than DROP SEQUENCE because it works on every server
+              this codebase still connects to, and matches ScriptAsDrop. }
+            SQL := 'drop generator ' + DropIdent(Item) + ';';
                 end
                 else
                 begin
@@ -684,8 +701,7 @@ begin
                 finally
                   Q.Free;
                 end;
-                SQL := 'drop domain ' + MakeQuotedIdent(Item.Caption, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].IsIB6,
-																				MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[TMarathonCacheObject(Item).ConnectionName].SQLDialect) + ';';
+                SQL := 'drop domain ' + DropIdent(Item) + ';';
               end;
 
             ctConnection,   //AC:
