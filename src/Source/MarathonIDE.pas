@@ -219,6 +219,9 @@ type
 		  editor stays because it is what you want for one column at a time. }
 		function DesignTable(TableName: String; Connection: String;
 			Schema: String = ''): TForm;
+		{ The schema diagram: every table on a connection and the keys between
+		  them. One per connection - a second would show the same thing. }
+		function ShowSchemaDiagram(Connection: String): TForm;
 		procedure NewView(Connection: String);
 		function OpenView(ViewName: String; Connection: String;
 			Schema: String = ''): TForm;
@@ -255,7 +258,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -2428,6 +2431,32 @@ function TMarathonIDE.OpenTable(TableName, Connection: String;
 	Schema: String): TForm;
 begin
 	Result := OpenObject(TableName, Connection, ctTable, Schema);
+end;
+
+function TMarathonIDE.ShowSchemaDiagram(Connection: String): TForm;
+var
+	C: TMarathonCacheConnection;
+	Idx: Integer;
+	F: TfrmSchemaDiagram;
+begin
+	Result := nil;
+	if not CheckConnected(Connection) then
+		Exit;
+	for Idx := 0 to Screen.FormCount - 1 do
+		if (Screen.Forms[Idx] is TfrmSchemaDiagram) and
+		   (TfrmSchemaDiagram(Screen.Forms[Idx]).GetActiveConnectionName = Connection) then
+		begin
+			Screen.Forms[Idx].BringToFront;
+			Exit(Screen.Forms[Idx]);
+		end;
+	C := FCurrentProject.Cache.ConnectionByName[Connection];
+	if not Assigned(C) or not Assigned(C.Connection) then
+		Exit;
+	F := TfrmSchemaDiagram.Create(nil);
+	F.LoadFrom(C.Connection, C.Transaction, Connection, '',
+		C.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+	F.ShowDocument;
+	Result := F;
 end;
 
 function TMarathonIDE.DesignTable(TableName, Connection: String;

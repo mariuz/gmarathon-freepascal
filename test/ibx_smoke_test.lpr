@@ -24,7 +24,8 @@ uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
   ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
-  TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat;
+  TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
+  SchemaDiagram, SchemaDiagramIO;
 
 type
   { The trace's event is "of object", so it needs a method to hand it to - a
@@ -331,6 +332,117 @@ begin
     Monitor.Free;
     Collector.Free;
   end;
+end;
+
+{ The schema diagram's reader, against a real server.
+
+  The layout is checked in keyword_test without a database. What only a server
+  can answer is whether the catalogue queries are right: a foreign key lives in
+  three tables at once - the constraint, the pair of constraints it joins, and
+  the index segments giving the columns - and getting the join wrong yields
+  either nothing or a cross product, both of which look like a plausible
+  diagram until someone counts the lines. }
+procedure TestSchemaDiagramReader;
+var
+  D: TSchemaDiagram;
+  Found: Boolean;
+  Idx: Integer;
+  L: TDiagramLink;
+begin
+  WriteLn('Schema diagram reader:');
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Q.SQL.Text := 'execute block as begin ' +
+    'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''SD_PARENT'')) then ' +
+    '  execute statement ''create table SD_PARENT (ID integer not null primary key, NAME varchar(20))''; ' +
+    'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''SD_CHILD'')) then ' +
+    '  execute statement ''create table SD_CHILD (ID integer not null primary key, ' +
+    '    PARENT_ID integer references SD_PARENT(ID), NOTE varchar(20))''; ' +
+    'end';
+  Q.ExecSQL;
+  Tr.Commit;
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  D := ReadSchemaDiagram(DB, Tr);
+  try
+    if D.TableCount = 0 then
+    begin
+      WriteLn('FAIL: the diagram reader found no tables at all');
+      Halt(1);
+    end;
+    WriteLn('  ok   it reads the tables (', D.TableCount, ')');
+
+    if not Assigned(D.FindTable('SD_PARENT')) or
+       not Assigned(D.FindTable('SD_CHILD')) then
+    begin
+      WriteLn('FAIL: the reader did not find the two test tables');
+      Halt(1);
+    end;
+    { Columns, in declaration order - the order they read in the diagram is the
+      order they read in the table. }
+    if (D.FindTable('SD_CHILD').Columns.Count <> 3) or
+       (Trim(D.FindTable('SD_CHILD').Columns[0]) <> 'ID') then
+    begin
+      WriteLn('FAIL: SD_CHILD read back with ',
+        D.FindTable('SD_CHILD').Columns.Count, ' column(s), first "',
+        D.FindTable('SD_CHILD').Columns[0], '"');
+      Halt(1);
+    end;
+    WriteLn('  ok   with their columns, in declaration order');
+
+    { Views are not tables and must not be drawn as them. }
+    if Assigned(D.FindTable('EDIT_VW')) then
+    begin
+      WriteLn('FAIL: a view was read as a table');
+      Halt(1);
+    end;
+    WriteLn('  ok   and without the views');
+
+    { The key itself, both ends and the right columns. }
+    Found := False;
+    for Idx := 0 to D.LinkCount - 1 do
+    begin
+      L := D.Links[Idx];
+      if SameText(L.FromTable, 'SD_CHILD') and SameText(L.ToTable, 'SD_PARENT') then
+      begin
+        Found := True;
+        if not SameText(Trim(L.FromColumn), 'PARENT_ID') or
+           not SameText(Trim(L.ToColumn), 'ID') then
+        begin
+          WriteLn('FAIL: the key was read as ', L.FromColumn, ' -> ', L.ToColumn);
+          Halt(1);
+        end;
+      end;
+    end;
+    if not Found then
+    begin
+      WriteLn('FAIL: the foreign key between the two tables was not read');
+      Halt(1);
+    end;
+    WriteLn('  ok   and the foreign key, with the column at each end');
+
+    { One line, not several. Joining the segments without matching their
+      positions gives a row per pair and would draw the same key repeatedly. }
+    Found := False;
+    Idx := 0;
+    for Idx := 0 to D.LinkCount - 1 do
+      if SameText(D.Links[Idx].ConstraintName,
+                  D.Links[0].ConstraintName) and (Idx > 0) and
+         SameText(D.Links[Idx].FromTable, D.Links[0].FromTable) then
+        Found := True;
+    if Found then
+    begin
+      WriteLn('FAIL: a single-column key produced more than one link');
+      Halt(1);
+    end;
+    WriteLn('  ok   once each, not once per pair of columns');
+  finally
+    D.Free;
+  end;
+  if Tr.InTransaction then
+    Tr.Commit;
 end;
 
 { The query builder's SQL, against a real server.
@@ -3556,6 +3668,7 @@ begin
       earlier in the run is not hidden behind it. }
     TestTableDesignRoundTrip;
     TestQueryBuilderSQL;
+    TestSchemaDiagramReader;
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestSchemaDDL;

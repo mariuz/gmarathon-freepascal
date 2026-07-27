@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram;
 
 var
   Failures: Integer = 0;
@@ -1488,6 +1488,81 @@ begin
   Found.Free;
 end;
 
+{ The schema diagram, on a real database.
+
+  Where the boxes go is checked in keyword_test without a canvas, and the
+  catalogue queries in the smoke test against a live server. What needs both a
+  display and a database is the form: that the .lfm streams, that it reads a
+  real schema into boxes, that it paints them, and that a table can be picked
+  up and moved. }
+procedure CheckSchemaDiagram(Conn: TMarathonCacheConnection);
+var
+  F: TfrmSchemaDiagram;
+  T: TDiagramTable;
+  WasLeft, WasTop: Integer;
+begin
+  WriteLn('Schema diagram:');
+  try
+    F := TfrmSchemaDiagram.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the diagram .lfm streams (' + E.ClassName + ': ' + E.Message + ')');
+      Exit;
+    end;
+  end;
+  try
+    Check(Assigned(F.pbDiagram) and Assigned(F.scrDiagram),
+      'the diagram .lfm streams its canvas and scroll box');
+
+    F.LoadFrom(Conn.Connection, Conn.Transaction, 'EditorHarness', '',
+      Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+    Check(F.Diagram.TableCount > 0, 'it reads the database''s tables (' +
+      IntToStr(F.Diagram.TableCount) + ')');
+    Check(F.Diagram.LinkCount > 0, 'and the foreign keys between them (' +
+      IntToStr(F.Diagram.LinkCount) + ')');
+
+    { Laid out, not left stacked at the origin. }
+    T := F.Diagram.Tables[0];
+    Check(T.Width > 0, 'every box has been given a size');
+    Check(F.pbDiagram.Width > T.Width,
+      'and the canvas is sized to hold the diagram');
+
+    { Painting. A nil canvas or a bad index only shows up by drawing. }
+    try
+      F.pbDiagramPaint(nil);
+      Check(True, 'the diagram paints');
+    except
+      on E: Exception do
+        Check(False, 'the diagram paints (' + E.ClassName + ': ' + E.Message + ')');
+    end;
+
+    { Dragging a table, through the handlers a mouse reaches. }
+    T := TableAt(F.Diagram, F.Diagram.Tables[0].Left + 5,
+      F.Diagram.Tables[0].Top + 5);
+    Check(Assigned(T), 'a point inside a box finds the table');
+    if Assigned(T) then
+    begin
+      WasLeft := T.Left;
+      WasTop := T.Top;
+      F.pbDiagramMouseDown(mbLeft, [], T.Left + 5, T.Top + 5);
+      F.pbDiagramMouseMove([], T.Left + 205, T.Top + 105);
+      F.pbDiagramMouseUp(mbLeft, [], T.Left + 205, T.Top + 105);
+      Check((T.Left <> WasLeft) or (T.Top <> WasTop), 'and dragging moves it');
+      { A table dragged past the old extent would otherwise be drawn outside
+        the canvas and be unreachable. }
+      Check(F.pbDiagram.Width >= T.Left + T.Width,
+        'and the canvas grows to keep it reachable');
+    end;
+
+    { Arrange puts everything back into a layout. }
+    F.btnRelayoutClick(nil);
+    Check(F.Diagram.Tables[0].Width > 0, 'Arrange lays the diagram out again');
+  finally
+    F.Free;
+  end;
+end;
+
 { Opening objects through the IDE, which is the route the object tree uses.
 
   Every check so far has constructed an editor directly. That is not how the
@@ -1917,6 +1992,7 @@ begin
   CheckSchemaQualifiedEditor(Conn);
   CheckQueryBuilder(Conn);
   CheckOpenThroughIDE(Conn);
+  CheckSchemaDiagram(Conn);
   CheckSQLTrace(Conn);
 end;
 

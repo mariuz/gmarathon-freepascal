@@ -553,6 +553,57 @@ and schema comparison all exist here already. The gap is arrangement.
   the application but are the old COM server rather than duplicates, so they are
   left for a decision about that build.
 
+## Phase 10 — a second pass over the VS Code MSSQL extension
+
+Phase 9 was built from that extension's feature set; this is the same list
+reviewed again against what it ships now (its changelog, July 2026) and against
+what Firebird can support. Not everything there makes sense here: it is a
+client for one server product with a cloud service behind it, and several of
+its headline features have no Firebird counterpart at all.
+
+| Their feature | Here |
+|---|---|
+| Shortcuts configuration | **Done** — the keybinding editor |
+| Connection groups | **Done** |
+| Table Designer | **Done** |
+| Schema Compare | **Done** |
+| Query Profiler | **Done** — over `MON$` rather than their DMVs |
+| Global object search | **Done** — the Metadata Search window and the object tree filter |
+| Query results grid | **Done** — results sit under the statement, as theirs do |
+| Backup/restore dialogs | **Done** — the Maintenance dialog, over IBX's services API |
+| Query Plan Visualizer | **Partly** — the plan is shown as text. Firebird's `PLAN` is a nested expression and could be drawn as a tree; smaller than it sounds |
+| Edit data grid with script preview | **Partly** — the grid edits, but applies rather than showing what it would run. The table designer now has that pattern to copy |
+| **Schema Designer** | **Not done** — see below |
+| SQL Notebooks | Not planned: a VS Code notebook-host feature, with no shell here to host one |
+| Data API Builder | Not planned — generates REST/GraphQL endpoints for Azure SQL |
+| GitHub Copilot integration | Not planned |
+| Local SQL Server containers | Not planned. The nearest useful thing, creating a database, is already File > Create Database |
+
+- [x] **Schema Designer** — a diagram of the tables and the foreign keys
+  between them. `src/Common/SchemaDiagram.pas` holds the model and the layout
+  (no canvas, so where every box goes is checked without one),
+  `src/Common/SchemaDiagramIO.pas` reads the catalogue, and
+  `src/Source/SchemaDiagramForm.pas` draws it. Reached through
+  `MarathonIDE.ShowSchemaDiagram`, one per connection.
+
+  Layout is breadth-first from the most-referenced table, so a table sits near
+  what it references; tables in no relationship go last, together. That is a
+  rough rule on purpose — it beats alphabetical order by a long way, it is
+  predictable, and it terminates on the cyclic graphs real schemas have.
+  Anything cleverer is a force-directed simulation, which moves every time it
+  runs and cannot be tested.
+
+  Everything it needs was in the catalogue:
+  `RDB$RELATION_CONSTRAINTS` gives the keys, `RDB$REF_CONSTRAINTS` pairs each
+  foreign key with the unique key it references, and `RDB$INDEX_SEGMENTS` gives
+  the columns on both sides. The drawing is the approach the query builder
+  already uses — one paint box, boxes and lines drawn rather than made of
+  controls.
+
+  The part worth care is layout: sixty tables in a grid is unreadable, so
+  tables want placing near what they reference.
+
+
 ## Explicitly out of scope
 
 Adapted-but-rejected FlameRobin roadmap items, and why:

@@ -121,7 +121,7 @@
         <PackageName Value="fbintf"/>
       </Item6>
     </RequiredPackages>
-    <Units Count="102">
+    <Units Count="103">
       <Unit0>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -791,6 +791,12 @@
         <HasResources Value="True"/>
         <UnitName Value="KeyBindingEditor"/>
       </Unit118>
+      <Unit119>
+        <Filename Value="SchemaDiagramForm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="SchemaDiagramForm"/>
+      </Unit119>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

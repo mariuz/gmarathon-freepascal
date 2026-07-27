@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,163 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestSchemaDiagram;
+var
+  D: TSchemaDiagram;
+  T: TDiagramTable;
+  Idx, W, H, Overlaps, A, B: Integer;
+  P, Q: TDiagramTable;
+
+  function Overlapping(X, Y: TDiagramTable): Boolean;
+  begin
+    Result := (X.Left < Y.Left + Y.Width) and (Y.Left < X.Left + X.Width) and
+              (X.Top < Y.Top + Y.Height) and (Y.Top < X.Top + X.Height);
+  end;
+
+begin
+  { An empty diagram lays out without complaint. }
+  D := TSchemaDiagram.Create;
+  try
+    LayoutDiagram(D, 800, 160, 14, 20);
+    DiagramExtent(D, W, H);
+    Check((W = 0) and (H = 0), 'an empty diagram has no extent');
+    Check(TableAt(D, 10, 10) = nil, 'and nothing is at any point in it');
+  finally
+    D.Free;
+  end;
+
+  D := TSchemaDiagram.Create;
+  try
+    T := D.AddTable('CUSTOMERS');
+    T.Columns.Add('ID');
+    T.Columns.Add('NAME');
+    T := D.AddTable('ORDERS');
+    T.Columns.Add('ID');
+    T.Columns.Add('CUST_ID');
+    T := D.AddTable('LINES');
+    T.Columns.Add('ORDER_ID');
+    D.AddTable('LOOKUP');   { in no relationship at all }
+
+    { Reading a table twice is a caller reading twice, not two tables. }
+    D.AddTable('CUSTOMERS');
+    Check(D.TableCount = 4, 'the same table added twice is one table');
+
+    D.AddLink('ORDERS', 'CUST_ID', 'CUSTOMERS', 'ID', 'FK_ORD_CUST');
+    D.AddLink('LINES', 'ORDER_ID', 'ORDERS', 'ID', 'FK_LIN_ORD');
+    Check(D.LinkCount = 2, 'links are recorded');
+
+    { Degree counts both ends, which is what "most connected" means. }
+    Check(D.DegreeOf('ORDERS') = 2, 'a table in two keys has degree two');
+    Check(D.DegreeOf('CUSTOMERS') = 1, 'and one in one has degree one');
+    Check(D.DegreeOf('LOOKUP') = 0, 'a table in none has degree zero');
+    Check(D.DegreeOf('NOSUCHTABLE') = 0, 'and an unknown name has none either');
+    Check(D.IsolatedCount = 1, 'the unrelated table is counted as isolated');
+
+    LayoutDiagram(D, 800, 160, 14, 20);
+
+    { Every box got a size from its columns, not a default. }
+    for Idx := 0 to D.TableCount - 1 do
+      if D.Tables[Idx].Width <= 0 then
+      begin
+        Check(False, 'every box has a width');
+        Break;
+      end;
+    Check(D.FindTable('CUSTOMERS').Height > D.FindTable('LOOKUP').Height,
+      'a box with columns is taller than one without');
+
+    { Nothing overlaps: two boxes on top of each other is the one thing a
+      layout must never do. }
+    Overlaps := 0;
+    for A := 0 to D.TableCount - 1 do
+      for B := A + 1 to D.TableCount - 1 do
+        if Overlapping(D.Tables[A], D.Tables[B]) then
+          Inc(Overlaps);
+    Check(Overlaps = 0, 'no two boxes overlap');
+
+    { The most-connected table leads, so a reader finds it first. }
+    P := D.FindTable('ORDERS');
+    Check((P.Left <= D.FindTable('CUSTOMERS').Left) and (P.Top <= D.FindTable('CUSTOMERS').Top),
+      'the most connected table is placed first');
+
+    { And a table in no relationship goes after every table that is in one -
+      mixed in, it would push related tables apart for nothing. }
+    Q := D.FindTable('LOOKUP');
+    Check((Q.Top > P.Top) or (Q.Left > P.Left),
+      'an unrelated table is placed after the connected ones');
+
+    DiagramExtent(D, W, H);
+    Check((W > 0) and (H > 0), 'the diagram has an extent to scroll over');
+    Check(W >= D.FindTable('ORDERS').Left + D.FindTable('ORDERS').Width,
+      'which reaches the far edge of the furthest box');
+
+    { Hit testing, which is how a box is picked up. }
+    P := D.FindTable('ORDERS');
+    Check(TableAt(D, P.Left + 5, P.Top + 5) = P, 'a point inside a box finds it');
+    Check(TableAt(D, P.Left - 5, P.Top - 5) <> P, 'and a point outside does not');
+    Check(TableAt(D, -100, -100) = nil, 'a point off the diagram finds nothing');
+  finally
+    D.Free;
+  end;
+
+  { A cycle, which real schemas have and a naive walk would spin on. }
+  D := TSchemaDiagram.Create;
+  try
+    D.AddTable('A_TAB');
+    D.AddTable('B_TAB');
+    D.AddLink('A_TAB', 'B_ID', 'B_TAB', 'ID', 'FK1');
+    D.AddLink('B_TAB', 'A_ID', 'A_TAB', 'ID', 'FK2');
+    LayoutDiagram(D, 800, 160, 14, 20);
+    Check(D.Tables[0].Width > 0, 'a cycle between two tables lays out and terminates');
+  finally
+    D.Free;
+  end;
+
+  { A table referencing itself - an employee's manager, say. }
+  D := TSchemaDiagram.Create;
+  try
+    D.AddTable('STAFF');
+    D.AddLink('STAFF', 'MANAGER_ID', 'STAFF', 'ID', 'FK_SELF');
+    Check(D.DegreeOf('STAFF') = 2, 'a self-reference counts at both ends');
+    LayoutDiagram(D, 800, 160, 14, 20);
+    Check(D.FindTable('STAFF').Width > 0, 'and lays out without spinning');
+  finally
+    D.Free;
+  end;
+
+  { Enough tables to wrap, which is where a row-height mistake shows up as
+    boxes sitting on each other. }
+  D := TSchemaDiagram.Create;
+  try
+    for Idx := 1 to 24 do
+    begin
+      T := D.AddTable('T' + IntToStr(Idx));
+      { Deliberately uneven heights: a row as tall as its tallest box is the
+        only way the next row clears it. }
+      if Idx mod 3 = 0 then
+      begin
+        T.Columns.Add('A'); T.Columns.Add('B'); T.Columns.Add('C');
+        T.Columns.Add('D'); T.Columns.Add('E');
+      end;
+      if Idx > 1 then
+        D.AddLink('T' + IntToStr(Idx), 'P', 'T' + IntToStr(Idx - 1), 'ID',
+          'FK' + IntToStr(Idx));
+    end;
+    LayoutDiagram(D, 700, 160, 14, 20);
+    Overlaps := 0;
+    for A := 0 to D.TableCount - 1 do
+      for B := A + 1 to D.TableCount - 1 do
+        if Overlapping(D.Tables[A], D.Tables[B]) then
+          Inc(Overlaps);
+    Check(Overlaps = 0, 'twenty-four tables of uneven height still do not overlap');
+    { Wrapped rather than run off the side. }
+    DiagramExtent(D, W, H);
+    Check(W <= 700, 'and the diagram stays within the width it was given');
+    Check(H > 200, 'wrapping onto further rows');
+  finally
+    D.Free;
+  end;
 end;
 
 procedure TestIconScaling;
@@ -1437,6 +1594,9 @@ begin
 
   WriteLn('Icon scaling:');
   TestIconScaling;
+
+  WriteLn('Schema diagram:');
+  TestSchemaDiagram;
 
   if Failures > 0 then
   begin
