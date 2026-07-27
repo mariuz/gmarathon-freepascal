@@ -18,7 +18,7 @@ program ibx_smoke_test;
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, ibxscript;
+  ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript;
 
 var
   DB: TIBDatabase;
@@ -316,6 +316,7 @@ end;
 procedure TestSchemaDDL;
 var
   Ex: TDDLExtractor;
+  Names: TStringList;
   SchemaDDL: String;
   Probe: TIBQuery;
   Found: Boolean;
@@ -498,6 +499,50 @@ begin
   RequireNotInDDL(SchemaDDL, 'IN_CURRENT_SCHEMA',
     'a column from the same-named table in the current schema');
   WriteLn('Schema-qualified extraction OK (', Trim(Copy(SchemaDDL, 1, Pos('(', SchemaDDL) - 1)), ')');
+
+  { Listing what a *named* schema holds, which is what a tree needs to offer
+    those objects at all. The current schema has a table of the same name, so
+    a list that ignored the schema would look identical. }
+  Names := ListSchemaObjects(DB, Tr, sokTable, 'SMOKE_OTHER', True);
+  try
+    if Names.IndexOf('SMOKE_DUP') < 0 then
+    begin
+      WriteLn('FAIL: the other schema''s table was not listed');
+      Halt(1);
+    end;
+    { SMOKE_DUP is in both, so its presence proves nothing on its own. The
+      current schema's *other* tables must be absent. }
+    if Names.IndexOf('IBX_SMOKE_TEST') >= 0 then
+    begin
+      WriteLn('FAIL: a current-schema table appeared in another schema''s list');
+      Halt(1);
+    end;
+    WriteLn('Schema object listing OK (', Names.Count,
+      ' table(s) in SMOKE_OTHER)');
+  finally
+    Names.Free;
+  end;
+
+  { And the current schema still lists what it always did, so the tree's
+    existing behaviour is unchanged when no schema is named. }
+  Names := ListSchemaObjects(DB, Tr, sokTable, '', True);
+  try
+    if Names.IndexOf('IBX_SMOKE_TEST') < 0 then
+    begin
+      WriteLn('FAIL: naming no schema stopped listing the current one');
+      Halt(1);
+    end;
+  finally
+    Names.Free;
+  end;
+
+  { A server without schemas must not be sent RDB$SCHEMA_NAME at all - naming a
+    column that is not there is a hard error, not an empty result. }
+  if Pos('rdb$schema_name', SchemaObjectListSQL(sokTable, '', False)) > 0 then
+  begin
+    WriteLn('FAIL: the pre-schema statement still names RDB$SCHEMA_NAME');
+    Halt(1);
+  end;
 
   Run('drop table SMOKE_OTHER.SMOKE_DUP', 'dropping the other schema''s table');
   Run('drop table SMOKE_DUP', 'dropping the table');

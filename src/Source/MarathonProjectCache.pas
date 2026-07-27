@@ -64,7 +64,7 @@ interface
 
 uses SysUtils, Classes, ComCtrls, Controls, Dialogs, {$IFDEF D6_OR_HIGHER}
 	Variants, {$ENDIF}
-	IBDatabase, IBQuery, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, SafeDisconnect, WindowLists, ScriptRecorder, GimbalToolsAPI;
+	IBDatabase, IBQuery, DOM, XMLWrite, XMLRead, TypInfo, MarathonProjectCacheTypes, SafeDisconnect, SchemaObjects, WindowLists, ScriptRecorder, GimbalToolsAPI;
 
 const
    cSepChar = #2;
@@ -541,7 +541,35 @@ type
 
   public
     constructor Create; override;
+    procedure Expand(Recursive: Boolean); override;
     function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
+  end;
+
+  { An object in a named schema. It carries the schema so that extracting its
+    DDL can qualify the result; the editors and the drop dialog do not take one
+    yet, which is why this offers neither. }
+  TMarathonCacheSchemaMember = class(TMarathonCacheObject)
+  private
+    FSchema: String;
+  public
+    constructor Create; override;
+    function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
+    property Schema: String read FSchema write FSchema;
+  end;
+
+  { One kind of object within one schema. The headers under a connection ask
+    for whatever an unqualified name reaches; these ask for the contents of a
+    named schema, which is the only way objects outside the search path can be
+    seen at all. }
+  TMarathonCacheSchemaObjectsHeader = class(TMarathonCacheHeader)
+  private
+    FSchema: String;
+    FKind: TSchemaObjectKind;
+  public
+    procedure Expand(Recursive: Boolean); override;
+    constructor Create; override;
+    property Schema: String read FSchema write FSchema;
+    property Kind: TSchemaObjectKind read FKind write FKind;
   end;
 
   TMarathonCachePublicationsHeader = class(TMarathonCacheHeader)
@@ -4804,6 +4832,106 @@ begin
 	inherited;
 	FImageIndex := 9;
 	FCacheType := ctSchema;
+end;
+
+{ A schema opens into the same object kinds a connection does, but asking about
+  this schema rather than about whatever the search path reaches. }
+procedure TMarathonCacheSchema.Expand(Recursive: Boolean);
+const
+	Kinds: array[0..8] of TSchemaObjectKind = (sokDomain, sokTable, sokView,
+		sokProcedure, sokFunction, sokTrigger, sokGenerator, sokException,
+		sokPackage);
+	Captions: array[0..8] of String = ('Domains', 'Tables', 'Views',
+		'Stored Procedures', 'User Defined Functions', 'Triggers', 'Generators',
+		'Exceptions', 'Packages');
+var
+	Idx: Integer;
+	NV: TMarathonTreeNode;
+	Header: TMarathonCacheSchemaObjectsHeader;
+begin
+	FContainerNode.DeleteChildren;
+	for Idx := Low(Kinds) to High(Kinds) do
+	begin
+		NV := FRootItem.FCache.AddPathNode(FContainerNode, Captions[Idx]);
+		Header := TMarathonCacheSchemaObjectsHeader.Create;
+		Header.ContainerNode := NV;
+		Header.RootItem := FRootItem;
+		Header.Caption := Captions[Idx];
+		Header.ConnectionName := FConnectionName;
+		Header.Schema := FObjectName;
+		Header.Kind := Kinds[Idx];
+		NV.Data := Header;
+	end;
+	FExpanded := True;
+end;
+
+constructor TMarathonCacheSchemaMember.Create;
+begin
+	inherited;
+	FImageIndex := 2;
+	FCacheType := ctTable;
+end;
+
+{ Nothing is offered yet, deliberately. Every action reaches its object through
+  an unqualified name - the editors, the drop dialog, and the bulk extract
+  wizard alike - and outside the search path that names a different object or
+  none at all. An action that quietly works on the wrong table is worse than an
+  action that is not there.
+
+  TDDLExtractor does now understand a schema, so wiring these up is a matter of
+  carrying the schema through those callers rather than of new machinery. Until
+  then this branch is for seeing what a schema holds, which is itself something
+  that was not possible before: those objects were invisible. }
+function TMarathonCacheSchemaMember.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
+begin
+	Result := False;
+end;
+
+constructor TMarathonCacheSchemaObjectsHeader.Create;
+begin
+	inherited;
+	FCacheType := ctCacheHeader;
+end;
+
+procedure TMarathonCacheSchemaObjectsHeader.Expand(Recursive: Boolean);
+var
+	Conn: TMarathonCacheConnection;
+	Names: TStringList;
+	Idx: Integer;
+	NV: TMarathonTreeNode;
+	wNode: TMarathonCacheObject;
+begin
+	FContainerNode.DeleteChildren;
+	Conn := FRootItem.ConnectionByName[FConnectionName];
+	if not Assigned(Conn) or not Conn.Connected then
+	begin
+		FExpanded := True;
+		Exit;
+	end;
+	Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, FKind, FSchema,
+		Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+	try
+		for Idx := 0 to Names.Count - 1 do
+		begin
+			NV := FRootItem.FCache.AddPathNode(FContainerNode, Names[Idx]);
+			{ Read-only for now: these carry a schema the editors and the drop
+			  dialog do not yet take, so offering Open or Drop here would act on
+			  whatever the *unqualified* name reaches - a different object. What
+			  works is extracting the DDL, which does understand a schema. }
+			wNode := TMarathonCacheSchemaMember.Create;
+			wNode.ContainerNode := NV;
+			wNode.RootItem := FRootItem;
+			wNode.Caption := Names[Idx];
+			wNode.ObjectName := Names[Idx];
+			wNode.ConnectionName := FConnectionName;
+			wNode.System := False;
+			TMarathonCacheSchemaMember(wNode).Schema := FSchema;
+			NV.Data := wNode;
+		end;
+		FExpanded := True;
+	finally
+		Names.Free;
+	end;
 end;
 
 { No editor form and no New: creating a schema is a one-line statement with
