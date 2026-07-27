@@ -404,21 +404,51 @@ and schema comparison all exist here already. The gap is arrangement.
   Not done: the **dedicated connection dialog**. The master-properties
   connection tab already has every field one would have, so a new dialog would
   be a second way to do the same thing rather than a better one.
-- [ ] **7. Table designer** — assessed rather than started, because the shape
-  of the job is not what the item implies. Marathon *already* designs tables:
-  New Table opens a column dialog, and the table editor has Structure,
-  Constraints, Indices and DDL tabs. What the VS Code designer adds is that the
-  whole table is edited in one view and **the script is shown before it is
-  applied**. Marathon applies each change as you make it — every column dialog
-  runs its own `ALTER TABLE` on OK — so there is nothing pending to preview.
+- [x] **7. Table designer** — the whole table in one grid, the script it would
+  run underneath it, and one Apply.
 
-  Building the designer therefore means converting the table editor from
-  immediate-apply to design-then-apply: a batch of intended changes, a script
-  built from them, and one apply. That is a deep change to the editor with the
-  thinnest coverage in the tree — until this session it had none at all, and it
-  now has "it opens and reads its columns". Worth doing, worth doing with tests
-  first, and not worth starting at the end of a long session and leaving half
-  converted.
+  The shape of the job was not what the item implied. Marathon *already*
+  designs tables: New Table opens a column dialog, and the table editor has
+  Structure, Constraints, Indices and DDL tabs. What the VS Code designer adds
+  is that the whole table is edited in one view and **the script is shown
+  before it is applied**. Marathon applied each change as it was made — every
+  column dialog ran its own `ALTER TABLE` on OK — so there was nothing pending
+  to preview, and no way to abandon a half-made change: the first three columns
+  were already in the database while you were still deciding on the fourth.
+
+  So the designer is a second way of editing a table rather than a replacement.
+  The immediate-apply editor is still what you want to alter one column; this is
+  what you want to lay out a table. Nothing was converted, which is why the
+  change carries no risk to the editor that had the thinnest coverage in the
+  tree.
+
+  Three units, split so the decisions can be tested without a server:
+  - `src/Common/TableDesign.pas` — a design, and the statements that turn one
+    into another. No database, no LCL. Renames come first (so later statements
+    can use the new name) and the primary key last (it names columns the earlier
+    ones create); drops and retypes are flagged as able to lose data.
+  - `src/Common/TableDesignIO.pas` — reading a table out of the catalogue as a
+    design, and running a script. Reuses the metadata extractor's
+    `ConvertFieldType`, so a column reads back spelled the way the DDL tab
+    spells it — if the two disagreed, opening a table and pressing Apply without
+    touching anything would rewrite columns.
+  - `src/Source/TableDesignerForm.pas` — the form. Reachable from the object
+    tree's context menu and the command palette (`ObjectDesignTable`).
+
+  A column carries the name it has *in the database* alongside the name it is
+  being given. That is what makes a rename an instruction rather than a guess:
+  without it, `ID` becoming `CUSTOMER_ID` is indistinguishable from `ID` being
+  dropped and `CUSTOMER_ID` added, and those two differ by the data in the
+  column.
+
+  Tested at three levels: 28 checks in `keyword_test` on what each edit should
+  generate (no database); a round trip in `ibx_smoke_test` that creates a table
+  from a design, reads it back, applies every kind of change at once and checks
+  each one landed — including that *reading a table twice generates no
+  statements*, which is what ties the reader and the generator together; and
+  the form itself in `form_load_test` against a real table. Reverting the
+  rename ordering makes the live test fail with the error it exists to prevent
+  (`column "FULL_NAME" does not exist`).
 - [x] **8. Cleanup that this makes possible** — `WindowList` and the Window menu
   exist to manage floating windows and become redundant once documents are tabs;
   `GlobalMigrateWizard.pas` is already dead (superseded by `MetaExtractWizard`);
@@ -514,5 +544,5 @@ because the original reasoning no longer holds:
 | 9 | Results beneath the statement | Done |
 | 9 | Command palette | Done |
 | 9 | Connection groups | Done; dedicated dialog judged not worth it |
-| 9 | Table designer | Assessed, not started — needs the editor converted to design-then-apply |
+| 9 | Table designer | Done — added alongside the immediate-apply editor, not converting it |
 | 9 | Cleanup enabled by the shell | Done |

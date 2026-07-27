@@ -40,7 +40,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette;
 
 var
   Failures: Integer = 0;
@@ -1116,6 +1116,85 @@ end;
 
   Skipped, loudly, when the variables are unset, so a run without a server
   still means something and does not quietly report success it did not earn. }
+{ The table designer, on a real table.
+
+  The model underneath it is checked twice already - keyword_test says what an
+  edit should generate, and the smoke test says Firebird accepts it. Neither
+  says the form is wired to any of that. What is left to get wrong is exactly
+  what a build cannot catch: an .lfm that does not stream, a grid whose hidden
+  original-name column was dropped so every column looks like an addition, a
+  script pane nothing refreshes, an Apply button enabled with nothing to apply. }
+procedure CheckTableDesignerOn(Conn: TMarathonCacheConnection; const TableName: String);
+var
+  F: TfrmTableDesigner;
+  Before: Integer;
+begin
+  WriteLn('Table designer:');
+  try
+    F := TfrmTableDesigner.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the designer''s .lfm streams (' + E.ClassName + ': ' + E.Message + ')');
+      Exit;
+    end;
+  end;
+  try
+    Check(Assigned(F.grdColumns) and Assigned(F.memScript) and Assigned(F.btnApply),
+      'the designer''s .lfm streams its grid, script pane and Apply button');
+    { Six visible columns and the hidden one behind them. Without that seventh
+      the form still builds and still runs - and every column read from the
+      database looks like one being added, so Apply would try to add columns
+      that already exist. }
+    Check(F.grdColumns.ColCount = 7,
+      'the grid keeps its hidden original-name column (has ' +
+      IntToStr(F.grdColumns.ColCount) + ' columns)');
+
+    try
+      F.LoadTable(Conn.Connection, 'EditorHarness', TableName);
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the designer loads ' + TableName + ' (' + E.ClassName +
+          ': ' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    Check(F.grdColumns.RowCount > 1,
+      'it reads the table''s columns into the grid (' +
+      IntToStr(F.grdColumns.RowCount - 1) + ')');
+
+    { The property the whole design-then-apply idea rests on: opening a table
+      and touching nothing has nothing to apply. If this failed, the first
+      thing a user did would be to run an unintended script. }
+    Check(F.memScript.Lines.Count = 0, 'a freshly opened table has an empty script');
+    Check(not F.btnApply.Enabled, 'and Apply is disabled with nothing to apply');
+
+    { An edit, made the way the grid makes one. }
+    Before := F.memScript.Lines.Count;
+    F.grdColumns.Cells[1, 1] := 'varchar(123)';
+    F.grdColumnsEditingDone(F.grdColumns);
+    Check(F.memScript.Lines.Count > Before,
+      'editing a cell puts something in the script pane');
+    Check(Pos('varchar(123)', F.memScript.Lines.Text) > 0,
+      'and the script says what was actually typed');
+    Check(F.btnApply.Enabled, 'and Apply becomes available');
+    { Retyping is the flagged kind, so the warning has to reach the pane - it
+      is the only thing standing between a mistyped width and a truncated
+      column. }
+    Check(Pos('lose data', F.memScript.Lines.Text) > 0,
+      'a retype is marked as able to lose data');
+
+    { And backing out. Nothing was applied, so this has to leave the table
+      alone and the form back where it started. }
+    F.btnRevertClick(nil);
+    Check(F.memScript.Lines.Count = 0, 'Revert empties the script again');
+    Check(not F.btnApply.Enabled, 'and disables Apply');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckTableEditorAgainstDatabase(const DatabaseName, User, Password: String);
 var
   Conn: TMarathonCacheConnection;
@@ -1208,6 +1287,8 @@ begin
   CheckEditorLoads(Conn, sokDomain, 'the domain editor');
   CheckEditorLoads(Conn, sokGenerator, 'the generator editor');
   CheckEditorLoads(Conn, sokException, 'the exception editor');
+
+  CheckTableDesignerOn(Conn, TableName);
 end;
 
 procedure CheckCompletionWiring;
@@ -1533,6 +1614,57 @@ end;
   What a query matches is decided without a GUI in keyword_test; what matters
   here is that it finds the commands that actually exist, narrows as you type,
   and refuses to run one that cannot run. }
+{ The designer is only worth having if it can be reached.
+
+  Everything else about it is checked directly - construct the form, call
+  LoadTable. That is exactly what a user cannot do: they get there through the
+  tree's context menu, which is streamed from an .lfm and silently does nothing
+  if the item is not bound to the action. }
+procedure CheckDesignTableReachable;
+var
+  Idx: Integer;
+  Action: TContainedAction;
+  Found: TCustomAction;
+  MenuFound: Boolean;
+
+  { Depth-first, because the item sits inside the popup's item tree rather than
+    at its top level. }
+  function BoundSomewhere(Item: TMenuItem): Boolean;
+  var
+    N: Integer;
+  begin
+    Result := Item.Action = Found;
+    if Result then
+      Exit;
+    for N := 0 to Item.Count - 1 do
+      if BoundSomewhere(Item.Items[N]) then
+        Exit(True);
+  end;
+
+begin
+  WriteLn('Table designer is reachable:');
+  Found := nil;
+  for Idx := 0 to frmMarathonMain.actMain.ActionCount - 1 do
+  begin
+    Action := frmMarathonMain.actMain.Actions[Idx];
+    if (Action is TCustomAction) and (Action.Name = 'ObjectDesignTable') then
+      Found := TCustomAction(Action);
+  end;
+  Check(Assigned(Found), 'the Design Table action is in the action list');
+  if not Assigned(Found) then
+    Exit;
+  { Which also puts it in the command palette, since that reads the same list. }
+  Check(Assigned(Found.OnExecute), 'it has something to run');
+  Check(Pos('Design', CommandDisplayName(Found.Caption)) > 0,
+    'and a caption that finds it by typing "design"');
+
+  MenuFound := False;
+  for Idx := 0 to dmMenus.mnuTree.Items.Count - 1 do
+    if BoundSomewhere(dmMenus.mnuTree.Items[Idx]) then
+      MenuFound := True;
+  Check(MenuFound, 'the object tree''s context menu offers it');
+end;
+
 procedure CheckCommandPalette;
 var
   P: TfrmCommandPalette;
@@ -2057,6 +2189,7 @@ begin
   CheckExplorerFilter;
   CheckResultsUnderEditor;
   CheckCommandPalette;
+  CheckDesignTableReachable;
   CheckConnectionGrouping;
   CheckHighDPIScaling;
   CheckCompletionWiring;

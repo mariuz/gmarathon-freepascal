@@ -102,6 +102,9 @@ type
     function CanScriptMerge: Boolean; virtual;
     procedure DoScriptMerge; virtual;
 
+    function CanDesignTable: Boolean; virtual;
+    procedure DoDesignTable; virtual;
+
     procedure ShowDocument;
     { Gives a control the focus if it can take it.
 
@@ -448,6 +451,18 @@ end;
 function TfrmBaseDocumentForm.CanScriptDrop: Boolean;
 begin
   Result := False;
+end;
+
+function TfrmBaseDocumentForm.CanDesignTable: Boolean;
+begin
+  { Only the object tree knows which table is selected, so only it overrides
+    this. Everything else leaves the menu item greyed. }
+  Result := False;
+end;
+
+procedure TfrmBaseDocumentForm.DoDesignTable;
+begin
+  { Nothing: CanDesignTable said so. }
 end;
 
 function TfrmBaseDocumentForm.CanScriptMerge: Boolean;

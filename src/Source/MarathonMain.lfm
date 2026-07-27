@@ -2389,6 +2389,13 @@ object frmMarathonMain: TfrmMarathonMain
       OnExecute = ViewRefreshExecute
       OnUpdate = ViewRefreshUpdate
     end
+    object ObjectDesignTable: TAction
+      Category = 'Object'
+      Caption = '&Design Table...'
+      Hint = 'Edit the whole table in one grid and review the script before it runs'
+      OnExecute = ObjectDesignTableExecute
+      OnUpdate = ObjectDesignTableUpdate
+    end
     object ProjectExtractMetadata: TAction
       Category = 'Project'
       Caption = 'E&xtract Metadata...'

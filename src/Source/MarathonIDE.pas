@@ -200,6 +200,10 @@ type
 		function OpenGenerator(GeneratorName: String; Connection: String): TForm;
 		procedure NewTable(Connection: String);
 		function OpenTable(TableName: String; Connection: String): TForm;
+		{ The table designer, which is the other way of editing a table: the whole
+		  table in one grid, and the script shown before it is run. OpenTable's
+		  editor stays because it is what you want for one column at a time. }
+		function DesignTable(TableName: String; Connection: String): TForm;
 		procedure NewView(Connection: String);
 		function OpenView(ViewName: String; Connection: String): TForm;
 		procedure NewUDF(Connection: String);
@@ -233,7 +237,7 @@ var
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -1014,6 +1018,11 @@ begin
 					L.Free;
 				end;
 			end;
+
+		opDesign:
+			{ Only tables offer it - CanDoOperation says so - so there is no type
+			  dispatch here, unlike opOpen which every object kind answers to. }
+			DesignTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 		opScriptSelect, opScriptInsert, opScriptUpdate, opScriptDelete, opScriptCreate,
 		opScriptExecute, opScriptAlter, opScriptDrop, opScriptMerge:
@@ -2559,6 +2568,22 @@ begin
 		FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);
 		Result := F;
 	end;
+end;
+
+function TMarathonIDE.DesignTable(TableName, Connection: String): TForm;
+var
+	C: TMarathonCacheConnection;
+begin
+	Result := nil;
+	if not CheckConnected(Connection) then
+		Exit;
+	if not DoesObjectExist(TableName, ctTable, Connection) then
+		Exit;
+	C := FCurrentProject.Cache.ConnectionByName[Connection];
+	if not Assigned(C) or not Assigned(C.Connection) then
+		Exit;
+	Result := ShowTableDesigner(C.Connection, Connection, TableName);
+	FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);
 end;
 
 procedure TMarathonIDE.NewView(Connection: String);

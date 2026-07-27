@@ -258,6 +258,9 @@ object dmMenus: TdmMenus
     object ProjectOpenItem1: TMenuItem
       Action = frmMarathonMain.ProjectOpenItem
     end
+    object ObjectDesignTable1: TMenuItem
+      Action = frmMarathonMain.ObjectDesignTable
+    end
     object ProjectCreateFolder1: TMenuItem
       Action = frmMarathonMain.ProjectCreateFolder
     end

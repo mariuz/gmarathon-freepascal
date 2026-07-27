@@ -249,6 +249,8 @@ type
 
 		function CanScriptMerge : Boolean; override;
 		procedure DoScriptMerge; override;
+		function CanDesignTable : Boolean; override;
+		procedure DoDesignTable; override;
 
 		function CanScriptExecute : Boolean; override;
 		procedure DoScriptExecute; override;
@@ -1266,6 +1268,16 @@ end;
 procedure TfrmDatabaseExplorer.DoScriptDrop;
 begin
 	DoBrowserOperation(opScriptDrop);
+end;
+
+function TfrmDatabaseExplorer.CanDesignTable: Boolean;
+begin
+	Result := CanDoBrowserOperation(opDesign);
+end;
+
+procedure TfrmDatabaseExplorer.DoDesignTable;
+begin
+	DoBrowserOperation(opDesign);
 end;
 
 function TfrmDatabaseExplorer.CanScriptMerge: Boolean;

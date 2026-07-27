@@ -1,0 +1,190 @@
+object frmTableDesigner: TfrmTableDesigner
+  Left = 240
+  Height = 520
+  Top = 130
+  Width = 760
+  Caption = 'Design Table'
+  ClientHeight = 520
+  ClientWidth = 760
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  LCLVersion = '2.2.6.0'
+  object pnlTop: TPanel
+    Left = 0
+    Height = 56
+    Top = 0
+    Width = 760
+    Align = alTop
+    BevelOuter = bvNone
+    ClientHeight = 56
+    ClientWidth = 760
+    TabOrder = 0
+    object lblTable: TLabel
+      Left = 8
+      Height = 15
+      Top = 34
+      Width = 36
+      Caption = 'Table:'
+      ParentColor = False
+    end
+    object edTableName: TEdit
+      Left = 52
+      Height = 23
+      Top = 30
+      Width = 260
+      TabOrder = 0
+    end
+    object tbActions: TToolBar
+      Left = 0
+      Height = 26
+      Top = 0
+      Width = 760
+      ButtonHeight = 24
+      ButtonWidth = 96
+      Caption = 'tbActions'
+      ShowCaptions = True
+      TabOrder = 1
+      object btnAddColumn: TToolButton
+        Left = 1
+        Top = 2
+        Caption = 'Add column'
+        OnClick = btnAddColumnClick
+      end
+      object btnDeleteColumn: TToolButton
+        Left = 97
+        Top = 2
+        Caption = 'Remove'
+        OnClick = btnDeleteColumnClick
+      end
+      object btnMoveUp: TToolButton
+        Left = 193
+        Top = 2
+        Caption = 'Move up'
+        OnClick = btnMoveUpClick
+      end
+      object btnMoveDown: TToolButton
+        Left = 289
+        Top = 2
+        Caption = 'Move down'
+        OnClick = btnMoveDownClick
+      end
+      object sep1: TToolButton
+        Left = 385
+        Height = 24
+        Top = 2
+        Caption = 'sep1'
+        Style = tbsDivider
+      end
+      object btnApply: TToolButton
+        Left = 390
+        Top = 2
+        Caption = 'Apply'
+        Enabled = False
+        OnClick = btnApplyClick
+      end
+      object btnRevert: TToolButton
+        Left = 486
+        Top = 2
+        Caption = 'Revert'
+        Enabled = False
+        OnClick = btnRevertClick
+      end
+    end
+  end
+  object grdColumns: TStringGrid
+    Left = 0
+    Height = 246
+    Top = 56
+    Width = 760
+    Align = alClient
+    ColCount = 7
+    Columns = <
+      item
+        Title.Caption = 'Column'
+        Width = 160
+      end
+      item
+        Title.Caption = 'Type'
+        Width = 150
+      end
+      item
+        ButtonStyle = cbsCheckboxColumn
+        Title.Caption = 'Not null'
+        Width = 70
+      end
+      item
+        Title.Caption = 'Default'
+        Width = 120
+      end
+      item
+        Title.Caption = 'Computed by'
+        Width = 170
+      end
+      item
+        Title.Caption = 'Key'
+        Width = 50
+      end
+      item
+        Title.Caption = 'Original'
+        Visible = False
+        Width = 10
+      end>
+    FixedCols = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goEditing, goRowSelect, goSmoothScroll]
+    RowCount = 1
+    TabOrder = 1
+    OnCheckboxToggled = grdColumnsCheckboxToggled
+    OnEditingDone = grdColumnsEditingDone
+  end
+  object splScript: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 5
+    Top = 302
+    Width = 760
+    Align = alBottom
+    ResizeAnchor = akBottom
+  end
+  object pnlScript: TPanel
+    Left = 0
+    Height = 194
+    Top = 307
+    Width = 760
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 194
+    ClientWidth = 760
+    TabOrder = 2
+    object lblScript: TLabel
+      Left = 4
+      Height = 15
+      Top = 2
+      Width = 220
+      Caption = 'This is what Apply will run:'
+      ParentColor = False
+    end
+    object memScript: TMemo
+      Left = 0
+      Height = 173
+      Top = 21
+      Width = 760
+      Align = alBottom
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      Font.Name = 'Monospace'
+      ParentFont = False
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
+      TabOrder = 0
+      WordWrap = False
+    end
+  end
+  object stbStatus: TStatusBar
+    Left = 0
+    Height = 19
+    Top = 501
+    Width = 760
+    Panels = <>
+    SimplePanel = True
+    SimpleText = 'No changes.'
+  end
+end

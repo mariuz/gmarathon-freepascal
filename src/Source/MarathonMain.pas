@@ -151,6 +151,7 @@ type
     ObjectScriptAlter: TAction;
     ObjectScriptDrop: TAction;
     ObjectScriptMerge: TAction;
+    ObjectDesignTable: TAction;
     ObjectScriptExecute: TAction;
     ToolsSessionMonitor: TAction;
     ToolsProfiler: TAction;
@@ -569,6 +570,8 @@ type
     procedure ObjectScriptDropUpdate(Sender: TObject);
     procedure ObjectScriptMergeExecute(Sender: TObject);
     procedure ObjectScriptMergeUpdate(Sender: TObject);
+    procedure ObjectDesignTableExecute(Sender: TObject);
+    procedure ObjectDesignTableUpdate(Sender: TObject);
     procedure ObjectScriptExecuteExecute(Sender: TObject);
     procedure ObjectScriptExecuteUpdate(Sender: TObject);
     procedure ToolsSessionMonitorExecute(Sender: TObject);
@@ -2141,6 +2144,28 @@ begin
 		ObjectScriptDrop.Enabled := F.CanScriptDrop
 	else
 		ObjectScriptDrop.Enabled := False;
+end;
+
+procedure TfrmMarathonMain.ObjectDesignTableExecute(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		F.DoDesignTable;
+end;
+
+procedure TfrmMarathonMain.ObjectDesignTableUpdate(Sender: TObject);
+var
+	F: IMarathonForm;
+
+begin
+	F := MarathonIDEInstance.ScreenActiveForm;
+	if Assigned(F) then
+		ObjectDesignTable.Enabled := F.CanDesignTable
+	else
+		ObjectDesignTable.Enabled := False;
 end;
 
 procedure TfrmMarathonMain.ObjectScriptMergeExecute(Sender: TObject);

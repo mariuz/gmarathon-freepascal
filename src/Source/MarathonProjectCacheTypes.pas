@@ -68,7 +68,10 @@ type
       stable for any plugin compiled against an older build. }
     opScriptAlter,
     opScriptDrop,
-    opScriptMerge);
+    opScriptMerge,
+    { Open the table designer rather than the table editor - the whole table in
+      one grid, with the script shown before it runs. Tables only. }
+    opDesign);
 
   TGSSCacheType = (
     ctDontCare,

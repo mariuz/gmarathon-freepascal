@@ -18,7 +18,8 @@ program ibx_smoke_test;
 uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript;
+  ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
+  TableDesign, TableDesignIO;
 
 var
   DB: TIBDatabase;
@@ -197,6 +198,271 @@ begin
     WriteLn(DDLText);
     Halt(1);
   end;
+end;
+
+{ A column, with only what a given check is about spelled out. An empty
+  original name is what marks a column as one being added. }
+function Col(const AOriginal, AName, AType: String; ANotNull: Boolean = False;
+  const ADefault: String = ''): TColumnDesign;
+begin
+  Result.OriginalName := AOriginal;
+  Result.Name := AName;
+  Result.DataType := AType;
+  Result.NotNull := ANotNull;
+  Result.DefaultValue := ADefault;
+  Result.ComputedAs := '';
+  Result.Collation := '';
+end;
+
+{ The table designer's model against a real server.
+
+  keyword_test already checks what a given edit should generate, without a
+  database. What it cannot check is the half that matters most: that Firebird
+  accepts those statements, and that a table read back out of the catalogue
+  says the same thing as the design that made it. Those two are what make a
+  preview worth trusting - a script nobody ran is a guess. }
+procedure TestTableDesignRoundTrip;
+var
+  Original, Target, Reread: TTableDesign;
+  Statements: TStringList;
+  C: TColumnDesign;
+  Changes: TTableDesignChangeArray;
+  Idx: Integer;
+  Names: String;
+
+  procedure Fail(const What: String);
+  begin
+    WriteLn('FAIL: table design round trip: ', What);
+    if Tr.InTransaction then
+      Tr.Rollback;
+    Halt(1);
+  end;
+
+  procedure RunDDL(const SQLText: String);
+  begin
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.SQL.Text := SQLText;
+    Q.ExecSQL;
+    Tr.Commit;
+  end;
+
+  { The column of that name, or a failure - so a missing column is reported as
+    itself rather than as a range-check error further down. }
+  function ColumnNamed(Design: TTableDesign; const AName: String): TColumnDesign;
+  var
+    N: Integer;
+  begin
+    for N := 0 to Design.ColumnCount - 1 do
+      if SameText(Design.Column(N).Name, AName) then
+        Exit(Design.Column(N));
+    Fail('no column called ' + AName + ' after the change');
+  end;
+
+begin
+  WriteLn('Table designer round trip:');
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Q.SQL.Text := 'execute block as begin ' +
+    'if (exists(select 1 from rdb$relations where rdb$relation_name = ''DESIGN_T'')) then ' +
+    '  execute statement ''drop table DESIGN_T''; end';
+  Q.ExecSQL;
+  Tr.Commit;
+
+  Original := TTableDesign.Create('DESIGN_T');
+  try
+    Original.AddColumn(Col('', 'ID', 'integer', True));
+    Original.AddColumn(Col('', 'NAME', 'varchar(30)'));
+    Original.AddColumn(Col('', 'QTY', 'integer', False, '7'));
+    Original.PrimaryKey.Add('ID');
+
+    { Does the server accept what CreateTableScript generates? Nothing below
+      means anything if it does not. }
+    try
+      RunDDL(CreateTableScript(Original));
+    except
+      on E: Exception do
+        Fail('Firebird rejected the generated CREATE TABLE: ' + E.Message +
+          ' - script was: ' + CreateTableScript(Original));
+    end;
+    WriteLn('  ok   the generated CREATE TABLE runs');
+  finally
+    Original.Free;
+  end;
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+
+  { What the designer would show when the table is opened. }
+  Original := ReadTableDesign(DB, Tr, 'DESIGN_T');
+  if not Assigned(Original) then
+    Fail('the table just created did not read back');
+  try
+    if Original.ColumnCount <> 3 then
+      Fail('read back ' + IntToStr(Original.ColumnCount) + ' columns, expected 3');
+    if not SameText(Trim(ColumnNamed(Original, 'NAME').DataType), 'varchar(30)') then
+      Fail('VARCHAR(30) read back as "' + ColumnNamed(Original, 'NAME').DataType + '"');
+    if not ColumnNamed(Original, 'ID').NotNull then
+      Fail('a NOT NULL column read back as nullable');
+    if ColumnNamed(Original, 'NAME').NotNull then
+      Fail('a nullable column read back as NOT NULL');
+    if Trim(ColumnNamed(Original, 'QTY').DefaultValue) <> '7' then
+      Fail('the default read back as "' + ColumnNamed(Original, 'QTY').DefaultValue +
+        '", expected 7 - the DEFAULT keyword should have been stripped');
+    if (Original.PrimaryKey.Count <> 1) or
+       not SameText(Trim(Original.PrimaryKey[0]), 'ID') then
+      Fail('the primary key did not read back');
+    if Trim(ColumnNamed(Original, 'ID').OriginalName) = '' then
+      Fail('a column read from the database has no original name, so every ' +
+        'column would look like one being added');
+    WriteLn('  ok   the table reads back as the design that made it');
+
+    { The property that ties the two halves together: a design read from the
+      database, compared with itself, must generate nothing. If the reader and
+      the generator disagreed about how a type is spelled - "VARCHAR(30)"
+      against "varchar(30) CHARACTER SET NONE", say - opening a table and
+      pressing Apply without touching anything would rewrite columns. }
+    Reread := ReadTableDesign(DB, Tr, 'DESIGN_T');
+    try
+      Changes := TableDesignChanges(Original, Reread);
+      if Length(Changes) <> 0 then
+      begin
+        Names := '';
+        for Idx := 0 to High(Changes) do
+          Names := Names + #10 + '         ' + Changes[Idx].Statement;
+        Fail('an untouched table generated ' + IntToStr(Length(Changes)) +
+          ' statement(s), so the reader and the generator disagree:' + Names);
+      end;
+      WriteLn('  ok   reading a table twice generates no changes');
+    finally
+      Reread.Free;
+    end;
+
+    { Now every kind of change at once, which is also the case most likely to
+      come out in an order the server rejects. }
+    Target := Original.Clone;
+    try
+      C := Target.Column(1);
+      C.Name := 'FULL_NAME';       { rename }
+      C.DataType := 'varchar(60)'; { and widen, by the new name }
+      C.NotNull := True;           { and make required }
+      Target.SetColumn(1, C);
+
+      C := Target.Column(2);
+      C.DefaultValue := '0';       { change a default }
+      Target.SetColumn(2, C);
+
+      Target.AddColumn(Col('', 'EMAIL', 'varchar(100)'));  { add }
+
+      Statements := TableDesignStatements(Original, Target);
+      try
+        if Statements.Count = 0 then
+          Fail('five edits generated no statements at all');
+        try
+          ApplyTableDesign(DB, Tr, Statements.ToStringArray);
+          Tr.Commit;
+        except
+          on E: Exception do
+            Fail('Firebird rejected the generated script: ' + E.Message +
+              ' - script was: ' + StringReplace(Statements.Text, #10, ' ', [rfReplaceAll]));
+        end;
+        WriteLn('  ok   the generated ALTER script runs (',
+          Statements.Count, ' statements)');
+      finally
+        Statements.Free;
+      end;
+    finally
+      Target.Free;
+    end;
+
+    { And the changes are actually there, rather than merely accepted. }
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Reread := ReadTableDesign(DB, Tr, 'DESIGN_T');
+    if not Assigned(Reread) then
+      Fail('the table did not read back after the changes');
+    try
+      if Reread.ColumnCount <> 4 then
+        Fail('expected 4 columns after adding one, got ' + IntToStr(Reread.ColumnCount));
+      if not SameText(Trim(ColumnNamed(Reread, 'FULL_NAME').DataType), 'varchar(60)') then
+        Fail('the renamed column is "' + ColumnNamed(Reread, 'FULL_NAME').DataType +
+          '", expected varchar(60) - the widen did not follow the rename');
+      if not ColumnNamed(Reread, 'FULL_NAME').NotNull then
+        Fail('the renamed column did not become NOT NULL');
+      if Trim(ColumnNamed(Reread, 'QTY').DefaultValue) <> '0' then
+        Fail('the changed default is "' + ColumnNamed(Reread, 'QTY').DefaultValue + '"');
+      if not SameText(Trim(ColumnNamed(Reread, 'EMAIL').DataType), 'varchar(100)') then
+        Fail('the added column is "' + ColumnNamed(Reread, 'EMAIL').DataType + '"');
+      WriteLn('  ok   every change is in the table afterwards');
+    finally
+      Reread.Free;
+    end;
+
+    { Dropping, separately, because it is the destructive one and because it
+      has to work on a table that has rows in it. }
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.SQL.Text := 'insert into DESIGN_T (ID, FULL_NAME) values (1, ''x'')';
+    Q.ExecSQL;
+    Tr.Commit;
+
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Reread := ReadTableDesign(DB, Tr, 'DESIGN_T');
+    try
+      Target := Reread.Clone;
+      try
+        for Idx := 0 to Target.ColumnCount - 1 do
+          if SameText(Target.Column(Idx).Name, 'EMAIL') then
+          begin
+            Target.DropColumn(Idx);
+            Break;
+          end;
+        Statements := TableDesignStatements(Reread, Target);
+        try
+          try
+            ApplyTableDesign(DB, Tr, Statements.ToStringArray);
+            Tr.Commit;
+          except
+            on E: Exception do
+              Fail('Firebird rejected the generated DROP: ' + E.Message);
+          end;
+        finally
+          Statements.Free;
+        end;
+      finally
+        Target.Free;
+      end;
+    finally
+      Reread.Free;
+    end;
+
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Reread := ReadTableDesign(DB, Tr, 'DESIGN_T');
+    try
+      if Reread.ColumnCount <> 3 then
+        Fail('the dropped column is still there');
+      WriteLn('  ok   a dropped column goes, on a table with rows in it');
+    finally
+      Reread.Free;
+    end;
+
+    { The name a key has to be dropped by, which cannot be guessed: Firebird
+      calls an unnamed one INTEG_nnn and the number differs between databases. }
+    if PrimaryKeyConstraintName(DB, Tr, 'DESIGN_T') = '' then
+      Fail('the primary key constraint name did not read back, so a designer ' +
+        'could not drop the key');
+    WriteLn('  ok   the primary key constraint name reads back');
+
+    if Tr.InTransaction then
+      Tr.Commit;
+  finally
+    Original.Free;
+  end;
+
+  RunDDL('drop table DESIGN_T');
 end;
 
 { File > Create Database, minus the dialog. The wizard it replaces was a
@@ -2898,6 +3164,7 @@ begin
 
     { Left until last: it makes and drops databases of its own, so a failure
       earlier in the run is not hidden behind it. }
+    TestTableDesignRoundTrip;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));

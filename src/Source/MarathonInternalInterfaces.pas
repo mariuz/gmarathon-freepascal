@@ -226,6 +226,11 @@ type
     function CanScriptMerge: Boolean;
     procedure DoScriptMerge;
 
+    { The table designer. Offered by the object tree on a table; every other
+      form answers False, which the base class does for them. }
+    function CanDesignTable: Boolean;
+    procedure DoDesignTable;
+
     function CanScriptExecute: Boolean;
     procedure DoScriptExecute;
 

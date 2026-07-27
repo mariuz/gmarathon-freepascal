@@ -4241,6 +4241,8 @@ begin
         Result := CacheType = ctSP;
       opScriptMerge:
         Result := CacheType = ctTable;
+      opDesign:
+        Result := CacheType = ctTable;
       opScriptAlter:
         { Domains and generators have an ALTER form of their own, but scripting
           one from the current state has nothing to put in it - what the user
