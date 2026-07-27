@@ -263,6 +263,48 @@ value-for-effort; none are blocked on engine or library limits.
 
   The credentials come from the environment rather than argv because the application treats its first argument as a project file to open, and the harness registers a server before the connection because `Connect` otherwise falls back to its own login dialog — under Xvfb a hang rather than a failure. Both were found the hard way. The smoke test now leaves a domain, a generator and an exception behind so those three editors are exercised rather than skipped.
 
+## Phase 9 — a single-window shell, modelled on the VS Code MSSQL extension
+
+Marathon is a floating-window application: the object browser is one window, and
+every table, view, procedure and SQL editor opens as another. The VS Code MSSQL
+extension — the reference for this phase — is one window: object explorer docked
+on the left, documents as tabs in the centre, results below, and a command
+palette over the top. Most of what that extension *does*, Marathon already does;
+what differs is the shell around it.
+
+Worth being explicit about what is **not** missing, so the work is not
+re-invented: connection colouring (environments), schema-grouped object trees,
+result export to CSV/JSON/Excel/INSERT, an execution plan view, a query profiler
+and schema comparison all exist here already. The gap is arrangement.
+
+- [ ] **1. Docked shell and tabbed documents** — the main window gains an
+  explorer panel, a splitter and a document tab area; document windows are
+  hosted as tabs rather than floating. Every document form descends from
+  `TfrmBaseDocumentForm`, so this hooks in one place rather than fourteen.
+- [ ] **2. Object explorer in the shell** — the browser's tree moves into the
+  left panel, with the list/detail pane it currently carries becoming a document
+  tab of its own when wanted.
+- [ ] **3. Explorer filtering and type-aware search** — the extension filters
+  large trees by name and by object type; Marathon has metadata search as a
+  separate window, which is the same capability in the wrong place.
+- [ ] **4. Results pane** — the SQL editor's grid moves to a shared results
+  area below the document tabs, with the existing exporters, so results are in
+  one predictable place rather than per-window.
+- [ ] **5. Command palette** — `Ctrl+Shift+P` over the existing `TActionList`,
+  which already names and groups every command in the application.
+- [ ] **6. Connection dialog and connection groups** — one dialog rather than
+  the current master-properties tab, reusing the environment colours already
+  implemented.
+- [ ] **7. Table designer** — a visual editor for creating and altering tables.
+  Large, and the first item here that is genuinely new capability rather than
+  rearrangement.
+- [ ] **8. Cleanup that this makes possible** — `WindowList` and the Window menu
+  exist to manage floating windows and become redundant once documents are tabs;
+  `GlobalMigrateWizard.pas` is already dead (superseded by `MetaExtractWizard`);
+  `lib/Other` holds three units shadowed by copies in `src/Source`. Release
+  notes are auto-generated stubs (`**Full Changelog**: …`) and could describe
+  what actually changed.
+
 ## Explicitly out of scope
 
 Adapted-but-rejected FlameRobin roadmap items, and why:
@@ -323,3 +365,11 @@ because the original reasoning no longer holds:
 | 8 | Parameterized routine executor | Not started |
 | 8 | Schema comparison / migration generator | Done |
 | 8 | HiDPI / scalable icons | Done (DPI scaling); scalable artwork needs new icons |
+| 9 | Docked shell and tabbed documents | In progress |
+| 9 | Object explorer in the shell | Not started |
+| 9 | Explorer filtering and type-aware search | Not started |
+| 9 | Shared results pane | Not started |
+| 9 | Command palette | Not started |
+| 9 | Connection dialog and groups | Not started |
+| 9 | Table designer | Not started |
+| 9 | Cleanup enabled by the shell | Not started |

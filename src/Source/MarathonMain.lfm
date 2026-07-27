@@ -993,6 +993,38 @@ object frmMarathonMain: TfrmMarathonMain
       end
     end
   end
+  object pnlShell: TPanel
+    Left = 0
+    Top = 75
+    Width = 728
+    Height = 32
+    Align = alClient
+    BevelOuter = bvNone
+    Caption = ''
+    object pnlExplorerDock: TPanel
+      Left = 0
+      Top = 0
+      Width = 260
+      Height = 32
+      Align = alLeft
+      BevelOuter = bvNone
+      Caption = ''
+    end
+    object splExplorer: TSplitter
+      Left = 260
+      Top = 0
+      Width = 5
+      Height = 32
+    end
+    object pgDocuments: TPageControl
+      Left = 265
+      Top = 0
+      Width = 463
+      Height = 32
+      Align = alClient
+      TabOrder = 0
+    end
+  end
   object stsMain: TStatusBar
     Left = 0
     Top = 107

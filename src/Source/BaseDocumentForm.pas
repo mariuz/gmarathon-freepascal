@@ -102,6 +102,7 @@ type
     function CanScriptMerge: Boolean; virtual;
     procedure DoScriptMerge; virtual;
 
+    procedure ShowDocument;
     function CanScriptCreate: Boolean; virtual;
     procedure DoScriptCreate; virtual;
 
@@ -344,7 +345,7 @@ implementation
 
 {$R *.lfm}
 
-uses MarathonIDE, Types;
+uses MarathonIDE, DocumentHost, Types;
 
 function TfrmBaseDocumentForm.CanAddToProject: Boolean;
 begin
@@ -509,6 +510,17 @@ end;
 procedure TfrmBaseDocumentForm.DoPaste;
 begin
 
+end;
+
+{ Shows this document. In the shell it becomes a tab; with no shell - a test
+  harness, or before the main window exists - it falls back to a window, which
+  is what every document did before Phase 9. Documents call this instead of
+  Show so the choice is made in one place. }
+procedure TfrmBaseDocumentForm.ShowDocument;
+begin
+  if Assigned(Documents) and Assigned(Documents.Host(Self)) then
+    Exit;
+  Show;
 end;
 
 constructor TfrmBaseDocumentForm.Create(AOwner: TComponent);

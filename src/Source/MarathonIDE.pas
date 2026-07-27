@@ -533,7 +533,7 @@ begin
 	F.ConnectionName := ConnName;
 	F.NewFile;
 	F.edSQLStatement.Text := SQLText;
-	F.Show;
+	F.ShowDocument;
 end;
 
 procedure TMarathonIDE.CacheEventHandler(Sender: TObject;	Event: TGSSCacheOp; Item: TMarathonCacheBaseNode);
@@ -1416,7 +1416,7 @@ begin
 		FSQL := TfrmSQLForm.Create(nil);
 		FSQL.ConnectionName := '';
 		FSQL.OpenFile(FDlgOpenFile.FileName);
-		FSQL.Show;
+		FSQL.ShowDocument;
 		Result := FSQL;
 		AddToRecentProjects(FDlgOpenFile.FileName);
 	end
@@ -1434,7 +1434,7 @@ begin
 	FSQL := TfrmSQLForm.Create(nil);
 	FSQL.ConnectionName := '';
 	FSQL.OpenFile(FileName);
-	FSQL.Show;
+	FSQL.ShowDocument;
 	Result := FSQL;
 	AddToRecentProjects(FileName);
 end;
@@ -1618,7 +1618,7 @@ begin
 			F := TfrmSQLForm.Create(nil);
 			F.ConnectionName := FCurrentProject.Cache.Connections[0].Caption;
 			F.NewFile;
-			F.Show;
+			F.ShowDocument;
 		end
 		else
 		begin
@@ -1643,7 +1643,7 @@ begin
 					F := TfrmSQLForm.Create(nil);
 					F.ConnectionName := ConnectName;
 					F.NewFile;
-					F.Show;
+					F.ShowDocument;
 				end;
 			finally
 				SC.Free;
@@ -1655,7 +1655,7 @@ begin
 		F := TfrmSQLForm.Create(nil);
 		F.ConnectionName := '';
 		F.NewFile;
-		F.Show;
+		F.ShowDocument;
 	end;
 end;
 
@@ -2199,7 +2199,7 @@ begin
 	F := TfrmDomains.Create(nil);
 	F.ConnectionName := Connection;
 	F.NewDomain;
-	F.Show;
+	F.ShowDocument;
 end;
 
 function TMarathonIDE.OpenDomain(DomainName: String; Connection: String): TForm;
@@ -2232,7 +2232,7 @@ begin
 		F := TfrmDomains.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadDomain(DomainName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(DomainName, ctDomain, Connection);
 		Result := F;
 	end;
@@ -2248,7 +2248,7 @@ begin
   F := TfrmStoredProcedure.Create(nil);
   F.ConnectionName := Connection;
   F.NewProcedure;
-  F.Show;
+  F.ShowDocument;
 end;
 
 function TMarathonIDE.OpenProcedure(ProcedureName, COnnection: String): TForm;
@@ -2285,7 +2285,7 @@ begin
     F := TfrmStoredProcedure.Create(nil);
     F.ConnectionName := Connection;
     F.LoadProcedure(ProcedureName);
-    F.Show;
+    F.ShowDocument;
     FCurrentProject.Cache.AddRecentObjectOpen(ProcedureName, ctSP, Connection);
     Result := F;
   end;
@@ -2330,7 +2330,7 @@ begin
 			F := TfrmStoredProcedure.Create(nil);
 			F.ConnectionName := Connection;
 			F.LoadProcedure(ProcedureName);
-			F.Show;
+			F.ShowDocument;
 			FCurrentProject.Cache.AddRecentObjectOpen(ProcedureName, ctSP, Connection);
 			Result := F;
 		end;
@@ -2348,7 +2348,7 @@ begin
 	F.ConnectionName := Connection;
 	try
 		F.NewTrigger('', '');
-		F.Show;
+		F.ShowDocument;
 	except
 		on E: Exception do
 			F.Free;
@@ -2365,7 +2365,7 @@ begin
 	F := TfrmTriggerEditor.Create(nil);
 	F.ConnectionName := Connection;
 	F.NewTrigger(TriggerType, Table);
-	F.Show;
+	F.ShowDocument;
 end;
 
 function TMarathonIDE.OpenTrigger(TriggerName, Connection: String): TForm;
@@ -2398,7 +2398,7 @@ begin
 		F := TfrmTriggerEditor.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadTrigger(TriggerName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(TriggerName, ctTrigger, Connection);
 		Result := F;
 	end;
@@ -2414,7 +2414,7 @@ begin
 	F := TfrmExceptions.Create(nil);
 	F.ConnectionName := Connection;
 	F.NewException;
-	F.Show;
+	F.ShowDocument;
 end;
 
 function TMarathonIDE.OpenException(ExceptionName, Connection: String): TForm;
@@ -2447,7 +2447,7 @@ begin
 		F := TfrmExceptions.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadException(ExceptionName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(ExceptionName, ctException, Connection);
 		Result := F;
 	end;
@@ -2463,7 +2463,7 @@ begin
 	F := TfrmGenerators.Create(nil);
 	F.ConnectionName := Connection;
 	F.NewGenerator;
-	F.Show;
+	F.ShowDocument;
 end;
 
 function TMarathonIDE.OpenGenerator(GeneratorName, Connection: String): TForm;
@@ -2496,7 +2496,7 @@ begin
 		F := TfrmGenerators.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadGenerator(GeneratorName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(GeneratorName, ctGenerator, Connection);
 		Result := F;
 	end;
@@ -2513,7 +2513,7 @@ begin
   F.ConnectionName := Connection;
   try
     F.NewTable;
-    F.Show;
+    F.ShowDocument;
   except
 		on E: Exception do
 			F.Free;
@@ -2550,7 +2550,7 @@ begin
 		F := TfrmTables.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadTable(TableName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);
 		Result := F;
 	end;
@@ -2567,7 +2567,7 @@ begin
 	F.ConnectionName := Connection;
 	try
 		F.NewView;
-		F.Show;
+		F.ShowDocument;
 	except
 		on E: Exception do
 			F.Free;
@@ -2604,7 +2604,7 @@ begin
 		F := TfrmViewEditor.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadView(ViewName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(ViewName, ctView, Connection);
 		Result := F;
 	end;
@@ -2621,7 +2621,7 @@ begin
 	F.ConnectionName := Connection;
 	try
 		F.NewUDF;
-		F.Show;
+		F.ShowDocument;
 	except
 		on E: Exception do
 			F.Free;
@@ -2658,7 +2658,7 @@ begin
 		F := TfrmUDFEditor.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadUDF(UDFName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(UDFName, ctUDF, Connection);
 		Result := F;
 	end;
@@ -2696,7 +2696,7 @@ begin
 		F := TfrmPackageEditor.Create(nil);
 		F.ConnectionName := Connection;
 		F.LoadPackage(PackageName);
-		F.Show;
+		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(PackageName, ctPackage, Connection);
 		Result := F;
 	end;
@@ -3315,7 +3315,7 @@ begin
 	if not Found then
 	begin
 		F := TfrmScriptEditorHost.Create(nil);
-		F.Show;
+		F.ShowDocument;
 	end;
 end;
 

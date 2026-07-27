@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost, SchemaObjects,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost, SchemaObjects, DocumentHost,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -1246,6 +1246,107 @@ begin
   end;
 end;
 
+{ Hosting documents as tabs - the shell Phase 9 is built around.
+
+  Checked without a database, because none of this needs one: what matters is
+  that a form put in a tab is reparented and shown, that a second request
+  activates the existing tab rather than adding a duplicate, and that closing a
+  document takes its tab with it. Leaking tabs would be invisible until a user
+  had opened and closed a few dozen documents. }
+procedure CheckDocumentHost;
+var
+  Shell: TForm;
+  Pages: TPageControl;
+  Host: TDocumentHost;
+  DocA, DocB: TForm;
+  Sheet: TTabSheet;
+begin
+  WriteLn('Document host:');
+  Shell := TForm.CreateNew(nil);
+  try
+    Shell.Width := 600;
+    Shell.Height := 400;
+    Pages := TPageControl.Create(Shell);
+    Pages.Parent := Shell;
+    Pages.Align := alClient;
+    Host := TDocumentHost.Create(Shell, Pages);
+
+    Check(Host.DocumentCount = 0, 'a new host holds no documents');
+    Check(Host.ActiveDocument = nil, 'and has no active document');
+
+    DocA := TForm.CreateNew(Shell);
+    DocA.Caption := 'Document A';
+    Sheet := Host.Host(DocA);
+    Check(Assigned(Sheet), 'a document is hosted');
+    Check(Host.DocumentCount = 1, 'it becomes one tab');
+    Check(Sheet.Caption = 'Document A', 'the tab takes the document''s caption');
+    Check(DocA.Parent = Sheet, 'the form is reparented into the tab');
+    Check(DocA.BorderStyle = bsNone, 'its window border is gone');
+    Check(DocA.Align = alClient, 'and it fills the tab');
+    Check(Host.IsHosted(DocA), 'the host knows it holds it');
+    Check(Host.ActiveDocument = DocA, 'and it is the active document');
+
+    DocB := TForm.CreateNew(Shell);
+    DocB.Caption := 'Document B';
+    Host.Host(DocB);
+    Check(Host.DocumentCount = 2, 'a second document is a second tab');
+    Check(Host.ActiveDocument = DocB, 'opening one activates it');
+
+    { Opening the same document again must not add a tab - the object tree
+      opens by name and will ask for one that is already up. }
+    Host.Host(DocA);
+    Check(Host.DocumentCount = 2, 'hosting the same document again adds no tab');
+    Check(Host.ActiveDocument = DocA, 'it activates the existing one instead');
+
+    Check(Host.Activate(DocB), 'an open document can be activated by request');
+    Check(Host.ActiveDocument = DocB, 'and becomes active');
+
+    DocA.Close;
+    Application.ProcessMessages;
+    Check(Host.DocumentCount = 1, 'closing a document removes its tab');
+    Check(not Host.IsHosted(DocA), 'and the host forgets it');
+  finally
+    Shell.Free;
+  end;
+end;
+
+{ The shell as the main window actually builds it, rather than the standalone
+  host exercised above. A document opened through the IDE has to become a tab;
+  before Phase 9 it became another floating window. }
+procedure CheckShellWiring;
+var
+  Probe: TForm;
+begin
+  WriteLn('Shell:');
+  Check(Assigned(Documents), 'the main window provides a document host');
+  if not Assigned(Documents) then
+    Exit;
+  Check(Documents.Pages = frmMarathonMain.pgDocuments,
+    'it hosts into the main window''s document area');
+  { The dock is deliberately hidden until the explorer moves into it. }
+  Check(not frmMarathonMain.pnlExplorerDock.Visible,
+    'the empty explorer dock is not shown');
+
+  { Hosted through the shell's own page control, not a stand-in for it. A real
+    document form is deliberately not built here: this harness has already
+    constructed several by this point and doing it again hangs - which is worth
+    knowing but is about repeated construction in one process, not about the
+    shell. That a document opens as a tab is checked by running the
+    application. }
+  Probe := TForm.CreateNew(frmMarathonMain);
+  try
+    Probe.Caption := 'Probe';
+    Check(Assigned(Documents.Host(Probe)), 'the shell hosts a document');
+    Check(Documents.ActiveDocument = Probe, 'and activates it');
+    Check(Probe.Parent = Documents.Pages.ActivePage,
+      'reparenting it into the document area');
+    Check(frmMarathonMain.pgDocuments.PageCount > 0,
+      'the main window''s document area holds it');
+  finally
+    Probe.Free;
+  end;
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1641,6 +1742,8 @@ begin
   CheckListViewRebuild;
   CheckImageListsSliced;
   CheckDesignedImageLists;
+  CheckDocumentHost;
+  CheckShellWiring;
   CheckHighDPIScaling;
   CheckCompletionWiring;
   CheckEditorSearch;

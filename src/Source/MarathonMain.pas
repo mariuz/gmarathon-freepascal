@@ -119,6 +119,13 @@ type
 		ToolsQueryBuilder: TAction;
     btnStatementHistory: TToolButton;
     stsMain: TStatusBar;
+    { The Phase 9 shell: the object explorer docks on the left and documents
+      open as tabs in the centre, rather than every document being its own
+      floating window. }
+    pnlShell: TPanel;
+    pnlExplorerDock: TPanel;
+    splExplorer: TSplitter;
+    pgDocuments: TPageControl;
     btnNextStatement: TToolButton;
 		btnPrevStatement: TToolButton;
     btnQueryBuilder: TToolButton;
@@ -767,7 +774,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -807,6 +814,16 @@ var
 	Idx: Integer;
 	B: TBitmap;
 begin
+	{ The shell's document area. Set before any document can be opened, and left
+	  nil if this form is never built - a harness, or the application before its
+	  main window is up - so callers fall back to a floating window rather than
+	  losing the document. }
+	Documents := TDocumentHost.Create(Self, pgDocuments);
+	{ The dock is hidden until the object explorer moves into it, which is the
+	  next item of this phase. An empty panel beside the documents would look
+	  like something had failed to load. }
+	pnlExplorerDock.Visible := False;
+	splExplorer.Visible := False;
 	Application.CreateForm(TdmMenus, dmMenus);
 	Application.OnIdle := IdleHandler;
 	MarathonIDEInstance.MainForm := Self;
