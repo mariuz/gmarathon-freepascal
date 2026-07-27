@@ -759,6 +759,18 @@ begin
     Check(Assigned(F.btnOK.OnClick), 'OK is guarded by a handler');
     Check(F.btnCancel.ModalResult = mrCancel, 'Cancel closes the dialog');
     Check(F.SourceConnection = '', 'no connection is chosen with none open');
+    { The script alternative. It opens on the database side, since that is the
+      common case, and the two inputs are enabled by which one is chosen. }
+    Check(F.rbFromConnection.Checked, 'it opens comparing against a database');
+    Check(not F.ComparingWithScript, 'and reports that as its mode');
+    Check(F.cmbSource.Enabled and not F.edScript.Enabled,
+      'the script box is disabled while comparing databases');
+    F.rbFromScript.Checked := True;
+    F.SourceKindChanged(nil);
+    Check(F.ComparingWithScript, 'choosing a script switches mode');
+    Check(F.edScript.Enabled and not F.cmbSource.Enabled,
+      'the connection list is disabled while comparing against a script');
+    Check(Assigned(F.btnBrowseScript.OnClick), 'Browse is hooked up');
   finally
     F.Free;
   end;

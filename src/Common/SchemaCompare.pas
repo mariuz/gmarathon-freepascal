@@ -63,9 +63,28 @@ type
 function CompareSchemas(const Source, Target: TScriptAsContext;
   out Differences: TSchemaDifferences): String;
 
+{ The same, against a DDL script rather than a live database.
+
+  The script is not parsed. It is run into a scratch database, which is then
+  compared as any other source would be and dropped afterwards - so a script
+  gets exactly the same treatment as a database, down to the dependency
+  ordering and the constraint handling, with no second implementation to keep
+  in step. It also means the script has to be one Firebird accepts, which is a
+  reasonable thing to insist on for something being used as a reference.
+
+  ScratchPath is where that database goes, and must be a path the *server* can
+  write - it is created by the server, not by this process. Returns an empty
+  string and a reason in ErrorMessage if the scratch database cannot be built,
+  which is the case worth reporting properly: a script that will not run is a
+  different problem from a schema that differs. }
+function CompareScriptWithDatabase(const ScriptFile: String;
+  const Target: TScriptAsContext;
+  const ScratchPath, ServerName, UserName, Password: String;
+  out Differences: TSchemaDifferences; out ErrorMessage: String): String;
+
 implementation
 
-uses IBDatabase, IBQuery, DDLExtractor;
+uses IBDatabase, IBQuery, DDLExtractor, CreateDatabase, ibxscript;
 
 type
   TComparedKind = record
@@ -749,6 +768,105 @@ begin
     Result := Script.Text;
   finally
     Script.Free;
+  end;
+end;
+
+
+function CompareScriptWithDatabase(const ScriptFile: String;
+  const Target: TScriptAsContext;
+  const ScratchPath, ServerName, UserName, Password: String;
+  out Differences: TSchemaDifferences; out ErrorMessage: String): String;
+var
+  Opts: TCreateDatabaseOptions;
+  DB: TIBDatabase;
+  Tr: TIBTransaction;
+  Runner: TIBXScript;
+  Lines: TStringList;
+  Built: Boolean;
+begin
+  Result := '';
+  ErrorMessage := '';
+  FillChar(Differences, SizeOf(Differences), 0);
+
+  if not FileExists(ScriptFile) then
+  begin
+    ErrorMessage := ScriptFile + ' does not exist.';
+    Exit;
+  end;
+
+  Opts.ServerName := ServerName;
+  Opts.FileName := ScratchPath;
+  Opts.UserName := UserName;
+  Opts.Password := Password;
+  { Matched to the database being compared against, so that a difference in
+    the script is a real one and not an artefact of the scratch database being
+    built differently. }
+  Opts.CharacterSet := '';
+  Opts.PageSize := 0;
+  Opts.Dialect := Target.Dialect;
+  if not CreateFirebirdDatabase(Opts, ErrorMessage) then
+    Exit;
+
+  DB := TIBDatabase.Create(nil);
+  Tr := TIBTransaction.Create(nil);
+  Built := False;
+  try
+    DB.DatabaseName := DatabaseConnectString(Opts);
+    DB.Params.Values['user_name'] := UserName;
+    DB.Params.Values['password'] := Password;
+    DB.LoginPrompt := False;
+    DB.SQLDialect := Target.Dialect;
+    Tr.DefaultDatabase := DB;
+    DB.DefaultTransaction := Tr;
+    try
+      DB.Connected := True;
+      Runner := TIBXScript.Create(nil);
+      Lines := TStringList.Create;
+      try
+        Runner.Database := DB;
+        Runner.Transaction := Tr;
+        Runner.Echo := False;
+        Runner.StopOnFirstError := True;
+        Lines.LoadFromFile(ScriptFile);
+        if not Runner.RunScript(Lines) then
+          ErrorMessage := ScriptFile + ' did not run against a new database. ' +
+            'The comparison needs a script Firebird accepts in full.'
+        else
+          Built := True;
+      finally
+        Lines.Free;
+        Runner.Free;
+      end;
+
+      if Built then
+      begin
+        if Tr.Active then
+          Tr.Commit;
+        Result := CompareSchemas(
+          ScriptAsContext(DB, Tr, Target.IsIB6, Target.Dialect, Target.EngineMajor),
+          Target, Differences);
+      end;
+    except
+      on E: Exception do
+        ErrorMessage := E.ClassName + ': ' + E.Message;
+    end;
+
+    { Dropped whichever way it went - a scratch database left behind would be
+      picked up as a real one the next time somebody looked at the directory. }
+    try
+      if Tr.Active then
+        Tr.Rollback;
+      if DB.Connected then
+        DB.DropDatabase;
+    except
+      on E: Exception do
+        if ErrorMessage = '' then
+          ErrorMessage := 'The comparison succeeded but the scratch database ' +
+            DatabaseConnectString(Opts) + ' could not be removed: ' + E.Message;
+    end;
+  finally
+    Tr.Free;
+    DB.Free;
   end;
 end;
 

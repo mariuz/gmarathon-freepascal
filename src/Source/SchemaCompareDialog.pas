@@ -36,16 +36,27 @@ type
     lblSource: TLabel;
     lblTarget: TLabel;
     lblExplain: TLabel;
+    rbFromConnection: TRadioButton;
+    rbFromScript: TRadioButton;
+    edScript: TEdit;
+    btnBrowseScript: TButton;
+    dlgOpenScript: TOpenDialog;
     cmbSource: TComboBox;
     cmbTarget: TComboBox;
     btnOK: TButton;
     btnCancel: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnOKClick(Sender: TObject);
+    procedure btnBrowseScriptClick(Sender: TObject);
+    procedure SourceKindChanged(Sender: TObject);
   public
     { The chosen connection names, valid once the dialog returns mrOK. }
     function SourceConnection: String;
     function TargetConnection: String;
+    { True when the comparison is against a DDL script rather than a second
+      database. ScriptFile is then what to read. }
+    function ComparingWithScript: Boolean;
+    function ScriptFile: String;
   end;
 
 implementation
@@ -74,6 +85,33 @@ begin
     cmbTarget.ItemIndex := 1
   else if cmbTarget.Items.Count > 0 then
     cmbTarget.ItemIndex := 0;
+  rbFromConnection.Checked := True;
+  SourceKindChanged(nil);
+end;
+
+procedure TfrmSchemaCompare.SourceKindChanged(Sender: TObject);
+begin
+  cmbSource.Enabled := rbFromConnection.Checked;
+  edScript.Enabled := rbFromScript.Checked;
+  btnBrowseScript.Enabled := rbFromScript.Checked;
+end;
+
+procedure TfrmSchemaCompare.btnBrowseScriptClick(Sender: TObject);
+begin
+  dlgOpenScript.Filter := 'SQL Scripts (*.sql)|*.sql|All Files (*.*)|*.*';
+  dlgOpenScript.Title := 'Reference Script';
+  if dlgOpenScript.Execute then
+    edScript.Text := dlgOpenScript.FileName;
+end;
+
+function TfrmSchemaCompare.ComparingWithScript: Boolean;
+begin
+  Result := rbFromScript.Checked;
+end;
+
+function TfrmSchemaCompare.ScriptFile: String;
+begin
+  Result := Trim(edScript.Text);
 end;
 
 function TfrmSchemaCompare.SourceConnection: String;
@@ -94,6 +132,24 @@ end;
 
 procedure TfrmSchemaCompare.btnOKClick(Sender: TObject);
 begin
+  if ComparingWithScript then
+  begin
+    if ScriptFile = '' then
+    begin
+      MessageDlg('Choose the script to compare against.', mtWarning, [mbOK], 0);
+      ModalResult := mrNone;
+      Exit;
+    end;
+    if TargetConnection = '' then
+    begin
+      MessageDlg('Choose the database to compare.', mtWarning, [mbOK], 0);
+      ModalResult := mrNone;
+      Exit;
+    end;
+    ModalResult := mrOK;
+    Exit;
+  end;
+
   if (SourceConnection = '') or (TargetConnection = '') then
   begin
     MessageDlg('Choose a connection on both sides.', mtWarning, [mbOK], 0);

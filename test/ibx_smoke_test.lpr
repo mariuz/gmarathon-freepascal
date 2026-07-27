@@ -486,7 +486,8 @@ var
   SrcDB, TgtDB: TIBDatabase;
   SrcTr, TgtTr: TIBTransaction;
   SrcCtx, TgtCtx: TScriptAsContext;
-  Diff, Diff2: TSchemaDifferences;
+  Diff, Diff2, Diff3: TSchemaDifferences;
+  ScriptFile, ScriptError: String;
   MigrationScript: String;
   Runner: TIBXScript;
   Lines: TStringList;
@@ -741,6 +742,64 @@ begin
         ' objects to drop, expected the same ', Diff.ToDrop);
       Halt(1);
     end;
+    { A DDL script as the reference instead of a live database. It is run into a
+      scratch database and compared like any other source, so it gets the same
+      treatment with no second implementation to keep in step. }
+    ScriptFile := GetTempDir + 'marathon_reference.sql';
+    with TStringList.Create do
+      try
+        Add('create table SCRIPT_TBL (ID integer not null primary key, NAME varchar(20));');
+        Add('create index IDX_SCRIPT_NAME on SCRIPT_TBL (NAME);');
+        SaveToFile(ScriptFile);
+      finally
+        Free;
+      end;
+    MigrationScript := CompareScriptWithDatabase(ScriptFile, TgtCtx,
+      '/tmp/marathon_cmp_scratch.fdb',
+      Copy(HostPrefix, 1, Length(HostPrefix) - 1), UserName, Password,
+      Diff3, ScriptError);
+    if ScriptError <> '' then
+    begin
+      WriteLn('FAIL: comparing against a script: ', ScriptError);
+      Halt(1);
+    end;
+    RequireInDDL(MigrationScript, 'SCRIPT_TBL', 'the table the script defines');
+    RequireInDDL(MigrationScript, 'IDX_SCRIPT_NAME', 'the index the script defines');
+    { The target's own tables are not in the script, so they come back as drops -
+      commented out, like every other drop. }
+    RequireInDDL(MigrationScript, '-- drop table', 'the target-only tables');
+    if Diff3.ToCreate < 2 then
+    begin
+      WriteLn('FAIL: expected the script''s table and index to be created, got ',
+        Diff3.ToCreate);
+      Halt(1);
+    end;
+    DeleteFile(ScriptFile);
+    WriteLn('Script comparison OK (', Diff3.ToCreate, ' to create, ',
+      Diff3.ToDrop, ' to drop)');
+
+    { A script Firebird will not accept must be reported as that, not as a
+      schema with no differences. }
+    ScriptFile := GetTempDir + 'marathon_bad.sql';
+    with TStringList.Create do
+      try
+        Add('create table BROKEN (this is not sql);');
+        SaveToFile(ScriptFile);
+      finally
+        Free;
+      end;
+    MigrationScript := CompareScriptWithDatabase(ScriptFile, TgtCtx,
+      '/tmp/marathon_cmp_scratch.fdb',
+      Copy(HostPrefix, 1, Length(HostPrefix) - 1), UserName, Password,
+      Diff3, ScriptError);
+    if ScriptError = '' then
+    begin
+      WriteLn('FAIL: a script that does not compile was accepted as a reference');
+      Halt(1);
+    end;
+    DeleteFile(ScriptFile);
+    WriteLn('Script comparison rejects a script Firebird will not run');
+
     WriteLn('Migration script converges (', Diff2.ToDrop,
       ' commented-out drop(s) and ', Diff2.NeedingAttention,
       ' report(s) remain, as intended)');

@@ -1761,7 +1761,9 @@ end;
 procedure TMarathonIDE.ToolsCompareSchemas;
 var
 	Dlg: TfrmSchemaCompare;
-	SourceName, TargetName: String;
+	SourceName, TargetName, ScriptName, ScriptError: String;
+	FromScript: Boolean;
+	TargetConn: TMarathonCacheConnection;
 	Diff: TSchemaDifferences;
 	MigrationScript: String;
 begin
@@ -1771,8 +1773,44 @@ begin
 			Exit;
 		SourceName := Dlg.SourceConnection;
 		TargetName := Dlg.TargetConnection;
+		FromScript := Dlg.ComparingWithScript;
+		ScriptName := Dlg.ScriptFile;
 	finally
 		Dlg.Free;
+	end;
+
+	if FromScript then
+	begin
+		TargetConn := FCurrentProject.Cache.ConnectionByName[TargetName];
+		Screen.Cursor := crHourGlass;
+		try
+			{ The scratch database goes beside the one being compared, which is a
+			  path the server is already known to be able to write - it is the
+			  server that creates it, not this process, so a local temp directory
+			  would be wrong for a remote connection. }
+			MigrationScript := CompareScriptWithDatabase(ScriptName,
+				ConnScriptContext(TargetConn),
+				ChangeFileExt(TargetConn.DBFileName, '') + '_compare_scratch.fdb',
+				MarathonIDEInstance.CurrentProject.Cache.ServerByName[
+					TargetConn.ServerName].HostName,
+				TargetConn.UserName, TargetConn.Password, Diff, ScriptError);
+		finally
+			Screen.Cursor := crDefault;
+		end;
+		if ScriptError <> '' then
+		begin
+			MessageDlg('The script could not be used as a reference.' + #13#10#13#10 +
+				ScriptError, mtError, [mbOK], 0);
+			Exit;
+		end;
+		ScriptAsOpenEditor(TargetName,
+			'/* ' + ExtractFileName(ScriptName) + ' -> ' + TargetName + ': ' +
+			IntToStr(Diff.ToCreate) + ' to create, ' +
+			IntToStr(Diff.Changed) + ' to redefine, ' +
+			IntToStr(Diff.ToDrop) + ' to drop, ' +
+			IntToStr(Diff.NeedingAttention) + ' needing attention. */' + #13#10 +
+			MigrationScript);
+		Exit;
 	end;
 
 	Screen.Cursor := crHourGlass;
