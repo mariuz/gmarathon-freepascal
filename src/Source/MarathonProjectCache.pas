@@ -342,9 +342,30 @@ type
 		property DomainList: TStringList read GetDomainList;
 	end;
 
+  { Declared ahead of TMarathonCacheHeader, which names it in ExpandObjectList
+    but is declared before it. }
+  TMarathonCacheObject = class;
+
   TMarathonCacheHeader = class(TMarathonCacheBaseNode)
   private
     FConnectionName: String;
+  protected
+    { The whole of what a header's Expand does apart from its query.
+
+      There were ten of these, one per kind of object, each about fifty lines
+      and each identical but for the SQL it ran and the class of node it made:
+      open a query, commit whatever transaction was running and start a fresh
+      one, walk the rows making nodes, mark the header expanded, and clean up
+      either way. Ten copies of that is ten places for the transaction
+      handling to drift.
+
+      AKind chooses the node class and, through GetImageIndexForCacheType, its
+      icon - which is why the per-kind node classes differ in nothing else. }
+    procedure ExpandObjectList(const ASQL, ANameField: String;
+      AKind: TGSSCacheType; ASystem: Boolean);
+    { Anything a particular kind needs doing to each node beyond its name.
+      Only triggers want it, for whether they are active. }
+    procedure SetupNode(ANode: TMarathonCacheObject; AQuery: TIBQuery); virtual;
   public
     constructor Create; override;
     property ConnectionName: String read FConnectionName write FConnectionName;
@@ -441,6 +462,8 @@ type
 	end;
 
 	TMarathonCacheTriggersHeader = class(TMarathonCacheHeader)
+	protected
+		procedure SetupNode(ANode: TMarathonCacheObject; AQuery: TIBQuery); override;
 	private
 
 	public
@@ -4284,46 +4307,15 @@ begin
 end;
 
 procedure TMarathonCacheDomainsHeader.Expand(Recursive: Boolean);
-var
-	wNode: TMarathonCacheDomain;
-	NV: TMarathonTreeNode;
-	Q: TIBQuery;
-
 begin
-	FContainerNode.DeleteChildren;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TIBTransaction(Q.Transaction).Active then
-			TIBTransaction(Q.Transaction).Commit;
-		TIBTransaction(Q.Transaction).StartTransaction;
-		try
-			Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((rdb$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$FIELD_NAME not starting with ''RDB$'')' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin
-				if AnsiUpperCase(Copy(Q.FieldByName('RDB$FIELD_NAME').AsString, 1, 4)) = 'RDB$' then
-				begin
-					NV := FRootItem.FCache.AddPathNode(fContainerNode, Q.FieldByName('RDB$FIELD_NAME').AsString);
-					wNode := TMarathonCacheDomain.Create;
-					wNode.ContainerNode := NV;
-					wNode.RootItem := FRootItem;
-					wNode.Caption := Q.FieldByName('RDB$FIELD_NAME').AsString;
-					wNode.ObjectName := Q.FieldByName('RDB$FIELD_NAME').AsString;
-					wNode.ConnectionName := FConnectionName;
-					wNode.System := True;
-					NV.Data := wNode;
-				end;
-				Q.Next;
-			end;
-			FExpanded := True;
-		finally
-			TIBTransaction(Q.Transaction).Commit;
-		end;
-	finally
-		Q.Free;
-	end;
+	{ System True here, unlike every other kind: these are the domains
+	  Firebird makes for itself behind each column, and the tree greys them
+	  accordingly. The RDB$ prefix filter is what keeps the list to the ones
+	  a user would recognise. }
+	ExpandObjectList('select RDB$FIELD_NAME from RDB$FIELDS where ' +
+		'((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and ' +
+		'(RDB$FIELD_NAME not starting with ''RDB$'')' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$FIELD_NAME asc', 'RDB$FIELD_NAME', ctDomain, True);
 end;
 
 { TMarathonCacheUserDomainsHeader }
@@ -4379,49 +4371,16 @@ end;
 
 procedure TMarathonCacheUDFsHeader.Expand(Recursive: Boolean);
 var
-	wNode: TMarathonCacheFunction;
-	NV: TMarathonTreeNode;
-	Q: TIBQuery;
-
+	Extra: String;
 begin
-	FContainerNode.DeleteChildren;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TIBTransaction(Q.Transaction).Active then
-			TIBTransaction(Q.Transaction).Commit;
-		TIBTransaction(Q.Transaction).StartTransaction;
-		try
-
-			{ Exclude packaged functions: they belong to their package and cannot
-			  be created or dropped standalone, so listing them at top level is
-			  wrong. RDB$PACKAGE_NAME only exists from Firebird 3 (ODS 12) on. }
-			if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
-				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FUNCTION_NAME asc;')
-			else
-				Q.SQL.Add('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FUNCTION_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin
-				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$FUNCTION_NAME').AsString);
-				wNode := TMarathonCacheFunction.Create;
-				wNode.ContainerNode := NV;
-				wNode.RootItem := FRootItem;
-				wNode.Caption := Q.FieldByName('RDB$FUNCTION_NAME').AsString;
-				wNode.ObjectName := Q.FieldByName('RDB$FUNCTION_NAME').AsString;
-				wNode.ConnectionName := FConnectionName;
-				wNode.System := False;
-				NV.Data := wNode;
-				Q.Next;
-			end;
-			FExpanded := True;
-		finally
-			TIBTransaction(Q.Transaction).Commit;
-		end;
-	finally
-		Q.Free;
-	end;
+	{ As for procedures: a packaged function belongs under its package. }
+	if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
+		Extra := ' and RDB$PACKAGE_NAME is null'
+	else
+		Extra := '';
+	ExpandObjectList('select RDB$FUNCTION_NAME from RDB$FUNCTIONS where ' +
+		'((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + Extra + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$FUNCTION_NAME asc', 'RDB$FUNCTION_NAME', ctUDF, False);
 end;
 
 { TMarathonCacheExceptionsHeader }
@@ -4432,44 +4391,10 @@ begin
 end;
 
 procedure TMarathonCacheExceptionsHeader.Expand(Recursive: Boolean);
-var
-  wNode: TMarathonCacheException;
-  NV: TMarathonTreeNode;
-  Q: TIBQuery;
-
 begin
-  FContainerNode.DeleteChildren;
-  Q := TIBQuery.Create(nil);
-  try
-    Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-    Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if TIBTransaction(Q.Transaction).Active then
-      TIBTransaction(Q.Transaction).Commit;
-    TIBTransaction(Q.Transaction).StartTransaction;
-    try
-
-			Q.SQL.Add('select RDB$EXCEPTION_NAME from RDB$EXCEPTIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$EXCEPTION_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin  
-				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$EXCEPTION_NAME').AsString);
-				wNode := TMarathonCacheException.Create;
-				wNode.ContainerNode := NV;
-				wNode.RootItem := FRootItem;
-				wNode.Caption := Q.FieldByName('RDB$EXCEPTION_NAME').AsString;
-				wNode.ObjectName := Q.FieldByName('RDB$EXCEPTION_NAME').AsString;
-        wNode.ConnectionName := FConnectionName;
-        wNode.System := False;
-        NV.Data := wNode;
-        Q.Next;
-      end;
-			FExpanded := True;
-		finally
-      TIBTransaction(Q.Transaction).Commit;
-    end;
-  finally
-    Q.Free;
-  end;
+	ExpandObjectList('select RDB$EXCEPTION_NAME from RDB$EXCEPTIONS where ' +
+		'((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$EXCEPTION_NAME asc', 'RDB$EXCEPTION_NAME', ctException, False);
 end;
 
 { TMarathonCacheGeneratorsHeader }
@@ -4480,44 +4405,10 @@ begin
 end;
 
 procedure TMarathonCacheGeneratorsHeader.Expand(Recursive: Boolean);
-var
-	wNode: TMarathonCacheGenerator;
-	NV: TMarathonTreeNode;
-	Q: TIBQuery;
-
 begin
-  FContainerNode.DeleteChildren;
-  Q := TIBQuery.Create(nil);
-  try
-    Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-    Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if TIBTransaction(Q.Transaction).Active then
-      TIBTransaction(Q.Transaction).Commit;
-    TIBTransaction(Q.Transaction).StartTransaction;
-    try
-
-			Q.SQL.Add('select RDB$GENERATOR_NAME from RDB$GENERATORS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$GENERATOR_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin
-				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$GENERATOR_NAME').AsString);
-				wNode := TMarathonCacheGenerator.Create;
-				wNode.ContainerNode := NV;
-				wNode.RootItem := FRootItem;
-				wNode.Caption := Q.FieldByName('RDB$GENERATOR_NAME').AsString;
-				wNode.ObjectName := Q.FieldByName('RDB$GENERATOR_NAME').AsString;
-				wNode.ConnectionName := FConnectionName;
-				wNode.System := False;
-				NV.Data := wNode;
-				Q.Next;
-			end;
-			FExpanded := True;
-		finally
-			TIBTransaction(Q.Transaction).Commit;
-		end;
-	finally
-		Q.Free;
-	end;
+	ExpandObjectList('select RDB$GENERATOR_NAME from RDB$GENERATORS where ' +
+		'((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$GENERATOR_NAME asc', 'RDB$GENERATOR_NAME', ctGenerator, False);
 end;
 
 { TMarathonCacheTriggersHeader }
@@ -4527,49 +4418,24 @@ begin
 	FCacheType := ctTriggerHeader;
 end;
 
-procedure TMarathonCacheTriggersHeader.Expand(Recursive: Boolean);
-var
-	wNode: TMarathonCacheTrigger;
-	NV: TMarathonTreeNode;
-	Q: TIBQuery;
-
+{ The one kind with anything to add to a node beyond its name. }
+procedure TMarathonCacheTriggersHeader.SetupNode(ANode: TMarathonCacheObject;
+	AQuery: TIBQuery);
 begin
-	FContainerNode.DeleteChildren;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TIBTransaction(Q.Transaction).Active then
-			TIBTransaction(Q.Transaction).Commit;
-		TIBTransaction(Q.Transaction).StartTransaction;
-		try
+	TMarathonCacheTrigger(ANode).IsActive :=
+		AQuery.FieldByName('RDB$TRIGGER_INACTIVE').AsInteger = 0;
+end;
 
-			Q.SQL.Add('select RDB$TRIGGER_NAME, RDB$TRIGGER_INACTIVE from RDB$TRIGGERS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$TRIGGER_SOURCE is not null) order by RDB$TRIGGER_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin
-				if AnsiUpperCase(Copy(Q.FieldByName('RDB$TRIGGER_NAME').AsString, 1, 6)) <> 'CHECK_' then
-				begin
-					NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$TRIGGER_NAME').AsString);
-					wNode := TMarathonCacheTrigger.Create;
-					wNode.ContainerNode := NV;
-					wNode.RootItem := FRootItem;
-					wNode.Caption := Q.FieldByName('RDB$TRIGGER_NAME').AsString;
-					wNode.ObjectName := Q.FieldByName('RDB$TRIGGER_NAME').AsString;
-          wNode.IsActive := Q.FieldByName('RDB$TRIGGER_INACTIVE').AsInteger = 0;
-					wNode.ConnectionName := FConnectionName;
-					wNode.System := False;
-					NV.Data := wNode;
-				end;
-				Q.Next;
-			end;
-			FExpanded := True;
-		finally
-			TIBTransaction(Q.Transaction).Commit;
-		end;
-	finally
-		Q.Free;
-	end;
+procedure TMarathonCacheTriggersHeader.Expand(Recursive: Boolean);
+begin
+	{ The CHECK_ filter was a comparison in the loop; it is a predicate now,
+	  which is where a filter belongs. UPPER keeps the old behaviour for a
+	  quoted lower-case name. }
+	ExpandObjectList('select RDB$TRIGGER_NAME, RDB$TRIGGER_INACTIVE from RDB$TRIGGERS ' +
+		'where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and ' +
+		'(RDB$TRIGGER_SOURCE is not null) and ' +
+		'(upper(RDB$TRIGGER_NAME) not starting with ''CHECK_'')' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$TRIGGER_NAME asc', 'RDB$TRIGGER_NAME', ctTrigger, False);
 end;
 
 { TMarathonCacheSystemTriggersHeader }
@@ -4632,50 +4498,18 @@ end;
 
 procedure TMarathonCacheStoredProceduresHeader.Expand(Recursive: Boolean);
 var
-	wNode: TMarathonCacheProcedure;
-	NV: TMarathonTreeNode;
-	Q: TIBQuery;
-
+	Extra: String;
 begin
-	FContainerNode.DeleteChildren;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-    Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-    if TIBTransaction(Q.Transaction).Active then
-      TIBTransaction(Q.Transaction).Commit;
-    TIBTransaction(Q.Transaction).StartTransaction;
-    try
-
-			{ Exclude packaged procedures for the same reason as packaged
-			  functions: they belong to their package and cannot be created or
-			  dropped standalone. RDB$PACKAGE_NAME only exists from Firebird 3
-			  (ODS 12) on. }
-			if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
-				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$PACKAGE_NAME is null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$PROCEDURE_NAME asc;')
-			else
-				Q.SQL.Add('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$PROCEDURE_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin
-				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$PROCEDURE_NAME').AsString);
-				wNode := TMarathonCacheProcedure.Create;
-				wNode.ContainerNode := NV;
-				wNode.RootItem := FRootItem;
-				wNode.Caption := Q.FieldByName('RDB$PROCEDURE_NAME').AsString;
-				wNode.ObjectName := Q.FieldByName('RDB$PROCEDURE_NAME').AsString;
-        wNode.ConnectionName := FConnectionName;
-        wNode.System := False;
-        NV.Data := wNode;
-        Q.Next;
-      end;
-      FExpanded := True;
-    finally
-      TIBTransaction(Q.Transaction).Commit;
-    end;
-  finally
-    Q.Free;
-  end;
+	{ Firebird 3 put procedures inside packages, and the ones that are belong
+	  under their package rather than here. Earlier servers have no such
+	  column to ask about. }
+	if FRootItem.ConnectionByName[FConnectionName].IsODSAtLeast(ODS_FB3_MAJOR, 0) then
+		Extra := ' and RDB$PACKAGE_NAME is null'
+	else
+		Extra := '';
+	ExpandObjectList('select RDB$PROCEDURE_NAME from RDB$PROCEDURES where ' +
+		'((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null))' + Extra + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$PROCEDURE_NAME asc', 'RDB$PROCEDURE_NAME', ctSP, False);
 end;
 
 { TMarathonCacheViewsHeader }
@@ -4687,44 +4521,11 @@ begin
 end;
 
 procedure TMarathonCacheViewsHeader.Expand(Recursive: Boolean);
-var
-	wNode: TMarathonCacheView;
-	NV: TMarathonTreeNode;
-	Q: TIBQuery;
-
 begin
-	FContainerNode.DeleteChildren;
-	Q := TIBQuery.Create(nil);
-	try
-		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
-		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
-		if TIBTransaction(Q.Transaction).Active then
-			TIBTransaction(Q.Transaction).Commit;
-		TIBTransaction(Q.Transaction).StartTransaction;
-		try
-
-			Q.SQL.Add('select RDB$RELATION_NAME from RDB$RELATIONS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and RDB$VIEW_SOURCE is not null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$RELATION_NAME asc;');
-			Q.Open;
-			while not Q.EOF do
-			begin
-				NV := FRootItem.FCache.AddPathNode(FContainerNode, Q.FieldByName('RDB$RELATION_NAME').AsString);
-				wNode := TMarathonCacheView.Create;
-				wNode.ContainerNode := NV;
-				wNode.RootItem := FRootItem;
-				wNode.Caption := Q.FieldByName('RDB$RELATION_NAME').AsString;
-				wNode.ObjectName := Q.FieldByName('RDB$RELATION_NAME').AsString;
-				wNode.ConnectionName := FConnectionName;
-				wNode.System := False;
-				NV.Data := wNode;
-				Q.Next;
-			end;
-			FExpanded := True;
-		finally
-			TIBTransaction(Q.Transaction).Commit;
-		end;
-	finally
-		Q.Free;
-	end;
+	ExpandObjectList('select RDB$RELATION_NAME from RDB$RELATIONS where ' +
+		'((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and ' +
+		'RDB$VIEW_SOURCE is not null' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause +
+		' order by RDB$RELATION_NAME asc', 'RDB$RELATION_NAME', ctView, False);
 end;
 
 { TMarathonCacheTablesHeader }
@@ -5276,6 +5077,79 @@ begin
 	end
 	else
 		Result := False;
+end;
+
+{ The node class for a kind of object. The classes differ in nothing but their
+  cache type and icon, and the icon comes from the cache type, so this is the
+  only place any of them is named. }
+function NewCacheObject(AKind: TGSSCacheType): TMarathonCacheObject;
+begin
+	case AKind of
+		ctTable:     Result := TMarathonCacheTable.Create;
+		ctView:      Result := TMarathonCacheView.Create;
+		ctSP:        Result := TMarathonCacheProcedure.Create;
+		ctTrigger:   Result := TMarathonCacheTrigger.Create;
+		ctDomain:    Result := TMarathonCacheDomain.Create;
+		ctGenerator: Result := TMarathonCacheGenerator.Create;
+		ctException: Result := TMarathonCacheException.Create;
+		ctUDF:       Result := TMarathonCacheFunction.Create;
+	else
+		Result := nil;
+	end;
+end;
+
+procedure TMarathonCacheHeader.SetupNode(ANode: TMarathonCacheObject;
+	AQuery: TIBQuery);
+begin
+	{ Nothing for most kinds. }
+end;
+
+procedure TMarathonCacheHeader.ExpandObjectList(const ASQL, ANameField: String;
+	AKind: TGSSCacheType; ASystem: Boolean);
+var
+	Q: TIBQuery;
+	NV: TMarathonTreeNode;
+	wNode: TMarathonCacheObject;
+	Name: String;
+begin
+	FContainerNode.DeleteChildren;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
+		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		{ A fresh transaction, because the tree's own queries commit constantly
+		  and a list read across two of them can disagree with itself. }
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
+		try
+			Q.SQL.Text := ASQL;
+			Q.Open;
+			while not Q.EOF do
+			begin
+				Name := Q.FieldByName(ANameField).AsString;
+				wNode := NewCacheObject(AKind);
+				if Assigned(wNode) then
+				begin
+					NV := FRootItem.FCache.AddPathNode(FContainerNode, Name);
+					wNode.ContainerNode := NV;
+					wNode.RootItem := FRootItem;
+					wNode.Caption := Name;
+					wNode.ObjectName := Name;
+					wNode.ConnectionName := FConnectionName;
+					wNode.System := ASystem;
+					SetupNode(wNode, Q);
+					NV.Data := wNode;
+				end;
+				Q.Next;
+			end;
+			FExpanded := True;
+		finally
+			TIBTransaction(Q.Transaction).Commit;
+		end;
+	finally
+		Q.Free;
+	end;
 end;
 
 constructor TMarathonCacheHeader.Create;
