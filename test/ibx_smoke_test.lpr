@@ -16,10 +16,26 @@ program ibx_smoke_test;
 {$MODE Delphi}
 
 uses
+  { First, and before anything that starts a thread: IBX's SQL monitor runs a
+    reader thread, and without a thread driver the program dies with "no thread
+    support compiled in" the moment one is created. The application itself gets
+    this from the LCL; a console harness has to say so. }
+  {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
   ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
-  TableDesign, TableDesignIO, QueryModel;
+  TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat;
+
+type
+  { The trace's event is "of object", so it needs a method to hand it to - a
+    nested procedure will not do. }
+  TTraceCollector = class
+  public
+    Lines: TStringList;
+    constructor Create;
+    destructor Destroy; override;
+    procedure Collect(Sender: TObject; const NewString: String);
+  end;
 
 var
   DB: TIBDatabase;
@@ -197,6 +213,123 @@ begin
     WriteLn('FAIL: ', What, ' should not appear ("', Needle, '"):');
     WriteLn(DDLText);
     Halt(1);
+  end;
+end;
+
+{ The SQL trace, actually tracing.
+
+  keyword_test says which IBX flags Marathon's categories map onto; only a
+  running server can say whether the monitor then delivers anything. That is
+  the question that matters here, because the component it replaced had every
+  property right and no behaviour at all - so a check that only looked at the
+  settings would have passed against the stub.
+
+  IBX delivers through a reader thread that calls Synchronize, so a console
+  program has to pump the synchronise queue itself; a GUI one gets it from the
+  message loop. }
+constructor TTraceCollector.Create;
+begin
+  inherited Create;
+  Lines := TStringList.Create;
+end;
+
+destructor TTraceCollector.Destroy;
+begin
+  Lines.Free;
+  inherited Destroy;
+end;
+
+procedure TTraceCollector.Collect(Sender: TObject; const NewString: String);
+begin
+  { On the main thread by the time Synchronize has delivered it. }
+  Lines.Add(NewString);
+end;
+
+procedure TestSQLTraceLive;
+var
+  Monitor: TIB_Monitor;
+  Collector: TTraceCollector;
+  Waited: Integer;
+begin
+  WriteLn('SQL trace against a live server:');
+  Collector := TTraceCollector.Create;
+  Monitor := TIB_Monitor.Create(nil);
+  try
+    Monitor.OnMonitorOutputItem := Collector.Collect;
+    Monitor.IncludeTimeStamp := True;
+    Monitor.MonitorGroups := [mgStatement];
+    Monitor.StatementGroups := [sgPrepare, sgExecute, sgFetch, sgError];
+    Monitor.Enabled := True;
+    { The publishing half: a connection sends nothing until it is told to. }
+    Monitor.Watch(DB);
+
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.Close;
+    Q.SQL.Text := 'select 1 as TRACE_PROBE from rdb$database';
+    Q.Open;
+    Q.Close;
+    if Tr.InTransaction then
+      Tr.Commit;
+
+    { The reader thread has its own pace, so this waits rather than assuming.
+      Two seconds is generous; if nothing has arrived by then nothing is
+      going to. }
+    Waited := 0;
+    while (Collector.Lines.Count = 0) and (Waited < 2000) do
+    begin
+      CheckSynchronize(50);
+      Inc(Waited, 50);
+    end;
+
+    if Collector.Lines.Count = 0 then
+    begin
+      WriteLn('FAIL: the SQL trace received nothing at all - the monitor is ' +
+        'still not connected to anything');
+      Halt(1);
+    end;
+    WriteLn('  ok   the trace receives events (', Collector.Lines.Count, ' line(s))');
+
+    { Not merely some traffic: the statement that was run. Anything else would
+      pass while tracing a different connection's work. }
+    if Pos('TRACE_PROBE', Collector.Lines.Text) = 0 then
+    begin
+      WriteLn('FAIL: the trace produced lines but not the statement that ran:');
+      WriteLn(Copy(Collector.Lines.Text, 1, 500));
+      Halt(1);
+    end;
+    WriteLn('  ok   and they contain the statement that was executed');
+
+    { The timestamp the Options dialog has always offered and that has never
+      done anything, because nothing was producing lines for it to affect. }
+    if Pos(FormatDateTime('yyyy-mm-dd', Now), Collector.Lines.Text) = 0 then
+    begin
+      WriteLn('FAIL: IncludeTimeStamp produced no timestamp');
+      Halt(1);
+    end;
+    WriteLn('  ok   with the timestamp the settings asked for');
+
+    { Switching it off has to stop it, or the window would keep filling after
+      the user turned tracing off. }
+    Monitor.Enabled := False;
+    Collector.Lines.Clear;
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.SQL.Text := 'select 2 as TRACE_SILENT from rdb$database';
+    Q.Open;
+    Q.Close;
+    if Tr.InTransaction then
+      Tr.Commit;
+    CheckSynchronize(200);
+    if Pos('TRACE_SILENT', Collector.Lines.Text) > 0 then
+    begin
+      WriteLn('FAIL: the trace kept reporting after being disabled');
+      Halt(1);
+    end;
+    WriteLn('  ok   and stop when tracing is switched off');
+  finally
+    Monitor.Free;
+    Collector.Free;
   end;
 end;
 
@@ -3410,6 +3543,7 @@ begin
       earlier in the run is not hidden behind it. }
     TestTableDesignRoundTrip;
     TestQueryBuilderSQL;
+    TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));

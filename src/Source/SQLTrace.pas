@@ -19,7 +19,7 @@ unit SQLTrace;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBDatabase, IBQuery, MarathonSQLMonitor, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, Menus, ComCtrls, Registry, ClipBrd, ExtCtrls, Buttons, IBDatabase, IBQuery, MarathonSQLMonitor, SQLTraceFormat, MarathonProjectCache, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentForm;
 
 type
 	TfrmSQLTrace = class(TfrmBaseDocumentForm)
@@ -41,6 +41,11 @@ type
 	public
 		{ Public declarations }
 		FFileName: String;
+
+		{ Tells every open connection to publish. Public because the harness
+		  calls it, and because a caller that has just opened a connection can
+		  use it - though the cache does that itself. }
+		procedure AttachConnections;
 
 		function CanClearBuffer: Boolean; override;
 		procedure DoClearBuffer; override;
@@ -224,6 +229,32 @@ begin
 		trcSQL.StatementGroups := trcSQL.StatementGroups + [sgExecuteImmediate]
 	else
 		trcSQL.StatementGroups := trcSQL.StatementGroups - [sgExecuteImmediate];
+
+	{ Switching it on, which nothing has ever done - the component it was built
+	  on had an Enabled property that meant nothing, so the window was set up
+	  correctly and then left waiting for lines that could not come. }
+	trcSQL.Enabled := True;
+	trcSQL.MakeActive;
+	AttachConnections;
+end;
+
+{ Tells every open connection to publish. Connections opened after this are
+  caught by the cache instead, which hands them to whichever monitor is
+  active. }
+procedure TfrmSQLTrace.AttachConnections;
+var
+	Idx: Integer;
+	Conn: TMarathonCacheConnection;
+begin
+	if not Assigned(MarathonIDEInstance) or
+	   not Assigned(MarathonIDEInstance.CurrentProject) then
+		Exit;
+	for Idx := 0 to MarathonIDEInstance.CurrentProject.Cache.ConnectionCount - 1 do
+	begin
+		Conn := MarathonIDEInstance.CurrentProject.Cache.Connections[Idx];
+		if Assigned(Conn) and Conn.Connected then
+			trcSQL.Watch(Conn.Connection);
+	end;
 end;
 
 procedure TfrmSQLTrace.WindowListClick(Sender: TObject);

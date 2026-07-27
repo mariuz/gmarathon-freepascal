@@ -3,7 +3,11 @@ program marathon;
 {$MODE Delphi}
 
 uses
-
+  { First, and before anything that might start one: the SQL Trace's monitor
+    runs a reader thread, and on Unix a program with no thread driver dies
+    with "no thread support compiled in" the moment a thread is created -
+    which is at the point the trace window is opened, not at startup. }
+  {$IFDEF UNIX}cthreads,{$ENDIF}
   LCLIntf, LCLType, LMessages,
   Forms,
   SysUtils,

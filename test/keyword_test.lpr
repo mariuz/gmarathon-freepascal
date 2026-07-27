@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,87 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestSQLTrace;
+var
+  Cats: TTraceCategories;
+  Line: String;
+  When_: TDateTime;
+begin
+  { Nothing asked for, nothing watched. The component leaves the monitor
+    disabled on an empty set, so this is what stops a trace window that has
+    been opened and configured to watch nothing from starting a reader
+    thread. }
+  Check(TraceCategoriesFor([], []) = [], 'watching nothing selects no categories');
+
+  { The plain groups map one for one. }
+  Check(tcConnect in TraceCategoriesFor([mgConnection], []), 'connections map to connect');
+  Check(tcTransact in TraceCategoriesFor([mgTransaction], []), 'transactions to transact');
+  Check(tcBlob in TraceCategoriesFor([mgBlob], []), 'blobs to blob');
+  { A row is a fetch - IBX has no separate notion of one. }
+  Check(tcFetch in TraceCategoriesFor([mgRow], []), 'rows map to fetch');
+  { Arrays have no flag of their own and arrive among the miscellany. }
+  Check(tcMisc in TraceCategoriesFor([mgArray], []), 'arrays map to the miscellany');
+
+  { A group not asked for must not be switched on by another. }
+  Cats := TraceCategoriesFor([mgConnection], []);
+  Check(not (tcTransact in Cats), 'asking for one group does not enable another');
+
+  { The statement groups are only meaningful when statements are watched at
+    all. Turning Prepare on while Statements is off would trace exactly what
+    the user had just switched off. }
+  Cats := TraceCategoriesFor([], [sgPrepare, sgExecute, sgFetch, sgError]);
+  Check(Cats = [], 'statement detail is ignored when statements are not watched');
+
+  Cats := TraceCategoriesFor([mgStatement], []);
+  Check(tcStatement in Cats, 'watching statements watches statements');
+
+  Cats := TraceCategoriesFor([mgStatement], [sgPrepare]);
+  Check(tcPrepare in Cats, 'prepare maps through');
+  Check(not (tcExecute in Cats), 'and does not drag execute in with it');
+
+  Cats := TraceCategoriesFor([mgStatement], [sgExecute]);
+  Check(tcExecute in Cats, 'execute maps through');
+  { Two of Marathon's groups mean the same IBX flag; either one has to reach
+    it, and neither may need the other. }
+  Cats := TraceCategoriesFor([mgStatement], [sgExecuteImmediate]);
+  Check(tcExecute in Cats, 'and so does execute-immediate on its own');
+
+  Cats := TraceCategoriesFor([mgStatement], [sgError]);
+  Check(tcError in Cats, 'errors map through');
+
+  { The six statement groups IBX has no flag for must still turn something on,
+    or ticking one of them in the Options dialog would do nothing at all. }
+  Cats := TraceCategoriesFor([mgStatement], [sgDescribe]);
+  Check(tcMisc in Cats, 'a statement group IBX has no flag for asks for the miscellany');
+  Cats := TraceCategoriesFor([mgStatement], [sgField]);
+  Check(tcMisc in Cats, 'and so does another of them');
+  Cats := TraceCategoriesFor([mgStatement], [sgPrepare]);
+  Check(not (tcMisc in Cats),
+    'while one that does have a flag does not ask for it as well');
+
+  { Formatting. }
+  When_ := EncodeDate(2026, 7, 27) + EncodeTime(14, 5, 9, 250);
+  Line := FormatTraceLine('select 1 from rdb$database', When_, False, '');
+  Check(Line = 'select 1 from rdb$database', 'without a timestamp the text is the line');
+
+  Line := FormatTraceLine('select 1', When_, True, '');
+  Check(Pos('2026-07-27', Line) > 0, 'a timestamp carries the date');
+  Check(Pos('14:05:09', Line) > 0, 'and the time');
+  { Two statements in the same second is the ordinary case, so a timestamp
+    that cannot tell them apart is decoration. }
+  Check(Pos('.250', Line) > 0, 'to the millisecond');
+  Check(Pos('select 1', Line) > 0, 'and still has the statement in it');
+
+  Line := FormatTraceLine('select 1', When_, False, ';;');
+  Check(Copy(Line, Length(Line) - 1, 2) = ';;', 'an item terminator is appended');
+
+  { MinTicks is what makes a trace usable on a busy connection. }
+  Check(PassesMinTicks(0, 0), 'with no threshold everything passes');
+  Check(PassesMinTicks(5, 0), 'including something that took time');
+  Check(not PassesMinTicks(5, 10), 'below the threshold is dropped');
+  Check(PassesMinTicks(10, 10), 'and the threshold itself passes');
 end;
 
 procedure TestQueryModel;
@@ -1055,6 +1136,9 @@ begin
 
   WriteLn('Query builder:');
   TestQueryModel;
+
+  WriteLn('SQL trace:');
+  TestSQLTrace;
 
   if Failures > 0 then
   begin

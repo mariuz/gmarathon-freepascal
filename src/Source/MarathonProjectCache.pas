@@ -962,7 +962,7 @@ function GetImageIndexForCacheType(CT: TGSSCacheType): Integer;
 
 implementation
 
-uses Globals, MarathonIDE, Login, Crypt32;
+uses Globals, MarathonIDE, Login, Crypt32, MarathonSQLMonitor;
 
 { Reads a stored password, preferring the hex form this build writes and falling
   back to the raw ciphertext older projects carry.
@@ -1956,6 +1956,11 @@ begin
 	try
     FConnection.SQLDialect := FSQLDialect;
 		FConnection.Connected := True;
+		{ A connection opened while the SQL Trace window is up has to be told to
+		  publish, or the trace would only ever show the connections that
+		  happened to be open when it was opened. }
+		if Assigned(ActiveTraceMonitor) then
+			ActiveTraceMonitor.Watch(FConnection);
 		if IsIB6 then
 		begin
 			FConnection.Connected := False;

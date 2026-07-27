@@ -18,6 +18,8 @@ program form_load_test;
 {$MODE Delphi}
 
 uses
+  { Before anything that starts a thread - see marathon.lpr. }
+  {$IFDEF UNIX}cthreads,{$ENDIF}
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
   GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost, SchemaObjects, DocumentHost, CommandPaletteDialog,
@@ -40,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery;
 
 var
   Failures: Integer = 0;
@@ -1204,6 +1206,76 @@ begin
   end;
 end;
 
+{ The SQL Trace window, which has opened onto nothing for the whole of this
+  port.
+
+  The component behind it had every property the Options dialog writes to and
+  no behaviour at all, so the window set itself up correctly and then waited
+  for lines that could not come. What is checked here is the thing that
+  distinguishes the two: run a statement, and see it appear in the window's
+  editor.
+
+  keyword_test covers which IBX flags Marathon's categories map to; the smoke
+  test covers that the monitor delivers at all. This covers the window. }
+procedure CheckSQLTrace(Conn: TMarathonCacheConnection);
+var
+  F: TfrmSQLTrace;
+  Q: TIBQuery;
+  Waited: Integer;
+begin
+  WriteLn('SQL trace window:');
+  try
+    F := TfrmSQLTrace.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the trace window .lfm streams (' + E.ClassName + ': ' +
+        E.Message + ')');
+      Exit;
+    end;
+  end;
+  try
+    Check(Assigned(F.edTrace) and Assigned(F.trcSQL),
+      'the trace window streams its editor and its monitor');
+    { Enabled by FormCreate, which is the line that had never existed. }
+    Check(F.trcSQL.Enabled, 'and the monitor is switched on when the window opens');
+    Check(F.trcSQL.CurrentTraceFlags <> [],
+      'with something actually being watched');
+
+    F.AttachConnections;
+    F.edTrace.Lines.Clear;
+
+    Q := TIBQuery.Create(nil);
+    try
+      Q.Database := Conn.Connection;
+      Q.Transaction := Conn.Transaction;
+      Q.AllowAutoActivateTransaction := True;
+      Q.SQL.Text := 'select 1 as WINDOW_PROBE from rdb$database';
+      Q.Open;
+      Q.Close;
+    finally
+      Q.Free;
+    end;
+
+    { The monitor delivers through a reader thread and Synchronize, so the
+      line arrives when the message loop next runs rather than immediately. }
+    Waited := 0;
+    while (Pos('WINDOW_PROBE', F.edTrace.Lines.Text) = 0) and (Waited < 3000) do
+    begin
+      Application.ProcessMessages;
+      CheckSynchronize(50);
+      Inc(Waited, 50);
+    end;
+
+    Check(Pos('WINDOW_PROBE', F.edTrace.Lines.Text) > 0,
+      'a statement run while the window is open appears in it');
+    if Pos('WINDOW_PROBE', F.edTrace.Lines.Text) = 0 then
+      WriteLn('       the window held: ', Copy(F.edTrace.Lines.Text, 1, 300));
+  finally
+    F.Free;
+  end;
+end;
+
 { The query builder, which replaces a unit that was never compiled into the
   program at all.
 
@@ -1593,6 +1665,7 @@ begin
   CheckTableDesignerOn(Conn, TableName);
   CheckSchemaQualifiedEditor(Conn);
   CheckQueryBuilder(Conn);
+  CheckSQLTrace(Conn);
 end;
 
 procedure CheckCompletionWiring;

@@ -594,3 +594,4 @@ because the original reasoning no longer holds:
 | 9 | Cleanup enabled by the shell | Done |
 | — | Printing and print preview | Done — replaced the unported report writers |
 | — | Query builder | Done — rewritten; the Win32 original is deleted |
+| — | SQL Trace | Done — the stub monitor replaced with IBX's |

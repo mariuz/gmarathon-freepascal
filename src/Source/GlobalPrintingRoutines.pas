@@ -23,9 +23,14 @@ uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDI
   PrintDocument, PrintRenderer, DDLExtractor, SchemaObjects;
 
 type
-  { FPC: This port has no replacement for the original PagePrnt/DSprint report-writer
-    units, so the whole print/print-preview subsystem is a no-op stub on this platform.
-    Public method signatures are kept as-is because many editor forms call them. }
+  { The reports the application can print. Every method builds a TPrintDocument
+    and hands it to Emit, which paginates it and either prints it or opens the
+    preview - see PrintDocument for where the pages break and PrintRenderer for
+    how they are drawn.
+
+    This replaced the original PagePrnt/DSprint report writers, which were
+    never ported; the method signatures are unchanged because the editor forms
+    all call them. }
   TfrmGlobalPrintingRoutines = class(TForm)
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private

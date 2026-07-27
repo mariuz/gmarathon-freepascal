@@ -51,6 +51,8 @@ The application is structured in layers:
 
 **Query Builder** — `src/Common/QueryModel.pas` holds the tables, joins and columns and generates the `SELECT`; it needs no widgetset, so join ordering is tested headlessly and the generated statements are run against a live server by the smoke test. `src/Source/QueryBuilderForm.pas` draws the canvas. This replaced `QBuilder.pas` (deleted), 2819 lines of Win32 GDI that was never compiled into this port.
 
+**SQL Trace** — `src/Common/SQLTraceFormat.pas` maps Marathon's monitor/statement groups onto IBX's trace flags and formats a traced line; no IBX, no LCL, so it is tested headlessly. `MarathonSQLMonitor.pas` is a thin adapter over IBX's `TIBSQLMonitor`, replacing a stub that had every property and no behaviour. Note tracing has **three** switches: the monitor that listens, each `TIBDatabase.TraceFlags` that publishes, and the global `MonitorHook.Enabled` that carries events between them — with any one off, nothing arrives.
+
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.
 
 **Editor** — `lib/SyntaxMemoWithStuff2/` wraps SynEdit with SQL syntax highlighting, code completion (`SQLInsightItem.pas`), bookmarks, and drag-and-drop.
@@ -118,6 +120,12 @@ Delphi UI code as unverified until it has been run:
 - **Event handlers fire with nil arguments** — `TTreeView.OnChange` fires with no
   node when the selection is cleared, which any tree rebuild does. Check before
   dereferencing.
+
+- **Threads need `cthreads` on Unix** — a program with no thread driver dies
+  with `no thread support compiled in` (runtime error 232) the moment one is
+  created, which for the SQL Trace is when the window is opened rather than at
+  startup. `cthreads` must come *first* in the `uses` clause of `marathon.lpr`
+  and of any console harness.
 
 Set `MARATHON_TRACE_EXCEPTIONS=1` to print a Pascal backtrace for every
 exception. gdb cannot produce one for faults raised inside the RTL — it is built
