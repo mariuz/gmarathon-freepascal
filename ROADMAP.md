@@ -254,6 +254,15 @@ value-for-effort; none are blocked on engine or library limits.
 
 ---
 
+- [x] **Object editors covered by a test, and three faults that exposed** — the eight object editors had never been opened by anything: they need a live connection *and* a widgetset at once, so the console smoke test cannot reach them and the GUI harness had no database. `test/form_load_test.lpr` now opens the table, view, procedure, trigger, domain, generator and exception editors on real objects, driven by `MARATHON_TEST_DB`/`MARATHON_TEST_USER`/`MARATHON_TEST_PASSWORD` and skipping loudly when they are unset. It prints a Pascal backtrace when an editor fails, because these run dozens of metadata queries and the message alone rarely says which one broke.
+
+  It found three faults on its first run, none of which any amount of reading had turned up:
+
+  - **The stored procedure editor could not be opened at all.** Its in-memory parameter list is a `TBufDataset` with persistent fields but no `FieldDefs`, and FPC refuses to open one of those — only `CreateDataset` builds the definitions from the fields. Delphi opened straight from the persistent fields, so this compiled and failed at runtime. The `.lfm` also marked it `Active`, so the failure happened during construction, which is why an earlier test had recorded the editor as "could not be built here" and moved on.
+  - **`GetDBCharSetName`, `GetCharSetNames` and `GetCollationNames` could never have worked.** Each creates its own `TIBTransaction`, assigns it to a query and opens the query without starting it — and a new transaction is not active. Every caller (the stored procedure, domain and column editors, and the debugger) got `Transaction is not active` in place of a character set or collation name.
+
+  The credentials come from the environment rather than argv because the application treats its first argument as a project file to open, and the harness registers a server before the connection because `Connect` otherwise falls back to its own login dialog — under Xvfb a hang rather than a failure. Both were found the hard way. The smoke test now leaves a domain, a generator and an exception behind so those three editors are exercised rather than skipped.
+
 ## Explicitly out of scope
 
 Adapted-but-rejected FlameRobin roadmap items, and why:

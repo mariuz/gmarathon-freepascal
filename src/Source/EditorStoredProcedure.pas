@@ -134,6 +134,7 @@ type
 		procedure DebugSetBreakPointLine(Active: Boolean; Line: Integer);
 		procedure DebugRefreshDots;
 
+		procedure OpenParameterList;
 		procedure LoadProcedure(ProcedureName: String);
 		procedure NewProcedure;
 		function InternalCloseQuery: Boolean; override;
@@ -596,7 +597,7 @@ begin
 		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		Result := False;
 		txtParameters.Close;
-		txtParameters.Open;
+		OpenParameterList;
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		if FIsInterbase6 then
@@ -911,7 +912,7 @@ begin
 		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		Result := False;
 		txtParameters.Close;
-		txtParameters.Open;
+		OpenParameterList;
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		if FIsInterbase6 then
@@ -2535,6 +2536,22 @@ end;
 function TfrmStoredProcedure.IsEncoding(Index: Integer): Boolean;
 begin
 	Result := FCharSet = GetCharSetByIndex(Index);
+end;
+
+{ Opens the in-memory parameter list, creating it the first time.
+
+  A TBufDataset with persistent fields but no FieldDefs cannot be opened - FPC
+  raises "Missing (compatible) underlying dataset", and only CreateDataset
+  builds the FieldDefs from the fields. Delphi opened straight from the
+  persistent fields, so this compiled and then failed at runtime: the editor
+  could not open a procedure, and because the .lfm also marked the dataset
+  Active it could not even be constructed. }
+procedure TfrmStoredProcedure.OpenParameterList;
+begin
+	if txtParameters.FieldDefs.Count = 0 then
+		txtParameters.CreateDataset;
+	if not txtParameters.Active then
+		txtParameters.Open;
 end;
 
 procedure TfrmStoredProcedure.LoadProcedure(ProcedureName: String);

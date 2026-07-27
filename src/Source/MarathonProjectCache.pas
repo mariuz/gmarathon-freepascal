@@ -2100,6 +2100,10 @@ begin
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
+    { A new transaction is not started, and IBX will not start one to run a
+      query - so this could never have worked and every caller got
+      "Transaction is not active" instead of an answer. }
+    TmpTrans.StartTransaction;
 
 		Q.SQL.Add('select distinct RDB$CHARACTER_SET_NAME from RDB$CHARACTER_SETS order by RDB$CHARACTER_SET_NAME asc');
 		Q.Open;
@@ -2110,7 +2114,9 @@ begin
     end;
 		Q.Close;
 
-    TmpTrans.Commit;
+    if TmpTrans.Active then
+
+      TmpTrans.Commit;
   finally
 		TmpTrans.Free;
     Q.Free;
@@ -2131,6 +2137,12 @@ begin
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
+		{ A transaction that has just been created is not started, and IBX will
+		  not start one to run a query - so this could never have worked, and
+		  every caller (the stored procedure, domain and column editors, and the
+		  debugger) got "Transaction is not active" instead of a character set
+		  name. }
+		TmpTrans.StartTransaction;
 
 		Q.SQL.Add('select RDB$CHARACTER_SET_NAME from RDB$CHARACTER_SETS where RDB$CHARACTER_SET_ID = ' + IntToStr(CharSetID));
 		Q.Open;
@@ -2145,7 +2157,8 @@ begin
 		else
       Result := '';
 
-    TmpTrans.Commit;
+    if TmpTrans.Active then
+      TmpTrans.Commit;
   finally
     TmpTrans.Free;
 		Q.Free;
@@ -2167,6 +2180,10 @@ begin
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
+    { A new transaction is not started, and IBX will not start one to run a
+      query - so this could never have worked and every caller got
+      "Transaction is not active" instead of an answer. }
+    TmpTrans.StartTransaction;
 
 		Q.SQL.Add('select distinct RDB$COLLATION_NAME from RDB$COLLATIONS order by RDB$COLLATION_NAME asc');
 		Q.Open;
@@ -2177,7 +2194,9 @@ begin
     end;
 		Q.Close;
 
-		TmpTrans.Commit;
+		if TmpTrans.Active then
+
+		  TmpTrans.Commit;
 	finally
 		TmpTrans.Free;
 		Q.Free;
@@ -2198,6 +2217,10 @@ begin
 
     Q.DataBase := FConnection;
     Q.Transaction := TmpTrans;
+    { A new transaction is not started, and IBX will not start one to run a
+      query - so this could never have worked and every caller got
+      "Transaction is not active" instead of an answer. }
+    TmpTrans.StartTransaction;
 
 		Q.SQL.Add('select RDB$COLLATION_NAME from RDB$COLLATIONS where RDB$CHARACTER_SET_ID = ' + IntToStr(CharSetID) + ' and RDB$COLLATION_ID = ' + IntToStr(CollationID));
 		Q.Open;
@@ -2212,7 +2235,9 @@ begin
 		else
 			Result := '';
 
-		TmpTrans.Commit;
+		if TmpTrans.Active then
+
+		  TmpTrans.Commit;
 	finally
 		TmpTrans.Free;
 		Q.Free;

@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost, SchemaObjects,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -790,6 +790,7 @@ end;
 procedure CheckEditorsAllowAutoTransactions;
 var
   F: TfrmTables;
+  SP: TfrmStoredProcedure;
   Datasets, Refused: Integer;
   FirstRefused: String;
 
@@ -828,6 +829,14 @@ begin
     Refused := 0;
     FirstRefused := '';
     Walk(F);
+    { The stored procedure editor too - it could not be constructed at all
+      until its in-memory parameter list was fixed, so it was never checked. }
+    SP := TfrmStoredProcedure.Create(nil);
+    try
+      Walk(SP);
+    finally
+      SP.Free;
+    end;
     Check(Datasets > 0, 'the table editor has IBX datasets to check');
     { More than the form's own, or the frames are not being reached. }
     Check(Datasets > 4, 'the datasets on its frames are counted too (' +
@@ -1001,6 +1010,94 @@ begin
   end;
 end;
 
+{ Opens one editor on the first object of its kind the database holds.
+
+  Each editor runs its own metadata queries, so each is a separate thing that
+  can break; loading is the shallowest useful check and the one that catches a
+  query naming the wrong thing. A kind the database has none of is skipped
+  rather than passed. }
+procedure CheckEditorLoads(Conn: TMarathonCacheConnection;
+  Kind: TSchemaObjectKind; const What: String);
+var
+  Names: TStringList;
+  Name: String;
+  Form: TForm;
+begin
+  Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, Kind, '',
+    Conn.IsODSAtLeast(14, 0));
+  try
+    if Names.Count = 0 then
+    begin
+      WriteLn('  .... ', What, ': nothing of that kind here to open');
+      Exit;
+    end;
+    Name := Trim(Names[0]);
+  finally
+    Names.Free;
+  end;
+
+  Form := nil;
+  try
+    try
+      case Kind of
+        sokView:
+          begin
+            Form := TfrmViewEditor.Create(nil);
+            TfrmViewEditor(Form).ConnectionName := Conn.Caption;
+            TfrmViewEditor(Form).LoadView(Name);
+          end;
+        sokProcedure:
+          begin
+            Form := TfrmStoredProcedure.Create(nil);
+            TfrmStoredProcedure(Form).ConnectionName := Conn.Caption;
+            TfrmStoredProcedure(Form).LoadProcedure(Name);
+          end;
+        sokTrigger:
+          begin
+            Form := TfrmTriggerEditor.Create(nil);
+            TfrmTriggerEditor(Form).ConnectionName := Conn.Caption;
+            TfrmTriggerEditor(Form).LoadTrigger(Name);
+          end;
+        sokDomain:
+          begin
+            Form := TfrmDomains.Create(nil);
+            TfrmDomains(Form).ConnectionName := Conn.Caption;
+            TfrmDomains(Form).LoadDomain(Name);
+          end;
+        sokGenerator:
+          begin
+            Form := TfrmGenerators.Create(nil);
+            TfrmGenerators(Form).ConnectionName := Conn.Caption;
+            TfrmGenerators(Form).LoadGenerator(Name);
+          end;
+        sokException:
+          begin
+            Form := TfrmExceptions.Create(nil);
+            TfrmExceptions(Form).ConnectionName := Conn.Caption;
+            TfrmExceptions(Form).LoadException(Name);
+          end;
+      end;
+      Check(True, What + ' opens ' + Name);
+    except
+      on E: Exception do
+      begin
+        Check(False, What + ' opens ' + Name + ' (' + E.ClassName + ': ' +
+          E.Message + ')');
+        { Where it failed, not just that it did. These editors run dozens of
+          metadata queries and the message alone rarely says which. }
+        DumpExceptionBackTrace(Output);
+        Flush(Output);
+      end;
+    end;
+  finally
+    try
+      Form.Free;
+    except
+      on E: Exception do ;
+    end;
+  end;
+end;
+
 { Opens an object editor on a real table.
 
   Everything else in this harness runs without a database, which is why the
@@ -1100,6 +1197,16 @@ begin
   finally
     F.Free;
   end;
+
+  { The other editors, on whatever their kind of object the database holds.
+    None of them has ever been opened by a test either, and each runs its own
+    metadata queries - so each is a separate thing that can break. }
+  CheckEditorLoads(Conn, sokView, 'the view editor');
+  CheckEditorLoads(Conn, sokProcedure, 'the procedure editor');
+  CheckEditorLoads(Conn, sokTrigger, 'the trigger editor');
+  CheckEditorLoads(Conn, sokDomain, 'the domain editor');
+  CheckEditorLoads(Conn, sokGenerator, 'the generator editor');
+  CheckEditorLoads(Conn, sokException, 'the exception editor');
 end;
 
 procedure CheckCompletionWiring;

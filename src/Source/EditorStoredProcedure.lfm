@@ -364,7 +364,6 @@ object frmStoredProcedure: TfrmStoredProcedure
     Top = 129
   end
   object txtParameters: TBufDataset
-    Active = True
     OnNewRecord = txtParametersNewRecord
     Left = 432
     Top = 164

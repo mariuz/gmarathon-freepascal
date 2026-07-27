@@ -2867,6 +2867,35 @@ begin
     if Tr.Active then
       Tr.Commit;
 
+    { A domain, a generator and an exception, left behind deliberately. The GUI
+      harness opens an editor on each kind the database holds, and without one
+      of these it skips those three editors - which is honest but covers
+      nothing. Created here because this suite already owns the test database.
+      RECREATE/EXECUTE BLOCK so a re-run is not an error. }
+    EnsureTransaction;
+    try
+      Q.SQL.Text := 'execute block as begin ' +
+        'if (not exists(select 1 from rdb$fields where rdb$field_name = ''SMOKE_DOM'')) then ' +
+        '  execute statement ''create domain SMOKE_DOM as varchar(12) character set WIN1252''; ' +
+        'if (not exists(select 1 from rdb$generators where rdb$generator_name = ''SMOKE_GEN'')) then ' +
+        '  execute statement ''create generator SMOKE_GEN''; ' +
+        'if (not exists(select 1 from rdb$exceptions where rdb$exception_name = ''SMOKE_EXC'')) then ' +
+        '  execute statement ''create exception SMOKE_EXC ''''a smoke test exception''''''; ' +
+        'end';
+      Q.ExecSQL;
+      if Tr.Active then
+        Tr.Commit;
+      WriteLn('Editor fixtures OK (domain, generator and exception present)');
+    except
+      on E: Exception do
+      begin
+        if Tr.Active then
+          Tr.Rollback;
+        WriteLn('FAIL: could not create the editor fixtures: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
     { Left until last: it makes and drops databases of its own, so a failure
       earlier in the run is not hidden behind it. }
     TestCreateDatabase(HostPrefixOf(DatabaseName));
