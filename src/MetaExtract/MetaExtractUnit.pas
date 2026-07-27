@@ -76,6 +76,7 @@ type
     FPassword: String;
     FRightMargin: Integer;
     FIsIB6: Boolean;
+    FSchema : String;
     FSQLDialect: Integer;
     FGrantSPs: TStringList;
     FGrantViews: TStringList;
@@ -116,6 +117,10 @@ type
     property UserName : String read FUserName write FUserName;
     property Password : String read FPassword write FPassword;
     property IsIB6 : Boolean read FIsIB6 write FIsIB6;
+    { The schema to extract from, or empty for whatever an unqualified name
+      reaches. Handed straight to the extractor, so a named schema both finds
+      the objects and qualifies the DDL. }
+    property Schema : String read FSchema write FSchema;
     property SQLDialect : Integer read FSQLDialect write FSQLDialect;
 
     property RightMargin : Integer read FRightMargin write FRightMargin;
@@ -900,6 +905,7 @@ begin
   FExtractor.Transaction := FTransaction;
   FExtractor.IsInterbase6 := FIsIB6;
   FExtractor.SQLDialect := FSQLDialect;
+  FExtractor.Schema := FSchema;
   FExtractor.IncludeDoc := FIncludeDoc;
 
   if not FTransaction.InTransaction then

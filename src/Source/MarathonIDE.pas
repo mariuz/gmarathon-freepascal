@@ -506,6 +506,17 @@ end;
   own, except for a node that lives in a named schema - there the generated
   statement has to name it, or it would run against whatever the search path
   reaches instead. }
+{ The schema a tree node belongs to, or empty when it is not in one. A schema
+  node stands for its own contents. }
+function SchemaOfItem(Item: TMarathonCacheBaseNode): String;
+begin
+	Result := '';
+	if Item is TMarathonCacheSchema then
+		Result := TMarathonCacheSchema(Item).ObjectName
+	else if Item is TMarathonCacheSchemaMember then
+		Result := TMarathonCacheSchemaMember(Item).Schema;
+end;
+
 function ItemScriptContext(Conn: TMarathonCacheConnection;
 	Item: TMarathonCacheBaseNode): TScriptAsContext;
 begin
@@ -959,11 +970,14 @@ begin
 
 						WizardForm := TfrmMetaExtractWizard.Create(nil);
 						try
+							{ A schema node extracts its own contents; anything else
+							  extracts what an unqualified name reaches, as before. }
 							WizardForm.SetConnection(ConnectName,
 								FCurrentProject.Cache.ConnectionByName[ConnectName].Connection,
 								FCurrentProject.Cache.ConnectionByName[ConnectName].Transaction,
 								FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6,
-								FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect);
+								FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect,
+								SchemaOfItem(Item));
 
 							for Idx := 0 to L.Count - 1 do
 								WizardForm.PreSelectObject(TMarathonCacheBaseNode(L.Objects[Idx]).CacheType, L[Idx]);

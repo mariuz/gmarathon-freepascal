@@ -71,6 +71,7 @@ type
 		FTransaction: TIBTransaction;
 		FIsIB6: Boolean;
 		FSQLDialect: Integer;
+		FSchema: String;
 		FStop: Boolean;
 		FExtracting: Boolean;
 		function GetExtractType: Integer;
@@ -102,8 +103,10 @@ type
 		procedure CollectChecked(LB: TCheckListBox; List: TStringList);
 		procedure ExtractNotifyHandler(Sender: TObject; CurObj: String; PercentDone: Integer; var Stop: Boolean);
 	public
+		{ Schema is optional and empty by default, which keeps every existing
+		  caller extracting exactly what it did before. }
 		procedure SetConnection(const ConnectionName: String; Database: TIBDatabase; Transaction: TIBTransaction;
-			IsIB6: Boolean; SQLDialect: Integer);
+			IsIB6: Boolean; SQLDialect: Integer; const Schema: String = '');
 		procedure PreSelectObject(CacheType: TGSSCacheType; const ObjectName: String);
 		{ Ord(TExtractType) rather than TExtractType itself, so callers don't need
 		  MetaExtractUnit in their uses clause just to set this. }
@@ -233,15 +236,26 @@ begin
 end;
 
 procedure TfrmMetaExtractWizard.SetConnection(const ConnectionName: String; Database: TIBDatabase;
-	Transaction: TIBTransaction; IsIB6: Boolean; SQLDialect: Integer);
+	Transaction: TIBTransaction; IsIB6: Boolean; SQLDialect: Integer;
+	const Schema: String);
 begin
+	FSchema := Schema;
 	FConnectionName := ConnectionName;
 	FDatabase := Database;
 	FTransaction := Transaction;
 	FIsIB6 := IsIB6;
 	FSQLDialect := SQLDialect;
-	Caption := 'Extract Metadata - ' + ConnectionName;
-	lblConnection.Caption := 'Connection: ' + ConnectionName;
+	if Schema <> '' then
+	begin
+		Caption := 'Extract Metadata - ' + ConnectionName + ' (' + Schema + ')';
+		lblConnection.Caption := 'Connection: ' + ConnectionName +
+			'    Schema: ' + Schema;
+	end
+	else
+	begin
+		Caption := 'Extract Metadata - ' + ConnectionName;
+		lblConnection.Caption := 'Connection: ' + ConnectionName;
+	end;
 	PopulateObjectLists;
 end;
 
@@ -307,7 +321,14 @@ begin
   if Assigned(FDatabase) and FDatabase.Connected then
     try
       if FDatabase.Attachment.GetODSMajorVersion >= 14 then
-        Result := ' and (rdb$schema_name = current_schema or current_schema is null)';
+      begin
+        if FSchema <> '' then
+          { A named schema is asked for exactly. The point of naming one is to
+            reach objects CURRENT_SCHEMA does not. }
+          Result := ' and (rdb$schema_name = ' + AnsiQuotedStr(FSchema, '''') + ')'
+        else
+          Result := ' and (rdb$schema_name = current_schema or current_schema is null)';
+      end;
     except
       Result := '';
     end;
@@ -525,6 +546,7 @@ begin
 		M.UserName := FDatabase.Params.Values['user_name'];
 		M.Password := FDatabase.Params.Values['password'];
 		M.IsIB6 := FIsIB6;
+		M.Schema := FSchema;
 		M.SQLDialect := FSQLDialect;
 		M.FileName := edOutputFile.Text;
 		M.OnExtractNotify := ExtractNotifyHandler;
