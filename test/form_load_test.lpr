@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling;
 
 var
   Failures: Integer = 0;
@@ -2697,6 +2697,85 @@ begin
   end;
 end;
 
+{ The icons, now that they are rendered from SVG at three sizes.
+
+  Which size a display wants is checked in keyword_test without a display. What
+  needs the real program is that the strips are actually in the compiled
+  resource and load: the .rc is turned into a .RES by tools/build_icons.sh, and
+  the binary carried a .RES built years ago on Windows - so a strip can exist
+  as a file, be named in the .rc, and still not be in the executable. }
+procedure CheckIconResolutions;
+const
+  ExpectedIcons = 15;
+var
+  Sizes: array[0..2] of Integer = (16, 24, 32);
+  Idx, Size: Integer;
+  B: TBitmap;
+  Name: String;
+  IL: TImageList;
+begin
+  WriteLn('Icon resolutions:');
+
+  for Idx := 0 to High(Sizes) do
+  begin
+    Size := Sizes[Idx];
+    Name := 'TREE_IMAGES_STRIP' + IconResourceSuffix(Size);
+    B := TBitmap.Create;
+    try
+      try
+        B.LoadFromResourceName(hInstance, Name);
+      except
+        on E: Exception do
+        begin
+          Check(False, Name + ' is in the compiled resource (' + E.Message + ')');
+          Continue;
+        end;
+      end;
+      Check(B.Height = Size, Name + ' is ' + IntToStr(Size) + ' pixels tall');
+      { One strip, one row: the loader slices it by height, so a strip whose
+        width is not a whole number of icons would lose the last one. }
+      Check(B.Width = ExpectedIcons * Size,
+        Name + ' holds ' + IntToStr(ExpectedIcons) + ' icons (is ' +
+        IntToStr(B.Width) + ' wide)');
+    finally
+      B.Free;
+    end;
+  end;
+
+  { And that the loader picks by DPI and fills the list at that size. }
+  for Idx := 0 to High(Sizes) do
+  begin
+    Size := Sizes[Idx];
+    IL := TImageList.Create(nil);
+    try
+      case Size of
+        16: LoadScaledStrip(IL, 'TREE_IMAGES_STRIP', 96);
+        24: LoadScaledStrip(IL, 'TREE_IMAGES_STRIP', 144);
+      else
+        LoadScaledStrip(IL, 'TREE_IMAGES_STRIP', 192);
+      end;
+      Check(IL.Width = Size,
+        'a display at that scale gets ' + IntToStr(Size) + '-pixel icons');
+      Check(IL.Count = ExpectedIcons,
+        'and all ' + IntToStr(ExpectedIcons) + ' of them (' +
+        IntToStr(IL.Count) + ')');
+    finally
+      IL.Free;
+    end;
+  end;
+
+  { The tree indexes 13 and 14 directly for its connected and inactive
+    overlays. The old strip held thirteen icons, so those two indexes pointed
+    at nothing and the overlays silently never appeared. }
+  IL := TImageList.Create(nil);
+  try
+    LoadScaledStrip(IL, 'TREE_IMAGES_STRIP', 96);
+    Check(IL.Count > 14, 'the two overlay icons the tree indexes are present');
+  finally
+    IL.Free;
+  end;
+end;
+
 procedure CheckCommandPalette;
 var
   P: TfrmCommandPalette;
@@ -3227,6 +3306,7 @@ begin
   CheckDesignTableReachable;
   CheckConnectionGrouping;
   CheckHighDPIScaling;
+  CheckIconResolutions;
   CheckCompletionWiring;
   CheckEditorSearch;
   CheckEditorsAllowAutoTransactions;

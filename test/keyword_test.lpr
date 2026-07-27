@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,39 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestIconScaling;
+begin
+  { The sizes the build script renders. Anything asking for one it does not
+    make would load a resource that is not there. }
+  Check(IconSizeForDPI(96) = 16, 'a normal display gets the 16-pixel icons');
+  Check(IconSizeForDPI(120) = 24, '125% gets 24');
+  Check(IconSizeForDPI(144) = 24, '150% gets 24');
+  Check(IconSizeForDPI(192) = 32, '200% gets 32');
+  Check(IconSizeForDPI(288) = 32, 'and anything larger gets 32, the largest made');
+
+  { Slightly-too-large is easier to read than slightly-too-small, so 175%
+    rounds up rather than down. }
+  Check(IconSizeForDPI(168) = 32, '175% rounds up rather than down');
+
+  { A display that reports nothing useful is commoner than it should be, and
+    guessing large from a bad number makes every icon wrong. }
+  Check(IconSizeForDPI(0) = 16, 'a display reporting nothing gets the base size');
+  Check(IconSizeForDPI(-1) = 16, 'and so does one reporting nonsense');
+
+  { Every size the chooser can return must be one the script renders, or the
+    resource lookup fails at runtime. }
+  Check((IconSizeForDPI(96) = IconSizes[0]) and
+        (IconSizeForDPI(144) = IconSizes[1]) and
+        (IconSizeForDPI(192) = IconSizes[2]),
+    'every size it can choose is one the build script renders');
+
+  { The base keeps its old resource name: renaming it would break every strip
+    loaded by a resource file an older build produced. }
+  Check(IconResourceSuffix(16) = '', 'the base size has no suffix');
+  Check(IconResourceSuffix(24) = '_24', 'and the others are named by size');
+  Check(IconResourceSuffix(32) = '_32', 'both of them');
 end;
 
 procedure TestCodeTemplates;
@@ -1401,6 +1434,9 @@ begin
 
   WriteLn('Code templates:');
   TestCodeTemplates;
+
+  WriteLn('Icon scaling:');
+  TestIconScaling;
 
   if Failures > 0 then
   begin

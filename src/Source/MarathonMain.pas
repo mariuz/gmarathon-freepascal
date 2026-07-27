@@ -851,9 +851,10 @@ begin
 	// Load the tree images from the resources
   B := TBitmap.Create;
   try
-		B.LoadFromResourceName(hInstance, 'TREE_IMAGES_STRIP');
-    ilMarathonImages.Clear;
-		AddStripMasked(ilMarathonImages, B, B.TransparentColor);
+		{ The strip that suits this display rather than always the 16-pixel one -
+		  the forms scale, so the icons have to as well or they sit small beside
+		  grown text. }
+		LoadScaledStrip(ilMarathonImages, 'TREE_IMAGES_STRIP', Screen.PixelsPerInch);
     ilMarathonImages.Overlay(13,0); //First overlay imageindex = 0  // Connected
     ilMarathonImages.Overlay(14,1); //Second overlay imageindex = 1 // Inactive/Warning
 

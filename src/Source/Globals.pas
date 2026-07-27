@@ -217,6 +217,18 @@ function DeclaredFieldLength(Q: TDataSet): Integer;
   bounds" from inside the widgetset. }
 procedure AddStripMasked(IL: TCustomImageList; Strip: TBitmap; MaskColor: TColor);
 
+{ Fills an image list from the strip that suits the display.
+
+  The icons are rendered from SVG into one strip per size (see icons/ and
+  tools/build_icons.sh), so a high-DPI display gets icons drawn at its own size
+  rather than a 16-pixel strip stretched to fit. Which size that is, is
+  IconScaling's decision and is tested without a display.
+
+  Falls back to the base strip when the bigger one is missing, so a resource
+  file that has not been rebuilt still gives working icons rather than none. }
+procedure LoadScaledStrip(IL: TCustomImageList; const BaseResource: String;
+	APixelsPerInch: Integer);
+
 { Lets every IBX dataset owned by AOwner start a transaction for itself when it
   is opened without one.
 
@@ -347,7 +359,7 @@ var
 
 implementation
 
-uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, SchemaNames;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, SchemaNames, IconScaling;
 
 const
   // Firebird BLR type constants (from ibase.h), as stored in
@@ -1099,6 +1111,52 @@ begin
 		  the form's own list, so every one of those tabs still failed. }
 		if Child.ComponentCount > 0 then
 			AllowAutoTransactions(Child);
+	end;
+end;
+
+procedure LoadScaledStrip(IL: TCustomImageList; const BaseResource: String;
+	APixelsPerInch: Integer);
+var
+	Size: Integer;
+	B: TBitmap;
+	Name: String;
+	Loaded: Boolean;
+begin
+	if not Assigned(IL) then
+		Exit;
+	Size := IconSizeForDPI(APixelsPerInch);
+	B := TBitmap.Create;
+	try
+		Loaded := False;
+		while not Loaded do
+		begin
+			Name := BaseResource + IconResourceSuffix(Size);
+			try
+				B.LoadFromResourceName(hInstance, Name);
+				Loaded := True;
+			except
+				on E: Exception do
+				begin
+					{ No such resource. Step down a size rather than give up: a
+					  resource file built before the larger strips existed still has
+					  the base one, and icons at the wrong size beat no icons. }
+					if Size <= BaseIconSize then
+						Exit;
+					if Size > 24 then
+						Size := 24
+					else
+						Size := BaseIconSize;
+				end;
+			end;
+		end;
+		{ The list has to be told how big its images are before they go in, or
+		  every one of them is cut to the 16 pixels the .lfm declared. }
+		IL.Width := Size;
+		IL.Height := Size;
+		IL.Clear;
+		AddStripMasked(IL, B, B.TransparentColor);
+	finally
+		B.Free;
 	end;
 end;
 

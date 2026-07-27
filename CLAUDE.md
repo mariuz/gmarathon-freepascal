@@ -57,6 +57,8 @@ The application is structured in layers:
 
 **Code templates** — `src/Common/CodeTemplates.pas` holds the templates, the `[name | description]` file form the Delphi build used, and expansion (caret marker, indentation to where the name was typed). No LCL. `TSyntaxMemoWithStuff2.ExpandTemplateAtCaret` is bound to Ctrl+J, so every editor built on the wrapper gets it; the Options "SQL Insight" tab edits them and `templates.dat` sits beside the executable. The same wrapper's `AddQuestGlyph`/`RemoveQuestGlyph` are the debugger's "blue dots", kept in SynEdit's own mark list so they move with the text.
 
+**Icons** — `icons/*.svg` is the source of truth; `tools/build_icons.sh` renders it to `TreeImagesStrip{,_24,_32}.bmp` at 16/24/32 and recompiles `Toolmenus.RES`. Output is checked in, so a normal build needs neither the script nor ImageMagick — run it after changing an icon. `Globals.LoadScaledStrip` picks the strip for the display; the thresholds live in `src/Common/IconScaling.pas` and are tested headlessly. Note ImageMagick's built-in SVG renderer has no arc command — use Béziers.
+
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.
 
 **Editor** — `lib/SyntaxMemoWithStuff2/` wraps SynEdit with SQL syntax highlighting, code completion (`SQLInsightItem.pas`), bookmarks, and drag-and-drop.
