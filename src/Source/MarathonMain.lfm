@@ -39,7 +39,7 @@ object frmMarathonMain: TfrmMarathonMain
     0000E0000000E0000000E0000000E0000000E0000000E0000000E0000000}
   OldCreateOrder = False
   Position = poDefaultSizeOnly
-  Scaled = False
+  Scaled = True
   Visible = True
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery

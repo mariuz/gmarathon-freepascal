@@ -16,7 +16,7 @@ object frmEditorConstraint: TfrmEditorConstraint
   KeyPreview = True
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown
   OnShow = FormShow

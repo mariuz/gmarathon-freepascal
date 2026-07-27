@@ -12,7 +12,7 @@ object frmViewEditor: TfrmViewEditor
   Font.Style = []
   KeyPreview = True
   OldCreateOrder = False
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate

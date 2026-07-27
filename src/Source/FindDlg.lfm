@@ -16,7 +16,7 @@ object EdFindDlg: TEdFindDlg
   KeyPreview = True
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnKeyDown = FormKeyDown
   OnShow = FormShow

@@ -1082,6 +1082,11 @@ var
 begin
 	if (IL = nil) or (Strip = nil) or (IL.Width <= 0) or (IL.Height <= 0) then
 		Exit;
+	{ So the icons follow the rest of the interface when it is scaled up. The
+	  artwork is 16x16 and there is no larger version of it in the tree, so this
+	  stretches rather than sharpens - but an icon at the wrong size next to
+	  scaled text is worse than a soft one at the right size. }
+	IL.Scaled := True;
 	Cols := Strip.Width div IL.Width;
 	Rows := Strip.Height div IL.Height;
 	{ A strip narrower than one cell is not a strip - add it as it is rather

@@ -16,7 +16,7 @@ object frmColumns: TfrmColumns
   KeyPreview = True
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnActivate = FormActivate
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown

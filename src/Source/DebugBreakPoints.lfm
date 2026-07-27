@@ -15,7 +15,7 @@ object frmDebugBreakPoints: TfrmDebugBreakPoints
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 13

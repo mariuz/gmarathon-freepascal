@@ -153,6 +153,13 @@ var
 begin
 	MarathonScreen := TMarathonScreen.Create;
 	try
+		{ Without this the whole interface renders at 96 DPI regardless of the
+		  display, which on a 4K screen means controls and text at a quarter of
+		  their intended size. Every .lfm was carrying Delphi's Scaled = False,
+		  which switches LCL's scaling off form by form; those now say True, and
+		  this turns it on for the application. On a 96 DPI display the factor is
+		  1.0 and nothing moves. }
+		Application.Scaled := True;
 		Application.Initialize;
 		Application.Title := 'Marathon - The SQL Tool for Firebird ';
 		Tracer := nil;

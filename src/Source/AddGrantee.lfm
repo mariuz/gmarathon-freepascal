@@ -15,7 +15,7 @@ object frmGranteeAdd: TfrmGranteeAdd
   KeyPreview = True
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown

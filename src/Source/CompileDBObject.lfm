@@ -15,7 +15,7 @@ object frmCompileDBObject: TfrmCompileDBObject
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow

@@ -15,7 +15,7 @@ object frmWatches: TfrmWatches
   FormStyle = fsStayOnTop
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnShow = FormShow
   PixelsPerInch = 96

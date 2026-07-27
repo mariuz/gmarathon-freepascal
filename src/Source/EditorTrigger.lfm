@@ -14,7 +14,7 @@ object frmTriggerEditor: TfrmTriggerEditor
   KeyPreview = True
   OldCreateOrder = False
   Position = poDefault
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate

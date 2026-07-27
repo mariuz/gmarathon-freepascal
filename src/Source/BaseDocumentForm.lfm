@@ -12,7 +12,7 @@ object frmBaseDocumentForm: TfrmBaseDocumentForm
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
-  Scaled = False
+  Scaled = True
   OnActivate = FormActivate
   OnClose = FormClose
   PixelsPerInch = 96

@@ -14,7 +14,7 @@ object frmEditorSnippet: TfrmEditorSnippet
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown

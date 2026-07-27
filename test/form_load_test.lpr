@@ -918,6 +918,45 @@ end;
   own format (see tools/imagelist_convert.lpr). Checked here because a blob
   that round-trips standalone is not proof it survives being streamed as part
   of a form. }
+{ DPI scaling. Every .lfm carried Delphi's Scaled = False, which switches LCL's
+  scaling off form by form, so on a high-DPI display the whole interface
+  rendered at 96 DPI - controls and text at a fraction of their intended size.
+  Checked here because the fault is invisible on a 96 DPI display, where the
+  scale factor is 1.0 and everything looks correct either way. }
+procedure CheckHighDPIScaling;
+var
+  Idx, Unscaled: Integer;
+  FirstUnscaled: String;
+  F: TCustomForm;
+begin
+  WriteLn('High-DPI scaling:');
+  { Application.Scaled is one line in marathon.lpr, which this harness does not
+    run. Asserting it here would mean asserting something the harness had to set
+    itself, which proves nothing. What is worth checking is the forms: every one
+    of them shipped with Delphi's Scaled = False, and that is the setting that
+    made the interface render at 96 DPI whatever the display. }
+  Unscaled := 0;
+  FirstUnscaled := '';
+  for Idx := 0 to Screen.CustomFormCount - 1 do
+  begin
+    F := Screen.CustomForms[Idx];
+    if not F.Scaled then
+    begin
+      Inc(Unscaled);
+      if FirstUnscaled <> '' then
+        FirstUnscaled := FirstUnscaled + ', ';
+      FirstUnscaled := FirstUnscaled + F.ClassName;
+    end;
+  end;
+  if Unscaled = 0 then
+    Check(True, 'every open form scales with the display')
+  else
+    Check(False, IntToStr(Unscaled) + ' form(s) do not scale: ' + FirstUnscaled);
+  { The icons have to follow, or they sit at 16 pixels beside scaled text. }
+  Check(frmMarathonMain.ilMarathonImages.Scaled,
+    'the tree image list scales with the display');
+end;
+
 procedure CheckDesignedImageLists;
 var
   NewObj: TfrmNewObject;
@@ -1279,6 +1318,7 @@ begin
   CheckListViewRebuild;
   CheckImageListsSliced;
   CheckDesignedImageLists;
+  CheckHighDPIScaling;
   CheckEditorsAllowAutoTransactions;
   CheckProjectSaveWithRememberedPassword;
 

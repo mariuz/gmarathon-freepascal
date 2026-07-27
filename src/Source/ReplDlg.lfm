@@ -14,7 +14,7 @@ object EdReplDlg: TEdReplDlg
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnKeyDown = FormKeyDown
   OnShow = FormShow

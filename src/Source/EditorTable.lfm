@@ -15,7 +15,7 @@ object frmTables: TfrmTables
   OldCreateOrder = False
   PopupMenu = PopupMenu1
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate

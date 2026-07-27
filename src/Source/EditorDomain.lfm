@@ -15,7 +15,7 @@ object frmDomains: TfrmDomains
   KeyPreview = True
   OldCreateOrder = False
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate

@@ -11,7 +11,7 @@ object frmEditorGrant: TfrmEditorGrant
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   Position = poScreenCenter
-  Scaled = False
+  Scaled = True
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown
