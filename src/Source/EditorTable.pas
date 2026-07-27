@@ -69,7 +69,7 @@ unit EditorTable;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls, RowEdits, Variants;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls, RowEdits, Variants, StrUtils;
 
 type
 	TfrmTables = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor, IGimbalIDETableEditorWindow)
@@ -184,6 +184,8 @@ type
 		  done was to read it back afterwards. }
 		function PendingDataChanges: String;
 		function HasPendingDataChanges: Boolean;
+		{ How many rows are waiting, so the question can say so. }
+		function PendingChangeCount: Integer;
 		{ Runs them, or throws them away. Both leave the grid showing what the
 		  table actually holds. }
 		procedure ApplyDataChanges;
@@ -550,21 +552,34 @@ begin
 end;
 
 procedure TfrmTables.CheckCommit;
+var
+	Pending: Integer;
 begin
-	if tblTableData.Active then
+	if not tblTableData.Active then
+		Exit;
+
+	{ Edits are held now rather than posted as each row is left, so what is
+	  outstanding when the tab is left is a set of row changes - not an open
+	  transaction. Asking "Commit Work?" about the transaction would leave those
+	  changes to be dropped silently by the close below, whichever way the user
+	  answered. }
+	if HasPendingDataChanges then
 	begin
-		tblTableData.Close;
-		if tblTableData.Modified then
-		begin
-			if MessageDlg('Commit Work?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-				tranTableData.Commit
-			else
-				tranTableData.Rollback;
-		end
+		Pending := PendingChangeCount;
+		if MessageDlg('Unapplied changes',
+			'There ' + IfThen(Pending = 1, 'is 1 row change', 'are ' +
+			IntToStr(Pending) + ' row changes') + ' that have not been written.' +
+			#13#10 + 'Apply them?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+			ApplyDataChanges
 		else
-			if tranTableData.Active then
-				tranTableData.Rollback;
+			CancelDataChanges;
 	end;
+
+	tblTableData.Close;
+	if tranTableData.Active then
+		{ Whatever was applied above was committed with it; anything else on this
+		  transaction was a read. }
+		tranTableData.Rollback;
 end;
 
 procedure TfrmTables.FillFieldList;
@@ -2927,6 +2942,22 @@ function TfrmTables.HasPendingDataChanges: Boolean;
 begin
   Result := tblTableData.Active and tblTableData.CachedUpdates and
     tblTableData.UpdatesPending;
+end;
+
+function TfrmTables.PendingChangeCount: Integer;
+var
+  L: TRowEditList;
+begin
+  Result := 0;
+  if not HasPendingDataChanges then
+    Exit;
+  L := TRowEditList.Create;
+  try
+    CollectDataChanges(L);
+    Result := L.Count;
+  finally
+    L.Free;
+  end;
 end;
 
 function TfrmTables.PendingDataChanges: String;
