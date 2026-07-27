@@ -404,15 +404,49 @@ and schema comparison all exist here already. The gap is arrangement.
   Not done: the **dedicated connection dialog**. The master-properties
   connection tab already has every field one would have, so a new dialog would
   be a second way to do the same thing rather than a better one.
-- [ ] **7. Table designer** — a visual editor for creating and altering tables.
-  Large, and the first item here that is genuinely new capability rather than
-  rearrangement.
-- [ ] **8. Cleanup that this makes possible** — `WindowList` and the Window menu
+- [ ] **7. Table designer** — assessed rather than started, because the shape
+  of the job is not what the item implies. Marathon *already* designs tables:
+  New Table opens a column dialog, and the table editor has Structure,
+  Constraints, Indices and DDL tabs. What the VS Code designer adds is that the
+  whole table is edited in one view and **the script is shown before it is
+  applied**. Marathon applies each change as you make it — every column dialog
+  runs its own `ALTER TABLE` on OK — so there is nothing pending to preview.
+
+  Building the designer therefore means converting the table editor from
+  immediate-apply to design-then-apply: a batch of intended changes, a script
+  built from them, and one apply. That is a deep change to the editor with the
+  thinnest coverage in the tree — until this session it had none at all, and it
+  now has "it opens and reads its columns". Worth doing, worth doing with tests
+  first, and not worth starting at the end of a long session and leaving half
+  converted.
+- [x] **8. Cleanup that this makes possible** — `WindowList` and the Window menu
   exist to manage floating windows and become redundant once documents are tabs;
   `GlobalMigrateWizard.pas` is already dead (superseded by `MetaExtractWizard`);
   `lib/Other` holds three units shadowed by copies in `src/Source`. Release
   notes are auto-generated stubs (`**Full Changelog**: …`) and could describe
   what actually changed.
+
+  Done: the three shadowed `lib/Other` units are gone, along with an orphaned
+  Delphi palette icon. They were not spare copies but a trap — `src/Source` is
+  earlier in the search path, so editing one had no effect whatsoever. All
+  three differed from the live versions, which is how a trap like that gets
+  noticed too late.
+
+  Release notes now list the commit subjects since the previous tag, name the
+  three downloads and link the comparison. The reason every release so far said
+  only *Full Changelog* is that all three platform jobs asked GitHub to
+  generate notes, and whichever finished last overwrote the others; one job
+  writes them now. Checked by running the generator against the real repository
+  rather than by reading the YAML — without `fetch-depth: 0` the default shallow
+  clone has no previous tag and the list would have come out empty.
+
+  `WindowList` and the Window menu are *not* removed. Documents are tabs now, so
+  the menu is largely redundant, but it still lists tool windows and the
+  explorer, and every document form registers itself with `WindowList` in its
+  constructor. That is a change to unpick carefully rather than in a cleanup
+  commit. `GlobalMigrateWizard` and `GSSDDLExtractorServer` are unreachable from
+  the application but are the old COM server rather than duplicates, so they are
+  left for a decision about that build.
 
 ## Explicitly out of scope
 
@@ -480,5 +514,5 @@ because the original reasoning no longer holds:
 | 9 | Results beneath the statement | Done |
 | 9 | Command palette | Done |
 | 9 | Connection groups | Done; dedicated dialog judged not worth it |
-| 9 | Table designer | Not started |
-| 9 | Cleanup enabled by the shell | Not started |
+| 9 | Table designer | Assessed, not started — needs the editor converted to design-then-apply |
+| 9 | Cleanup enabled by the shell | Done |
