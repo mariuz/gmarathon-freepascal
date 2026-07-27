@@ -80,6 +80,10 @@ type
 		constructor Create;
 	end;
 
+	{ Declared ahead of the editor, which holds one, and defined below it,
+	  because it holds a reference back to the editor. }
+	TEdPersistent = class;
+
 	TSyntaxMemoWithStuff2 = class(TSynEdit)
 	private
 		{ Private declarations }
@@ -98,6 +102,9 @@ type
     FOnDotLookup: TDotLookupEvent;
     FWordList: TWordList;
     FSQLInsightList: TSQLInsightList;
+    { Search text, options and history, kept per editor so that Find Next after
+      a Find in one window does not pick up what was typed in another. }
+    FPersist: TEdPersistent;
     FListDelay: Integer;
     FFindSettingsRegistryKey: String;
     FFindDialogCaption: String;
@@ -124,6 +131,15 @@ type
       from mouse/move handlers, and dropping it would mean scattering
       conditionals through every one of those call sites. }
     procedure CloseUpLists;
+    { Find, Find Next and Replace. These were left unimplemented on this port
+      and every caller had been reduced to a comment, so Ctrl+F did nothing in
+      the SQL editor or any object editor. The dialogs themselves were ported
+      and working - only the three methods that raise them were missing. The
+      search is SynEdit's own SearchReplace; nothing here needs the code
+      completion machinery this unit still lacks. }
+    procedure WSFind;
+    procedure WSFindNext;
+    procedure WSReplace;
     function DoOnSpecialLineColors(Line: integer; var Foreground, Background: TColor): boolean;
 
     property SelLength: integer read GetSelLength write SetSelLength;
@@ -249,13 +265,63 @@ begin
   FExecuteLineEnd := -1;
   FWordList := TWordList.Create;
   FSQLInsightList := TSQLInsightList.Create;
+  FPersist := TEdPersistent.Create(Self);
+  FPersist.Editor := Self;
+  { Whole-word and case are off, and the search runs forwards from the caret -
+    what a reader expects of a first Ctrl+F. }
+  FPersist.LastFindOpt := [];
 end;
 
 destructor TSyntaxMemoWithStuff2.Destroy;
 begin
   FWordList.Free;
   FSQLInsightList.Free;
+  { FPersist is owned by this component, so it is freed with it. }
 	inherited Destroy;
+end;
+
+procedure TSyntaxMemoWithStuff2.WSFind;
+var
+	Dlg: TEdFindDlg;
+begin
+	Dlg := TEdFindDlg.Create(Self);
+	try
+		if FFindDialogCaption <> '' then
+			Dlg.Caption := FFindDialogCaption;
+		Dlg.HelpContext := FFindDialogHelpContext;
+		Dlg.Execute(FPersist.LastFindText, FPersist.LastFindOpt, Self, FPersist);
+	finally
+		Dlg.Free;
+	end;
+end;
+
+procedure TSyntaxMemoWithStuff2.WSFindNext;
+begin
+	{ Nothing searched for yet, so ask rather than silently report that an empty
+	  string was not found. }
+	if FPersist.LastFindText = '' then
+	begin
+		WSFind;
+		Exit;
+	end;
+	if SearchReplace(FPersist.LastFindText, '', FPersist.LastFindOpt) = 0 then
+		MessageDlg(Format('Search string "%s" not found.', [FPersist.LastFindText]),
+			mtInformation, [mbOK], 0);
+end;
+
+procedure TSyntaxMemoWithStuff2.WSReplace;
+var
+	Dlg: TEdReplDlg;
+begin
+	Dlg := TEdReplDlg.Create(Self);
+	try
+		if FReplaceDialogCaption <> '' then
+			Dlg.Caption := FReplaceDialogCaption;
+		Dlg.HelpContext := FReplaceDialogHelpContext;
+		Dlg.Execute(FPersist.LastFindText, FPersist.LastFindOpt, Self, FPersist);
+	finally
+		Dlg.Free;
+	end;
 end;
 
 function TSyntaxMemoWithStuff2.GetSelLength: integer;

@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -923,6 +923,38 @@ end;
   rendered at 96 DPI - controls and text at a fraction of their intended size.
   Checked here because the fault is invisible on a 96 DPI display, where the
   scale factor is 1.0 and everything looks correct either way. }
+{ Find, Find Next and Replace in the editors. Every caller had been reduced to
+  a comment on this port, so Ctrl+F did nothing anywhere - while the dialogs
+  themselves were ported and working, and only the three methods that raise
+  them were missing. Checked through the forms' own Can/Do pair rather than the
+  editor control, since that is the path the menu actually takes. }
+procedure CheckEditorSearch;
+var
+  F: TfrmSQLForm;
+begin
+  WriteLn('Editor search:');
+  { Nothing here asserts the three methods exist - that is a compile-time fact,
+    and a test that only says "it compiles" is worth nothing. What matters is
+    that the menu path reaches them and that the search reads the editor's
+    text. }
+  F := TfrmSQLForm.Create(nil);
+  try
+    { Text first: the form only offers Find on a document with something in it,
+      which is why the order here matters. }
+    Check(not F.CanFind, 'Find is not offered on an empty document');
+    F.edSQLStatement.Text := 'select * from rdb$database';
+    Check(F.CanFind, 'the SQL editor offers Find once there is text');
+    Check(F.CanFindNext, 'and Find Next');
+    Check(F.CanReplace, 'and Replace');
+    Check(F.edSQLStatement.SearchReplace('rdb$database', '', []) > 0,
+      'a search over the editor text finds a match');
+    Check(F.edSQLStatement.SearchReplace('no_such_token', '', []) = 0,
+      'and reports nothing for text that is not there');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1319,6 +1351,7 @@ begin
   CheckImageListsSliced;
   CheckDesignedImageLists;
   CheckHighDPIScaling;
+  CheckEditorSearch;
   CheckEditorsAllowAutoTransactions;
   CheckProjectSaveWithRememberedPassword;
 

@@ -94,7 +94,7 @@ end;
 
 procedure TfrmSQLTrace.DoFind;
 begin
-	// FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
+	edTrace.WSFind;
 end;
 
 function TfrmSQLTrace.CanFindNext: Boolean;
@@ -104,7 +104,7 @@ end;
 
 procedure TfrmSQLTrace.DoFindNext;
 begin
-	// FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
+	edTrace.WSFindNext;
 end;
 
 function TfrmSQLTrace.CanSelectAll: Boolean;

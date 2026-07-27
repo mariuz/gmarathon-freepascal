@@ -967,7 +967,7 @@ procedure TfrmTriggerEditor.DoFind;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_EDIT:
-			; // FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
+			edEditor.WSFind;
 
 		PG_DOCO:
 			framDoco.WSFind;
@@ -978,7 +978,7 @@ procedure TfrmTriggerEditor.DoFindNext;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_EDIT:
-			; // FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
+			edEditor.WSFindNext;
 
 		PG_DOCO:
 			framDoco.WSFindNext;
@@ -1550,7 +1550,7 @@ procedure TfrmTriggerEditor.DoReplace;
 begin
 	case pgObjectEditor.ActivePageIndex of
 		PG_EDIT:
-			; // FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
+			edEditor.WSReplace;
 
 		PG_DOCO:
 			framDoco.WSReplace;

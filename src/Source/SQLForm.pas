@@ -1599,12 +1599,12 @@ end;
 
 procedure TfrmSQLForm.DoFind;
 begin
-	// FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
+	edSQLStatement.WSFind;
 end;
 
 procedure TfrmSQLForm.DoFindNext;
 begin
-	// FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
+	edSQLStatement.WSFindNext;
 end;
 
 procedure TfrmSQLForm.DoGotoBookmark(Index: Integer);
@@ -2417,7 +2417,7 @@ end;
 procedure TfrmSQLForm.DoReplace;
 begin
 	inherited;
-	// FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
+	edSQLStatement.WSReplace;
 end;
 
 procedure TfrmSQLForm.cmbModeChange(Sender: TObject);

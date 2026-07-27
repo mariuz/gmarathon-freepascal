@@ -1405,7 +1405,7 @@ procedure TfrmViewEditor.DoFind;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_SQL:
-			; // FPC: WSFind not available on this port's TSyntaxMemoWithStuff2
+			edEditor.WSFind;
 
 		PG_DOCO:
 			framDoco.WSFind;
@@ -1416,7 +1416,7 @@ procedure TfrmViewEditor.DoFindNext;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_SQL:
-			; // FPC: WSFindNext not available on this port's TSyntaxMemoWithStuff2
+			edEditor.WSFindNext;
 
 		PG_DOCO:
 			framDoco.WSFindNext;
@@ -1449,7 +1449,7 @@ procedure TfrmViewEditor.DoReplace;
 begin
 	case pgObjectEditor.ActivePage.PageIndex of
 		PG_SQL:
-			; // FPC: WSReplace not available on this port's TSyntaxMemoWithStuff2
+			edEditor.WSReplace;
 
 		PG_DOCO:
 			framDoco.WSReplace;
