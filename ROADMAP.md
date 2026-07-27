@@ -360,8 +360,29 @@ and schema comparison all exist here already. The gap is arrangement.
   one named function rather than seven inline conditions, and the test pins the
   case that would otherwise pass by accident: nothing focused must not count as
   the results being focused.
-- [ ] **5. Command palette** — `Ctrl+Shift+P` over the existing `TActionList`,
-  which already names and groups every command in the application.
+- [x] **5. Command palette** — `Ctrl+Shift+P` finds any of the application's
+  **176** commands by typing part of a name. It needed no list of commands:
+  every one is already a `TAction` with a caption and a category, so the
+  palette reads `actMain` and nothing has to be kept in step with it.
+
+  Words match independently and in any order, because nobody recalls the exact
+  wording of a menu item — *new conn* and *conn new* both find New Connection,
+  and the category is searched too, so *tools extract* finds Metadata Extract
+  without knowing which menu it lives under. Accelerator ampersands and
+  trailing ellipses are stripped, since they are noise to type against.
+  Ordering puts a name that *starts* with what was typed above one that merely
+  contains it, above one matched only through its category.
+
+  A command that cannot run now is **listed but greyed, not hidden**: an action
+  is disabled because its document or connection is not there, and hiding it
+  would send someone hunting for a command that exists. Pressing Enter on one
+  does nothing, which the test pins by finding a disabled command in the real
+  action list and requiring that it is offered and not executed.
+
+  What a query means is decided in the LCL-free `src/Common/CommandPalette.pas`
+  and tested there without a widgetset; the dialog is checked against the
+  application's own action list, which is what makes "it finds the commands
+  that actually exist" a real claim rather than one about a fixture.
 - [ ] **6. Connection dialog and connection groups** — one dialog rather than
   the current master-properties tab, reusing the environment colours already
   implemented.
@@ -439,7 +460,7 @@ because the original reasoning no longer holds:
 | 9 | Object explorer in the shell | Done |
 | 9 | Explorer filtering and type-aware search | Done |
 | 9 | Results beneath the statement | Done |
-| 9 | Command palette | Not started |
+| 9 | Command palette | Done |
 | 9 | Connection dialog and groups | Not started |
 | 9 | Table designer | Not started |
 | 9 | Cleanup enabled by the shell | Not started |

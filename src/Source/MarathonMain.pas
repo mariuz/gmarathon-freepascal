@@ -496,6 +496,11 @@ type
     procedure ViewNextWindowExecute(Sender: TObject);
     procedure ToolsMetaExtractExecute(Sender: TObject);
     procedure ToolsCompareSchemasExecute(Sender: TObject);
+    { Ctrl+Shift+P opens the command palette. Handled on the form rather than
+      as an action so it works wherever the focus is, including inside a
+      document tab. }
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure ShowCommandPalette;
     procedure ToolsMetaSearchExecute(Sender: TObject);
     procedure ToolsSQLCodeSnippetsExecute(Sender: TObject);
 		procedure ToolsSQLTraceExecute(Sender: TObject);
@@ -774,7 +779,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, TipOfTheDay, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -1372,6 +1377,32 @@ end;
 procedure TfrmMarathonMain.ToolsMetaExtractExecute(Sender: TObject);
 begin
 	MarathonIDEInstance.ToolsMetadataExtract;
+end;
+
+procedure TfrmMarathonMain.FormKeyDown(Sender: TObject; var Key: Word;
+	Shift: TShiftState);
+begin
+	if (Key = Ord('P')) and (ssCtrl in Shift) and (ssShift in Shift) then
+	begin
+		Key := 0;
+		ShowCommandPalette;
+	end;
+end;
+
+procedure TfrmMarathonMain.ShowCommandPalette;
+var
+	Palette: TfrmCommandPalette;
+begin
+	Palette := TfrmCommandPalette.Create(Self);
+	try
+		{ actMain is where every command lives. The menu module holds popup menus
+		  rather than actions, and actMRU holds recently opened files, which are
+		  documents rather than commands. }
+		Palette.AddActions(actMain);
+		Palette.ShowModal;
+	finally
+		Palette.Free;
+	end;
 end;
 
 procedure TfrmMarathonMain.ToolsCompareSchemasExecute(Sender: TObject);

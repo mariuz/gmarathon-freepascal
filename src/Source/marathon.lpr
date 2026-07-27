@@ -37,6 +37,7 @@ uses
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
   SchemaCompareDialog in 'SchemaCompareDialog.pas' {frmSchemaCompare},
   CreateDatabaseDialog in 'CreateDatabaseDialog.pas' {frmCreateDatabase},
+  CommandPaletteDialog in 'CommandPaletteDialog.pas' {frmCommandPalette},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},
   WindowList in 'WindowList.pas' {frmWindowList},
   UDFInputParam in 'UDFInputParam.pas' {frmUDFAddInput},

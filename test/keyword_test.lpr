@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette;
 
 var
   Highlighter: TSynSQLSyn;
@@ -80,6 +80,12 @@ begin
   Ctx := CompletionContextAt(Line, CaretX);
   Check((Ctx.Kind = ExpectKind) and (Ctx.Partial = ExpectPartial) and
         (Ctx.Qualifier = ExpectQualifier), What);
+end;
+
+procedure CheckCommand(const Query, Caption, Category: String;
+  Expect: Boolean; const What: String);
+begin
+  Check(CommandMatches(Query, Caption, Category) = Expect, What);
 end;
 
 procedure CheckFilter(const FilterText, ObjectName, KindCaption: String;
@@ -216,6 +222,40 @@ begin
 
   { A colon inside a quoted name is part of the name, not a type prefix. }
   CheckFilter('"A:B"', 'A:B', 'Tables', True, 'a colon inside quotes is not a type');
+
+  { --- Finding a command by typing part of its name --- }
+  WriteLn('Command palette:');
+
+  Check(CommandDisplayName('&New Connection...') = 'New Connection',
+    'accelerators and trailing dots are not part of the name');
+  Check(CommandDisplayName('E&xtract') = 'Extract',
+    'an ampersand inside a word goes too');
+
+  CheckCommand('', 'New Connection', 'Project', True, 'an empty query lists everything');
+  CheckCommand('new', 'New Connection', 'Project', True, 'one word matches');
+  CheckCommand('conn', '&New Connection...', 'Project', True,
+    'and matches through the accelerator markers');
+  CheckCommand('new conn', 'New Connection', 'Project', True, 'two words in order');
+  { Nobody recalls the exact wording, so word order must not matter. }
+  CheckCommand('conn new', 'New Connection', 'Project', True, 'or out of order');
+  CheckCommand('new xyz', 'New Connection', 'Project', False,
+    'every word has to appear');
+  CheckCommand('NEW', 'new connection', 'Project', True, 'matching ignores case');
+  { The category is searchable too, so a half-remembered menu name finds it. }
+  CheckCommand('tools extract', 'Metadata Extract', 'Tools', True,
+    'a word may come from the category');
+  CheckCommand('script', 'Metadata Extract', 'Tools', False,
+    'and an unrelated word still excludes it');
+
+  { Ordering: what was typed at the start of a name is almost certainly meant. }
+  Check(CommandRank('new', 'New Connection', 'Project') >
+        CommandRank('new', 'Add New Server', 'Project'),
+    'a name starting with the query outranks one merely containing it');
+  Check(CommandRank('new', 'Add New Server', 'Project') >
+        CommandRank('tools new', 'Something Else', 'Tools New'),
+    'and containing it outranks matching only through the category');
+  Check(CommandRank('zzz', 'New Connection', 'Project') = 0,
+    'no match ranks zero');
 
   if Failures > 0 then
   begin

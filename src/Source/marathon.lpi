@@ -768,6 +768,12 @@
         <HasResources Value="True"/>
         <UnitName Value="CreateDatabaseDialog"/>
       </Unit113>
+      <Unit114>
+        <Filename Value="CommandPaletteDialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="CommandPaletteDialog"/>
+      </Unit114>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -1,4 +1,6 @@
 object frmMarathonMain: TfrmMarathonMain
+  KeyPreview = True
+  OnKeyDown = FormKeyDown
   Left = 225
   Top = 121
   Width = 736

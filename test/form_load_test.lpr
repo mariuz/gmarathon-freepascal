@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost, SchemaObjects, DocumentHost,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost, SchemaObjects, DocumentHost, CommandPaletteDialog,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -1527,6 +1527,68 @@ begin
   end;
 end;
 
+{ The command palette against the application's real action list.
+
+  What a query matches is decided without a GUI in keyword_test; what matters
+  here is that it finds the commands that actually exist, narrows as you type,
+  and refuses to run one that cannot run. }
+procedure CheckCommandPalette;
+var
+  P: TfrmCommandPalette;
+  AllCommands, Narrowed: Integer;
+  Idx, Disabled: Integer;
+  Action: TCustomAction;
+begin
+  WriteLn('Command palette:');
+  P := TfrmCommandPalette.Create(nil);
+  try
+    P.AddActions(frmMarathonMain.actMain);
+    AllCommands := P.VisibleCount;
+    Check(AllCommands > 20, 'it finds the application''s commands (' +
+      IntToStr(AllCommands) + ')');
+
+    P.edQuery.Text := 'connection';
+    P.edQueryChange(nil);
+    Narrowed := P.VisibleCount;
+    Check(Narrowed > 0, 'a query finds something');
+    Check(Narrowed < AllCommands, 'and narrows the list');
+
+    P.edQuery.Text := 'zzz not a command at all';
+    P.edQueryChange(nil);
+    Check(P.VisibleCount = 0, 'a query matching nothing leaves nothing');
+    Check(P.ChosenAction = nil, 'and offers nothing to run');
+    Check(not P.ExecuteChosen, 'so nothing is executed');
+
+    P.edQuery.Text := '';
+    P.edQueryChange(nil);
+    Check(P.VisibleCount = AllCommands, 'clearing the query restores the list');
+
+    { A disabled command must be listed - hiding it sends the user hunting for
+      something that exists - but must not run. Most commands are disabled with
+      no project open, so there is certainly one to find. }
+    Disabled := -1;
+    for Idx := 0 to P.VisibleCount - 1 do
+    begin
+      Action := TCustomAction(P.lstCommands.Items.Objects[Idx]);
+      if Assigned(Action) and not Action.Enabled then
+      begin
+        Disabled := Idx;
+        Break;
+      end;
+    end;
+    if Disabled >= 0 then
+    begin
+      P.lstCommands.ItemIndex := Disabled;
+      Check(Assigned(P.ChosenAction), 'a command that cannot run is still listed');
+      Check(not P.ExecuteChosen, 'but is not executed');
+    end
+    else
+      WriteLn('  .... no disabled command here to check that path with');
+  finally
+    P.Free;
+  end;
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1927,6 +1989,7 @@ begin
   CheckExplorerDocks;
   CheckExplorerFilter;
   CheckResultsUnderEditor;
+  CheckCommandPalette;
   CheckHighDPIScaling;
   CheckCompletionWiring;
   CheckEditorSearch;
