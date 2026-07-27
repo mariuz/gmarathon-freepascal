@@ -23,7 +23,7 @@ interface
 
 uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, ibase60dyn, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, Clipbrd, FileCtrl, DBCtrls, ActnList, ImgList, {$IFDEF d6_or_higher}
 	Variants, {$ENDIF}
-	  BufDataset, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmCompatControls;
+	  BufDataset, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, FrameMetadata, MarathonProjectCacheTypes, MarathonInternalInterfaces, GimbalToolsAPI, rmCompatControls, SQLCompletionHost;
 
 type
 	TfrmStoredProcedure = class(TfrmBaseDocumentDataAwareForm, IMarathonStoredProcEditor, IGimbalIDESQLTextEditor)
@@ -98,6 +98,8 @@ type
 		procedure FormDestroy(Sender: TObject);
 		procedure edEditorStatusChange(Sender: TObject;	Changes: TSynStatusChanges);
 	private
+		{ Ctrl+Space completion - see SQLCompletionHost. }
+		FCompletion: TSQLCompletionHost;
 		{ Private declarations }
 		// Context sensitive keyword help
 		DoKeySearch: Boolean;
@@ -579,6 +581,7 @@ begin
 	It.Caption := '&1 Stored Procedure [' + FObjectName + ']';
 	It.OnClick := WindowListClick;
 	MarathonIDEInstance.AddMenuToMainForm(IT);
+	FCompletion := TSQLCompletionHost.Create(Self, edEditor);
 end;
 
 function TfrmStoredProcedure.GetParameters(Force: Boolean; var Params: String): Boolean;
@@ -2596,6 +2599,8 @@ begin
 		SQLDialect := TIBDatabase(qryUtil.Database).SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
+	if Assigned(FCompletion) then
+		FCompletion.ConnectionName := Value;
 end;
 
 

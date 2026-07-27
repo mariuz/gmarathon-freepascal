@@ -66,7 +66,7 @@ unit EditorView;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, ActnList, Buttons, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmCompatControls;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, Printers, ActnList, Buttons, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentDataAwareForm, MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, rmCompatControls, SQLCompletionHost;
 
 type
 	TfrmViewEditor = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor)
@@ -131,6 +131,8 @@ type
 		procedure edEditorStatusChange(Sender: TObject;	Changes: TSynStatusChanges);
 		procedure lstResultsDblClick(Sender: TObject);
 	private
+		{ Ctrl+Space completion - see SQLCompletionHost. }
+		FCompletion: TSQLCompletionHost;
 		{ Private declarations }
 		It: TMenuItem;
 		FErrors: Boolean;
@@ -312,6 +314,7 @@ begin
 	cmbTriggerDisplay.ItemIndex := 0;
 
   SetupSyntaxEditor(edEditor);
+	FCompletion := TSQLCompletionHost.Create(Self, edEditor);
 end;
 
 procedure TfrmViewEditor.tvTriggersMouseDown(Sender: TObject;	Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -1001,6 +1004,8 @@ begin
 		SQLDialect := qryTable.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
+	if Assigned(FCompletion) then
+		FCompletion.ConnectionName := Value;
 end;
 
 function TfrmViewEditor.CanInternalClose: Boolean;

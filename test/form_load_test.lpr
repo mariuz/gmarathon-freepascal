@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion, SQLCompletionHost,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -959,6 +959,48 @@ end;
   tested without a GUI in keyword_test; what matters here is that the popup is
   wired to the editor at all, and that a dot ends a token - without that,
   'c.' reads as one word and the qualifier is never seen. }
+{ Finds the completion popup a form should have created.
+
+  Construction is wrapped the way TryConstruct wraps it, and for the same
+  reason: some editors raise from OnCreate without a live database. Letting
+  that escape here does not fail the run, it hangs it - an unhandled exception
+  becomes a modal dialog with nobody under Xvfb to dismiss it, which is exactly
+  what happened the first time. A form that cannot be built is reported as not
+  checked rather than quietly passed. }
+procedure CheckHasCompletion(FormClass: TFormClass; const What: String);
+var
+  AForm: TForm;
+  Idx: Integer;
+  Comp: TSynCompletion;
+begin
+  AForm := nil;
+  try
+    try
+      AForm := FormClass.Create(nil);
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... ', What, ' could not be built here (', E.ClassName,
+          '), completion not checked');
+        Exit;
+      end;
+    end;
+    Comp := nil;
+    for Idx := 0 to AForm.ComponentCount - 1 do
+      if AForm.Components[Idx] is TSQLCompletionHost then
+        Comp := TSQLCompletionHost(AForm.Components[Idx]).Completion;
+    Check(Assigned(Comp), What + ' has a completion popup');
+    if Assigned(Comp) then
+      Check(Assigned(Comp.Editor), What + '''s popup is attached to an editor');
+  finally
+    try
+      AForm.Free;
+    except
+      on E: Exception do ;
+    end;
+  end;
+end;
+
 procedure CheckCompletionWiring;
 var
   F: TfrmSQLForm;
@@ -966,12 +1008,19 @@ var
   Idx: Integer;
 begin
   WriteLn('SQL completion:');
+  { All four editors, not just the SQL one. The PSQL editors are where routine
+    bodies are written, so completion matters there at least as much. }
+  CheckHasCompletion(TfrmSQLForm, 'the SQL editor');
+  CheckHasCompletion(TfrmViewEditor, 'the view editor');
+  CheckHasCompletion(TfrmTriggerEditor, 'the trigger editor');
+  CheckHasCompletion(TfrmStoredProcedure, 'the procedure editor');
+
   F := TfrmSQLForm.Create(nil);
   try
     Comp := nil;
     for Idx := 0 to F.ComponentCount - 1 do
-      if F.Components[Idx] is TSynCompletion then
-        Comp := TSynCompletion(F.Components[Idx]);
+      if F.Components[Idx] is TSQLCompletionHost then
+        Comp := TSQLCompletionHost(F.Components[Idx]).Completion;
     Check(Assigned(Comp), 'the editor has a completion popup');
     if not Assigned(Comp) then
       Exit;

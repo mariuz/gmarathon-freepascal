@@ -61,7 +61,7 @@ unit EditorTrigger;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, FileCtrl, ActnList, ImgList, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger, rmCompatControls, LazFileUtils;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Clipbrd, FileCtrl, ActnList, ImgList, IBDatabase, IBQuery, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, BaseDocumentDataAwareForm, FrameDescription, FrameDependencies, FrameDRUIMatrix, FramePermissions, MarathonProjectCacheTypes, MarathonInternalInterfaces, NewTrigger, rmCompatControls, LazFileUtils, SQLCompletionHost;
 
 type
 	TTriggerHeader = class(TObject)
@@ -118,6 +118,8 @@ type
 		procedure edEditorStatusChange(Sender: TObject;	Changes: TSynStatusChanges);
     procedure FormShow(Sender: TObject);
 	private
+		{ Ctrl+Space completion - see SQLCompletionHost. }
+		FCompletion: TSQLCompletionHost;
 		{ Private declarations }
 		FErrors: Boolean;
 		LinePos: LongInt;
@@ -480,6 +482,7 @@ begin
 	It.Caption := '&1 Trigger [' + FObjectName + ']';
 	It.OnClick := WindowListClick;
 	MarathonIDEInstance.AddMenuToMainForm(IT);
+	FCompletion := TSQLCompletionHost.Create(Self, edEditor);
 end;
 
 
@@ -1227,6 +1230,8 @@ begin
 		SQLDialect := qryUtil.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;
+	if Assigned(FCompletion) then
+		FCompletion.ConnectionName := Value;
 end;
 
 procedure TfrmTriggerEditor.NewTrigger(TriggerType: String; Table: String);
