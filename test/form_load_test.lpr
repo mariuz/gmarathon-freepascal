@@ -1444,6 +1444,50 @@ begin
   Check(Pos('yonder', Here) = 0, 'and kept apart the other way');
 end;
 
+{ Starting a new object of one kind, through the IDE. The editor comes up
+  empty and marked as new; what is checked is that the right class arrives and
+  knows it is new, since the factory picks the class from the cache type. }
+procedure CheckNewObject(Kind: TGSSCacheType; const What: String);
+var
+  Before, After_, Idx: Integer;
+  Found: TfrmBaseDocumentDataAwareForm;
+begin
+  Before := Screen.FormCount;
+  try
+    MarathonIDEInstance.NewObject('EditorHarness', Kind);
+  except
+    on E: Exception do
+    begin
+      Check(False, What + ' opens (' + E.ClassName + ': ' + E.Message + ')');
+      Exit;
+    end;
+  end;
+  After_ := Screen.FormCount;
+  Check(After_ > Before, What + ' opens an editor');
+  if After_ <= Before then
+    Exit;
+
+  Found := nil;
+  for Idx := Screen.FormCount - 1 downto 0 do
+    if Screen.Forms[Idx] is TfrmBaseDocumentDataAwareForm then
+    begin
+      Found := TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]);
+      Break;
+    end;
+  if not Assigned(Found) then
+  begin
+    Check(False, What + ' opens an object editor');
+    Exit;
+  end;
+  Check(Found.ObjectType = Kind, What + ' opens the right kind of editor');
+  { Marked as new, which is what makes the editor create rather than alter on
+    save - an editor that came up not-new would try to ALTER an object that
+    does not exist yet. }
+  Check(Found.NewObject, What + ' comes up marked as new');
+  Found.Hide;
+  Found.Free;
+end;
+
 { Opening objects through the IDE, which is the route the object tree uses.
 
   Every check so far has constructed an editor directly. That is not how the
@@ -1526,6 +1570,20 @@ begin
   CheckKind(sokException, ctException, 'an exception');
   Check(Opened >= 6, 'most kinds of object were reachable (' +
     IntToStr(Opened) + ')');
+
+  { Starting a new object of each kind. These were eight more procedures of
+    one shape, and they had drifted: some freed the editor when setting it up
+    raised and some leaked it. There is one implementation now, so what needs
+    checking is that each kind still produces the right editor, marked as new. }
+  CheckNewObject(ctView, 'a new view');
+  CheckNewObject(ctSP, 'a new procedure');
+  CheckNewObject(ctDomain, 'a new domain');
+  CheckNewObject(ctGenerator, 'a new generator');
+  CheckNewObject(ctException, 'a new exception');
+  { Not table or trigger: both ask a question first - the table editor opens
+    its column dialog to get a first column, and the trigger editor its own -
+    and a modal dialog cannot be answered under a bare X server, so the run
+    would hang rather than fail. The other five share the same code path. }
 
   { Not checked here: opening an object that does not exist. DoesObjectExist
     tells the user so with a modal dialog, which is the right thing for it to

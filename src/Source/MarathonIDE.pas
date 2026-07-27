@@ -186,6 +186,9 @@ type
     destructor Destroy; override;
 
 		//Object Editors
+		{ Starting a new object of any kind. The eight New* procedures below are
+		  one-line wrappers on this. }
+		procedure NewObject(Connection: String; Kind: TGSSCacheType);
 		procedure NewDomain(Connection: String);
 		{ Opening an object editor, for every kind. The nine Open* functions below
 		  are one-line wrappers on this - see its comment for why. }
@@ -555,6 +558,16 @@ begin
 	F.ShowDocument;
 end;
 
+{ The schema a tree node was listed from, or '' for one under the connection's
+  own headers - which means whatever the search path reaches. }
+function SchemaOfNode(Item: TMarathonCacheBaseNode): String;
+begin
+	if Item is TMarathonCacheSchemaMember then
+		Result := TMarathonCacheSchemaMember(Item).Schema
+	else
+		Result := '';
+end;
+
 procedure TMarathonIDE.CacheEventHandler(Sender: TObject;	Event: TGSSCacheOp; Item: TMarathonCacheBaseNode);
 var
 	B: IMarathonBrowser;
@@ -582,135 +595,35 @@ begin
 					ctGeneratorHeader,
 					ctExceptionHeader,
 					ctUDFHeader:
+						{ Opening a header opens everything under it. This was a case of
+						  its own with a branch per kind; two of those branches - trigger
+						  and exception - passed the *header* rather than the item, so
+						  opening a Triggers branch asked repeatedly for an object named
+						  "Triggers" and told the user each time that it did not exist. }
+						for Idx := 0 to Item.SubItems.Count - 1 do
 						begin
-							for Idx := 0 to Item.SubItems.Count - 1 do
-							begin
-								SubItem := TMarathonCacheBaseNode(Item.SubItems[Idx]);
-								case SubItem.CacheType of
-									ctDomain:
-										OpenDomain(SubItem.Caption, TMarathonCacheObject(SubItem).ConnectionName);
-
-									ctSP:
-										OpenProcedure(SubItem.Caption, TMarathonCacheObject(SubItem).ConnectionName);
-
-									ctTrigger:
-										OpenTrigger(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-									ctException:
-										OpenException(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-									ctGenerator:
-										OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-									ctTable:
-										OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-									ctView:
-										OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-									ctUDF:
-										OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-								end;
-							end;
+							SubItem := TMarathonCacheBaseNode(Item.SubItems[Idx]);
+							OpenObject(SubItem.Caption,
+								TMarathonCacheObject(SubItem).ConnectionName,
+								SubItem.CacheType, SchemaOfNode(SubItem));
 						end;
 
-					ctDomain:
-						if Item is TMarathonCacheSchemaMember then
-							OpenDomain(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenDomain(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctSP:
-						if Item is TMarathonCacheSchemaMember then
-							OpenProcedure(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenProcedure(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctTrigger:
-						if Item is TMarathonCacheSchemaMember then
-							OpenTrigger(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenTrigger(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctException:
-						if Item is TMarathonCacheSchemaMember then
-							OpenException(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenException(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctGenerator:
-						if Item is TMarathonCacheSchemaMember then
-							OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctTable:
-						{ A node under a schema branch carries the schema it was listed
-						  from; one under the connection's own headers does not, and an
-						  empty schema means whatever the search path reaches. }
-						if Item is TMarathonCacheSchemaMember then
-							OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctView:
-						if Item is TMarathonCacheSchemaMember then
-							OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctUDF:
-						if Item is TMarathonCacheSchemaMember then
-							OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
-
-					ctPackage:
-						if Item is TMarathonCacheSchemaMember then
-							OpenPackage(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-								TMarathonCacheSchemaMember(Item).Schema)
-						else
-							OpenPackage(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+					ctDomain, ctSP, ctTrigger, ctException, ctGenerator, ctTable,
+					ctView, ctUDF, ctPackage:
+						{ One call for every kind of object, since OpenObject takes the
+						  kind. A node under a schema branch carries the schema it was
+						  listed from; one under the connection's own headers does not,
+						  and an empty schema means whatever the search path reaches. }
+						OpenObject(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+							Item.CacheType, SchemaOfNode(Item));
 
 					ctRecentItem:
-						begin
-							case TMarathonCacheRecentItem(Item).ActualCacheType of
-								ctDomain:
-									OpenDomain(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheRecentItem(Item).ConnectionName);
-
-								ctSP:
-									OpenProcedure(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheRecentItem(Item).ConnectionName);
-
-								ctTrigger:
-									OpenTrigger(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheRecentItem(Item).ConnectionName);
-
-								ctException:
-									OpenException(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
-
-								ctGenerator:
-									OpenGenerator(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
-
-								ctTable:
-									OpenTable(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
-
-								ctView:
-									OpenView(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
-
-								ctUDF:
-									OpenUDF(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
-
-								ctPackage:
-									OpenPackage(TMarathonCacheRecentItem(Item).ObjectName, TMarathonCacheObject(Item).ConnectionName);
-							end;
-						end;
+						{ A recent entry remembers what kind of object it was, and its
+						  own name rather than the caption it is shown under. }
+						OpenObject(TMarathonCacheRecentItem(Item).ObjectName,
+							TMarathonCacheObject(Item).ConnectionName,
+							TMarathonCacheRecentItem(Item).ActualCacheType,
+							SchemaOfNode(Item));
 				end;
 			end;
 
@@ -2257,17 +2170,54 @@ begin
 	//
 end;
 
-procedure TMarathonIDE.NewDomain(COnnection: String);
-var
-	F: TfrmDomains;
+{ Starting a new object of any kind.
 
+  There were nine of these too, the same shape as the Open family and with the
+  same drift: some wrapped the setup in a try and freed the editor when it
+  raised, others did not and leaked one. Having a single implementation settles
+  that - it always frees. }
+{ Defined beside OpenObject further down; declared here because the New
+  family above reaches them first. }
+function CreateEditorFor(Kind: TGSSCacheType): TfrmBaseDocumentDataAwareForm; forward;
+
+procedure NewObjectIn(AForm: TfrmBaseDocumentDataAwareForm; Kind: TGSSCacheType);
+begin
+	case Kind of
+		ctTable:     TfrmTables(AForm).NewTable;
+		ctView:      TfrmViewEditor(AForm).NewView;
+		ctSP:        TfrmStoredProcedure(AForm).NewProcedure;
+		ctTrigger:   TfrmTriggerEditor(AForm).NewTrigger('', '');
+		ctDomain:    TfrmDomains(AForm).NewDomain;
+		ctGenerator: TfrmGenerators(AForm).NewGenerator;
+		ctException: TfrmExceptions(AForm).NewException;
+		ctUDF:       TfrmUDFEditor(AForm).NewUDF;
+	end;
+end;
+
+procedure TMarathonIDE.NewObject(Connection: String; Kind: TGSSCacheType);
+var
+	Editor: TfrmBaseDocumentDataAwareForm;
 begin
 	if not CheckConnected(Connection) then
 		Exit;
-	F := TfrmDomains.Create(nil);
-	F.ConnectionName := Connection;
-	F.NewDomain;
-	F.ShowDocument;
+	Editor := CreateEditorFor(Kind);
+	if not Assigned(Editor) then
+		Exit;
+	Editor.ConnectionName := Connection;
+	try
+		NewObjectIn(Editor, Kind);
+		Editor.ShowDocument;
+	except
+		{ An editor that failed while setting itself up is of no use and would
+		  otherwise be left behind with no window to close it by. }
+		on E: Exception do
+			Editor.Free;
+	end;
+end;
+
+procedure TMarathonIDE.NewDomain(COnnection: String);
+begin
+	NewObject(Connection, ctDomain);
 end;
 
 { Opening an object editor, for every kind of object.
@@ -2367,16 +2317,8 @@ begin
 end;
 
 procedure TMarathonIDE.NewProcedure(COnnection: String);
-var
-  F: TfrmStoredProcedure;
-
 begin
-  if not CheckConnected(Connection) then
-    Exit;
-  F := TfrmStoredProcedure.Create(nil);
-  F.ConnectionName := Connection;
-  F.NewProcedure;
-  F.ShowDocument;
+	NewObject(Connection, ctSP);
 end;
 
 function TMarathonIDE.OpenProcedure(ProcedureName, COnnection: String;
@@ -2432,21 +2374,8 @@ end;
 
 
 procedure TMarathonIDE.NewTrigger(Connection: String);
-var
-	F: TfrmTriggerEditor;
-
 begin
-	if not CheckConnected(Connection) then
-		Exit;
-	F := TfrmTriggerEditor.Create(nil);
-	F.ConnectionName := Connection;
-	try
-		F.NewTrigger('', '');
-		F.ShowDocument;
-	except
-		on E: Exception do
-			F.Free;
-	end;
+	NewObject(Connection, ctTrigger);
 end;
 
 procedure TMarathonIDE.NewTriggerWithInfo(Connection, TriggerType, Table: String);
@@ -2469,16 +2398,8 @@ begin
 end;
 
 procedure TMarathonIDE.NewException(Connection: String);
-var
-	F: TfrmExceptions;
-
 begin
-	if not CheckConnected(Connection) then
-		Exit;
-	F := TfrmExceptions.Create(nil);
-	F.ConnectionName := Connection;
-	F.NewException;
-	F.ShowDocument;
+	NewObject(Connection, ctException);
 end;
 
 function TMarathonIDE.OpenException(ExceptionName, Connection: String;
@@ -2488,16 +2409,8 @@ begin
 end;
 
 procedure TMarathonIDE.NewGenerator(Connection: String);
-var
-	F: TfrmGenerators;
-
 begin
-	if not CheckConnected(Connection) then
-		Exit;
-	F := TfrmGenerators.Create(nil);
-	F.ConnectionName := Connection;
-	F.NewGenerator;
-	F.ShowDocument;
+	NewObject(Connection, ctGenerator);
 end;
 
 function TMarathonIDE.OpenGenerator(GeneratorName, Connection: String;
@@ -2507,21 +2420,8 @@ begin
 end;
 
 procedure TMarathonIDE.NewTable(Connection: String);
-var
-  F: TfrmTables;
-
 begin
-  if not CheckConnected(Connection) then
-    Exit;
-  F := TfrmTables.Create(nil);
-  F.ConnectionName := Connection;
-  try
-    F.NewTable;
-    F.ShowDocument;
-  except
-		on E: Exception do
-			F.Free;
-	end;
+	NewObject(Connection, ctTable);
 end;
 
 function TMarathonIDE.OpenTable(TableName, Connection: String;
@@ -2548,21 +2448,8 @@ begin
 end;
 
 procedure TMarathonIDE.NewView(Connection: String);
-var
-	F: TfrmViewEditor;
-
 begin
-	if not CheckConnected(Connection) then
-		Exit;
-	F := TfrmViewEditor.Create(nil);
-	F.ConnectionName := Connection;
-	try
-		F.NewView;
-		F.ShowDocument;
-	except
-		on E: Exception do
-			F.Free;
-	end;
+	NewObject(Connection, ctView);
 end;
 
 function TMarathonIDE.OpenView(ViewName, Connection: String;
@@ -2572,21 +2459,8 @@ begin
 end;
 
 procedure TMarathonIDE.NewUDF(Connection: String);
-var
-	F: TfrmUDFEditor;
-
 begin
-	if not CheckConnected(Connection) then
-		Exit;
-	F := TfrmUDFEditor.Create(nil);
-	F.ConnectionName := Connection;
-	try
-		F.NewUDF;
-		F.ShowDocument;
-	except
-		on E: Exception do
-			F.Free;
-	end;
+	NewObject(Connection, ctUDF);
 end;
 
 function TMarathonIDE.OpenUDF(UDFName, Connection: String;
