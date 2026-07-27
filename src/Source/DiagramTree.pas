@@ -112,6 +112,10 @@ type
     constructor Create(AOwner : TComponent); override;
     destructor Destroy; override;
     function AddNode(id : string; ParentNode : TDiagramNode) : TDiagramNode;
+    { How many nodes the tree holds, counting the root. Exposed because "did
+      this plan draw as a tree or as one box" is the question the plan tab
+      exists to answer, and nothing could ask it. }
+    function NodeCount : Integer;
     procedure SelectNode(new_selected : TDiagramNode);
     procedure Redraw;
     procedure Clear;
@@ -657,6 +661,24 @@ begin
     Resize;
     Refresh;
   end;
+end;
+
+function TDiagramTree.NodeCount : Integer;
+
+	function CountFrom(Node : TDiagramNode) : Integer;
+	var
+		I : Integer;
+	begin
+		Result := 1;
+		for I := 0 to Node.FChildren.Count - 1 do
+			Result := Result + CountFrom(TDiagramNode(Node.FChildren[I]));
+	end;
+
+begin
+	if Assigned(Root) then
+		Result := CountFrom(Root)
+	else
+		Result := 0;
 end;
 
 procedure TDiagramTree.Clear;

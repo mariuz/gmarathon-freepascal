@@ -1347,7 +1347,7 @@ begin
 				if IsExplain then
 				begin
 					edPlan.Text := qrySQLStatement.GetPlan;
-					FillTreeFromExplainedPlan(edPlan.Text, dtPlan);
+					FillTreeFromPlan(edPlan.Text, dtPlan);
 					{ The user asked for the plan explicitly, so show it even when
 					  the Plan tab is otherwise switched off. }
 					tsPlan.TabVisible := True;
@@ -1603,7 +1603,7 @@ begin
 					if FShowPlan and (qrySQLStatement.StatementType in [SQLSelect, SQLSelectForUpdate, SQLUpdate, SQLDelete]) then
 					begin
 						edPlan.Text := qrySQLStatement.GetPlan;
-						FillTreeFromExplainedPlan(edPlan.Text, dtPlan);
+						FillTreeFromPlan(edPlan.Text, dtPlan);
 					end
 					else
 						dtPlan.Clear;

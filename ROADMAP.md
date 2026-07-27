@@ -571,7 +571,7 @@ its headline features have no Firebird counterpart at all.
 | Global object search | **Done** — the Metadata Search window and the object tree filter |
 | Query results grid | **Done** — results sit under the statement, as theirs do |
 | Backup/restore dialogs | **Done** — the Maintenance dialog, over IBX's services API |
-| Query Plan Visualizer | **Partly** — the plan is shown as text. Firebird's `PLAN` is a nested expression and could be drawn as a tree; smaller than it sounds |
+| Query Plan Visualizer | **Done** — the plan draws as a tree. Firebird has two plan formats: the explained one (3+, several indented lines) always drew, and the older parenthesised one is one line however deeply nested, so it drew as a single box holding the whole plan. `src/Common/PlanParser.pas` parses that form; `PlanUnit.FillTreeFromPlan` picks the reader that suits what arrived |
 | Edit data grid with script preview | **Partly** — the grid edits, but applies rather than showing what it would run. The table designer now has that pattern to copy |
 | **Schema Designer** | **Not done** — see below |
 | SQL Notebooks | Not planned: a VS Code notebook-host feature, with no shell here to host one |

@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree;
 
 var
   Failures: Integer = 0;
@@ -1488,6 +1488,89 @@ begin
   Found.Free;
 end;
 
+{ The query plan drawn as a tree.
+
+  The parse is checked in keyword_test without a canvas. What the form adds is
+  which reader a plan reaches.
+
+  There are two plan formats and Marathon met only one of them. Firebird 3 and
+  later hand back an explained plan - several lines, indented - and the reader
+  the tab has always used splits on that indentation, so those already drew as
+  a tree. The older parenthesised form is one line however deeply nested, and
+  that reader made a single box of it: the plan tab was the plan text, drawn in
+  a rectangle. That is what the parenthesised reader is for, and it is still
+  what arrives from an older server. }
+procedure CheckPlanTree(Conn: TMarathonCacheConnection);
+const
+  { A real Firebird plan in the older form, written out rather than fetched:
+    this server answers with the explained format, so the one format under test
+    here cannot be got from it. }
+  LegacyPlan = 'PLAN SORT (JOIN (SD_PARENT NATURAL, SD_CHILD INDEX (FK_SD_CHILD)))';
+var
+  F: TfrmSQLForm;
+  Q: TIBQuery;
+  ServerPlan: String;
+begin
+  WriteLn('Query plan tree:');
+
+  F := TfrmSQLForm.Create(nil);
+  try
+    Check(Assigned(F.dtPlan), 'the SQL editor has a plan tree');
+
+    { The reader the tab used, on the parenthesised form: one line, no
+      indentation, so one box holding the whole plan. }
+    FillTreeFromExplainedPlan(LegacyPlan, F.dtPlan);
+    Check(F.dtPlan.NodeCount <= 2,
+      'the line-and-indent reader makes one box of a parenthesised plan (' +
+      IntToStr(F.dtPlan.NodeCount) + ')');
+
+    { And the same plan through the reader that understands it. }
+    FillTreeFromPlan(LegacyPlan, F.dtPlan);
+    Check(F.dtPlan.NodeCount > 3,
+      'and the parenthesised reader makes a tree of it (' +
+      IntToStr(F.dtPlan.NodeCount) + ')');
+
+    { Whatever this server actually returns must still draw as a tree - that is
+      the path every user of a modern Firebird takes. }
+    ServerPlan := '';
+    Q := TIBQuery.Create(nil);
+    try
+      Q.Database := Conn.Connection;
+      Q.Transaction := Conn.Transaction;
+      Q.AllowAutoActivateTransaction := True;
+      Q.SQL.Text := 'select p.ID, c.NOTE from SD_PARENT p ' +
+        'join SD_CHILD c on c.PARENT_ID = p.ID order by p.NAME';
+      try
+        Q.Prepare;
+        ServerPlan := Q.GetPlan;
+      except
+        on E: Exception do
+          ServerPlan := '';
+      end;
+    finally
+      Q.Free;
+    end;
+
+    if Trim(ServerPlan) <> '' then
+    begin
+      FillTreeFromPlan(ServerPlan, F.dtPlan);
+      Check(F.dtPlan.NodeCount > 2,
+        'a plan from this server draws as a tree (' +
+        IntToStr(F.dtPlan.NodeCount) + ' nodes, ' +
+        Copy(Trim(ServerPlan), 1, 30) + ')');
+    end
+    else
+      WriteLn('  .... the server returned no plan to check against');
+
+    { Nothing at all clears the tab rather than leaving the last plan on it,
+      which would be worse than blank. }
+    FillTreeFromPlan('', F.dtPlan);
+    Check(F.dtPlan.NodeCount = 0, 'an empty plan clears the tree');
+  finally
+    F.Free;
+  end;
+end;
+
 { The schema diagram, on a real database.
 
   Where the boxes go is checked in keyword_test without a canvas, and the
@@ -1993,6 +2076,7 @@ begin
   CheckQueryBuilder(Conn);
   CheckOpenThroughIDE(Conn);
   CheckSchemaDiagram(Conn);
+  CheckPlanTree(Conn);
   CheckSQLTrace(Conn);
 end;
 

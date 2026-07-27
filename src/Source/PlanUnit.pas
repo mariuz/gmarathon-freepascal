@@ -121,7 +121,18 @@ type
   own much simpler indentation-based tree builder. }
 procedure FillTreeFromExplainedPlan(const PlanText: String; Tree: TDiagramTree);
 
+{ Fills the tree from whichever form of plan the text is.
+
+  IBX asks the server for isc_info_sql_get_plan, which is the older
+  parenthesised form - one line, however deeply nested. FillTreeFromExplainedPlan
+  splits on indentation, so that line became a single box holding the whole
+  plan: the plan tab was the text, drawn. This picks the reader that suits what
+  arrived. }
+procedure FillTreeFromPlan(const PlanText: String; Tree: TDiagramTree);
+
 implementation
+
+uses PlanParser;
 
 constructor TPlanNodeItemListStatement.Create;
 begin
@@ -356,6 +367,64 @@ begin
     end;
   finally
     Lines.Free;
+  end;
+  Tree.Redraw;
+end;
+
+procedure FillTreeFromPlan(const PlanText: String; Tree: TDiagramTree);
+var
+  Root: TPlanNode;
+
+  procedure AddNodes(APlan: TPlanNode; AParent: TDiagramNode);
+  var
+    Idx: Integer;
+    Node: TDiagramNode;
+    Caption: String;
+  begin
+    for Idx := 0 to APlan.ChildCount - 1 do
+    begin
+      Caption := APlan.Children[Idx].Caption;
+      if APlan.Children[Idx].Access <> '' then
+        Caption := Caption + ' ' + APlan.Children[Idx].Access;
+      Node := Tree.AddNode(Caption, AParent);
+      Node.Caption := Caption;
+      { The same two markings the explained reader uses, so a plan looks the
+        same however it arrived: a table read without an index is the thing
+        worth noticing, and an indexed one is the thing that is fine. }
+      if IsNaturalScan(APlan.Children[Idx]) then
+      begin
+        Node.ImageIndex := 5;
+        Node.Color := $00C8C8FF;
+      end
+      else if APlan.Children[Idx].Kind = pnTable then
+      begin
+        Node.ImageIndex := 6;
+        Node.Color := $00C8FFC8;
+      end;
+      AddNodes(APlan.Children[Idx], Node);
+    end;
+  end;
+
+var
+  RootNode: TDiagramNode;
+begin
+  { The explained form is what the old reader was written for. }
+  if IsExplainedPlan(PlanText) then
+  begin
+    FillTreeFromExplainedPlan(PlanText, Tree);
+    Exit;
+  end;
+
+  Tree.Clear;
+  if Trim(PlanText) = '' then
+    Exit;
+  Root := ParsePlan(PlanText);
+  try
+    RootNode := Tree.AddNode('Plan', nil);
+    RootNode.Caption := 'Plan';
+    AddNodes(Root, RootNode);
+  finally
+    Root.Free;
   end;
   Tree.Redraw;
 end;

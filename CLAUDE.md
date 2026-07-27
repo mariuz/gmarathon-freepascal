@@ -59,6 +59,8 @@ The application is structured in layers:
 
 **Icons** — `icons/*.svg` is the source of truth; `tools/build_icons.sh` renders it to `TreeImagesStrip{,_24,_32}.bmp` at 16/24/32 and recompiles `Toolmenus.RES`. Output is checked in, so a normal build needs neither the script nor ImageMagick — run it after changing an icon. `Globals.LoadScaledStrip` picks the strip for the display; the thresholds live in `src/Common/IconScaling.pas` and are tested headlessly. Note ImageMagick's built-in SVG renderer has no arc command — use Béziers.
 
+**Query plans** — Firebird returns two formats. Firebird 3+ gives an explained plan (indented lines), read by `PlanUnit.FillTreeFromExplainedPlan`; older servers give a parenthesised one-liner, parsed by `src/Common/PlanParser.pas`. `FillTreeFromPlan` picks between them — call that, not either reader directly.
+
 **Schema Designer** — `src/Common/SchemaDiagram.pas` is the model and the layout (breadth-first from the most-referenced table; no canvas, so it is tested headlessly), `SchemaDiagramIO.pas` reads tables and foreign keys from `RDB$RELATION_CONSTRAINTS` + `RDB$REF_CONSTRAINTS` + `RDB$INDEX_SEGMENTS`, and `src/Source/SchemaDiagramForm.pas` draws it on one paint box.
 
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.

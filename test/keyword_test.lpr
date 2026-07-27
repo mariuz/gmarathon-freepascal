@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,154 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestPlanParser;
+var
+  P: TPlanNode;
+
+  { The whole tree flattened, so a check can ask what is in it without
+    walking. }
+  function Flatten(N: TPlanNode; Depth: Integer): String;
+  var
+    Idx: Integer;
+  begin
+    Result := StringOfChar(' ', Depth * 2) + N.Caption;
+    if N.Access <> '' then
+      Result := Result + ' [' + N.Access + ']';
+    Result := Result + #10;
+    for Idx := 0 to N.ChildCount - 1 do
+      Result := Result + Flatten(N.Children[Idx], Depth + 1);
+  end;
+
+begin
+  { Nothing in, a root and nothing else out - never nil, so no caller has to
+    guard. }
+  P := ParsePlan('');
+  try
+    Check(Assigned(P), 'an empty plan still gives a tree');
+    Check(P.ChildCount = 0, 'with nothing under it');
+  finally
+    P.Free;
+  end;
+
+  { The simplest real plan. }
+  P := ParsePlan('PLAN (CUSTOMERS NATURAL)');
+  try
+    Check(P.ChildCount = 1, 'one table gives one node');
+    Check(P.Children[0].Caption = 'CUSTOMERS', 'named after the table');
+    Check(Pos('NATURAL', P.Children[0].Access) > 0, 'carrying how it is read');
+    { A bare bracketed list groups without naming an operation, so it must not
+      add a box of its own - one saying "(" would be noise. }
+    Check(P.TotalNodes = 2, 'and the brackets add no node of their own');
+    Check(IsNaturalScan(P.Children[0]), 'a table read without an index is a scan');
+  finally
+    P.Free;
+  end;
+
+  P := ParsePlan('PLAN (ORDERS INDEX (FK_ORD_CUST))');
+  try
+    Check(Pos('INDEX', P.Children[0].Access) > 0, 'an indexed read says so');
+    Check(Pos('FK_ORD_CUST', P.Children[0].Access) > 0, 'and names the index');
+    Check(not IsNaturalScan(P.Children[0]), 'and is not a scan');
+  finally
+    P.Free;
+  end;
+
+  { A join - the case the old reader turned into a single box. }
+  P := ParsePlan('PLAN JOIN (CUSTOMERS NATURAL, ORDERS INDEX (FK_ORD_CUST))');
+  try
+    Check(P.ChildCount = 1, 'a join is one node under the root');
+    Check(P.Children[0].Kind = pnJoin, 'and is recognised as a join');
+    Check(P.Children[0].ChildCount = 2, 'with a child per table');
+    Check(P.Children[0].Children[0].Caption = 'CUSTOMERS', 'in order');
+    Check(P.Children[0].Children[1].Caption = 'ORDERS', 'both of them');
+    { Two index names inside one INDEX(...) must not be read as the end of the
+      item and the start of another. }
+    Check(P.TotalNodes = 4, 'the whole plan is four nodes');
+  finally
+    P.Free;
+  end;
+
+  { Nesting, which is what makes it a tree at all. }
+  P := ParsePlan('PLAN SORT (JOIN (A_TAB NATURAL, B_TAB INDEX (I1, I2)))');
+  try
+    Check(P.Children[0].Kind = pnSort, 'a sort is recognised');
+    Check(P.Children[0].ChildCount = 1, 'wrapping one thing');
+    Check(P.Children[0].Children[0].Kind = pnJoin, 'which is the join');
+    Check(P.Children[0].Children[0].ChildCount = 2, 'with its two tables');
+    { Two indexes in one list: a comma inside the brackets is not an item
+      separator, and counting brackets is what tells them apart. }
+    Check(Pos('I1', P.Children[0].Children[0].Children[1].Access) > 0,
+      'an index list keeps its first index');
+    Check(Pos('I2', P.Children[0].Children[0].Children[1].Access) > 0,
+      'and its second, rather than splitting the item there');
+  finally
+    P.Free;
+  end;
+
+  P := ParsePlan('PLAN MERGE (SORT (A_TAB NATURAL), SORT (B_TAB NATURAL))');
+  try
+    Check(P.Children[0].Kind = pnMerge, 'a merge is recognised');
+    Check(P.Children[0].ChildCount = 2, 'with both sides under it');
+    Check(P.Children[0].Children[0].Kind = pnSort, 'each of which is a sort');
+  finally
+    P.Free;
+  end;
+
+  P := ParsePlan('PLAN HASH (A_TAB NATURAL, B_TAB NATURAL)');
+  try
+    Check(P.Children[0].Kind = pnHash, 'a hash join is recognised');
+  finally
+    P.Free;
+  end;
+
+  { ORDER, which names an index without the INDEX keyword. }
+  P := ParsePlan('PLAN (CUSTOMERS ORDER PK_CUSTOMERS)');
+  try
+    Check(Pos('ORDER', P.Children[0].Access) > 0, 'an ordered read says so');
+    Check(Pos('PK_CUSTOMERS', P.Children[0].Access) > 0, 'and names the index');
+  finally
+    P.Free;
+  end;
+
+  { Quoted names, which is how a mixed-case table appears. }
+  P := ParsePlan('PLAN ("My Table" NATURAL)');
+  try
+    Check(Pos('My Table', P.Children[0].Caption) > 0,
+      'a quoted name keeps its spaces');
+  finally
+    P.Free;
+  end;
+
+  { Several PLAN clauses, one per subquery, which Firebird runs together. }
+  P := ParsePlan('PLAN (A_TAB NATURAL) PLAN (B_TAB NATURAL)');
+  try
+    Check(P.ChildCount = 2, 'two plan clauses give two subtrees');
+  finally
+    P.Free;
+  end;
+
+  { Nothing here may raise or hang, whatever arrives - a plan comes from the
+    server, so anything odd in it is not the user's mistake. }
+  P := ParsePlan('PLAN JOIN (A_TAB NATURAL');
+  try
+    Check(P.TotalNodes >= 2, 'an unclosed bracket still gives a tree');
+  finally
+    P.Free;
+  end;
+  P := ParsePlan('))))');
+  try
+    Check(Assigned(P), 'and so does nonsense');
+  finally
+    P.Free;
+  end;
+
+  { Telling the two plan formats apart, since they need different readers. }
+  Check(not IsExplainedPlan('PLAN JOIN (A NATURAL, B NATURAL)'),
+    'a parenthesised plan is not the explained kind');
+  Check(IsExplainedPlan('Select Expression'#10'    -> Table "A" Full Scan'),
+    'and an indented one is');
 end;
 
 procedure TestSchemaDiagram;
@@ -1597,6 +1745,9 @@ begin
 
   WriteLn('Schema diagram:');
   TestSchemaDiagram;
+
+  WriteLn('Query plan:');
+  TestPlanParser;
 
   if Failures > 0 then
   begin
