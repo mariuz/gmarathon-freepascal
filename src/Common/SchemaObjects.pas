@@ -51,6 +51,16 @@ function ListSchemaObjects(DB: TIBDatabase; Tr: TIBTransaction;
 function SchemaObjectListSQL(Kind: TSchemaObjectKind; const Schema: String;
   HasSchemas: Boolean): String;
 
+{ Every word the server reserves, from RDB$KEYWORDS.
+
+  Firebird 5 added that table, so an older server has none and this comes back
+  empty - which the caller takes as "use the built-in list". Asking the server
+  beats keeping a list here: it is right for the server in front of the user,
+  needs no maintenance when Firebird adds a word, and does not highlight a
+  feature the server does not have. }
+function ReadServerKeywords(ADatabase: TIBDatabase;
+  ATransaction: TIBTransaction): TStringList;
+
 implementation
 
 uses IBQuery;
@@ -143,6 +153,41 @@ begin
       Q.Next;
     end;
     Q.Close;
+  finally
+    Q.Free;
+  end;
+end;
+
+function ReadServerKeywords(ADatabase: TIBDatabase;
+  ATransaction: TIBTransaction): TStringList;
+var
+  Q: TIBQuery;
+begin
+  Result := TStringList.Create;
+  if not Assigned(ADatabase) or not ADatabase.Connected then
+    Exit;
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := ADatabase;
+    Q.Transaction := ATransaction;
+    Q.AllowAutoActivateTransaction := True;
+    { RDB$RESERVED tells a reserved word from one that is merely recognised;
+      both are worth painting, so both are taken. }
+    Q.SQL.Text := 'select rdb$keyword_name from rdb$keywords';
+    try
+      Q.Open;
+      while not Q.EOF do
+      begin
+        Result.Add(Trim(Q.Fields[0].AsString));
+        Q.Next;
+      end;
+      Q.Close;
+    except
+      { No such table: a server older than Firebird 5. Empty is the answer, and
+        the caller falls back to the built-in list. }
+      on E: Exception do
+        Result.Clear;
+    end;
   finally
     Q.Free;
   end;

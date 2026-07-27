@@ -248,6 +248,14 @@ procedure AllowAutoTransactions(AOwner: TComponent);
   do not have one - they are frames, and reach their form through an interface
   - so they come here instead. Both end at SchemaNames, so there is one rule. }
 function SchemaClauseFor(const ConnectionName, Schema: String): String;
+
+{ Teaches the shared SQL highlighter whatever this server reserves.
+
+  Called when a connection opens. Here rather than in the cache because the
+  highlighter belongs to the menu data module, and the cache has no business
+  knowing about it. }
+procedure ApplyConnectionKeywords(ADatabase: TIBDatabase;
+	ATransaction: TIBTransaction);
 function BracketNear(StartCh: Integer; s: String): Boolean;
 function DoNiftyWrap(St: String; Width: Integer): String;
 procedure ExportGrid(ExType : TExportType; Q : TDataSet; FieldList : TStringList; TableName: String; FileName: String);
@@ -359,7 +367,7 @@ var
 
 implementation
 
-uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, SchemaNames, IconScaling;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, SchemaNames, IconScaling, SchemaObjects, FirebirdKeywords;
 
 const
   // Firebird BLR type constants (from ibase.h), as stored in
@@ -1075,6 +1083,21 @@ begin
       Q.Free;
     end;
   end;
+end;
+
+procedure ApplyConnectionKeywords(ADatabase: TIBDatabase;
+	ATransaction: TIBTransaction);
+var
+	Words: TStringList;
+begin
+	if not Assigned(dmMenus) or not Assigned(dmMenus.synHighlighter) then
+		Exit;
+	Words := ReadServerKeywords(ADatabase, ATransaction);
+	try
+		ApplyServerKeywords(dmMenus.synHighlighter, Words);
+	finally
+		Words.Free;
+	end;
 end;
 
 function SchemaClauseFor(const ConnectionName, Schema: String): String;

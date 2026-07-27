@@ -334,6 +334,60 @@ begin
   end;
 end;
 
+{ The server's own keyword list.
+
+  Firebird 5 added RDB$KEYWORDS, so the SQL editor can be told what this server
+  reserves instead of a list being kept by hand in FirebirdKeywords. What only
+  a server can answer is whether the table is there and what is in it. }
+procedure TestServerKeywordList;
+var
+  Words: TStringList;
+begin
+  WriteLn('Server keyword list:');
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Words := ReadServerKeywords(DB, Tr);
+  try
+    if EngineMajor < 5 then
+    begin
+      { No RDB$KEYWORDS before Firebird 5, and an empty list is the signal to
+        fall back rather than a failure. }
+      WriteLn('  ok   server is Firebird ', EngineMajor,
+        ', so no keyword list and the built-in one is used');
+      Exit;
+    end;
+
+    if Words.Count < 100 then
+    begin
+      WriteLn('FAIL: the server reported only ', Words.Count, ' keyword(s)');
+      Halt(1);
+    end;
+    WriteLn('  ok   the server reports its keywords (', Words.Count, ')');
+
+    { Words that must be in any Firebird's list, so this is checking the
+      contents rather than merely the row count. }
+    if (Words.IndexOf('SELECT') < 0) or (Words.IndexOf('FROM') < 0) then
+    begin
+      WriteLn('FAIL: the list is missing SELECT or FROM');
+      Halt(1);
+    end;
+    WriteLn('  ok   including the ones every version has');
+
+    { And the reason for asking at all: words newer than the list this program
+      would otherwise carry. }
+    if Words.IndexOf('BLOB_APPEND') < 0 then
+    begin
+      WriteLn('FAIL: the list is missing BLOB_APPEND, added in Firebird 5');
+      Halt(1);
+    end;
+    WriteLn('  ok   and ones newer than this program''s own list');
+  finally
+    Words.Free;
+  end;
+  if Tr.InTransaction then
+    Tr.Commit;
+end;
+
 { The schema diagram's reader, against a real server.
 
   The layout is checked in keyword_test without a database. What only a server
@@ -3669,6 +3723,7 @@ begin
     TestTableDesignRoundTrip;
     TestQueryBuilderSQL;
     TestSchemaDiagramReader;
+    TestServerKeywordList;
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestSchemaDDL;

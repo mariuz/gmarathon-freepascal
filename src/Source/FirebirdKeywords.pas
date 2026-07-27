@@ -37,15 +37,27 @@ unit FirebirdKeywords;
   else competes for that attribute. The clean long-term fix is an FB5/FB6
   keyword set upstream in Lazarus, which would make this unit unnecessary.
 
-  Every word here was checked twice: that the Firebird 6.0.0 test server
-  actually accepts it, and that Lazarus's sqlFirebird40 list does not already
-  contain it. Notably absent for that reason are the JSON functions
-  (JSON_VALUE, JSON_QUERY and friends) and UNLIST - Firebird 6.0.0 rejects
-  them, so there is nothing yet to highlight. }
+  The list below is now a fallback rather than the answer. Firebird 5 added
+  RDB$KEYWORDS, a system table holding every word the server itself reserves -
+  527 of them on the 6.0.0 test server - so a connection can be asked instead
+  of a list being maintained here by hand. ApplyServerKeywords does that, and
+  it is better than any hand-kept list in three ways: it is exactly right for
+  the server in front of the user, it needs no maintenance when Firebird adds a
+  word, and a feature that is not in this server does not get highlighted as
+  though it were.
+
+  It also settles something the roadmap had blocked: the JSON functions are
+  absent from the list below because Firebird 6.0.0 rejects them, and a server
+  that does support them will simply report them in RDB$KEYWORDS.
+
+  The hand-kept list stays for servers older than 5, which have no
+  RDB$KEYWORDS. Every word in it was checked twice: that the test server
+  accepts it, and that Lazarus's sqlFirebird40 list does not already have
+  it. }
 
 interface
 
-uses Classes, SynHighlighterSQL;
+uses SysUtils, Classes, SynHighlighterSQL;
 
 const
   ExtraFirebirdKeywords: array[0..5] of String = (
@@ -62,6 +74,23 @@ const
   appended to. Call it after LoadFromRegistry, since that restores the
   attribute colours this has to copy from. }
 procedure ApplyFirebirdKeywords(Highlighter: TSynSQLSyn);
+
+{ The same, from a list the server supplied - RDB$KEYWORDS.
+
+  Only words the highlighter does not already know are injected. Handing it all
+  527 would work but would replace its own keyword handling with the
+  TableName attribute for every one of them, which is a worse rendering of the
+  words it already gets right.
+
+  Falls back to the hand-kept list when ServerWords is empty, which is what a
+  server older than Firebird 5 gives. }
+procedure ApplyServerKeywords(Highlighter: TSynSQLSyn; ServerWords: TStrings);
+
+{ Which of ServerWords the highlighter does not already tokenise as a keyword.
+  Separated out because it is the decision worth checking, and it needs no
+  connection. }
+procedure SelectUnknownKeywords(Highlighter: TSynSQLSyn; ServerWords,
+  Dest: TStrings);
 
 { Adds the SQL words worth offering in a completion list to Dest.
 
@@ -129,6 +158,75 @@ begin
   Highlighter.TableNameAttri.Foreground := Highlighter.KeyAttri.Foreground;
   Highlighter.TableNameAttri.Background := Highlighter.KeyAttri.Background;
   Highlighter.TableNameAttri.Style := Highlighter.KeyAttri.Style;
+end;
+
+{ True when the highlighter already paints this word as something other than a
+  plain identifier - a reserved word, a function, a type. Asked by tokenising,
+  because TSynSQLSyn does not publish its keyword list. }
+function AlreadyKnown(Highlighter: TSynSQLSyn; const Word_: String): Boolean;
+var
+  Kind: Integer;
+begin
+  Highlighter.SetLine(Word_, 0);
+  Kind := -1;
+  while not Highlighter.GetEol do
+  begin
+    if Trim(Highlighter.GetToken) <> '' then
+    begin
+      Kind := Highlighter.GetTokenKind;
+      Break;
+    end;
+    Highlighter.Next;
+  end;
+  Result := (Kind >= 0) and (Kind <> Ord(tkIdentifier));
+end;
+
+procedure SelectUnknownKeywords(Highlighter: TSynSQLSyn; ServerWords,
+  Dest: TStrings);
+var
+  Idx: Integer;
+  Word_: String;
+begin
+  Dest.Clear;
+  if not Assigned(Highlighter) or not Assigned(ServerWords) then
+    Exit;
+  for Idx := 0 to ServerWords.Count - 1 do
+  begin
+    Word_ := Trim(ServerWords[Idx]);
+    { A word with anything but letters and underscores in it is not something
+      the highlighter tokenises as one word, so injecting it would do nothing
+      useful. }
+    if Word_ = '' then
+      Continue;
+    if AlreadyKnown(Highlighter, Word_) then
+      Continue;
+    if Dest.IndexOf(Word_) < 0 then
+      Dest.Add(Word_);
+  end;
+end;
+
+procedure ApplyServerKeywords(Highlighter: TSynSQLSyn; ServerWords: TStrings);
+var
+  Unknown: TStringList;
+begin
+  if not Assigned(Highlighter) then
+    Exit;
+  { No list means a server too old to have RDB$KEYWORDS. }
+  if not Assigned(ServerWords) or (ServerWords.Count = 0) then
+  begin
+    ApplyFirebirdKeywords(Highlighter);
+    Exit;
+  end;
+  Unknown := TStringList.Create;
+  try
+    SelectUnknownKeywords(Highlighter, ServerWords, Unknown);
+    Highlighter.TableNames.Assign(Unknown);
+    { The same styling copy ApplyFirebirdKeywords makes, for the same reason:
+      injected words arrive with the TableName attribute. }
+    Highlighter.TableNameAttri.Assign(Highlighter.KeyAttri);
+  finally
+    Unknown.Free;
+  end;
 end;
 
 end.

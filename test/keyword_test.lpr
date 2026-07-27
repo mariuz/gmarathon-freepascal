@@ -210,6 +210,65 @@ begin
         Result := Length(Doc[P].Lines[L]);
 end;
 
+procedure TestServerKeywords;
+var
+  Server, Chosen: TStringList;
+begin
+  Server := TStringList.Create;
+  Chosen := TStringList.Create;
+  try
+    { Words the highlighter already handles are left alone: injecting one
+      replaces its own handling with the TableName attribute, which renders
+      worse than what it already does.
+
+      Invented words are used for the other side rather than real Firebird
+      ones, because by this point ApplyFirebirdKeywords has already injected
+      every word in the built-in list - so a real one would correctly report
+      as known and prove nothing. }
+    Server.Add('SELECT');
+    Server.Add('FROM');
+    Server.Add('ZZ_UNKNOWN_ONE');
+    Server.Add('ZZ_UNKNOWN_TWO');
+    SelectUnknownKeywords(Highlighter, Server, Chosen);
+    Check(Chosen.IndexOf('SELECT') < 0, 'a word the highlighter knows is not injected');
+    Check(Chosen.IndexOf('FROM') < 0, 'nor another one');
+    Check(Chosen.IndexOf('ZZ_UNKNOWN_ONE') >= 0, 'one it does not know is');
+    Check(Chosen.IndexOf('ZZ_UNKNOWN_TWO') >= 0, 'and so is the next');
+
+    { Duplicates and blanks come out of a catalogue query as readily as
+      anything else. }
+    Server.Clear;
+    Server.Add('ZZ_UNKNOWN_ONE');
+    Server.Add('ZZ_UNKNOWN_ONE');
+    Server.Add('');
+    Server.Add('   ');
+    SelectUnknownKeywords(Highlighter, Server, Chosen);
+    Check(Chosen.Count = 1, 'duplicates and blanks are dropped');
+
+    { A word the server reported is painted. }
+    Server.Clear;
+    Server.Add('ZZ_UNKNOWN_ONE');
+    ApplyServerKeywords(Highlighter, Server);
+    Check(KindOf('ZZ_UNKNOWN_ONE') <> IdentifierKind,
+      'a word the server reported is highlighted');
+    { Which is the point of asking the server at all: this program has never
+      heard of it. }
+    Check(KindOf('ZZ_UNKNOWN_TWO') = IdentifierKind,
+      'and one it did not report is not');
+
+    { Nothing from the server - a Firebird older than 5, which has no
+      RDB$KEYWORDS - falls back to the built-in list rather than leaving the
+      highlighter with nothing. }
+    Server.Clear;
+    ApplyServerKeywords(Highlighter, Server);
+    Check(KindOf('LOCKED') <> IdentifierKind,
+      'an empty server list falls back to the built-in keywords');
+  finally
+    Server.Free;
+    Chosen.Free;
+  end;
+end;
+
 procedure TestRowEdits;
 var
   L: TRowEditList;
@@ -1768,6 +1827,11 @@ begin
       reload. }
     ApplyFirebirdKeywords(Highlighter);
     Check(KindOf('LOCKED') <> IdentifierKind, 'still highlighted after a second call');
+
+    { The server's own list, which is what this now prefers. Inside this block
+      because it needs the same live highlighter. }
+    WriteLn('Keywords from the server:');
+    TestServerKeywords;
   finally
     Highlighter.Free;
   end;

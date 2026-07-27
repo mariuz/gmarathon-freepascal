@@ -61,6 +61,8 @@ The application is structured in layers:
 
 **Data grid edits** — the table editor's Data tab runs with IBX `CachedUpdates`, so edits are held. `TfrmTables.PendingDataChanges` renders them through `src/Common/RowEdits.pas`; `ApplyDataChanges` writes them, `CancelDataChanges` drops them. Leaving the Data tab asks about the *pending row changes*, not about the transaction — `CheckCommit`. Note the harness cannot drive an edit through that dataset: closing it with changes pending raises that question, and a modal dialog hangs under Xvfb. RowEdits refuses to write an UPDATE or DELETE for a table with no primary key rather than emit one that would match every row that looks alike.
 
+**SQL keywords** — the highlighter takes its list from the connected server's `RDB$KEYWORDS` (Firebird 5+), applied by `Globals.ApplyConnectionKeywords` when a connection opens. `FirebirdKeywords.ExtraFirebirdKeywords` is now only the fallback for older servers. Words the highlighter already knows are not injected — doing so would replace its own handling with the TableName attribute.
+
 **Query plans** — Firebird returns two formats. Firebird 3+ gives an explained plan (indented lines), read by `PlanUnit.FillTreeFromExplainedPlan`; older servers give a parenthesised one-liner, parsed by `src/Common/PlanParser.pas`. `FillTreeFromPlan` picks between them — call that, not either reader directly.
 
 **Schema Designer** — `src/Common/SchemaDiagram.pas` is the model and the layout (breadth-first from the most-referenced table; no canvas, so it is tested headlessly), `SchemaDiagramIO.pas` reads tables and foreign keys from `RDB$RELATION_CONSTRAINTS` + `RDB$REF_CONSTRAINTS` + `RDB$INDEX_SEGMENTS`, and `src/Source/SchemaDiagramForm.pas` draws it on one paint box.

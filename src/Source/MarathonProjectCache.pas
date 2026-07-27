@@ -1984,6 +1984,11 @@ begin
 		  happened to be open when it was opened. }
 		if Assigned(ActiveTraceMonitor) then
 			ActiveTraceMonitor.Watch(FConnection);
+		{ And the editor highlights whatever this server reserves, rather than a
+		  list kept by hand here. Firebird 5 and later report it in
+		  RDB$KEYWORDS; an older one reports nothing and the built-in list is
+		  used instead. }
+		ApplyConnectionKeywords(FConnection, FTransaction);
 		if IsIB6 then
 		begin
 			FConnection.Connected := False;
