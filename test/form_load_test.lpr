@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates;
 
 var
   Failures: Integer = 0;
@@ -2336,6 +2336,145 @@ begin
   Check(Action.ShortCut = WasShortCut, 'the application is left as it was found');
 end;
 
+{ Code templates and the debugger's gutter glyphs - the last two things the
+  reduced editor wrapper could not do.
+
+  What a template expands to is checked in keyword_test without an editor.
+  These are the parts that need one: that Ctrl+J in a real editor replaces the
+  word with the body and leaves the caret where the template asked, that the
+  Options tab lists and edits the templates rather than looking complete and
+  holding nothing, and that a glyph put on a line is actually there. }
+{ KeyDown is protected, as it should be - it is the editor's own business, not
+  something callers poke. A descendant declared here reaches it without
+  widening the real class's interface just for a test. }
+type
+  TEditorUnderTest = class(TSyntaxMemoWithStuff2);
+
+procedure CheckCodeTemplates;
+var
+  Ed: TEditorUnderTest;
+  Opts: TfrmMarathonOptions;
+  Key: Word;
+  T: TCodeTemplate;
+  Before: Integer;
+begin
+  WriteLn('Code templates:');
+
+  GlobalCodeTemplates.Clear;
+  T := GlobalCodeTemplates.Add('sel', 'Select all rows');
+  T.Body.Add('select *');
+  T.Body.Add('from |');
+
+  Ed := TEditorUnderTest.Create(nil);
+  try
+    { A parent, because SynEdit needs a handle before its caret can be moved. }
+    Ed.Parent := frmMarathonMain;
+    Ed.Lines.Text := 'sel';
+    Ed.CaretY := 1;
+    Ed.CaretX := 4;
+
+    Key := Ord('J');
+    Ed.KeyDown(Key, [ssCtrl]);
+    Check(Key = 0, 'Ctrl+J on a template name is swallowed');
+    Check(Pos('select *', Ed.Lines.Text) > 0, 'and the template is expanded');
+    { Replaced, not appended - otherwise the abbreviation is left behind in
+      front of what it expanded to. }
+    Check(Pos('sel' + #13, Ed.Lines.Text) = 0, 'the name it replaced is gone');
+    Check(Ed.CaretY = 2, 'the caret lands on the marked line');
+    Check(Ed.CaretX = 6, 'at the marked column');
+
+    { One undo step, not one per line: an expansion the user did not want must
+      come back out in a single press. }
+    Ed.Undo;
+    Check(Trim(Ed.Lines.Text) = 'sel', 'and one Undo takes the whole expansion back');
+
+    { Indentation. The same template inside a block lines up with where it was
+      typed, or every expansion has to be re-indented by hand. }
+    Ed.Lines.Text := '    sel';
+    Ed.CaretY := 1;
+    Ed.CaretX := 8;
+    Key := Ord('J');
+    Ed.KeyDown(Key, [ssCtrl]);
+    Check(Pos('    from', Ed.Lines.Text) > 0, 'a template indents to where it was typed');
+
+    { A word that names no template must be left alone, so Ctrl+J still
+      reaches anything else that wants it. }
+    Ed.Lines.Text := 'notatemplate';
+    Ed.CaretY := 1;
+    Ed.CaretX := 13;
+    Before := Length(Ed.Lines.Text);
+    Key := Ord('J');
+    Ed.KeyDown(Key, [ssCtrl]);
+    Check(Length(Ed.Lines.Text) = Before, 'an unknown word expands to nothing');
+    Check(Key <> 0, 'and the keystroke is passed on rather than swallowed');
+
+    { The debugger's blue dots. Every call site was an empty statement, so a
+      procedure opened for debugging looked like one that could not be. }
+    Ed.Lines.Text := 'line one'#13#10'line two'#13#10'line three';
+    Ed.ClearQuestGlyphs;
+    Check(Ed.QuestGlyphCount = 0, 'an editor starts with no glyphs');
+    Ed.AddQuestGlyph(2);
+    Check(Ed.HasQuestGlyph(2), 'a glyph can be put on a line');
+    Check(not Ed.HasQuestGlyph(1), 'and is only on that line');
+    Check(Ed.QuestGlyphCount = 1, 'and is counted once');
+    { The debugger redraws the whole set whenever it refreshes, so asking
+      twice must not stack them up. }
+    Ed.AddQuestGlyph(2);
+    Check(Ed.QuestGlyphCount = 1, 'asking for the same line twice adds one glyph');
+    Ed.AddQuestGlyph(3);
+    Check(Ed.QuestGlyphCount = 2, 'a second line adds a second');
+    Ed.RemoveQuestGlyph(2);
+    Check(not Ed.HasQuestGlyph(2), 'a glyph can be taken off again');
+    Check(Ed.HasQuestGlyph(3), 'leaving the others alone');
+    Ed.ClearQuestGlyphs;
+    Check(Ed.QuestGlyphCount = 0, 'and they can all be cleared');
+  finally
+    Ed.Parent := nil;
+    Ed.Free;
+  end;
+
+  { The Options tab, which has looked complete and held nothing. }
+  try
+    Opts := TfrmMarathonOptions.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the Options dialog streams (' + E.ClassName + ': ' + E.Message + ')');
+      Exit;
+    end;
+  end;
+  try
+    Opts.RefreshTemplateList;
+    Check(Opts.lstTemplates.Items.Count = GlobalCodeTemplates.Count,
+      'the SQL Insight tab lists the templates (' +
+      IntToStr(Opts.lstTemplates.Items.Count) + ')');
+    Check(Opts.lstTemplates.Items[0].Caption = 'sel', 'by name');
+    Check(Opts.lstTemplates.Items[0].SubItems[0] = 'Select all rows',
+      'and description');
+
+    { Selecting one shows its body. }
+    Opts.lstTemplates.Items[0].Selected := True;
+    Opts.lstTemplatesChange(nil, Opts.lstTemplates.Items[0], ctState);
+    Check(Pos('select *', Opts.edSQLInsightCode.Lines.Text) > 0,
+      'selecting a template shows its body');
+
+    { Editing the body writes back to the template, not to whichever one
+      happens to be selected later. }
+    Opts.edSQLInsightCode.Lines.Text := 'select 1 from rdb$database';
+    Opts.edSQLInsightCodeChange(nil);
+    Check(Pos('rdb$database', GlobalCodeTemplates.FindByName('sel').Body.Text) > 0,
+      'editing the body writes back to the template');
+
+    { And re-selecting must not write the pane back over it - the handler
+      fires on deselection too, with the item that was let go. }
+    Opts.lstTemplatesChange(nil, Opts.lstTemplates.Items[0], ctState);
+    Check(Pos('rdb$database', GlobalCodeTemplates.FindByName('sel').Body.Text) > 0,
+      'and re-selecting it does not overwrite what was just typed');
+  finally
+    Opts.Free;
+  end;
+end;
+
 procedure CheckCommandPalette;
 var
   P: TfrmCommandPalette;
@@ -2861,6 +3000,7 @@ begin
   CheckResultsUnderEditor;
   CheckCommandPalette;
   CheckKeyBindingEditor;
+  CheckCodeTemplates;
   CheckPrintPreview;
   CheckDesignTableReachable;
   CheckConnectionGrouping;

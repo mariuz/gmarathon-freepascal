@@ -781,7 +781,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor, MarathonOptions;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -842,6 +842,9 @@ begin
 	  up with the right keys already on them. Nothing happens when there is no
 	  file, which is the normal case. }
 	LoadKeyBindings(actMain);
+	{ And the code templates, so an editor can expand one whether or not the
+	  Options dialog has been opened this session. }
+	LoadCodeTemplates;
 
 	ForceDirectories(ExtractFilePath(Application.ExeName) + 'Projects\'); { *Converted from ForceDirectories*  }
 

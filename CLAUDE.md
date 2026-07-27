@@ -55,6 +55,8 @@ The application is structured in layers:
 
 **Keybindings** — `src/Common/KeyBindings.pas` holds the map of command to shortcut, the storage text form, and conflict detection; no LCL, so it is tested headlessly. The text form is deliberately not the LCL's `ShortCutToText`, which is translated — a file written on a German build would not load on an English one. `src/Source/KeyBindingEditor.pas` is the grid, reached from Options; `keybind.dat` beside the executable holds only what differs from the built-in shortcuts.
 
+**Code templates** — `src/Common/CodeTemplates.pas` holds the templates, the `[name | description]` file form the Delphi build used, and expansion (caret marker, indentation to where the name was typed). No LCL. `TSyntaxMemoWithStuff2.ExpandTemplateAtCaret` is bound to Ctrl+J, so every editor built on the wrapper gets it; the Options "SQL Insight" tab edits them and `templates.dat` sits beside the executable. The same wrapper's `AddQuestGlyph`/`RemoveQuestGlyph` are the debugger's "blue dots", kept in SynEdit's own mark list so they move with the text.
+
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.
 
 **Editor** — `lib/SyntaxMemoWithStuff2/` wraps SynEdit with SQL syntax highlighting, code completion (`SQLInsightItem.pas`), bookmarks, and drag-and-drop.
@@ -154,4 +156,3 @@ without frame pointers, so the caller's frame is lost.
 - Tri-state checkbox handling (previously via VirtualTreeView)
 
 The following features are intentionally stubbed/disabled on this FPC/Lazarus port (they show a "not available" message or silently no-op) because they depend on deep Win32-only APIs or on report-writer/editor units that were never ported. Each is a candidate for a real follow-up port:
-- **SQL Insight code templates** (Options dialog "SQL Insight" tab) and **bookmark glyphs** in the SQL/trigger/SP editors — `src/Source/SyntaxMemoWithStuff2.pas` is a reduced stub of the full editor wrapper at `lib/SyntaxMemoWithStuff2/SyntaxMemoWithStuff2.pas` (which is itself unported/unbuilt); it's still missing `AddQuestGlyph`/`RemoveQuestGlyph`. The `SQLInsightList` completion surface was never needed: SynEdit's own `TSynCompletion` provides the popup, and `src/Common/SQLCompletion.pas` decides what goes in it. **Find/Replace now works** — `WSFind`/`WSFindNext`/`WSReplace` are implemented over SynEdit's own `SearchReplace` and the already-ported `FindDlg`/`ReplDlg`.

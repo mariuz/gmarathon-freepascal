@@ -168,14 +168,25 @@ type
 		FLocalErrorBack: TColor;
 		FLockOut: Boolean;
 		FCanSaveBindings: Boolean;
+		{ True while the body pane is being filled from a template, so its own
+		  OnChange does not write it straight back. }
+		FLoadingTemplate: Boolean;
 		procedure UpdateSample;
 	public
 		{ Public declarations }
+		{ Refills the SQL Insight tab from the template list. }
+		procedure RefreshTemplateList;
 	end;
+
+{ The code templates, kept beside the executable. Declared here because this is
+  where they are edited, and called from startup so an editor can expand one
+  without the Options dialog ever having been opened. }
+procedure LoadCodeTemplates;
+procedure SaveCodeTemplates;
 
 implementation
 
-uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem, FirebirdKeywords, KeyBindingEditor;
+uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem, FirebirdKeywords, KeyBindingEditor, CodeTemplates;
 
 {$R *.lfm}
 
@@ -319,8 +330,11 @@ begin
 	chkCapitalise.Checked := gCapitalise;
 	tbDelay.Position := gListDelay;
 
-	// Editor SQLInsight
-	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+	{ The templates. Every handler on this tab used to say only that
+	  SQLInsightList was unavailable, so the tab looked complete, held nothing
+	  and saved nothing. }
+	LoadCodeTemplates;
+	RefreshTemplateList;
 	edSQLInsightCode.Lines.Clear;
 
 	// SQL Trace
@@ -337,9 +351,91 @@ begin
 	chkExecuteImmediate.Checked := gTraceExecuteImmediate;
 end;
 
-procedure TfrmMarathonOptions.lstTemplatesChange(Sender: TObject;	Item: TListItem; Change: TItemChange);
+{ Where the templates live: beside the executable, like the other per-user
+  files this application keeps. }
+function CodeTemplatesFileName: String;
 begin
-	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+	Result := ExtractFilePath(Application.ExeName) + 'templates.dat';
+end;
+
+procedure LoadCodeTemplates;
+var
+	Lines: TStringList;
+begin
+	Lines := TStringList.Create;
+	try
+		if FileExists(CodeTemplatesFileName) then
+		begin
+			try
+				Lines.LoadFromFile(CodeTemplatesFileName);
+				GlobalCodeTemplates.LoadFromText(Lines.Text);
+			except
+				{ An unreadable file is not worth refusing over; the starter set is
+				  better than an empty tab. }
+				on E: Exception do
+					GlobalCodeTemplates.Clear;
+			end;
+		end;
+		{ Only when there is nothing at all - a user who has deliberately deleted
+		  every template should not have them come back. }
+		if GlobalCodeTemplates.Count = 0 then
+			GlobalCodeTemplates.AddDefaults;
+	finally
+		Lines.Free;
+	end;
+end;
+
+procedure SaveCodeTemplates;
+var
+	Lines: TStringList;
+begin
+	Lines := TStringList.Create;
+	try
+		Lines.Text := GlobalCodeTemplates.SaveToText;
+		try
+			Lines.SaveToFile(CodeTemplatesFileName);
+		except
+			on E: Exception do
+				MessageDlg('The code templates could not be saved: ' + E.Message,
+					mtWarning, [mbOK], 0);
+		end;
+	finally
+		Lines.Free;
+	end;
+end;
+
+procedure TfrmMarathonOptions.RefreshTemplateList;
+var
+	Idx: Integer;
+begin
+	lstTemplates.Items.Clear;
+	for Idx := 0 to GlobalCodeTemplates.Count - 1 do
+		with lstTemplates.Items.Add do
+		begin
+			Caption := GlobalCodeTemplates[Idx].Name;
+			SubItems.Add(GlobalCodeTemplates[Idx].Description);
+		end;
+end;
+
+procedure TfrmMarathonOptions.lstTemplatesChange(Sender: TObject;	Item: TListItem; Change: TItemChange);
+var
+	T: TCodeTemplate;
+begin
+	{ Fired for deselection too, with the item that was let go - so writing the
+	  body pane back at that point would put one template's text onto
+	  another. }
+	if (Change <> ctState) or not Assigned(Item) or not Item.Selected then
+		Exit;
+	FLoadingTemplate := True;
+	try
+		T := GlobalCodeTemplates.FindByName(Item.Caption);
+		if Assigned(T) then
+			edSQLInsightCode.Lines.Assign(T.Body)
+		else
+			edSQLInsightCode.Lines.Clear;
+	finally
+		FLoadingTemplate := False;
+	end;
 end;
 
 procedure TfrmMarathonOptions.UpdateSample;
@@ -389,7 +485,7 @@ begin
 	end;
 
 	synOptions.SaveToRegistry(HKEY_CURRENT_USER, REG_SETTINGS_HIGHLIGHTING);
-	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+	SaveCodeTemplates;
 
 	with TRegistry.Create do
 		try
@@ -744,7 +840,7 @@ begin
 			F.Caption := 'Add Code Template';
 			if F.ShowModal = mrOK then
 			begin
-				// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+				GlobalCodeTemplates.Add(F.edShortCut.Text, F.edDescription.Text);
 				with lstTemplates.Items.Add do
 				begin
 					Caption := F.edShortCut.Text;
@@ -760,6 +856,7 @@ end;
 procedure TfrmMarathonOptions.btnSQLIEditClick(Sender: TObject);
 var
 	F: TfrmSQLInsight;
+	T: TCodeTemplate;
 
 begin
 	if lstTemplates.Selected <> nil then
@@ -771,7 +868,12 @@ begin
 			F.Caption := 'Edit Code Template';
 			if F.ShowModal = mrOK then
 			begin
-				// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+				T := GlobalCodeTemplates.FindByName(lstTemplates.Selected.Caption);
+				if Assigned(T) then
+				begin
+					T.Name := Trim(F.edShortCut.Text);
+					T.Description := Trim(F.edDescription.Text);
+				end;
 				lstTemplates.Selected.Caption := F.edShortCut.Text;
 				lstTemplates.Selected.SubItems[0] := F.edDescription.Text;
 			end;
@@ -782,8 +884,16 @@ begin
 end;
 
 procedure TfrmMarathonOptions.edSQLInsightCodeChange(Sender: TObject);
+var
+	T: TCodeTemplate;
 begin
-	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+	{ Not while the pane is being filled from a template - that would write it
+	  straight back and, worse, onto whichever one is selected by then. }
+	if FLoadingTemplate or not Assigned(lstTemplates.Selected) then
+		Exit;
+	T := GlobalCodeTemplates.FindByName(lstTemplates.Selected.Caption);
+	if Assigned(T) then
+		T.Body.Assign(edSQLInsightCode.Lines);
 end;
 
 procedure TfrmMarathonOptions.btnSQLIDeleteClick(Sender: TObject);
@@ -793,8 +903,10 @@ begin
 		if MessageDlg('Are you sure you wish to delete the item "' +
 			lstTemplates.Selected.Caption + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 		begin
-			// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+			GlobalCodeTemplates.Delete(
+				GlobalCodeTemplates.IndexOfName(lstTemplates.Selected.Caption));
 			lstTemplates.Selected.Delete;
+			edSQLInsightCode.Lines.Clear;
 		end;
 	end;
 end;

@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,128 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestCodeTemplates;
+var
+  List: TCodeTemplateList;
+  T: TCodeTemplate;
+  Text_, Saved: String;
+  CaretLine, CaretCol: Integer;
+begin
+  { Which word the user meant. }
+  Check(TemplateWordBefore('sel', 4) = 'sel', 'the word before the caret is found');
+  Check(TemplateWordBefore('select * from sel', 18) = 'sel',
+    'from the end of a line of text');
+  Check(TemplateWordBefore('  sel', 6) = 'sel', 'past leading whitespace');
+  Check(TemplateWordBefore('sel ', 5) = '',
+    'a caret after a space is not at the end of a word');
+  Check(TemplateWordBefore('sel', 1) = '', 'and neither is one at the start');
+  { Underscores and digits are part of an identifier, so part of a name. }
+  Check(TemplateWordBefore('my_t2', 6) = 'my_t2',
+    'underscores and digits belong to the word');
+
+  Check(IndentOf('    select') = '    ', 'the indent of a line is its leading spaces');
+  Check(IndentOf(#9'  x') = #9'  ', 'tabs count too');
+  Check(IndentOf('select') = '', 'and a line at the margin has none');
+
+  List := TCodeTemplateList.Create;
+  try
+    T := List.Add('sel', 'Select all rows');
+    T.Body.Add('select *');
+    T.Body.Add('from |');
+
+    Check(List.Count = 1, 'a template can be added');
+    Check(Assigned(List.FindByName('sel')), 'and found by name');
+    { Nobody remembers whether they called it sel or SEL. }
+    Check(Assigned(List.FindByName('SEL')), 'without regard to case');
+    Check(List.FindByName('nope') = nil, 'and an unknown name finds nothing');
+
+    { Expansion at the margin. }
+    Text_ := ExpandTemplate(T, '', CaretLine, CaretCol);
+    Check(Pos('select *', Text_) > 0, 'the body is expanded');
+    Check(Pos('|', Text_) = 0, 'with the caret marker taken out');
+    Check(CaretLine = 1, 'and the caret lands on the marked line');
+    Check(CaretCol = 6, 'at the marked column');
+    { A template goes into a line that already exists, so a trailing break
+      would push whatever followed onto a line of its own. }
+    Check((Length(Text_) > 0) and not (Text_[Length(Text_)] in [#13, #10]),
+      'and the text does not end in a line break');
+
+    { Expansion inside a block. Every line after the first lines up with where
+      the template was typed; the first does not, because the caret is already
+      there. }
+    Text_ := ExpandTemplate(T, '    ', CaretLine, CaretCol);
+    Check(Pos('    from', Text_) > 0, 'later lines are indented to match');
+    Check(Copy(Text_, 1, 6) = 'select', 'while the first line is not, being typed in place');
+
+    { A template with no marker. }
+    T := List.Add('plain', 'No caret marker');
+    T.Body.Add('commit');
+    Text_ := ExpandTemplate(T, '', CaretLine, CaretCol);
+    Check(Text_ = 'commit', 'a template without a marker expands whole');
+    Check((CaretLine = 0) and (CaretCol = 7),
+      'and the caret goes to the end, where typing would carry on');
+
+    { The marker is the concatenation operator, so a template wanting a literal
+      one doubles it. }
+    T := List.Add('cat', 'Concatenate');
+    T.Body.Add('a || b');
+    Text_ := ExpandTemplate(T, '', CaretLine, CaretCol);
+    Check(Text_ = 'a | b', 'a doubled marker becomes one literal bar');
+    Check(CaretCol = 6, 'and is not mistaken for the caret position');
+
+    { The file form. }
+    Saved := List.SaveToText;
+    Check(Pos('[sel | Select all rows]', Saved) > 0, 'a template saves with its header');
+    Check(Pos('select *', Saved) > 0, 'and its body');
+  finally
+    List.Free;
+  end;
+
+  { Round trip, which is what has to hold for a saved file. }
+  List := TCodeTemplateList.Create;
+  try
+    List.LoadFromText('[sel | Select all]'#10'select *'#10'from |'#10 +
+                      '[ins | Insert]'#10'insert into |'#10);
+    Check(List.Count = 2, 'two templates read back');
+    Check(List[0].Name = 'sel', 'with their names');
+    Check(Trim(List[0].Description) = 'Select all', 'and descriptions');
+    Check(List[0].Body.Count = 2, 'and the right number of body lines');
+    Check(List[1].Body[0] = 'insert into |', 'the second body is its own');
+    { A body line may perfectly well contain brackets, so only a line that is
+      wholly bracketed starts a new template. }
+    List.LoadFromText('[t | T]'#10'select cast(x as varchar(10)) from y'#10);
+    Check(List.Count = 1, 'brackets inside a body do not start a template');
+    Check(List[0].Body.Count = 1, 'and the line stays in the body');
+    { Anything before the first header belongs to no template. }
+    List.LoadFromText('stray line'#10'[t | T]'#10'body'#10);
+    Check((List.Count = 1) and (List[0].Body.Count = 1),
+      'a stray line before the first header is dropped');
+    { A header with no description is still a template. }
+    List.LoadFromText('[bare]'#10'body'#10);
+    Check((List.Count = 1) and (List[0].Name = 'bare'),
+      'a header with no description still names a template');
+  finally
+    List.Free;
+  end;
+
+  List := TCodeTemplateList.Create;
+  try
+    List.AddDefaults;
+    Check(List.Count > 3, 'there is a starter set for a machine that has none');
+    Check(Assigned(List.FindByName('sel')), 'including a select');
+    { The starter set has to survive its own file format, or the first save
+      would corrupt what shipped. }
+    Saved := List.SaveToText;
+    List.LoadFromText(Saved);
+    Check(Assigned(List.FindByName('blk')),
+      'and the whole set survives a save and load');
+    Check(List.FindByName('blk').Body.Count = 4,
+      'with its body intact');
+  finally
+    List.Free;
+  end;
 end;
 
 procedure TestKeyBindings;
@@ -1276,6 +1398,9 @@ begin
 
   WriteLn('Key bindings:');
   TestKeyBindings;
+
+  WriteLn('Code templates:');
+  TestCodeTemplates;
 
   if Failures > 0 then
   begin

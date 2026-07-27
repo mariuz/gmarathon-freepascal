@@ -119,6 +119,13 @@ type
 		procedure WMWindowPosChanging(var Message : TLMessage); message WM_WINDOWPOSCHANGING;
 		procedure CMMouseLeave(var Message : TLMessage); message CM_MOUSELEAVE;
     procedure KeyPress(var Key: Char); override;
+		{ Ctrl+J expands the template named by the word before the caret - the
+		  binding Delphi's editor used, and the one the Options tab's help text
+		  has always described. }
+		procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+		{ The mark on that line, if any. Bookmarks are SynEdit's own and are left
+		  alone; only the debugger's are ours to add and remove. }
+		function FindQuestMark(ALine: Integer): TSynEditMark;
 	public
 		constructor Create(AOwner: TComponent); override;
 		destructor Destroy; override;
@@ -140,6 +147,25 @@ type
     procedure WSFind;
     procedure WSFindNext;
     procedure WSReplace;
+
+    { The debugger's "blue dots": a mark in the gutter on every line a
+      breakpoint may be set on. The PSQL editor asked for these in three
+      places and every one had been reduced to an empty statement, so a
+      procedure opened for debugging looked identical to one that could not be
+      debugged at all.
+
+      Called Quest glyphs because that is what the original editor wrapper
+      called them, and the call sites still say so. }
+    procedure AddQuestGlyph(ALine: Integer);
+    procedure RemoveQuestGlyph(ALine: Integer);
+    procedure ClearQuestGlyphs;
+    function HasQuestGlyph(ALine: Integer): Boolean;
+    function QuestGlyphCount: Integer;
+
+    { Expands the code template named by the word just before the caret, and
+      leaves the caret where the template asks for it. Returns False when that
+      word names no template, so a caller can leave the keystroke alone. }
+    function ExpandTemplateAtCaret: Boolean;
     function DoOnSpecialLineColors(Line: integer; var Foreground, Background: TColor): boolean;
 
     property SelLength: integer read GetSelLength write SetSelLength;
@@ -182,7 +208,7 @@ type
 
 implementation
 
-uses FindDlg, ReplDlg;
+uses FindDlg, ReplDlg, CodeTemplates;
 
 { TWordList }
 constructor TWordList.Create;
@@ -407,6 +433,137 @@ end;
 procedure TEdPersistent.SetReplList(Value: TStrings);
 begin
   FReplList.Assign(Value);
+end;
+
+{ The debugger's blue dots, kept in SynEdit's own mark list rather than in a
+  list of this unit's own. Doing it that way means the gutter draws them, the
+  marks move when lines are inserted above them, and nothing here has to be
+  told when the text changes. }
+
+function TSyntaxMemoWithStuff2.FindQuestMark(ALine: Integer): TSynEditMark;
+var
+  Idx: Integer;
+begin
+  Result := nil;
+  for Idx := 0 to Marks.Count - 1 do
+    if (Marks[Idx].Line = ALine) and (not Marks[Idx].IsBookmark) then
+      Exit(Marks[Idx]);
+end;
+
+procedure TSyntaxMemoWithStuff2.AddQuestGlyph(ALine: Integer);
+var
+  Mark: TSynEditMark;
+begin
+  if ALine < 1 then
+    Exit;
+  { Asking twice for the same line is the ordinary case - the debugger redraws
+    the whole set whenever it refreshes - so it has to be idempotent rather
+    than stack marks up. }
+  if Assigned(FindQuestMark(ALine)) then
+    Exit;
+  Mark := TSynEditMark.Create(Self);
+  Mark.Line := ALine;
+  { With no image list configured, SynEdit draws one of its own built-in
+    glyphs; without this the mark exists and nothing appears. }
+  Mark.InternalImage := True;
+  Mark.ImageIndex := 0;
+  Mark.Visible := True;
+  Marks.Add(Mark);
+end;
+
+procedure TSyntaxMemoWithStuff2.RemoveQuestGlyph(ALine: Integer);
+var
+  Mark: TSynEditMark;
+begin
+  Mark := FindQuestMark(ALine);
+  if Assigned(Mark) then
+  begin
+    Marks.Remove(Mark);
+    Mark.Free;
+  end;
+end;
+
+procedure TSyntaxMemoWithStuff2.ClearQuestGlyphs;
+var
+  Idx: Integer;
+  Mark: TSynEditMark;
+begin
+  for Idx := Marks.Count - 1 downto 0 do
+  begin
+    Mark := Marks[Idx];
+    if not Mark.IsBookmark then
+    begin
+      Marks.Remove(Mark);
+      Mark.Free;
+    end;
+  end;
+end;
+
+function TSyntaxMemoWithStuff2.HasQuestGlyph(ALine: Integer): Boolean;
+begin
+  Result := Assigned(FindQuestMark(ALine));
+end;
+
+function TSyntaxMemoWithStuff2.QuestGlyphCount: Integer;
+var
+  Idx: Integer;
+begin
+  Result := 0;
+  for Idx := 0 to Marks.Count - 1 do
+    if not Marks[Idx].IsBookmark then
+      Inc(Result);
+end;
+
+procedure TSyntaxMemoWithStuff2.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if (Key = Ord('J')) and (ssCtrl in Shift) and not (ssAlt in Shift) then
+  begin
+    { Only swallowed when a template was actually expanded, so Ctrl+J over a
+      word that names none is left for anything else that wants it. }
+    if ExpandTemplateAtCaret then
+    begin
+      Key := 0;
+      Exit;
+    end;
+  end;
+  inherited KeyDown(Key, Shift);
+end;
+
+function TSyntaxMemoWithStuff2.ExpandTemplateAtCaret: Boolean;
+var
+  Word_, Indent, Expanded: String;
+  Template: TCodeTemplate;
+  CaretLine, CaretCol, Line: Integer;
+begin
+  Result := False;
+  Line := CaretY;
+  if (Line < 1) or (Line > Lines.Count) then
+    Exit;
+  Word_ := TemplateWordBefore(Lines[Line - 1], CaretX);
+  if Word_ = '' then
+    Exit;
+  Template := GlobalCodeTemplates.FindByName(Word_);
+  if not Assigned(Template) then
+    Exit;
+
+  Indent := IndentOf(Lines[Line - 1]);
+  Expanded := ExpandTemplate(Template, Indent, CaretLine, CaretCol);
+
+  { The name the user typed is replaced, not added to. Selecting it and
+    assigning over the selection keeps this one undo step. }
+  BeginUndoBlock;
+  try
+    BlockBegin := Point(CaretX - Length(Word_), Line);
+    BlockEnd := Point(CaretX, Line);
+    SelText := Expanded;
+    { Where the template asked for the caret. CaretLine counts from the first
+      line of the expansion, which is the line the name was on. }
+    CaretY := Line + CaretLine;
+    CaretX := CaretCol;
+  finally
+    EndUndoBlock;
+  end;
+  Result := True;
 end;
 
 end.

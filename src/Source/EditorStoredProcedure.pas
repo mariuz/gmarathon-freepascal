@@ -2667,8 +2667,9 @@ begin
 			Exit;
 		end;
 
-		for Idx := 0 to edEditor.Lines.Count - 1 do
-			; // FPC: RemoveQuestGlyph not available on this port's TSyntaxMemoWithStuff2
+		{ Every one of these was an empty statement, so a procedure opened for
+		  debugging looked exactly like one that could not be debugged. }
+		edEditor.ClearQuestGlyphs;
 
 		// Check the impact of changing input params
 		if not CheckInputParamsImpact then
@@ -2749,7 +2750,7 @@ begin
 				Module := MarathonIDEInstance.DebuggerVM.ModuleByName[FObjectName];
 				if Assigned(Module) then
 					for Idx := 0 to Module.AllowBreakList.Count - 1 do
-						; // FPC: AddQuestGlyph not available on this port's TSyntaxMemoWithStuff2
+						edEditor.AddQuestGlyph(StrToIntDef(Module.AllowBreakList[Idx], 0))
 			end;
 		end;
 
@@ -3162,7 +3163,7 @@ begin
 	Module := MarathonIDEInstance.DebuggerVM.ModuleByName[FObjectName];
 	if Assigned(Module) then
 		for Idx := 0 to Module.AllowBreakList.Count - 1 do
-			; // FPC: AddQuestGlyph not available on this port's TSyntaxMemoWithStuff2
+			edEditor.AddQuestGlyph(StrToIntDef(Module.AllowBreakList[Idx], 0));
 end;
 
 end.

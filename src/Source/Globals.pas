@@ -652,7 +652,9 @@ begin
 		end;
 	end;}
 
-	// FPC: SQLInsightList not available on this port's TSyntaxMemoWithStuff2
+	{ Code templates are expanded by the editor itself on Ctrl+J - see
+	  TSyntaxMemoWithStuff2.KeyDown - rather than through a list the caller
+	  fills, which is what the commented-out block above was doing. }
 end;
 
 procedure SetupNonSyntaxEditor(Editor : TSyntaxMemoWithStuff2);

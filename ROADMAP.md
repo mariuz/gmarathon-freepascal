@@ -596,3 +596,4 @@ because the original reasoning no longer holds:
 | — | Query builder | Done — rewritten; the Win32 original is deleted |
 | — | SQL Trace | Done — the stub monitor replaced with IBX's |
 | — | Keybinding editor | Done — replaces the removed rmControls grid |
+| — | Code templates and debugger glyphs | Done — the editor wrapper stub filled in |
