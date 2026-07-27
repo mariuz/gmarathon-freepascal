@@ -36,7 +36,7 @@
       <Filename Value="keyword_test"/>
     </Target>
     <SearchPaths>
-      <OtherUnitFiles Value="../src/Source"/>
+      <OtherUnitFiles Value="../src/Source;../src/Common"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

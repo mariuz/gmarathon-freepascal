@@ -20,7 +20,7 @@ program form_load_test;
 uses
   Interfaces, SysUtils, Classes, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls,
   ActnList, Menus, DB, DBGrids, Registry, Graphics, ImgList, IBCustomDataSet,
-  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2,
+  GSSRegistry, Globals, MarathonProjectCacheTypes, MarathonProjectCache, SQLParamsDialog, SQLParamTypes, IB, Crypt32, SyntaxMemoWithStuff2, SynCompletion,
   EditorPackage, ProfilerWindow, Spin,
   MarathonIDE, MenuModule, MarathonMain,
   AboutBox, AddGrantee, AddWatch, ArrayDialog,
@@ -955,6 +955,40 @@ begin
   end;
 end;
 
+{ Ctrl+Space completion in the SQL editor. The decision of what to offer is
+  tested without a GUI in keyword_test; what matters here is that the popup is
+  wired to the editor at all, and that a dot ends a token - without that,
+  'c.' reads as one word and the qualifier is never seen. }
+procedure CheckCompletionWiring;
+var
+  F: TfrmSQLForm;
+  Comp: TSynCompletion;
+  Idx: Integer;
+begin
+  WriteLn('SQL completion:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    Comp := nil;
+    for Idx := 0 to F.ComponentCount - 1 do
+      if F.Components[Idx] is TSynCompletion then
+        Comp := TSynCompletion(F.Components[Idx]);
+    Check(Assigned(Comp), 'the editor has a completion popup');
+    if not Assigned(Comp) then
+      Exit;
+    Check(Comp.Editor = F.edSQLStatement, 'it is attached to the SQL editor');
+    Check(Assigned(Comp.OnExecute), 'it fills its list on demand');
+    Check(Pos('.', Comp.EndOfTokenChr) > 0,
+      'a dot ends a token, so a qualifier is seen');
+    { With no connection there are no object names, but the keywords must still
+      be offered - completion has to work on a disconnected editor. }
+    Comp.OnExecute(Comp);
+    Check(Comp.ItemList.Count > 0, 'keywords are offered without a connection');
+    Check(Comp.ItemList.IndexOf('SELECT') >= 0, 'SELECT is among them');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1351,6 +1385,7 @@ begin
   CheckImageListsSliced;
   CheckDesignedImageLists;
   CheckHighDPIScaling;
+  CheckCompletionWiring;
   CheckEditorSearch;
   CheckEditorsAllowAutoTransactions;
   CheckProjectSaveWithRememberedPassword;

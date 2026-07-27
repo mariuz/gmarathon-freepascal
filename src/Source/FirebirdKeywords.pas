@@ -63,7 +63,50 @@ const
   attribute colours this has to copy from. }
 procedure ApplyFirebirdKeywords(Highlighter: TSynSQLSyn);
 
+{ Adds the SQL words worth offering in a completion list to Dest.
+
+  Kept here rather than read back from the highlighter because TSynSQLSyn does
+  not expose its keyword list - only TableNames is published - so there is
+  nothing to borrow. The list is deliberately the words people type rather than
+  every reserved word Firebird knows: a completion list that offers 300 entries
+  is a list nobody reads. }
+procedure AddFirebirdKeywords(Dest: TStrings);
+
 implementation
+
+const
+  CompletionKeywords: array[0..92] of String = (
+    'ALTER', 'AND', 'ANY', 'AS', 'ASC', 'AVG',
+    'BEGIN', 'BETWEEN', 'BY',
+    'CASE', 'CAST', 'CHAR', 'CHECK', 'COALESCE', 'COMMIT', 'CONSTRAINT',
+    'COUNT', 'CREATE', 'CROSS', 'CURRENT_DATE', 'CURRENT_TIME',
+    'CURRENT_TIMESTAMP', 'CURSOR',
+    'DECLARE', 'DECIMAL', 'DEFAULT', 'DELETE', 'DESC', 'DISTINCT', 'DO', 'DROP',
+    'ELSE', 'END', 'EXCEPTION', 'EXECUTE', 'EXISTS', 'EXIT',
+    'FETCH', 'FIRST', 'FOR', 'FOREIGN', 'FROM', 'FULL', 'FUNCTION',
+    'GENERATOR', 'GRANT', 'GROUP', 'HAVING',
+    'IF', 'IN', 'INDEX', 'INNER', 'INSERT', 'INTO', 'IS',
+    'JOIN', 'KEY', 'LEFT', 'LIKE', 'MAX', 'MERGE', 'MIN',
+    'NOT', 'NULL', 'ON', 'OR', 'ORDER', 'OUTER',
+    'PLAN', 'PRIMARY', 'PROCEDURE', 'RETURNING', 'RETURNS', 'RIGHT', 'ROLLBACK',
+    'ROWS', 'SELECT', 'SET', 'SKIP', 'SUM',
+    'TABLE', 'THEN', 'TRIGGER', 'UNION', 'UNIQUE', 'UPDATE', 'USING',
+    'VALUES', 'VIEW', 'WHEN', 'WHERE', 'WHILE', 'WITH'
+    );
+
+procedure AddFirebirdKeywords(Dest: TStrings);
+var
+  Idx: Integer;
+begin
+  if not Assigned(Dest) then
+    Exit;
+  for Idx := Low(CompletionKeywords) to High(CompletionKeywords) do
+    Dest.Add(CompletionKeywords[Idx]);
+  { The newer words this unit exists for, so completion and highlighting agree
+    on what the server understands. }
+  for Idx := Low(ExtraFirebirdKeywords) to High(ExtraFirebirdKeywords) do
+    Dest.Add(ExtraFirebirdKeywords[Idx]);
+end;
 
 procedure ApplyFirebirdKeywords(Highlighter: TSynSQLSyn);
 var

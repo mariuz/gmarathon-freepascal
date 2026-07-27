@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SQLStatementText, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SQLStatementText, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls, SynCompletion, SQLCompletion, FirebirdKeywords;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -177,6 +177,7 @@ type
     procedure cmbConnectionDropDown(Sender: TObject);
     procedure qrySQLStatementFilterRecord(DataSet: TDataSet; var Accept: Boolean);
 	private
+		FCompletion: TSynCompletion;
 		{ Private declarations }
 		{ Holds the single output row of a statement Firebird executes with
 		  output rather than through a cursor - see ExecuteSingletonOutput. }
@@ -259,6 +260,11 @@ type
 		procedure DoPaste; override;
 
 		function CanFind: Boolean; override;
+		{ Ctrl+Space completion. SynEdit supplies the popup; what this adds is
+		  deciding what to put in it - keywords and the connection's objects
+		  normally, and that object's columns after a dot. }
+		procedure SetUpCompletion;
+		procedure CompletionExecute(Sender: TObject);
 		procedure DoFind; override;
 
 		function CanReplace: Boolean; override;
@@ -352,7 +358,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs;
 
 {$R *.lfm}
 
@@ -493,6 +499,7 @@ begin
 
 	FExecuteMode := exStatement;
 	cmbMode.ItemIndex := 0;
+	SetUpCompletion;
 
 	imgSuccess.Parent := stsSQLStatement;
 	imgSuccess.Top := 5;
@@ -1594,6 +1601,81 @@ begin
 	finally
 		Screen.Cursor := crDefault;
 		{$IFNDEF FPC}qrySQLStatement.EndBusy;{$ENDIF}
+	end;
+end;
+
+procedure TfrmSQLForm.SetUpCompletion;
+begin
+	FCompletion := TSynCompletion.Create(Self);
+	FCompletion.Editor := edSQLStatement;
+	{ Ctrl+Space, which is what every other SQL tool uses. SynEdit's default is
+	  the same shortcut, but it is set explicitly so a change of default does
+	  not silently move it. }
+	FCompletion.ShortCut := Menus.ShortCut(VK_SPACE, [ssCtrl]);
+	{ A dot has to end a token, or typing 'c.' would look like one word and the
+	  list would never see the qualifier. }
+	FCompletion.EndOfTokenChr := '()[]. ,;:-+*/=<>''"';
+	FCompletion.OnExecute := CompletionExecute;
+end;
+
+procedure TfrmSQLForm.CompletionExecute(Sender: TObject);
+var
+	Ctx: TCompletionContext;
+	Conn: TMarathonCacheConnection;
+	Cols: TStringList;
+	Idx: Integer;
+	Line, TableName: String;
+begin
+	FCompletion.ItemList.BeginUpdate;
+	try
+		FCompletion.ItemList.Clear;
+		Line := edSQLStatement.LineText;
+		Ctx := CompletionContextAt(Line, edSQLStatement.CaretX);
+
+		Conn := nil;
+		if ConnectionName <> '' then
+			Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ConnectionName];
+
+		if Ctx.Kind = ckQualified then
+		begin
+			{ After a dot only that object's columns make sense - a keyword there
+			  never does. Nothing is offered when the connection is closed or the
+			  name resolves to nothing, which is better than offering a list that
+			  does not belong to it. }
+			if Assigned(Conn) and Conn.Connected then
+			begin
+				TableName := ResolveAlias(edSQLStatement.Text, Ctx.Qualifier);
+				try
+					Cols := ScriptAsColumnNames(
+						ScriptAsContext(Conn.Connection, Conn.Transaction, Conn.IsIB6,
+							Conn.SQLDialect, Conn.ServerMajorVersion),
+						AnsiUpperCase(TableName));
+					try
+						for Idx := 0 to Cols.Count - 1 do
+							FCompletion.ItemList.Add(Trim(Cols[Idx]));
+					finally
+						Cols.Free;
+					end;
+				except
+					{ An unknown name is the normal case while typing, not an error
+					  to report - it just has no columns to offer. }
+					on E: Exception do ;
+				end;
+			end;
+			Exit;
+		end;
+
+		{ Otherwise: the objects on this connection, then the keywords. Objects
+		  first because they are what the reader cannot remember; keywords are
+		  already highlighted as they type. }
+		if Assigned(Conn) and Conn.Connected then
+		begin
+			FCompletion.ItemList.AddStrings(Conn.TableList);
+			FCompletion.ItemList.AddStrings(Conn.ViewList);
+		end;
+		AddFirebirdKeywords(FCompletion.ItemList);
+	finally
+		FCompletion.ItemList.EndUpdate;
 	end;
 end;
 

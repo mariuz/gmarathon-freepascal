@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion;
 
 var
   Highlighter: TSynSQLSyn;
@@ -71,6 +71,22 @@ var
   Idx: Integer;
   IdentifierKind: Integer;
   Word: String;
+
+procedure CheckContext(const Line: String; CaretX: Integer;
+  ExpectKind: TCompletionKind; const ExpectPartial, ExpectQualifier, What: String);
+var
+  Ctx: TCompletionContext;
+begin
+  Ctx := CompletionContextAt(Line, CaretX);
+  Check((Ctx.Kind = ExpectKind) and (Ctx.Partial = ExpectPartial) and
+        (Ctx.Qualifier = ExpectQualifier), What);
+end;
+
+procedure CheckAlias(const SQLText, Alias, Expect, What: String);
+begin
+  Check(ResolveAlias(SQLText, Alias) = Expect, What +
+    ' (got "' + ResolveAlias(SQLText, Alias) + '")');
+end;
 
 begin
   Highlighter := TSynSQLSyn.Create(nil);
@@ -125,9 +141,43 @@ begin
     Highlighter.Free;
   end;
 
+  { --- What a completion list should offer at a given point --- }
+  WriteLn('Completion context:');
+
+  CheckContext('select ', 8, ckAny, '', '', 'whitespace offers everything');
+  CheckContext('select cus', 11, ckAny, 'cus', '',
+    'a partly typed word is the filter');
+  CheckContext('select c.', 10, ckQualified, '', 'c',
+    'just past a dot asks for that object''s columns');
+  CheckContext('select c.na', 12, ckQualified, 'na', 'c',
+    'and filters them by what follows the dot');
+  { A dot with nothing in front of it qualifies nothing - looking up the
+    columns of '' would offer an empty list where keywords were wanted. }
+  CheckContext('select .', 9, ckAny, '', '', 'a leading dot qualifies nothing');
+  CheckContext('select RDB$DB', 14, ckAny, 'RDB$DB', '',
+    'a Firebird name keeps its $ and is not cut short');
+  { The caret can sit before the end of the line: only what is behind it
+    counts, or typing in the middle of a word would offer the wrong list. }
+  CheckContext('select abc from t', 11, ckAny, 'abc', '',
+    'only the text behind the caret is read');
+
+  WriteLn('Alias resolution:');
+  CheckAlias('select * from CUSTOMERS c', 'c', 'CUSTOMERS', 'a FROM alias');
+  CheckAlias('select * from CUSTOMERS as c', 'c', 'CUSTOMERS', 'an AS alias');
+  CheckAlias('select * from CUSTOMERS c join ORDERS o on o.ID = c.ID', 'o',
+    'ORDERS', 'a JOIN alias');
+  CheckAlias('select * from CUSTOMERS c,ORDERS o', 'o', 'ORDERS',
+    'an alias with no space after the comma');
+  { An unaliased table typed in full has to resolve to itself, or qualifying a
+    column with the table name would offer nothing. }
+  CheckAlias('select * from CUSTOMERS', 'CUSTOMERS', 'CUSTOMERS',
+    'a table named in full');
+  CheckAlias('select * from CUSTOMERS c', 'zz', 'zz',
+    'an unknown alias is left alone');
+
   if Failures > 0 then
   begin
-    WriteLn('FAIL: ', Failures, ' keyword highlighting check(s) failed.');
+    WriteLn('FAIL: ', Failures, ' check(s) failed.');
     Halt(1);
   end;
   WriteLn('PASS: Firebird 5/6 keyword highlighting works.');
