@@ -593,3 +593,4 @@ because the original reasoning no longer holds:
 | 9 | Table designer | Done — added alongside the immediate-apply editor, not converting it |
 | 9 | Cleanup enabled by the shell | Done |
 | — | Printing and print preview | Done — replaced the unported report writers |
+| — | Query builder | Done — rewritten; the Win32 original is deleted |

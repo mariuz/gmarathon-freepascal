@@ -255,7 +255,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, SaveFileFormat, MarathonIDE, MarathonOptions, InputDialog;
+uses Globals, HelpMap, SQLYacc, CompileDBObject, DropObject, SaveFileFormat, MarathonIDE, MarathonOptions, InputDialog, QueryBuilderForm, MarathonProjectCache;
 
 {$R *.lfm}
 
@@ -1590,13 +1590,29 @@ end;
 
 function TfrmTriggerEditor.CanQueryBuilder: Boolean;
 begin
-	Result := False;
+	{ False for the whole of this port until now, because there was no query
+	  builder to offer. }
+	Result := True;
 end;
 
 procedure TfrmTriggerEditor.DoQueryBuilder;
+var
+	Conn: TMarathonCacheConnection;
+	Text: String;
+
 begin
-	// FPC: Query Builder (QBuilder.pas) relies on deep Win32 GDI/grid APIs not ported to LCL; disabled on this port.
-	MessageDlg('The Query Builder is not available in this build.', mtInformation, [mbOK], 0);
+	Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ConnectionName];
+	if not Assigned(Conn) or not Conn.Connected then
+	begin
+		MessageDlg('Connect to a database before building a query.', mtInformation,
+			[mbOK], 0);
+		Exit;
+	end;
+	Text := BuildQuery(Conn.Connection, Conn.Transaction);
+	{ Empty means cancelled, which must leave the editor alone rather than
+	  clearing what was in it. }
+	if Text <> '' then
+		edEditor.SelText := Text;
 end;
 
 procedure TfrmTriggerEditor.OpenMessages;

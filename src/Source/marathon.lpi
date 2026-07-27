@@ -304,12 +304,6 @@
         <HasResources Value="True"/>
         <UnitName Value="SQLInsightItem"/>
       </Unit30>
-      <Unit31>
-        <Filename Value="QBuilder.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="QBuilder"/>
-      </Unit31>
       <Unit32>
         <Filename Value="ReorderColumns.pas"/>
         <IsPartOfProject Value="True"/>
@@ -785,6 +779,12 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="PrintRenderer"/>
       </Unit116>
+      <Unit117>
+        <Filename Value="QueryBuilderForm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="QueryBuilderForm"/>
+      </Unit117>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

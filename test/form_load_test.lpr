@@ -40,7 +40,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel;
 
 var
   Failures: Integer = 0;
@@ -1204,6 +1204,126 @@ begin
   end;
 end;
 
+{ The query builder, which replaces a unit that was never compiled into the
+  program at all.
+
+  The SQL it generates is checked in keyword_test without a widgetset and run
+  against a live server in the smoke test. What needs a display is the canvas,
+  and it is driven through the very mouse handlers the user's mouse reaches -
+  a check that called the model directly would prove the model, which is
+  already proven, and nothing about the form. }
+procedure CheckQueryBuilder(Conn: TMarathonCacheConnection);
+var
+  F: TfrmQueryBuilder;
+  Box2Left: Integer;
+
+  { The form lays its first box out at (12, 12) with a 20-pixel caption and
+    16-pixel rows, and the second one 174 pixels to the right. Repeated here
+    rather than exported, because a test that asked the form where it drew
+    something would agree with whatever the form did. }
+  function TickX(BoxLeft: Integer): Integer;
+  begin
+    Result := BoxLeft + 8;
+  end;
+
+  function RowY(Row: Integer): Integer;
+  begin
+    Result := 12 + 20 + Row * 16 + 6;
+  end;
+
+  { The column name, to the right of the tick box - where a drag starts. }
+  function NameX(BoxLeft: Integer): Integer;
+  begin
+    Result := BoxLeft + 60;
+  end;
+
+begin
+  WriteLn('Query builder:');
+  try
+    F := TfrmQueryBuilder.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the builder .lfm streams (' + E.ClassName + ': ' + E.Message + ')');
+      Exit;
+    end;
+  end;
+  try
+    Check(Assigned(F.pbCanvas) and Assigned(F.memSQL) and Assigned(F.grdColumns),
+      'the builder .lfm streams its canvas, grid and SQL pane');
+    Check(F.SQL = '', 'an empty builder produces no SQL');
+
+    F.LoadFrom(Conn.Connection, Conn.Transaction);
+    Check(F.lstTables.Items.Count > 0,
+      'it lists the connection''s tables (' +
+      IntToStr(F.lstTables.Items.Count) + ')');
+    if F.lstTables.Items.IndexOf('QB_A') < 0 then
+    begin
+      WriteLn('  .... skipped the canvas: the smoke test''s QB_A is not here');
+      Exit;
+    end;
+
+    { Added the way the Add button adds them. }
+    F.lstTables.ItemIndex := F.lstTables.Items.IndexOf('QB_A');
+    F.btnAddClick(nil);
+    F.lstTables.ItemIndex := F.lstTables.Items.IndexOf('QB_B');
+    F.btnAddClick(nil);
+    Check(F.Model.TableCount = 2, 'Add puts a table on the canvas');
+    Check(Pos('QB_A', F.SQL) > 0, 'and it reaches the SQL');
+    Box2Left := 12 + 150 + 24;
+
+    { Painting. This is where a nil canvas or a bad index shows up, and it
+      cannot be reached except by drawing. }
+    try
+      F.pbCanvasPaint(nil);
+      Check(True, 'the canvas paints its boxes');
+    except
+      on E: Exception do
+        Check(False, 'the canvas paints (' + E.ClassName + ': ' + E.Message + ')');
+    end;
+
+    { Ticking a column by clicking its box, through the real handler. QB_A's
+      first column is ID. }
+    F.pbCanvasMouseDown(mbLeft, [], TickX(12), RowY(0));
+    F.pbCanvasMouseUp(mbLeft, [], TickX(12), RowY(0));
+    Check(Pos('QA.ID', F.SQL) > 0, 'clicking a tick box chooses that column');
+    Check(Pos('select *', F.SQL) = 0, 'and replaces the *');
+    Check(F.grdColumns.RowCount = 2, 'and the column grid shows it');
+
+    { Clicking it again unticks it. The form keeps the entry with an empty
+      name so the grid indices hold; what must not happen is that emptiness
+      reaching the SQL as a dangling "QA." reference. }
+    F.pbCanvasMouseDown(mbLeft, [], TickX(12), RowY(0));
+    F.pbCanvasMouseUp(mbLeft, [], TickX(12), RowY(0));
+    Check(Pos('QA.,', F.SQL) = 0, 'clicking again unticks it without leaving a stub');
+    Check(Pos('select *', F.SQL) > 0, 'and the SQL goes back to selecting everything');
+
+    { Joining, by dragging from a column of one box to a column of the other -
+      press, move, release, exactly as a mouse does it. }
+    Check(F.Model.JoinCount = 0, 'nothing is joined yet');
+    F.pbCanvasMouseDown(mbLeft, [], NameX(12), RowY(0));
+    F.pbCanvasMouseMove([], NameX(Box2Left), RowY(1));
+    F.pbCanvasMouseUp(mbLeft, [], NameX(Box2Left), RowY(1));
+    Check(F.Model.JoinCount = 1, 'dragging between two columns makes a join');
+    Check(Pos('inner join', F.SQL) > 0, 'which reaches the SQL');
+    Check(IsFullyJoined(F.Model), 'and the query becomes fully joined');
+
+    { A drag that ends on nothing must not make a join out of thin air. }
+    F.pbCanvasMouseDown(mbLeft, [], NameX(12), RowY(0));
+    F.pbCanvasMouseUp(mbLeft, [], 600, 400);
+    Check(F.Model.JoinCount = 1, 'a drag released on empty canvas joins nothing');
+
+    { Dragging a box by its caption moves it rather than joining anything. }
+    F.pbCanvasMouseDown(mbLeft, [], 60, 16);
+    F.pbCanvasMouseMove([], 260, 216);
+    F.pbCanvasMouseUp(mbLeft, [], 260, 216);
+    Check(F.Model.JoinCount = 1, 'dragging a box by its caption makes no join');
+    Check(F.SQL <> '', 'and the query survives being rearranged');
+  finally
+    F.Free;
+  end;
+end;
+
 { The object editors against two schemas holding the same table name.
 
   This is the one that matters. Firebird 6 made an object name unique per
@@ -1472,6 +1592,7 @@ begin
 
   CheckTableDesignerOn(Conn, TableName);
   CheckSchemaQualifiedEditor(Conn);
+  CheckQueryBuilder(Conn);
 end;
 
 procedure CheckCompletionWiring;

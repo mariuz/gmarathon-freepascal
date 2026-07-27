@@ -19,7 +19,7 @@ uses
   SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
   ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
-  TableDesign, TableDesignIO;
+  TableDesign, TableDesignIO, QueryModel;
 
 var
   DB: TIBDatabase;
@@ -197,6 +197,165 @@ begin
     WriteLn('FAIL: ', What, ' should not appear ("', Needle, '"):');
     WriteLn(DDLText);
     Halt(1);
+  end;
+end;
+
+{ The query builder's SQL, against a real server.
+
+  keyword_test says what the builder should generate; only Firebird can say
+  whether the result parses. Join order is the reason this matters: a query
+  whose FROM clause names a table before the join that introduces it is
+  perfectly well-formed text and is rejected, so a builder that gets it wrong
+  looks right until someone runs it. }
+procedure TestQueryBuilderSQL;
+var
+  M: TQueryModel;
+  SQL: String;
+
+  procedure RunGenerated(const What: String);
+  begin
+    SQL := BuildSelectSQL(M);
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.Close;
+    { The generated statement ends in a semicolon for the editor's benefit; the
+      engine takes one statement and does not want it. }
+    Q.SQL.Text := StripTrailingSemicolon(SQL);
+    try
+      Q.Open;
+      Q.Close;
+      WriteLn('  ok   ', What);
+    except
+      on E: Exception do
+      begin
+        WriteLn('FAIL: the query builder generated SQL Firebird rejected (', What, '): ',
+          E.Message);
+        WriteLn(SQL);
+        if Tr.InTransaction then
+          Tr.Rollback;
+        Halt(1);
+      end;
+    end;
+    if Tr.InTransaction then
+      Tr.Commit;
+  end;
+
+begin
+  WriteLn('Query builder SQL:');
+
+  { Prepared here rather than reusing another suite's tables, so this stands on
+    its own and says what it depends on. }
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Q.SQL.Text := 'execute block as begin ' +
+    'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''QB_A'')) then ' +
+    '  execute statement ''create table QB_A (ID integer not null primary key, NAME varchar(20))''; ' +
+    'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''QB_B'')) then ' +
+    '  execute statement ''create table QB_B (ID integer not null primary key, A_ID integer, NOTE varchar(20))''; ' +
+    'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''QB_C'')) then ' +
+    '  execute statement ''create table QB_C (ID integer not null primary key, B_ID integer, QTY integer)''; ' +
+    'end';
+  Q.ExecSQL;
+  Tr.Commit;
+
+  { One table. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'QB_A');
+    RunGenerated('one table, everything selected');
+  finally
+    M.Free;
+  end;
+
+  { Columns, a filter and a sort. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'QB_A');
+    M.AddColumn('QA', 'NAME').OutputName := 'CUSTOMER';
+    with M.AddColumn('QA', 'ID') do
+    begin
+      Filter := '> 0';
+      Sort := soDescending;
+    end;
+    M.Distinct := True;
+    RunGenerated('columns with an alias, a filter, a sort and DISTINCT');
+  finally
+    M.Free;
+  end;
+
+  { Two tables joined. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'QB_A');
+    M.AddTable('', 'QB_B');
+    M.AddJoin(jkLeft, 'QA', 'ID', 'QB', 'A_ID');
+    M.AddColumn('QA', 'NAME');
+    M.AddColumn('QB', 'NOTE');
+    RunGenerated('two tables with a left join');
+  finally
+    M.Free;
+  end;
+
+  { Three tables added in an order that is not a valid FROM order.
+
+    The chain is QB_A <- QB_B <- QB_C, but they are dropped C, A, B - which is
+    what someone does who starts from the detail table and then adds what it
+    looks up. Emitting them in the order they were added puts QB_A second,
+    where the only join it has names QB_B, which is not in the query yet.
+
+    An earlier version of this test added them A, B, C. That order is already
+    valid, so it passed whether or not JoinOrder did anything at all. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'QB_C');
+    M.AddTable('', 'QB_A');
+    M.AddTable('', 'QB_B');
+    M.AddJoin(jkInner, 'QC', 'B_ID', 'QB', 'ID');
+    M.AddJoin(jkInner, 'QB', 'A_ID', 'QA', 'ID');
+    M.AddColumn('QA', 'NAME');
+    M.AddColumn('QC', 'QTY');
+    RunGenerated('three tables added in an order the FROM clause cannot use');
+  finally
+    M.Free;
+  end;
+
+  { A table joined to nothing still has to produce SQL that runs - it is a
+    cross join, which is a legitimate if rarely intended query. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'QB_A');
+    M.AddTable('', 'QB_B');
+    M.AddTable('', 'QB_C');
+    M.AddJoin(jkInner, 'QB', 'A_ID', 'QA', 'ID');
+    RunGenerated('an unjoined table becomes a cross join that still runs');
+  finally
+    M.Free;
+  end;
+
+  { A self-join, which is what two aliases for one table are for. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'QB_A');
+    M.AddTable('', 'QB_A');
+    M.AddJoin(jkInner, 'QA', 'ID', 'QA2', 'ID');
+    M.AddColumn('QA', 'NAME');
+    M.AddColumn('QA2', 'NAME');
+    RunGenerated('a self-join through two aliases for one table');
+  finally
+    M.Free;
+  end;
+
+  { And with quoting on, which changes every identifier in the statement. }
+  M := TQueryModel.Create;
+  try
+    M.QuoteIdentifiers := True;
+    M.AddTable('', 'QB_A');
+    M.AddTable('', 'QB_B');
+    M.AddJoin(jkInner, 'QA', 'ID', 'QB', 'A_ID');
+    M.AddColumn('QA', 'NAME');
+    RunGenerated('quoted identifiers throughout');
+  finally
+    M.Free;
   end;
 end;
 
@@ -3250,6 +3409,7 @@ begin
     { Left until last: it makes and drops databases of its own, so a failure
       earlier in the run is not hidden behind it. }
     TestTableDesignRoundTrip;
+    TestQueryBuilderSQL;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));

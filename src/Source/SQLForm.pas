@@ -358,7 +358,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm;
 
 {$R *.lfm}
 
@@ -817,9 +817,23 @@ begin
 end;
 
 procedure TfrmSQLForm.actQueryBuilderExecute(Sender: TObject);
+var
+	Conn: TMarathonCacheConnection;
+	Text: String;
+
 begin
-	// FPC: Query Builder (QBuilder.pas) relies on deep Win32 GDI/grid APIs not ported to LCL; disabled on this port.
-	MessageDlg('The Query Builder is not available in this build.', mtInformation, [mbOK], 0);
+	Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ConnectionName];
+	if not Assigned(Conn) or not Conn.Connected then
+	begin
+		MessageDlg('Connect to a database before building a query.', mtInformation,
+			[mbOK], 0);
+		Exit;
+	end;
+	Text := BuildQuery(Conn.Connection, Conn.Transaction);
+	{ Empty means cancelled, which must leave the editor alone rather than
+	  clearing what was in it. }
+	if Text <> '' then
+		edSQLStatement.SelText := Text;
 end;
 
 procedure TfrmSQLForm.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);

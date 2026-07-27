@@ -38,6 +38,7 @@ uses
   SchemaCompareDialog in 'SchemaCompareDialog.pas' {frmSchemaCompare},
   TableDesignerForm in 'TableDesignerForm.pas' {frmTableDesigner},
   PrintRenderer in 'PrintRenderer.pas',
+  QueryBuilderForm in 'QueryBuilderForm.pas' {frmQueryBuilder},
   CreateDatabaseDialog in 'CreateDatabaseDialog.pas' {frmCreateDatabase},
   CommandPaletteDialog in 'CommandPaletteDialog.pas' {frmCommandPalette},
   SaveFileFormat in 'SaveFileFormat.pas' {frmSaveFileFormat},

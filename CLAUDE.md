@@ -49,6 +49,8 @@ The application is structured in layers:
 
 **Printing** — `src/Common/PrintDocument.pas` builds a document from blocks (title, headings, text, tables) and paginates it onto a character grid; it needs no printer and no LCL, so pagination is tested headlessly. `src/Source/PrintRenderer.pas` draws a page onto any canvas — the printer's or the preview's — in a fixed-pitch font sized to make the grid span the page. `PrintPreviewForm.pas` renders pages onto a paint box; `GlobalPrintingRoutines.pas` builds the documents, taking object reports from `DDLExtractor`. This replaced the `PagePrnt`/`DSprint` report writers, which were never ported.
 
+**Query Builder** — `src/Common/QueryModel.pas` holds the tables, joins and columns and generates the `SELECT`; it needs no widgetset, so join ordering is tested headlessly and the generated statements are run against a live server by the smoke test. `src/Source/QueryBuilderForm.pas` draws the canvas. This replaced `QBuilder.pas` (deleted), 2819 lines of Win32 GDI that was never compiled into this port.
+
 **Plugin System** — `GimbalToolsAPI.pas` defines the public plugin interface; `GimbalToolsAPIImpl.pas` is the implementation. Plugins are managed via `PluginsDialog.pas`.
 
 **Editor** — `lib/SyntaxMemoWithStuff2/` wraps SynEdit with SQL syntax highlighting, code completion (`SQLInsightItem.pas`), bookmarks, and drag-and-drop.
@@ -142,6 +144,5 @@ without frame pointers, so the caller's frame is lost.
 - Tri-state checkbox handling (previously via VirtualTreeView)
 
 The following features are intentionally stubbed/disabled on this FPC/Lazarus port (they show a "not available" message or silently no-op) because they depend on deep Win32-only APIs or on report-writer/editor units that were never ported. Each is a candidate for a real follow-up port:
-- **Query Builder** (`QBuilder.pas`) — not compiled into the app at all (removed from `marathon.lpr`); deep Win32 GDI/grid message handling (`WM_*`, `TWMMouse`, raw `Polygon`/`ClipCursor` calls).
 - **SQL Insight code templates** (Options dialog "SQL Insight" tab) and **bookmark glyphs** in the SQL/trigger/SP editors — `src/Source/SyntaxMemoWithStuff2.pas` is a reduced stub of the full editor wrapper at `lib/SyntaxMemoWithStuff2/SyntaxMemoWithStuff2.pas` (which is itself unported/unbuilt); it's still missing `AddQuestGlyph`/`RemoveQuestGlyph`. The `SQLInsightList` completion surface was never needed: SynEdit's own `TSynCompletion` provides the popup, and `src/Common/SQLCompletion.pas` decides what goes in it. **Find/Replace now works** — `WSFind`/`WSFindNext`/`WSReplace` are implemented over SynEdit's own `SearchReplace` and the already-ported `FindDlg`/`ReplDlg`.
 - **Keybinding editor** (`btnEditKeysClick` in `MarathonOptions.pas`) — `MarathonMain.pas`'s `kbgKeys` is a bare `TComponent` placeholder, not a real keybinding grid.

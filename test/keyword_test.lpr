@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,211 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestQueryModel;
+var
+  M: TQueryModel;
+  C: TQueryColumn;
+  Order: TStringList;
+  SQL: String;
+  A, B: Integer;
+begin
+  { An empty builder produces nothing rather than a broken statement. }
+  M := TQueryModel.Create;
+  try
+    Check(BuildSelectSQL(M) = '', 'an empty query builds no SQL');
+  finally
+    M.Free;
+  end;
+
+  { Aliases. The same table dropped twice is a self-join, not a mistake. }
+  M := TQueryModel.Create;
+  try
+    Check(M.AddTable('', 'CUSTOMERS').Alias = 'C', 'an alias comes from the initials');
+    Check(M.AddTable('', 'ORDER_LINE_ITEM').Alias = 'OLI',
+      'and from the initial of each word');
+    Check(M.AddTable('', 'CUSTOMERS').Alias <> 'C',
+      'the same table twice gets a second alias, so a self-join works');
+  finally
+    M.Free;
+  end;
+
+  { One table, nothing ticked. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'CUSTOMERS');
+    SQL := BuildSelectSQL(M);
+    Check(Pos('select *', SQL) > 0, 'no columns chosen selects everything');
+    Check(Pos('from CUSTOMERS C', SQL) > 0, 'and the table is aliased in FROM');
+  finally
+    M.Free;
+  end;
+
+  { Columns, output names, filters and sorts. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'CUSTOMERS');
+    C := M.AddColumn('C', 'NAME');
+    C.OutputName := 'Customer';
+    C := M.AddColumn('C', 'BALANCE');
+    C.Filter := '> 100';
+    C.Sort := soDescending;
+    SQL := BuildSelectSQL(M);
+    Check(Pos('C.NAME as Customer', SQL) > 0, 'an output name becomes AS');
+    Check(Pos('where C.BALANCE > 100', SQL) > 0, 'a filter becomes WHERE');
+    Check(Pos('order by C.BALANCE desc', SQL) > 0, 'and a sort becomes ORDER BY');
+    { Both columns, not just the last one to be added. }
+    Check((Pos('C.NAME', SQL) > 0) and (Pos('C.BALANCE', SQL) > 0),
+      'every chosen column is selected');
+  finally
+    M.Free;
+  end;
+
+  { Distinct. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'T');
+    M.Distinct := True;
+    Check(Pos('select distinct', BuildSelectSQL(M)) > 0, 'DISTINCT is emitted');
+  finally
+    M.Free;
+  end;
+
+  { Two tables and a join. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'CUSTOMERS');
+    M.AddTable('', 'ORDERS');
+    M.AddJoin(jkInner, 'C', 'ID', 'O', 'CUST_ID');
+    SQL := BuildSelectSQL(M);
+    Check(Pos('inner join ORDERS O on', SQL) > 0, 'a join becomes a JOIN clause');
+    Check(Pos('C.ID = O.CUST_ID', SQL) > 0, 'with its condition');
+    Check(IsFullyJoined(M), 'and the query is fully joined');
+  finally
+    M.Free;
+  end;
+
+  { Join kinds. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'A_TAB');
+    M.AddTable('', 'B_TAB');
+    M.AddJoin(jkLeft, 'AT', 'ID', 'BT', 'AID');
+    Check(Pos('left join', BuildSelectSQL(M)) > 0, 'a left join says so');
+  finally
+    M.Free;
+  end;
+
+  { Join order - the part that produces SQL the server rejects if it is wrong.
+    The joins are made in an order that does not match the table order, which
+    is exactly what a user dragging lines around produces. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'AAA');
+    M.AddTable('', 'BBB');
+    M.AddTable('', 'CCC');
+    { CCC joins to BBB, and BBB joins to AAA - but the CCC join is made
+      first. Emitting the joins in the order they were made would name BBB
+      before BBB is in the query. }
+    M.AddJoin(jkInner, 'C', 'BID', 'B', 'ID');
+    M.AddJoin(jkInner, 'B', 'AID', 'A', 'ID');
+    Order := JoinOrder(M);
+    try
+      Check(Order.IndexOf('A') = 0, 'the first table added leads the FROM clause');
+      Check(Order.IndexOf('B') < Order.IndexOf('C'),
+        'and a table is ordered after the one it joins to');
+    finally
+      Order.Free;
+    end;
+    SQL := BuildSelectSQL(M);
+    { Every alias must be introduced before it is used in an ON clause. }
+    A := Pos('BBB B', SQL);
+    B := Pos('B.AID', SQL);
+    Check((A > 0) and (B > 0) and (A < B),
+      'an alias is declared before any ON clause names it');
+    Check(IsFullyJoined(M), 'three tables joined in a chain are fully joined');
+  finally
+    M.Free;
+  end;
+
+  { A table nobody joined. It still belongs in the query - the user put it
+    there - but the SQL must say so rather than invent a condition. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'AAA');
+    M.AddTable('', 'BBB');
+    M.AddTable('', 'ZZZ');
+    M.AddJoin(jkInner, 'A', 'ID', 'B', 'AID');
+    Check(not IsFullyJoined(M), 'an unjoined table is reported, not hidden');
+    SQL := BuildSelectSQL(M);
+    Check(Pos('ZZZ Z', SQL) > 0, 'and still appears in the query');
+    Check(Pos('on Z.', SQL) = 0, 'without a condition being made up for it');
+  finally
+    M.Free;
+  end;
+
+  { A table joined to two others: the second connection is a condition on the
+    first join, not a second JOIN clause naming the same table twice. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'AAA');
+    M.AddTable('', 'BBB');
+    M.AddJoin(jkInner, 'A', 'ID1', 'B', 'ID1');
+    M.AddJoin(jkInner, 'A', 'ID2', 'B', 'ID2');
+    SQL := BuildSelectSQL(M);
+    Check(Pos('and A.ID2 = B.ID2', SQL) > 0,
+      'a second join between the same tables becomes an extra condition');
+    A := 0;
+    for B := 1 to Length(SQL) - 4 do
+      if Copy(SQL, B, 4) = 'BBB ' then
+        Inc(A);
+    Check(A = 1, 'and the table is named once, not joined twice');
+  finally
+    M.Free;
+  end;
+
+  { Removing a table takes its columns and joins with it - a column naming an
+    alias the FROM clause no longer declares is rejected by the server. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'AAA');
+    M.AddTable('', 'BBB');
+    M.AddColumn('A', 'X');
+    M.AddColumn('B', 'Y');
+    M.AddJoin(jkInner, 'A', 'ID', 'B', 'AID');
+    M.RemoveTable('B');
+    Check(M.TableCount = 1, 'removing a table removes it');
+    Check(M.ColumnCount = 1, 'and the columns that named it');
+    Check(M.JoinCount = 0, 'and the joins that named it');
+    Check(Pos('B.', BuildSelectSQL(M)) = 0, 'so nothing refers to it any more');
+  finally
+    M.Free;
+  end;
+
+  { Schemas, reusing what the editors already know about them. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('S_ALPHA', 'CUSTOMERS');
+    Check(Pos('S_ALPHA.CUSTOMERS', BuildSelectSQL(M)) > 0,
+      'a table in a schema is named with it');
+  finally
+    M.Free;
+  end;
+
+  { Quoting is off by default: Firebird folds unquoted names to upper case, and
+    quoting everything makes a generated query case-sensitive unasked. }
+  M := TQueryModel.Create;
+  try
+    M.AddTable('', 'CUSTOMERS');
+    Check(Pos('"', BuildSelectSQL(M)) = 0, 'identifiers are unquoted by default');
+    M.QuoteIdentifiers := True;
+    M.AddColumn('C', 'Mixed Case');
+    Check(Pos('"Mixed Case"', BuildSelectSQL(M)) > 0,
+      'and quoted when asked, for a name that needs it');
+  finally
+    M.Free;
+  end;
 end;
 
 procedure TestPrintDocument;
@@ -847,6 +1052,9 @@ begin
 
   WriteLn('Print pagination:');
   TestPrintDocument;
+
+  WriteLn('Query builder:');
+  TestQueryModel;
 
   if Failures > 0 then
   begin

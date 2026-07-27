@@ -1,0 +1,222 @@
+object frmQueryBuilder: TfrmQueryBuilder
+  Left = 200
+  Height = 600
+  Top = 110
+  Width = 900
+  Caption = 'Query Builder'
+  ClientHeight = 600
+  ClientWidth = 900
+  Position = poScreenCenter
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  LCLVersion = '2.2.6.0'
+  object pnlLeft: TPanel
+    Left = 0
+    Height = 559
+    Top = 0
+    Width = 190
+    Align = alLeft
+    BevelOuter = bvNone
+    ClientHeight = 559
+    ClientWidth = 190
+    TabOrder = 0
+    object lblTables: TLabel
+      Left = 6
+      Height = 15
+      Top = 6
+      Width = 40
+      Caption = 'Tables:'
+      ParentColor = False
+    end
+    object lstTables: TListBox
+      Left = 6
+      Height = 496
+      Top = 26
+      Width = 178
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      ItemHeight = 0
+      TabOrder = 0
+      OnDblClick = lstTablesDblClick
+    end
+    object btnAdd: TButton
+      Left = 6
+      Height = 25
+      Top = 528
+      Width = 178
+      Anchors = [akLeft, akRight, akBottom]
+      Caption = 'Add to Query'
+      TabOrder = 1
+      OnClick = btnAddClick
+    end
+  end
+  object splLeft: TSplitter
+    Left = 190
+    Height = 559
+    Top = 0
+    Width = 5
+  end
+  object pnlCanvas: TPanel
+    Left = 195
+    Height = 320
+    Top = 0
+    Width = 705
+    Align = alClient
+    BevelOuter = bvLowered
+    Caption = ''
+    ClientHeight = 318
+    ClientWidth = 703
+    TabOrder = 1
+    object pbCanvas: TPaintBox
+      Left = 0
+      Height = 318
+      Top = 0
+      Width = 703
+      Align = alClient
+      OnMouseDown = pbCanvasMouseDown
+      OnMouseMove = pbCanvasMouseMove
+      OnMouseUp = pbCanvasMouseUp
+      OnPaint = pbCanvasPaint
+    end
+  end
+  object splBottom: TSplitter
+    Cursor = crVSplit
+    Left = 195
+    Height = 5
+    Top = 320
+    Width = 705
+    Align = alBottom
+    ResizeAnchor = akBottom
+  end
+  object pnlBottom: TPanel
+    Left = 195
+    Height = 234
+    Top = 325
+    Width = 705
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 234
+    ClientWidth = 705
+    TabOrder = 2
+    object pgBottom: TPageControl
+      Left = 0
+      Height = 234
+      Top = 0
+      Width = 705
+      ActivePage = tsColumns
+      Align = alClient
+      TabIndex = 0
+      TabOrder = 0
+      object tsColumns: TTabSheet
+        Caption = 'Columns'
+        ClientHeight = 206
+        ClientWidth = 697
+        object grdColumns: TStringGrid
+          Left = 0
+          Height = 206
+          Top = 0
+          Width = 697
+          Align = alClient
+          ColCount = 4
+          Columns = <
+            item
+              ReadOnly = True
+              Title.Caption = 'Column'
+              Width = 220
+            end
+            item
+              Title.Caption = 'Output name'
+              Width = 160
+            end
+            item
+              PickList.Strings = (
+                ''
+                'asc'
+                'desc'
+              )
+              Title.Caption = 'Sort'
+              Width = 80
+            end
+            item
+              Title.Caption = 'Condition'
+              Width = 200
+            end>
+          FixedCols = 0
+          Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goEditing, goSmoothScroll]
+          RowCount = 1
+          TabOrder = 0
+          OnEditingDone = grdColumnsEditingDone
+        end
+      end
+      object tsSQL: TTabSheet
+        Caption = 'SQL'
+        ClientHeight = 206
+        ClientWidth = 697
+        object memSQL: TMemo
+          Left = 0
+          Height = 206
+          Top = 0
+          Width = 697
+          Align = alClient
+          Font.Name = 'Monospace'
+          ParentFont = False
+          ReadOnly = True
+          ScrollBars = ssAutoBoth
+          TabOrder = 0
+          WordWrap = False
+        end
+      end
+    end
+  end
+  object pnlButtons: TPanel
+    Left = 0
+    Height = 41
+    Top = 559
+    Width = 900
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 41
+    ClientWidth = 900
+    TabOrder = 3
+    object chkDistinct: TCheckBox
+      Left = 8
+      Height = 19
+      Top = 10
+      Width = 66
+      Caption = 'DISTINCT'
+      TabOrder = 0
+      OnClick = chkDistinctClick
+    end
+    object lblWarning: TLabel
+      Left = 92
+      Height = 15
+      Top = 12
+      Width = 600
+      Caption = ''
+      Font.Color = clMaroon
+      ParentColor = False
+      ParentFont = False
+    end
+    object btnOK: TButton
+      Left = 712
+      Height = 25
+      Top = 8
+      Width = 85
+      Anchors = [akTop, akRight]
+      Caption = 'OK'
+      Default = True
+      ModalResult = 1
+      TabOrder = 1
+    end
+    object btnCancel: TButton
+      Left = 805
+      Height = 25
+      Top = 8
+      Width = 85
+      Anchors = [akTop, akRight]
+      Cancel = True
+      Caption = 'Cancel'
+      ModalResult = 2
+      TabOrder = 2
+    end
+  end
+end
