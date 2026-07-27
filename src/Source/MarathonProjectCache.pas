@@ -548,6 +548,14 @@ type
   { An object in a named schema. It carries the schema so that extracting its
     DDL can qualify the result; the editors and the drop dialog do not take one
     yet, which is why this offers neither. }
+  { A heading that gathers the connections of one environment. It is a label
+    and nothing else - every operation belongs to the connections inside it. }
+  TMarathonCacheConnectionGroup = class(TMarathonCacheBaseNode)
+  public
+    constructor Create; override;
+    function CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean; override;
+  end;
+
   TMarathonCacheSchemaMember = class(TMarathonCacheObject)
   private
     FSchema: String;
@@ -675,6 +683,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+		function CollectConnections(Into: TList): Integer;
+		procedure RegroupConnections;
 		function AddConnectionInternal: TMarathonCacheConnection;
     function AddServerInternal: TMarathonCacheServer;
     procedure DatabaseDisconnecting(ConnectionName: String);
@@ -1444,49 +1454,178 @@ end;
 
 function TMarathonProjectDatabaseCache.GetConnection(Index: Integer): TMarathonCacheConnection;
 var
-  TNV: TMarathonTreeNode;
-
+	L: TList;
 begin
-  Result := nil;
-	TNV := FCache.FindPathNode(cSepChar + 'Connections');
-	if Assigned(TNV) then
-		Result := TMarathonCacheConnection(TNV.Item[Index].Data);
+	Result := nil;
+	L := TList.Create;
+	try
+		CollectConnections(L);
+		if (Index >= 0) and (Index < L.Count) then
+			Result := TMarathonCacheConnection(L[Index]);
+	finally
+		L.Free;
+	end;
 end;
 
 function TMarathonProjectDatabaseCache.GetConnectionByName(Index: String): TMarathonCacheConnection;
 var
-	TNV: TMarathonTreeNode;
-	CTNV: TMarathonTreeNode;
-
+	L: TList;
+	Idx: Integer;
 begin
 	Result := nil;
-	TNV := FCache.FindPathNode(cSepChar + 'Connections');
-	if Assigned(TNV) then
-	begin
-		CTNV := TNV.GetFirstChild;
-		while CTNV <> nil do
+	L := TList.Create;
+	try
+		CollectConnections(L);
+		for Idx := 0 to L.Count - 1 do
+			if AnsiLowerCase(TMarathonCacheConnection(L[Idx]).Caption) = AnsiLowerCase(Index) then
+				Exit(TMarathonCacheConnection(L[Idx]));
+	finally
+		L.Free;
+	end;
+end;
+
+{ Gathers the connections under a heading per environment.
+
+  Only when more than one environment is actually in use: a project where every
+  connection is Production, or none is tagged at all, gains nothing from a
+  single heading with everything under it. Grouping is presentation, so it can
+  be undone and redone at will - which is what happens when a connection's
+  environment changes. }
+procedure TMarathonProjectDatabaseCache.RegroupConnections;
+var
+	Root, Node, Next: TMarathonTreeNode;
+	Conns: TList;
+	Idx: Integer;
+	Conn: TMarathonCacheConnection;
+	Environments: TStringList;
+	GroupNode: TMarathonTreeNode;
+	Group: TMarathonCacheConnectionGroup;
+	Name: String;
+begin
+	Root := FCache.FindPathNode(cSepChar + 'Connections');
+	if not Assigned(Root) then
+		Exit;
+
+	Conns := TList.Create;
+	Environments := TStringList.Create;
+	try
+		CollectConnections(Conns);
+		Environments.Sorted := True;
+		Environments.Duplicates := dupIgnore;
+		for Idx := 0 to Conns.Count - 1 do
+			Environments.Add(EnvironmentDisplayName(
+				TMarathonCacheConnection(Conns[Idx]).Environment));
+
+		{ Take the tree back to a flat list first, so this is the same operation
+		  whether or not it has been grouped before. The connection objects are
+		  reattached, never rebuilt - they hold live database handles. }
+		Node := Root.GetFirstChild;
+		while Assigned(Node) do
 		begin
-			if AnsiLowerCase(CTNV.Text) = AnsiLowerCase(Index) then
+			Next := Node.GetNextSibling;
+			if TObject(Node.Data) is TMarathonCacheConnectionGroup then
 			begin
-				Result := TMarathonCacheConnection(CTNV.Data);
-				Break;
+				TObject(Node.Data).Free;
+				Node.Data := nil;
+				Node.Delete;
 			end;
-			CTNV := CTNV.GetNextSibling;
+			Node := Next;
 		end;
+		for Idx := 0 to Conns.Count - 1 do
+		begin
+			Conn := TMarathonCacheConnection(Conns[Idx]);
+			Conn.ContainerNode := FCache.AddPathNode(Root, Conn.Caption);
+			Conn.ContainerNode.Data := Conn;
+		end;
+
+		if Environments.Count < 2 then
+			Exit;
+
+		for Idx := 0 to Environments.Count - 1 do
+		begin
+			Name := Environments[Idx];
+			GroupNode := FCache.AddPathNode(Root, Name);
+			Group := TMarathonCacheConnectionGroup.Create;
+			Group.RootItem := Self;
+			Group.Caption := Name;
+			Group.ContainerNode := GroupNode;
+			GroupNode.Data := Group;
+		end;
+
+		{ Move each connection under its heading. }
+		Node := Root.GetFirstChild;
+		while Assigned(Node) do
+		begin
+			Next := Node.GetNextSibling;
+			if TObject(Node.Data) is TMarathonCacheConnection then
+			begin
+				Conn := TMarathonCacheConnection(Node.Data);
+				Name := EnvironmentDisplayName(Conn.Environment);
+				GroupNode := Root.GetFirstChild;
+				while Assigned(GroupNode) and (GroupNode.Text <> Name) do
+					GroupNode := GroupNode.GetNextSibling;
+				if Assigned(GroupNode) then
+				begin
+					Node.Data := nil;
+					Node.Delete;
+					Conn.ContainerNode := FCache.AddPathNode(GroupNode, Conn.Caption);
+					Conn.ContainerNode.Data := Conn;
+				end;
+			end;
+			Node := Next;
+		end;
+	finally
+		Environments.Free;
+		Conns.Free;
+	end;
+end;
+
+{ Every connection under the Connections node, whether it sits there directly
+  or inside an environment group. The three accessors below used to read the
+  node's direct children, which made "how many connections are there" the same
+  question as "how deep is the tree" - so grouping them would have emptied the
+  connection list everywhere, including the project file. Collecting them is
+  now one place, and the shape of the tree is not part of the answer. }
+function TMarathonProjectDatabaseCache.CollectConnections(Into: TList): Integer;
+var
+	TNV, Child, GrandChild: TMarathonTreeNode;
+begin
+	if Assigned(Into) then
+		Into.Clear;
+	Result := 0;
+	TNV := FCache.FindPathNode(cSepChar + 'Connections');
+	if not Assigned(TNV) then
+		Exit;
+	Child := TNV.GetFirstChild;
+	while Assigned(Child) do
+	begin
+		if TObject(Child.Data) is TMarathonCacheConnectionGroup then
+		begin
+			GrandChild := Child.GetFirstChild;
+			while Assigned(GrandChild) do
+			begin
+				if TObject(GrandChild.Data) is TMarathonCacheConnection then
+				begin
+					if Assigned(Into) then
+						Into.Add(GrandChild.Data);
+					Inc(Result);
+				end;
+				GrandChild := GrandChild.GetNextSibling;
+			end;
+		end
+		else if TObject(Child.Data) is TMarathonCacheConnection then
+		begin
+			if Assigned(Into) then
+				Into.Add(Child.Data);
+			Inc(Result);
+		end;
+		Child := Child.GetNextSibling;
 	end;
 end;
 
 function TMarathonProjectDatabaseCache.GetConnectionCount: Integer;
-var
-	TNV: TMarathonTreeNode;
-
 begin
-	Result := 0;
-	TNV := FCache.FindPathNode(cSepChar + 'Connections');
-	if Assigned(TNV) then
-	begin
-		Result := TNV.Count;
-	end;
+	Result := CollectConnections(nil);
 end;
 
 { TMarathonCacheCache }
@@ -3569,6 +3708,9 @@ begin
     end;
   end;
   FOpen := True;
+  { Connections are read one at a time, so their environments are only all
+    known once the file has been read. }
+  FCache.RegroupConnections;
 end;
 
 procedure TMarathonProject.SaveToFile(FileName: String);
@@ -4889,6 +5031,18 @@ begin
 		NV.Data := Header;
 	end;
 	FExpanded := True;
+end;
+
+constructor TMarathonCacheConnectionGroup.Create;
+begin
+	inherited;
+	FCacheType := ctFolder;
+	FImageIndex := 0;
+end;
+
+function TMarathonCacheConnectionGroup.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
+begin
+	Result := False;
 end;
 
 constructor TMarathonCacheSchemaMember.Create;

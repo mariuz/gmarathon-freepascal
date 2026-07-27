@@ -383,9 +383,27 @@ and schema comparison all exist here already. The gap is arrangement.
   and tested there without a widgetset; the dialog is checked against the
   application's own action list, which is what makes "it finds the commands
   that actually exist" a real claim rather than one about a fixture.
-- [ ] **6. Connection dialog and connection groups** — one dialog rather than
-  the current master-properties tab, reusing the environment colours already
-  implemented.
+- [~] **6. Connection groups** — connections are gathered under a heading per
+  environment, and only when more than one environment is in use: a project
+  where everything is Production, or nothing is tagged, gains nothing from a
+  single heading over the lot. Grouping is presentation, so it can be run again
+  whenever an environment changes, and running it twice neither multiplies the
+  headings nor loses a connection.
+
+  The work was not the headings. `ConnectionCount`, `Connections[]` and
+  `ConnectionByName` were each *defined* as the direct children of the
+  Connections node — so "how many connections are there" was the same question
+  as "how deep is the tree", and adding a level under it would have emptied the
+  connection list everywhere, including the project file on the next save.
+  Collecting connections is now one routine that does not care about the shape
+  of the tree, and the accessors go through it. Reverting just that and leaving
+  the grouping in place does not fail the suite so much as hang it, which is
+  what `Connections[]` handing back a group node cast to a connection looks
+  like.
+
+  Not done: the **dedicated connection dialog**. The master-properties
+  connection tab already has every field one would have, so a new dialog would
+  be a second way to do the same thing rather than a better one.
 - [ ] **7. Table designer** — a visual editor for creating and altering tables.
   Large, and the first item here that is genuinely new capability rather than
   rearrangement.
@@ -461,6 +479,6 @@ because the original reasoning no longer holds:
 | 9 | Explorer filtering and type-aware search | Done |
 | 9 | Results beneath the statement | Done |
 | 9 | Command palette | Done |
-| 9 | Connection dialog and groups | Not started |
+| 9 | Connection groups | Done; dedicated dialog judged not worth it |
 | 9 | Table designer | Not started |
 | 9 | Cleanup enabled by the shell | Not started |

@@ -1590,6 +1590,73 @@ begin
   end;
 end;
 
+{ Connections gathered under a heading per environment.
+
+  The point of the check is not the headings but everything that reads the
+  connection list: ConnectionCount, Connections[] and ConnectionByName were all
+  defined as the direct children of the Connections node, so adding a level
+  under it would have emptied the connection list everywhere - including the
+  project file, silently, on the next save. }
+procedure CheckConnectionGrouping;
+var
+  Cache: TMarathonProjectDatabaseCache;
+  A, B, C: TMarathonCacheConnection;
+  Root, Node: TMarathonTreeNode;
+  Groups: Integer;
+begin
+  WriteLn('Connection grouping:');
+  Cache := MarathonIDEInstance.CurrentProject.Cache;
+
+  A := Cache.AddConnectionInternal;
+  A.Caption := 'GroupProd';
+  A.Environment := envProduction;
+  B := Cache.AddConnectionInternal;
+  B.Caption := 'GroupDev';
+  B.Environment := envDevelopment;
+  C := Cache.AddConnectionInternal;
+  C.Caption := 'GroupDev2';
+  C.Environment := envDevelopment;
+
+  Cache.RegroupConnections;
+
+  { What every caller depends on, checked first. }
+  Check(Cache.ConnectionCount >= 3, 'grouping leaves the connection count intact (' +
+    IntToStr(Cache.ConnectionCount) + ')');
+  Check(Cache.ConnectionByName['GroupProd'] = A, 'a grouped connection is still found by name');
+  Check(Cache.ConnectionByName['GroupDev2'] = C, 'including one in a group of several');
+  Check(Cache.Connections[0] <> nil, 'and by index');
+
+  { And then the headings themselves. }
+  Root := Cache.Cache.FindPathNode(#2 + 'Connections');
+  Groups := 0;
+  Node := Root.GetFirstChild;
+  while Assigned(Node) do
+  begin
+    if TObject(Node.Data) is TMarathonCacheConnectionGroup then
+      Inc(Groups);
+    Node := Node.GetNextSibling;
+  end;
+  Check(Groups >= 2, 'connections of different environments get separate headings (' +
+    IntToStr(Groups) + ')');
+  Check(A.ContainerNode.Parent <> Root, 'and the connections move under them');
+
+  { Grouping is presentation, so doing it twice must not multiply headings or
+    lose a connection - it runs again whenever an environment changes. }
+  Cache.RegroupConnections;
+  Groups := 0;
+  Node := Root.GetFirstChild;
+  while Assigned(Node) do
+  begin
+    if TObject(Node.Data) is TMarathonCacheConnectionGroup then
+      Inc(Groups);
+    Node := Node.GetNextSibling;
+  end;
+  Check(Groups >= 2, 'regrouping does not multiply the headings (' +
+    IntToStr(Groups) + ')');
+  Check(Cache.ConnectionByName['GroupProd'] = A,
+    'and the connections survive it');
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1990,6 +2057,7 @@ begin
   CheckExplorerFilter;
   CheckResultsUnderEditor;
   CheckCommandPalette;
+  CheckConnectionGrouping;
   CheckHighDPIScaling;
   CheckCompletionWiring;
   CheckEditorSearch;
