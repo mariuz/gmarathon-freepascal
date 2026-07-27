@@ -27,7 +27,7 @@ Required Lazarus packages: `SynEdit`, `LCL`, `Printer4Lazarus`, `TAChartLazarusP
 
 ## Tests
 
-No unit test suite exists. Manual testing only via Lazarus IDE. `test/ibx_smoke_test.lpr` is a standalone smoke test that connects to a real Firebird server via IBX (create table / insert / select round trip, then extracts and sanity-checks its DDL via `DDLExtractor`) — build with `lazbuild test/ibx_smoke_test.lpi` and run as `./test/ibx_smoke_test <database> <user> <password>`. CI runs the full app build plus this smoke test against a live Firebird server via `.github/workflows/build.yml` on push/PR to master.
+No unit test suite exists. Manual testing only via Lazarus IDE. `test/form_load_test.lpr` additionally opens the table editor against a live database when `MARATHON_TEST_DB`/`MARATHON_TEST_USER`/`MARATHON_TEST_PASSWORD` are set (it skips loudly otherwise) — the object editors need a database and a widgetset at once, so nothing else covers them. Note the variables are read from the environment, not argv: the application treats its first argument as a project file to open. `test/ibx_smoke_test.lpr` is a standalone smoke test that connects to a real Firebird server via IBX (create table / insert / select round trip, then extracts and sanity-checks its DDL via `DDLExtractor`) — build with `lazbuild test/ibx_smoke_test.lpi` and run as `./test/ibx_smoke_test <database> <user> <password>`. CI runs the full app build plus this smoke test against a live Firebird server via `.github/workflows/build.yml` on push/PR to master.
 
 ## Roadmap
 

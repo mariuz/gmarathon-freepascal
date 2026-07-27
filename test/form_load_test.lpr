@@ -1001,6 +1001,107 @@ begin
   end;
 end;
 
+{ Opens an object editor on a real table.
+
+  Everything else in this harness runs without a database, which is why the
+  editors have never been covered by anything: they need a live connection and
+  a widgetset at once, and the console smoke test can supply only the first.
+  Given credentials this fills that gap - and it is the harness any change to
+  the editors' queries would need, because there is otherwise no way to tell
+  whether one still loads what it should.
+
+  The credentials come from the environment rather than the command line, and
+  that is not a preference: TfrmMarathonMain treats ParamStr(1) as a project
+  file to open, so passing a database name there makes the main form try to
+  open it as a project and the run hangs on the resulting dialog before any of
+  this is reached.
+
+  Skipped, loudly, when the variables are unset, so a run without a server
+  still means something and does not quietly report success it did not earn. }
+procedure CheckTableEditorAgainstDatabase(const DatabaseName, User, Password: String);
+var
+  Conn: TMarathonCacheConnection;
+  Server: TMarathonCacheServer;
+  F: TfrmTables;
+  Fields: Integer;
+  FilePart, TableName: String;
+begin
+  WriteLn('Table editor against a live database:');
+  if DatabaseName = '' then
+  begin
+    WriteLn('  .... skipped: set MARATHON_TEST_DB, MARATHON_TEST_USER and ' +
+      'MARATHON_TEST_PASSWORD to include it');
+    Exit;
+  end;
+
+  { A server has to exist first: Connect looks its connection's server up by
+    name and builds the database string from it. Without one the first attempt
+    fails and Connect falls back to its own login dialog - which under Xvfb is
+    a hang rather than a failure. }
+  Server := MarathonIDEInstance.CurrentProject.Cache.AddServerInternal;
+  Server.Caption := 'HarnessServer';
+  Server.UserName := User;
+  Server.Password := Password;
+  if Pos(':/', DatabaseName) > 0 then
+  begin
+    Server.Local := False;
+    Server.HostName := Copy(DatabaseName, 1, Pos(':/', DatabaseName) - 1);
+    FilePart := Copy(DatabaseName, Pos(':/', DatabaseName) + 1, MaxInt);
+  end
+  else
+  begin
+    Server.Local := True;
+    FilePart := DatabaseName;
+  end;
+
+  Conn := MarathonIDEInstance.CurrentProject.Cache.AddConnectionInternal;
+  Conn.Caption := 'EditorHarness';
+  Conn.ServerName := 'HarnessServer';
+  Conn.DBFileName := FilePart;
+  Conn.UserName := User;
+  Conn.Password := Password;
+  Conn.SQLDialect := 3;
+  if not Conn.Connect then
+  begin
+    Check(False, 'the harness connection opens');
+    Exit;
+  end;
+  Check(True, 'the harness connection opens');
+
+  { Whatever table the database happens to hold, rather than one this suite
+    expects another suite to have left behind. That coupling would fail
+    confusingly the moment the steps were reordered, and it stops the harness
+    being usable against any database. }
+  if Conn.TableList.Count = 0 then
+  begin
+    WriteLn('  .... skipped: ', DatabaseName, ' holds no user tables');
+    Exit;
+  end;
+  TableName := Trim(Conn.TableList[0]);
+
+  F := TfrmTables.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    try
+      F.LoadTable(TableName);
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the table editor loads ' + TableName + ' (' + E.ClassName +
+          ': ' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    Check(True, 'the table editor loads ' + TableName);
+    { Loading is not enough: it has to have read the columns. An editor that
+      opens on an empty structure looks fine and is useless. }
+    Fields := F.lvFieldList.Items.Count;
+    Check(Fields > 0, 'it reads the table''s columns (' + IntToStr(Fields) + ')');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckCompletionWiring;
 var
   F: TfrmSQLForm;
@@ -1438,6 +1539,10 @@ begin
   CheckEditorSearch;
   CheckEditorsAllowAutoTransactions;
   CheckProjectSaveWithRememberedPassword;
+  CheckTableEditorAgainstDatabase(
+    GetEnvironmentVariable('MARATHON_TEST_DB'),
+    GetEnvironmentVariable('MARATHON_TEST_USER'),
+    GetEnvironmentVariable('MARATHON_TEST_PASSWORD'));
 
   if Failures > 0 then
   begin

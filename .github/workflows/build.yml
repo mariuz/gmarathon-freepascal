@@ -74,11 +74,20 @@ jobs:
       - name: Build form loading test
         run: lazbuild test/form_load_test.lpi
 
+      # The database variables are what let this reach the object editors, which
+      # need a live connection and a widgetset at the same time and so are
+      # covered by neither of the other suites. They are read from the
+      # environment rather than the command line because the application treats
+      # its first argument as a project file to open.
       - name: Run form loading test
         run: |
           sudo apt-get install -y --no-install-recommends xvfb
           mkdir -p /tmp/marathon-test-home
-          HOME=/tmp/marathon-test-home xvfb-run -a ./test/form_load_test
+          HOME=/tmp/marathon-test-home \
+            MARATHON_TEST_DB="localhost:/tmp/ibx_smoke_test.fdb" \
+            MARATHON_TEST_USER=SYSDBA \
+            MARATHON_TEST_PASSWORD="${FIREBIRD_SYSDBA_PASSWORD}" \
+            xvfb-run -a ./test/form_load_test
 
   # Windows is compile-only (no Firebird server / smoke test): its purpose is
   # to type-check the {$IFDEF WINDOWS} code paths, which are invisible to the
