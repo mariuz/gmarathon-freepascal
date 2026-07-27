@@ -1116,6 +1116,91 @@ end;
 
   Skipped, loudly, when the variables are unset, so a run without a server
   still means something and does not quietly report success it did not earn. }
+{ The object editors against two schemas holding the same table name.
+
+  This is the one that matters. Firebird 6 made an object name unique per
+  schema rather than per database, and every metadata query in every editor
+  filtered on the name alone - so on a database holding EDIT_DUP in the current
+  schema (ID, HERE_A, HERE_B) and EDIT_SCH.EDIT_DUP (OVER_THERE), opening
+  either showed a table with all four columns. Not a missing feature: a wrong
+  answer, silently.
+
+  The fixture comes from the smoke test, which leaves the pair behind
+  deliberately. Skipped on anything before Firebird 6, where the pair cannot
+  exist and there is nothing to get wrong. }
+procedure CheckSchemaQualifiedEditor(Conn: TMarathonCacheConnection);
+var
+  F: TfrmTables;
+
+  { The editor's column list as one string, so a check can say which columns
+    are there rather than only how many. }
+  function ColumnsOf(ATable, ASchema: String): String;
+  var
+    E: TfrmTables;
+    Idx: Integer;
+  begin
+    Result := '';
+    E := TfrmTables.Create(nil);
+    try
+      E.ConnectionName := 'EditorHarness';
+      E.Schema := ASchema;
+      try
+        E.LoadTable(ATable);
+      except
+        on Ex: Exception do
+        begin
+          Result := '<' + Ex.ClassName + ': ' + Ex.Message + '>';
+          Exit;
+        end;
+      end;
+      for Idx := 0 to E.lvFieldList.Items.Count - 1 do
+        Result := Result + Trim(E.lvFieldList.Items[Idx].Caption) + ' ';
+    finally
+      E.Free;
+    end;
+  end;
+
+var
+  Here, There: String;
+begin
+  WriteLn('Editors against two schemas:');
+  if not Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0) then
+  begin
+    WriteLn('  .... skipped: server has no SQL schemas');
+    Exit;
+  end;
+
+  F := TfrmTables.Create(nil);
+  try
+    Check(F.Schema = '', 'an editor defaults to no schema, as it always did');
+  finally
+    F.Free;
+  end;
+
+  There := ColumnsOf('EDIT_DUP', 'EDIT_SCH');
+  Here := ColumnsOf('EDIT_DUP', '');
+
+  { Each editor shows its own table's columns and none of the other's. Before
+    the schema predicate both of these held all four. }
+  Check(Pos('OVER_THERE', There) > 0,
+    'the named schema''s table shows its own column');
+  Check(Pos('HERE_A', There) = 0,
+    'and not a column belonging to the same-named table in another schema');
+  Check(Pos('HERE_A', Here) > 0, 'the current schema''s table shows its own columns');
+  Check(Pos('OVER_THERE', Here) = 0, 'and not the other schema''s');
+
+  { Counting as well as naming: a predicate that filtered on the wrong column
+    would return nothing at all, which passes every "is X absent" check above
+    while showing an empty table. }
+  Check(Length(Trim(There)) > 0, 'the named schema''s table is not empty');
+  Check(Length(Trim(Here)) > 0, 'and neither is the current schema''s');
+  if (Pos('HERE_A', There) > 0) or (Pos('OVER_THERE', Here) > 0) then
+  begin
+    WriteLn('       EDIT_SCH.EDIT_DUP showed: ', There);
+    WriteLn('       EDIT_DUP showed:          ', Here);
+  end;
+end;
+
 { The table designer, on a real table.
 
   The model underneath it is checked twice already - keyword_test says what an
@@ -1289,6 +1374,7 @@ begin
   CheckEditorLoads(Conn, sokException, 'the exception editor');
 
   CheckTableDesignerOn(Conn, TableName);
+  CheckSchemaQualifiedEditor(Conn);
 end;
 
 procedure CheckCompletionWiring;

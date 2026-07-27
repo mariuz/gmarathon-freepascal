@@ -20,7 +20,7 @@ interface
 uses
   {$IFDEF MSWINDOWS} Windows, {$ENDIF} SysUtils, Classes, IBDatabase, IBCustomDataSet,
   IBQuery, IBSQL, IBHeader, IB, DB, MetaExtractGlobals, DOM, xmlread, xmlwrite,
-  MarathonProjectCacheTypes, StrUtils;
+  MarathonProjectCacheTypes, StrUtils, SchemaNames;
 
 type
   TDDLObjectType = (
@@ -1445,21 +1445,14 @@ end;
   than everything. }
 function TDDLExtractor.SchemaClause(const Alias: String; const Column: String): String;
 begin
-  if not ODSAtLeast(14, 0) then
-    Result := ''
-  else if FSchema <> '' then
-    { A named schema is asked for exactly, not through CURRENT_SCHEMA - the
-      point of naming one is to reach objects the search path does not. }
-    Result := ' and (' + Alias + Column + ' = ' + AnsiQuotedStr(FSchema, '''') + ')'
-  else
-    Result := ' and (' + Alias + Column + ' = current_schema or current_schema is null)';
+  { SchemaNames owns the rule now - the object editors need exactly the same
+    predicate, and two copies of it are two things to keep in step. }
+  Result := SchemaPredicate(Alias, Column, FSchema, ODSAtLeast(14, 0));
 end;
 
 function TDDLExtractor.QualifiedIdent(const ObjectName: String): String;
 begin
-  Result := MakeQuotedIdent(Trim(ObjectName), FIsIB6, FSQLDialect);
-  if FSchema <> '' then
-    Result := MakeQuotedIdent(FSchema, FIsIB6, FSQLDialect) + '.' + Result;
+  Result := SchemaNames.QualifiedIdent(FSchema, ObjectName, FIsIB6, FSQLDialect);
 end;
 
 function TDDLExtractor.SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;

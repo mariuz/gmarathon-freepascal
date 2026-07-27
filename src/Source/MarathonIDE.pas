@@ -199,7 +199,8 @@ type
 		procedure NewGenerator(Connection: String);
 		function OpenGenerator(GeneratorName: String; Connection: String): TForm;
 		procedure NewTable(Connection: String);
-		function OpenTable(TableName: String; Connection: String): TForm;
+		function OpenTable(TableName: String; Connection: String;
+			Schema: String = ''): TForm;
 		{ The table designer, which is the other way of editing a table: the whole
 		  table in one grid, and the script shown before it is run. OpenTable's
 		  editor stays because it is what you want for one column at a time. }
@@ -615,7 +616,14 @@ begin
 						OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctTable:
-						OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						{ A node under a schema branch carries the schema it was listed
+						  from; one under the connection's own headers does not, and an
+						  empty schema means whatever the search path reaches. }
+						if Item is TMarathonCacheSchemaMember then
+							OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctView:
 						OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
@@ -2534,7 +2542,8 @@ begin
 	end;
 end;
 
-function TMarathonIDE.OpenTable(TableName, Connection: String): TForm;
+function TMarathonIDE.OpenTable(TableName, Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2547,8 +2556,11 @@ begin
 	Found := False;
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmTables then
+			{ Same name in a different schema is a different table, so comparing
+			  the name alone would raise the wrong editor. }
 			if (TfrmTables(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmTables(Screen.Forms[Idx]).ObjectName  = TableName) then
+				(TfrmTables(Screen.Forms[Idx]).ObjectName  = TableName) and
+				(TfrmTables(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2563,6 +2575,10 @@ begin
 		end;
 		F := TfrmTables.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load, not after: the editor reads all its metadata while
+		  loading, so a schema set afterwards would come too late to affect a
+		  single query. }
+		F.Schema := Schema;
 		F.LoadTable(TableName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);

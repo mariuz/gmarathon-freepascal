@@ -196,9 +196,49 @@ confirmed to exist rather than taken from release notes.
 
   Two defects surfaced while doing it. Schema members were all created as `ctTable` whatever they were, so scripting a view or a procedure in another schema would have extracted it as a table — the cache type is what decides how an object is scripted. And dropping a generator ran `delete from rdb$generators where rdb$generator_name = …`, a raw catalogue delete matching on name alone: with schemas it could remove a generator of that name in a different one, and it was never the supported way to drop a generator regardless. Both now do the right thing, and `DROP GENERATOR` was confirmed against the server rather than assumed.
 
-  **Open is not offered, and the reason is worth stating rather than leaving as a to-do.** The eight object editors hold 272 uses of the object name between them — every metadata query they run, and every DDL statement they build, names it unqualified. Threading a schema through all of that is a large change to the application's core editing surface, and it is the part of this codebase with the least test coverage: the editors need a live database *and* a widgetset, so `form_load_test` cannot even construct the stored-procedure editor without a connection, and the console smoke test cannot touch them at all. A refactor of that size with no way to check it is a poor trade against what it buys.
+  **Open is offered on a schema's tables, and the reason the rest still wait is
+  worth stating.** What was recorded here as a missing feature turned out to be
+  a wrong answer. Firebird 6 made an object name unique per schema rather than
+  per database; every metadata query in every editor filtered on the name
+  alone, so on a database holding `EDIT_DUP` in the current schema and
+  `EDIT_SCH.EDIT_DUP`, opening either showed one table carrying both schemas'
+  columns. That is a defect on any Firebird 6 database with two schemas,
+  whether or not anyone wanted to open a foreign-schema object.
 
-  What it buys is also smaller than it first looks. Another schema's objects can already be **listed, scripted, extracted in bulk and dropped**; *Script as Create* puts an object's full DDL in an editor, which is most of what opening it would show. The gap is structured editing of a foreign-schema object, not access to it. If that becomes wanted, the sequence is: give the editors a schema property, qualify the statements they generate, then qualify their metadata queries. **The harness that makes it checkable now exists** — `test/form_load_test.lpr` opens the table editor against a live database and requires it to read the table's columns, which is the first thing a mishandled schema would break. It is driven by `MARATHON_TEST_DB`, `MARATHON_TEST_USER` and `MARATHON_TEST_PASSWORD`, skips loudly when they are unset so a run without a server still means something, and is wired into CI alongside the smoke test. Confirmed to catch the fault it exists for by breaking the editor's column query and watching it report zero columns.
+  The foundation is in place and the table editor is converted:
+  - `src/Common/SchemaNames.pas` — the predicate that narrows a catalogue query
+    to one schema, and the qualified identifier that makes generated DDL name
+    the object the query found. No database, no LCL. `DDLExtractor` had worked
+    both out first and now calls in here rather than keeping a second copy.
+  - `src/Common/SQLIdentifiers.pas` — identifier quoting, lifted out of
+    `MetaExtractGlobals` (which still declares it and delegates). Nothing about
+    deciding whether a name needs double quotes involves Firebird's API, but it
+    lived next to `IBHeader`, so anything wanting to spell a name had to link
+    the whole IBX package — which is what kept it out of the light harness.
+  - `TfrmBaseDocumentDataAwareForm` — the base all eight editors share — gained
+    `Schema`, `SchemaClause` and `QualifiedObjectName`, so converting an editor
+    is now appending a clause per query rather than inventing a mechanism.
+  - `EditorTable` is converted: 18 catalogue queries and the DDL it generates.
+
+  Which schema column to filter on was read off a live server rather than
+  guessed, because several are not what one would expect — `RDB$USER_PRIVILEGES`
+  uses `RDB$RELATION_SCHEMA_NAME` for the object granted on, and
+  `RDB$REF_CONSTRAINTS` uses `RDB$CONST_SCHEMA_NAME_UQ`. Filtering on the wrong
+  one returns nothing, which looks exactly like an object with no privileges.
+
+  **Still to do: the other seven editors** — view, procedure, trigger, domain,
+  generator, exception and package, roughly 220 further name uses. Each is the
+  same mechanical change now that the base class carries the mechanism. Until
+  they are done the tree offers Open only on a schema's *tables*
+  (`TMarathonCacheSchemaMember.CanDoOperation`); the rest still offer scripting,
+  extraction and drop, all of which already understand a schema. Note the
+  defect is not confined to foreign schemas — an unconverted editor opened on a
+  current-schema object still merges any same-named object from another schema.
+
+  Verified by `form_load_test` against the real pair the smoke test leaves
+  behind: each editor shows its own columns and none of the other's, and is not
+  merely empty. Removing the predicate makes both checks fail with all four
+  columns in both editors, which is the original defect reproduced.
 
   **Extraction is now schema-scoped, which fixed a silent corruption.** Object names are unique per schema, not per database, so every `DDLExtractor` query filtering on the name alone matched *every* schema using that name. With a `T_AMBIG` in both `PUBLIC` and `APPX`, the column query matched four rows and `ExtractTable` emitted one table carrying both schemas' columns and a duplicated `ID` — verified against the live server before the fix, and the regression test reproduces exactly that failure when the clause is removed. A `SchemaClause` helper now restricts the ~30 name-keyed queries to what an unqualified name reaches, matching how the tree lists them. Two traps it exists to record: `RDB$USER_PRIVILEGES` spells the column `RDB$RELATION_SCHEMA_NAME`, not `RDB$SCHEMA_NAME`, so the grants queries need their own column name; and the `CURRENT_SCHEMA IS NULL` guard is load-bearing, because with an empty search path every query would otherwise return nothing rather than everything.
 

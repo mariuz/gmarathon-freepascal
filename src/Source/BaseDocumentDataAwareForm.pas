@@ -38,7 +38,7 @@ unit BaseDocumentDataAwareForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, BaseDocumentForm, Globals, MarathonInternalInterfaces, MarathonIDE, MarathonProjectCacheTypes, Menus, MarathonProjectCache, SchemaNames;
 
 type
 	TfrmBaseDocumentDataAwareForm = class(TfrmBaseDocumentForm)
@@ -59,6 +59,10 @@ type
 		FIsInterbase6: Boolean;
 		FSQLDialect: Integer;
 		FObjectType: TGSSCacheType;
+		{ The schema the object lives in, or '' for whatever an unqualified name
+		  reaches through the search path. Empty on every server before Firebird 6,
+		  which had no schemas. }
+		FSchema: String;
     fIsMaximized : boolean;
 		procedure SetDatabaseName(const Value: String); virtual;
 		function GetObjectName : String; override;
@@ -76,6 +80,34 @@ type
 		property NewObject : Boolean read FNewObject write FNewObject;
 		property ObjectModified : Boolean read FObjectModified write FObjectModified;
 		property ObjectType : TGSSCacheType read FObjectType write FObjectType;
+
+		{ Where the object lives. Set before loading it - the editors read their
+		  metadata in the load, so setting this afterwards is too late. }
+		property Schema : String read FSchema write FSchema;
+
+		{ True when this connection's server has schemas at all. Firebird 5 and
+		  earlier have no RDB$SCHEMA_NAME and naming it is a hard error, so every
+		  schema predicate has to disappear rather than evaluate to true. }
+		function SupportsSchemas : Boolean;
+
+		{ The fragment that narrows a catalogue query to this object's schema,
+		  ready to append to a WHERE that already has a condition in it.
+
+		  Every metadata query in every editor needs this. Without it a query that
+		  filters on name alone matches the same name in every schema at once: on
+		  a database holding S_ALPHA.DUPTAB(A1, A2) and S_BETA.DUPTAB(B1, B2, B3),
+		  the column query for either returns all five columns and the editor shows
+		  a table that does not exist.
+
+		  Column is the schema column on the table being filtered, which is not
+		  RDB$SCHEMA_NAME everywhere - see SchemaNames for the ones that differ. }
+		function SchemaClause(const Alias : String = '';
+			const Column : String = 'rdb$schema_name') : String;
+
+		{ The object's name as generated DDL should spell it, qualified when it is
+		  in a named schema so the statement acts on the object the queries found
+		  rather than on whatever the search path reaches. }
+		function QualifiedObjectName : String;
 	end;
 
 implementation
@@ -106,6 +138,31 @@ end;
 function TfrmBaseDocumentDataAwareForm.GetObjectNewStatus: Boolean;
 begin
 	Result := FNewObject;
+end;
+
+function TfrmBaseDocumentDataAwareForm.SupportsSchemas: Boolean;
+var
+	Conn: TMarathonCacheConnection;
+begin
+	Result := False;
+	if not Assigned(MarathonIDEInstance) or
+	   not Assigned(MarathonIDEInstance.CurrentProject) then
+		Exit;
+	Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName];
+	Result := Assigned(Conn) and Conn.Connected and
+		Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0);
+end;
+
+function TfrmBaseDocumentDataAwareForm.SchemaClause(const Alias: String;
+	const Column: String): String;
+begin
+	Result := SchemaPredicate(Alias, Column, FSchema, SupportsSchemas);
+end;
+
+function TfrmBaseDocumentDataAwareForm.QualifiedObjectName: String;
+begin
+	Result := SchemaNames.QualifiedIdent(FSchema, FObjectName, FIsInterbase6,
+		FSQLDialect);
 end;
 
 procedure TfrmBaseDocumentDataAwareForm.SetDatabaseName(const Value: String);

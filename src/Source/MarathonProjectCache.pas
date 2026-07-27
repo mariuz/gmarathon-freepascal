@@ -5085,10 +5085,14 @@ end;
   into the editor forms and the wizard, not new machinery. }
 function TMarathonCacheSchemaMember.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
 begin
-	{ Drop is offered now that the drop dialog names the schema. Open is not:
-	  the editor forms take an object name and nothing else, so outside the
-	  search path they would load a different object. }
-	Result := (not Multiple) and (Op in [opScriptCreate, opScriptDrop, opDrop]);
+	{ Open is offered for the kinds whose editor takes a schema. The rest still
+	  are not: an editor that filters its metadata on name alone matches the
+	  same name in every schema at once, so outside the search path it would
+	  show a table built from another table's columns. }
+	if (not Multiple) and (Op = opOpen) then
+		Result := FCacheType in [ctTable]
+	else
+		Result := (not Multiple) and (Op in [opScriptCreate, opScriptDrop, opDrop]);
 end;
 
 constructor TMarathonCacheSchemaObjectsHeader.Create;

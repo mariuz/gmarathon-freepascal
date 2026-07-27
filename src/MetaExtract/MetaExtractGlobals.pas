@@ -18,7 +18,10 @@ unit MetaExtractGlobals;
 interface
 
 uses
-	Classes, SysUtils, DB, {$IFDEF MSWINDOWS} Windows, {$ENDIF} IBHeader;
+	Classes, SysUtils, DB, {$IFDEF MSWINDOWS} Windows, {$ENDIF} IBHeader,
+	{ Identifier quoting moved out to a unit that needs no IBX, so anything which
+	  only has to spell a name can do it without linking the API. }
+	SQLIdentifiers;
 
 function ConvertFieldType(ftype, flen, fscale, fsubtype, fprecision : Integer; IsInterbase6 : Boolean) : String;
 
@@ -474,91 +477,23 @@ end;
 
 function StripQuotesFromQuotedIdentifier(S : String) : String;
 begin
-  if Length(S) > 0 then
-  begin
-    if S[1] in ['''', '"'] then
-    begin
-      S := Copy(S, 2, Length(S));
-    end;
-  end;
-
-  if Length(S) > 0 then
-  begin
-    if S[Length(S)] in ['''', '"'] then
-    begin
-      S := Copy(S, 1, Length(S) - 1);
-		end;
-  end;
-  Result := S;
+  Result := SQLIdentifiers.StripQuotesFromQuotedIdentifier(S);
 end;
 
 function IsIdentifierQuoted(S : String) : Boolean;
-var
-  BeginQuote : Boolean;
-  EndQuote : Boolean;
-
 begin
-  BeginQuote := False;
-  EndQuote := False;
-
-	if Length(S) > 0 then
-  begin
-    if S[1] in ['''', '"'] then
-    begin
-      BeginQuote := True;
-    end;
-  end;
-
-  if Length(S) > 0 then
-  begin
-    if S[Length(S)] in ['''', '"'] then
-    begin
-      EndQuote := True;
-    end;
-  end;
-  Result := BeginQuote and EndQuote;
+  Result := SQLIdentifiers.IsIdentifierQuoted(S);
 end;
 
 
 function ShouldBeQuoted(S : String) : Boolean;
-var
-  Idx : Integer;
-
 begin
-  Result := False;
-	for Idx := 1 to Length(S) do
-  begin
-    if not (S[Idx] in ['A'..'Z', 'a'..'z', '_', '0'..'9']) then
-    begin
-      Result := True;
-      Break;
-    end;
-  end;
+  Result := SQLIdentifiers.ShouldBeQuoted(S);
 end;
 
 function MakeQuotedIdent(S : String; IB6 : Boolean; Dialect : Integer) : String;
 begin
-  if not IB6 then
-  begin
-		Result := S;
-  end
-  else
-  begin
-    if Dialect in [3] then
-    begin
-      if not IsIdentifierQuoted(S) then
-      begin
-        if ShouldBeQuoted(S) then
-          Result := AnsiQuotedStr(S, '"')
-        else
-          Result := S;
-      end
-      else
-        Result := S;
-    end
-    else
-      Result := S;
-  end;
+  Result := SQLIdentifiers.MakeQuotedIdent(S, IB6, Dialect);
 end;
 
 

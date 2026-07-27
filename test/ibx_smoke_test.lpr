@@ -3152,6 +3152,36 @@ begin
       if Tr.Active then
         Tr.Commit;
       WriteLn('Editor fixtures OK (domain, generator and exception present)');
+
+      { The same table name in two schemas, left behind for the GUI harness.
+        The object editors filter their metadata on name alone, which on
+        Firebird 6 matches every schema at once - so an editor opened on one of
+        these used to show a table built from both. Nothing but a real pair of
+        same-named tables can catch that, and only the GUI harness can open an
+        editor, so the pair is made here and left. }
+      if EngineMajor >= 6 then
+      begin
+        EnsureTransaction;
+        Q.SQL.Text := 'execute block as begin ' +
+          'if (not exists(select 1 from rdb$schemas where rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create schema EDIT_SCH''; end';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+        EnsureTransaction;
+        Q.SQL.Text := 'execute block as begin ' +
+          'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''EDIT_DUP'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create table EDIT_DUP (ID integer, HERE_A varchar(5), HERE_B varchar(5))''; ' +
+          'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''EDIT_DUP'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create table EDIT_SCH.EDIT_DUP (OVER_THERE integer)''; ' +
+          'end';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('Schema editor fixture OK (EDIT_DUP in the current schema and in EDIT_SCH)');
+      end;
     except
       on E: Exception do
       begin

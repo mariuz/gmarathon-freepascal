@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames;
 
 var
   Highlighter: TSynSQLSyn;
@@ -175,6 +175,77 @@ begin
   Result.AddColumn(Col('NAME', 'NAME', 'varchar(30)'));
   Result.AddColumn(Col('BALANCE', 'BALANCE', 'numeric(18,2)', False, '0'));
   Result.PrimaryKey.Add('CUST_ID');
+end;
+
+procedure TestSchemaNames;
+var
+  Schema, Name: String;
+begin
+  { A server without schemas must get no fragment at all. Naming
+    RDB$SCHEMA_NAME on Firebird 5 is a hard error rather than a null, so an
+    "always true" fragment would not do - it has to disappear. }
+  Check(SchemaPredicate('', '', False) = '',
+    'a server without schemas gets no predicate');
+  Check(SchemaPredicate('a.', 'S_ALPHA', False) = '',
+    'and none even when a schema is named');
+
+  { With schemas but none named, an unqualified name means whatever the search
+    path reaches. }
+  Check(Pos('current_schema', SchemaPredicate('', '', True)) > 0,
+    'no named schema falls back to CURRENT_SCHEMA');
+  { The guard that stops an empty search path returning nothing at all rather
+    than everything. }
+  Check(Pos('current_schema is null', SchemaPredicate('', '', True)) > 0,
+    'and guards against a null CURRENT_SCHEMA');
+
+  { A named schema is asked for exactly - the whole point of naming one is to
+    reach objects the search path does not. }
+  Check(Pos('''S_ALPHA''', SchemaPredicate('', 'S_ALPHA', True)) > 0,
+    'a named schema is matched exactly');
+  Check(Pos('current_schema', SchemaPredicate('', 'S_ALPHA', True)) = 0,
+    'and does not fall back to the search path');
+  Check(Pos(' and (', SchemaPredicate('', 'S_ALPHA', True)) = 1,
+    'the fragment appends to an existing WHERE');
+
+  Check(Pos('a.rdb$schema_name', SchemaPredicate('a.', 'S_ALPHA', True)) > 0,
+    'an alias is carried through');
+  { Not every catalogue table calls it RDB$SCHEMA_NAME, and filtering on the
+    wrong column quietly returns nothing. }
+  Check(Pos('rdb$relation_schema_name', SchemaPredicate('',
+    'rdb$relation_schema_name', 'S_ALPHA', True)) > 0,
+    'and so is a column that is not the usual one');
+
+  { Identifiers, as generated DDL spells them. }
+  Check(QualifiedIdent('', 'CUSTOMERS', True, 3) = 'CUSTOMERS',
+    'no schema leaves the name bare');
+  Check(QualifiedIdent('S_ALPHA', 'CUSTOMERS', True, 3) = 'S_ALPHA.CUSTOMERS',
+    'a schema qualifies it');
+  { A name needing quotes must still get them once qualified, on both halves
+    independently. }
+  Check(QualifiedIdent('S_ALPHA', 'Mixed Case', True, 3) =
+    'S_ALPHA."Mixed Case"', 'a name needing quotes still gets them');
+
+  { Splitting what a user or a tree node hands over. }
+  Check(not SplitSchemaName('CUSTOMERS', Schema, Name),
+    'a bare name names no schema');
+  Check((Schema = '') and (Name = 'CUSTOMERS'),
+    'and comes back whole');
+  Check(SplitSchemaName('S_ALPHA.CUSTOMERS', Schema, Name),
+    'a qualified name splits');
+  Check((Schema = 'S_ALPHA') and (Name = 'CUSTOMERS'), 'into its two parts');
+  Check(SplitSchemaName('"My Schema"."My Table"', Schema, Name) and
+    (Schema = 'My Schema') and (Name = 'My Table'),
+    'quoted parts are unquoted');
+  { The reason the scan skips quotes rather than taking the first dot. }
+  Check(SplitSchemaName('"A.B"."C"', Schema, Name) and (Schema = 'A.B') and
+    (Name = 'C'), 'a dot inside quotes is part of the name, not a separator');
+  Check(not SplitSchemaName('.CUSTOMERS', Schema, Name),
+    'a leading dot names no schema');
+
+  Check(DisplaySchemaName('', 'CUSTOMERS') = 'CUSTOMERS',
+    'an unqualified object is shown plainly');
+  Check(DisplaySchemaName('S_ALPHA', 'CUSTOMERS') = 'S_ALPHA.CUSTOMERS',
+    'and a schema one is shown qualified');
 end;
 
 procedure TestTableDesign;
@@ -552,6 +623,9 @@ begin
 
   WriteLn('Table design:');
   TestTableDesign;
+
+  WriteLn('Schema-qualified names:');
+  TestSchemaNames;
 
   if Failures > 0 then
   begin
