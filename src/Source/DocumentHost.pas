@@ -40,6 +40,13 @@ type
     FPages: TPageControl;
     procedure FormClosed(Sender: TObject; var Action: TCloseAction);
     function SheetOf(AForm: TForm): TTabSheet;
+  protected
+    { A hosted form can be destroyed without ever being closed - freed by its
+      owner, or freed outright. The sheet identifies its form by address, so a
+      tab left behind by that would match the next form the allocator happens to
+      put at the same address, and the host would report a brand new window as
+      already open. Component notification is how a form says it is going. }
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
     constructor Create(AOwner: TComponent; APages: TPageControl); reintroduce;
     { Puts AForm in a tab and shows it. Returns the sheet, or nil when there is
@@ -57,6 +64,15 @@ type
     property Pages: TPageControl read FPages;
   end;
 
+{ Puts a form into a fixed panel of the shell - the object explorer into its
+  dock, rather than a document into a tab. Same reparenting, but the panel is
+  part of the layout and is made visible when something goes into it, so an
+  empty dock never shows.
+
+  Returns False when there is no panel, so the caller can fall back to showing
+  the form as a window. }
+function DockInto(AForm: TForm; APanel: TWinControl; ASplitter: TControl): Boolean;
+
 var
   { The shell's host, set by the main form once its layout exists. Nil until
     then, and nil in anything that does not build a shell - a test harness, or
@@ -64,6 +80,23 @@ var
   Documents: TDocumentHost = nil;
 
 implementation
+
+function DockInto(AForm: TForm; APanel: TWinControl; ASplitter: TControl): Boolean;
+begin
+  Result := Assigned(AForm) and Assigned(APanel);
+  if not Result then
+    Exit;
+  AForm.BorderStyle := bsNone;
+  AForm.Parent := APanel;
+  AForm.Align := alClient;
+  APanel.Visible := True;
+  if Assigned(ASplitter) then
+  begin
+    ASplitter.Visible := True;
+    ASplitter.Left := APanel.Left + APanel.Width;
+  end;
+  AForm.Show;
+end;
 
 constructor TDocumentHost.Create(AOwner: TComponent; APages: TPageControl);
 begin
@@ -128,6 +161,8 @@ begin
   { The form's own close handling still runs; this only removes the tab
     afterwards, so a document that refuses to close keeps its tab. }
   AForm.AddHandlerClose(FormClosed);
+  { So the host hears about a form that is destroyed rather than closed. }
+  AForm.FreeNotification(Self);
   AForm.Show;
   FPages.ActivePage := Result;
 end;
@@ -153,6 +188,24 @@ begin
   Sheet.Tag := 0;
   { And release the sheet the same way the form is released, rather than in the
     middle of the form's own teardown. }
+  Application.ReleaseComponent(Sheet);
+end;
+
+procedure TDocumentHost.Notification(AComponent: TComponent; Operation: TOperation);
+var
+  Sheet: TTabSheet;
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation <> opRemove) or not (AComponent is TForm) then
+    Exit;
+  Sheet := SheetOf(TForm(AComponent));
+  if not Assigned(Sheet) then
+    Exit;
+  { The form is on its way out whether or not it was closed politely, so the
+    tab goes with it. }
+  Sheet.Tag := 0;
+  if TForm(AComponent).Parent = Sheet then
+    TForm(AComponent).Parent := nil;
   Application.ReleaseComponent(Sheet);
 end;
 

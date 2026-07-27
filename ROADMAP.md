@@ -300,9 +300,29 @@ and schema comparison all exist here already. The gap is arrangement.
   `ActiveControl` and raises in exactly the same way, so the "fix" would have
   spread the fault rather than contained it. It is `FocusIfPossible` now, and
   the dialogs were put back.
-- [ ] **2. Object explorer in the shell** — the browser's tree moves into the
-  left panel, with the list/detail pane it currently carries becoming a document
-  tab of its own when wanted.
+- [x] **2. Object explorer in the shell** — the browser docks into the left
+  panel instead of floating, and the panel and its splitter appear only when
+  something is in them. `DockInto` is the same reparenting the document host
+  does, without the tab; the explorer falls back to a window when there is no
+  shell. Its list/detail pane is unchanged for now — moving that into a
+  document tab is a separate question.
+
+  This is where the address-identity flaw in the document host surfaced, and it
+  was luck that it did. A tab remembers which form it holds by address; a form
+  destroyed *without being closed* left that behind, and the allocator handed
+  the same address to the object explorer, so the host reported a brand new
+  window as already open. The host now takes `FreeNotification` from each
+  document and drops the tab when the form goes, however it goes.
+
+  Two lessons went into the test rather than only the code. The first version
+  of the check passed with the mechanism removed, because its documents shared
+  an owner with the host — and `TComponent.Notification` already reaches
+  components that share an owner. The application creates documents with
+  `Create(nil)`, so the test now does too, and removing the notification fails
+  it three times over. The second: an assertion that the dock "starts hidden"
+  was true only at startup and ran after a project had been opened; it is now
+  the invariant that the dock shows exactly when it holds something, which is
+  checkable at any point.
 - [ ] **3. Explorer filtering and type-aware search** — the extension filters
   large trees by name and by object type; Marathon has metadata search as a
   separate window, which is the same capability in the wrong place.
@@ -385,7 +405,7 @@ because the original reasoning no longer holds:
 | 8 | Schema comparison / migration generator | Done |
 | 8 | HiDPI / scalable icons | Done (DPI scaling); scalable artwork needs new icons |
 | 9 | Docked shell and tabbed documents | Done |
-| 9 | Object explorer in the shell | Not started |
+| 9 | Object explorer in the shell | Done |
 | 9 | Explorer filtering and type-aware search | Not started |
 | 9 | Shared results pane | Not started |
 | 9 | Command palette | Not started |

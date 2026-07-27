@@ -1258,7 +1258,7 @@ var
   Shell: TForm;
   Pages: TPageControl;
   Host: TDocumentHost;
-  DocA, DocB: TForm;
+  DocA, DocB, DocC: TForm;
   Sheet: TTabSheet;
 begin
   WriteLn('Document host:');
@@ -1305,6 +1305,31 @@ begin
     Application.ProcessMessages;
     Check(Host.DocumentCount = 1, 'closing a document removes its tab');
     Check(not Host.IsHosted(DocA), 'and the host forgets it');
+
+    { A document can also be destroyed without ever being closed. The tab
+      identifies its form by address, so one left behind by that would match
+      whatever the allocator next puts at the same address, and a brand new
+      window would be reported as already open. Found by exactly that: a freed
+      probe collided with the object explorer.
+
+      Ownerless on purpose. TComponent.Notification reaches components that
+      share an owner, so a document owned by the same form as the host would be
+      cleaned up whether or not the host asked to be told - and the check would
+      pass with the mechanism removed. The application creates its documents
+      with Create(nil), and that is the case that needs the notification. }
+    DocC := TForm.CreateNew(nil);
+    DocC.Caption := 'Document C';
+    Host.Host(DocC);
+    Check(Host.DocumentCount = 2, 'an ownerless document is hosted');
+    DocC.Free;
+    Application.ProcessMessages;
+    Check(Host.DocumentCount = 1,
+      'freeing an ownerless document without closing it removes its tab');
+
+    DocB.Free;
+    Application.ProcessMessages;
+    Check(Host.DocumentCount = 0, 'and freeing the last one empties the host');
+    Check(Host.ActiveDocument = nil, 'leaving no dangling active document');
   finally
     Shell.Free;
   end;
@@ -1323,9 +1348,13 @@ begin
     Exit;
   Check(Documents.Pages = frmMarathonMain.pgDocuments,
     'it hosts into the main window''s document area');
-  { The dock is deliberately hidden until the explorer moves into it. }
-  Check(not frmMarathonMain.pnlExplorerDock.Visible,
-    'the empty explorer dock is not shown');
+  { The dock shows exactly when it holds something. Stated as an invariant
+    rather than "it starts hidden": by this point in the run a project has been
+    opened, which docks the explorer, so checking the startup state here would
+    be checking it in the wrong place. }
+  Check(frmMarathonMain.pnlExplorerDock.Visible =
+        (frmMarathonMain.pnlExplorerDock.ControlCount > 0),
+    'the explorer dock is shown only when something is in it');
 
   { Hosted through the shell's own page control, not a stand-in for it. A real
     document form is deliberately not built here: this harness has already
@@ -1344,6 +1373,51 @@ begin
       'the main window''s document area holds it');
   finally
     Probe.Free;
+  end;
+end;
+
+{ The object explorer docked into the shell rather than floating.
+
+  Uses the real TfrmDatabaseExplorer, not a stand-in: the previous item was
+  reported as working on the strength of a stand-in and then died with runtime
+  error 217 in the application, because a reparented form behaves differently
+  from a plain one. }
+procedure CheckExplorerDocks;
+var
+  Explorer: TfrmDatabaseExplorer;
+begin
+  WriteLn('Explorer dock:');
+  Explorer := nil;
+  try
+    try
+      Explorer := TfrmDatabaseExplorer.Create(nil);
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped: the explorer could not be built here (',
+          E.ClassName, ')');
+        Exit;
+      end;
+    end;
+    Check(DockInto(Explorer, frmMarathonMain.pnlExplorerDock,
+      frmMarathonMain.splExplorer), 'the explorer docks');
+    Check(Explorer.Parent = frmMarathonMain.pnlExplorerDock,
+      'into the shell''s left panel');
+    Check(Explorer.BorderStyle = bsNone, 'without its own window border');
+    Check(Explorer.Align = alClient, 'filling the dock');
+    { The dock and its splitter are hidden until something is in them, so
+      putting the explorer there has to reveal both. }
+    Check(frmMarathonMain.pnlExplorerDock.Visible, 'which becomes visible');
+    Check(frmMarathonMain.splExplorer.Visible, 'along with its splitter');
+    { And it must not have become a document tab by accident. }
+    Check(not Documents.IsHosted(Explorer),
+      'and is not also opened as a document tab');
+  finally
+    if Assigned(Explorer) then
+    begin
+      Explorer.Parent := nil;
+      Explorer.Free;
+    end;
   end;
 end;
 
@@ -1744,6 +1818,7 @@ begin
   CheckDesignedImageLists;
   CheckDocumentHost;
   CheckShellWiring;
+  CheckExplorerDocks;
   CheckHighDPIScaling;
   CheckCompletionWiring;
   CheckEditorSearch;
