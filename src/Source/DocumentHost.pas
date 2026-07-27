@@ -141,10 +141,19 @@ begin
   Sheet := SheetOf(TForm(Sender));
   if not Assigned(Sheet) then
     Exit;
-  { Detach before the sheet goes, or freeing the sheet would take the form's
-    window handle with it while the form is still closing. }
+
+  { Detach first: the sheet is the form's parent, and freeing a parent from
+    inside the child's close handler leaves the form to be released later - by
+    the application's async queue, when Action is caFree - with a parent that
+    has gone. That is an access violation in the form's own destructor, and it
+    happens after the close looks to have succeeded. }
   TForm(Sender).Parent := nil;
-  Sheet.Free;
+  { Forget it now, so a second close or a lookup in between cannot find a sheet
+    that is on its way out. }
+  Sheet.Tag := 0;
+  { And release the sheet the same way the form is released, rather than in the
+    middle of the form's own teardown. }
+  Application.ReleaseComponent(Sheet);
 end;
 
 function TDocumentHost.ActiveDocument: TForm;

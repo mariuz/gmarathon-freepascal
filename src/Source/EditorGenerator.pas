@@ -136,7 +136,7 @@ begin
 	FObjectType := ctGenerator;
 	pgObjectEditor.ActivePage := tsGeneratorView;
 	HelpContext := IDH_Generator_Editor;
-	ActiveControl := edGeneratorName;
+	FocusIfPossible(edGeneratorName);
 	Top := MarathonIDEInstance.MainForm.FormTop + MarathonIDEInstance.MainForm.FormHeight + 2;
 	Left := MarathonScreen.Left + (MarathonScreen.Width div 4) + 4;
 	Height := (MarathonScreen.Height Div 2) + MarathonIDEInstance.MainForm.FormHeight;

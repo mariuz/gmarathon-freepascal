@@ -103,6 +103,19 @@ type
     procedure DoScriptMerge; virtual;
 
     procedure ShowDocument;
+    { Gives a control the focus if it can take it.
+
+      A document hosted in a tab is no longer a top-level form, so assigning
+      ActiveControl reaches the shell's notion of focus and raises "Cannot
+      focus a disabled or invisible window" whenever the control is not yet
+      shown - which is the normal case while a tab is being built. Documents
+      call this instead; focus is a convenience and never worth an exception.
+
+      Deliberately not called FocusControl: TCustomForm already has one, and
+      taking that name would shadow it silently - which it briefly did, quietly
+      changing what several dialogs do, since LCL's version assigns
+      ActiveControl and can raise in exactly the same way. }
+    procedure FocusIfPossible(AControl: TWinControl);
     function CanScriptCreate: Boolean; virtual;
     procedure DoScriptCreate; virtual;
 
@@ -521,6 +534,20 @@ begin
   if Assigned(Documents) and Assigned(Documents.Host(Self)) then
     Exit;
   Show;
+end;
+
+procedure TfrmBaseDocumentForm.FocusIfPossible(AControl: TWinControl);
+begin
+  if not Assigned(AControl) then
+    Exit;
+  try
+    if AControl.CanSetFocus then
+      AControl.SetFocus;
+  except
+    { The widgetset can still refuse - a control on a tab sheet that is being
+      switched away from, say. Nothing here is worth interrupting the user. }
+    on E: Exception do ;
+  end;
 end;
 
 constructor TfrmBaseDocumentForm.Create(AOwner: TComponent);

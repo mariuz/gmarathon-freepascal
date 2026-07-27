@@ -375,7 +375,7 @@ begin
   InternalCaption := 'Exception - [' + FObjectName + ']';
   edExceptionName.Text := FObjectName;
   edExceptionText.Text := '';
-  ActiveControl := edExceptionText;
+  FocusIfPossible(edExceptionText);
   FObjectModified := True;
   FNewObject := True;
 end;

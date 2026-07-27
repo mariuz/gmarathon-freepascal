@@ -2494,7 +2494,7 @@ end;
 procedure TfrmSQLForm.FormShow(Sender: TObject);
 begin
   inherited;
-  ActiveControl := edSQLStatement;
+  FocusIfPossible(edSQLStatement);
 end;
 
 end.

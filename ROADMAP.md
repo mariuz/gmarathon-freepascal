@@ -277,10 +277,29 @@ re-invented: connection colouring (environments), schema-grouped object trees,
 result export to CSV/JSON/Excel/INSERT, an execution plan view, a query profiler
 and schema comparison all exist here already. The gap is arrangement.
 
-- [ ] **1. Docked shell and tabbed documents** — the main window gains an
+- [x] **1. Docked shell and tabbed documents** — the main window gains an
   explorer panel, a splitter and a document tab area; document windows are
   hosted as tabs rather than floating. Every document form descends from
   `TfrmBaseDocumentForm`, so this hooks in one place rather than fourteen.
+
+  Two faults only running the application found, both caused by the change and
+  neither reachable from the harness. A document in a tab is no longer a
+  top-level form, so the editors' `ActiveControl := …` reached the shell's
+  notion of focus and raised *Cannot focus a disabled or invisible window*
+  while a tab was still being built; documents now ask through a guard that
+  treats focus as the convenience it is. And freeing the tab from inside the
+  document's own close handler left the form to be released afterwards by the
+  application's async queue with a parent that had gone — an access violation
+  in the form's destructor, *after* the close appeared to succeed. The tab is
+  now released the same way the form is.
+
+  A third thing worth recording because it was silent: the guard was first
+  called `FocusControl`, which is already a method of `TCustomForm`. It
+  shadowed the built-in one and quietly changed several dialogs, whose own
+  focus calls had been rewritten to it in the same sweep. LCL's version assigns
+  `ActiveControl` and raises in exactly the same way, so the "fix" would have
+  spread the fault rather than contained it. It is `FocusIfPossible` now, and
+  the dialogs were put back.
 - [ ] **2. Object explorer in the shell** — the browser's tree moves into the
   left panel, with the list/detail pane it currently carries becoming a document
   tab of its own when wanted.
@@ -365,7 +384,7 @@ because the original reasoning no longer holds:
 | 8 | Parameterized routine executor | Not started |
 | 8 | Schema comparison / migration generator | Done |
 | 8 | HiDPI / scalable icons | Done (DPI scaling); scalable artwork needs new icons |
-| 9 | Docked shell and tabbed documents | In progress |
+| 9 | Docked shell and tabbed documents | Done |
 | 9 | Object explorer in the shell | Not started |
 | 9 | Explorer filtering and type-aware search | Not started |
 | 9 | Shared results pane | Not started |

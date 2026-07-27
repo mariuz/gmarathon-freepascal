@@ -448,7 +448,7 @@ begin
   FObjectName := 'new_udf';
   InternalCaption := 'UDF - [' + FObjectName + ']';
   edUDFName.Text := FObjectName;
-  ActiveControl := edUDFName;
+  FocusIfPossible(edUDFName);
 	FObjectModified := True;
   FNewObject := True;
 end;

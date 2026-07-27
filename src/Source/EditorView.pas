@@ -628,7 +628,7 @@ begin
 					lvFieldList.Columns[5].Width := MarathonIDEInstance.CurrentProject.TEFieldsColumns.Items[5].Width;
 					lvFieldList.Columns[6].Width := MarathonIDEInstance.CurrentProject.TEFieldsColumns.Items[6].Width;
 					lvFieldList.Items.EndUpdate;
-					ActiveControl := lvFieldList;
+					FocusIfPossible(lvFieldList);
 				end;
 
 			PG_DEPEND:
@@ -680,10 +680,10 @@ begin
 					end;
 					case nbResults.ActivePageIndex of
 						0:
-							ActiveControl := grdDataView;
+							FocusIfPossible(grdDataView);
 
 						1:
-							ActiveControl := pnledResults;
+							FocusIfPossible(pnledResults);
 					end;
 				end;
 
@@ -894,7 +894,7 @@ begin
 
 	pgObjectEditor.ActivePage := tsSQL;
 	pgObjectEditorChange(pgObjectEditor);
-	ActiveControl := edEditor;
+	FocusIfPossible(edEditor);
 end;
 
 procedure TfrmViewEditor.NewView;

@@ -1093,7 +1093,7 @@ begin
 	InternalCaption := 'Domain [new_domain]';
 	FObjectName := 'new_domain';
 	edColumn.Text := 'new_domain';
-	ActiveControl := edColumn;
+	FocusIfPossible(edColumn);
 end;
 
 procedure TfrmDomains.SetDatabaseName(const Value: String);

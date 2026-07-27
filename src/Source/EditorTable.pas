@@ -676,7 +676,7 @@ begin
 					lvFieldList.Columns[5].Width := MarathonIDEInstance.CurrentProject.TEFieldsColumns.Items[5].Width;
 					lvFieldList.Columns[6].Width := MarathonIDEInstance.CurrentProject.TEFieldsColumns.Items[6].Width;
 					lvFieldList.Items.EndUpdate;
-					ActiveControl := lvFieldList;
+					FocusIfPossible(lvFieldList);
 				end;
 
 			PG_CONST:
@@ -813,7 +813,7 @@ begin
 					lvConstraints.Items.EndUpdate;
 					qryConstraints.Close;
 					qryConstraints.Transaction.Commit;
-					ActiveControl := lvConstraints;
+					FocusIfPossible(lvConstraints);
 				end;
 
 			PG_INDEX: 
@@ -883,7 +883,7 @@ begin
 					lvIndex.Items.EndUpdate;
 					qryTable.Close;
 					qryTable.Transaction.Commit;
-					ActiveControl := lvIndex;
+					FocusIfPossible(lvIndex);
 				end;
 
 			PG_DEPEND: 
@@ -941,10 +941,10 @@ begin
 
 					case nbResults.ActivePageIndex of
 						0:
-							ActiveControl := grdDataView;
+							FocusIfPossible(grdDataView);
 
 						1:
-							ActiveControl := pnledResults;
+							FocusIfPossible(pnledResults);
 					end;
 				end;
 

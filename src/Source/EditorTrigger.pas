@@ -1687,7 +1687,7 @@ end;
 procedure TfrmTriggerEditor.FormShow(Sender: TObject);
 begin
   inherited;
-	ActiveControl := edEditor;
+	FocusIfPossible(edEditor);
 end;
 
 end.
