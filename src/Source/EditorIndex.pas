@@ -88,12 +88,19 @@ type
 		FModifyIndex: Boolean;
 		FIsInterbase6, FIsInterbase5: Boolean;
 		FIndexName, FTableName, FDatabaseName: String;
+		{ The schema of the table this dialog was opened on, handed over by the
+		  table editor - without it the statements it builds name whatever the
+		  unqualified name reaches. }
+		FSchema: String;
 		// Old values, are used to determine if something was changed
 		FOldUnique, FOldActive: Boolean;
 		FOldOrder: Byte;
 		FOldColumns: TStringList;
 		{ Private declarations }
 		function GetObjectName: String;
+		{ Set by the table editor before the dialog is shown. }
+		property Schema: String read FSchema write FSchema;
+		function GetObjectSchema: String;
 		function GetActiveConnectionName: String;
 		function GetActiveObjectType: TGSSCacheType;
 		function GetActiveStatusBar: TStatusBar;
@@ -247,6 +254,13 @@ end;
 function TfrmEditorIndex.GetObjectName: String;
 begin
 	Result := '';
+end;
+
+function TfrmEditorIndex.GetObjectSchema: String;
+begin
+	{ These dialogs are opened by the table editor and act on its table, so
+	  the schema is the one it handed over. }
+	Result := FSchema;
 end;
 
 procedure TfrmEditorIndex.OpenMessages;

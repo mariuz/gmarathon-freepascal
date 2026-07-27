@@ -3526,6 +3526,19 @@ begin
         Q.ExecSQL;
         if Tr.Active then
           Tr.Commit;
+        { A different description on each of the same-named tables. The editors'
+          Description tab is a frame running its own query, so this is what
+          shows whether it reads the object the editor was opened on. }
+        EnsureTransaction;
+        { COMMENT ON rather than an UPDATE of RDB$RELATIONS: Firebird 6 refuses
+          to let anything write the system tables directly. }
+        Q.SQL.Text := 'comment on table EDIT_DUP is ''desc here''';
+        Q.ExecSQL;
+        Q.SQL.Text := 'comment on table EDIT_SCH.EDIT_DUP is ''desc yonder''';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+
         WriteLn('Schema editor fixture OK (table, view, procedure, exception, ' +
           'generator and domain in the current schema and in EDIT_SCH)');
       end;

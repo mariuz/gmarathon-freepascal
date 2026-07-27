@@ -66,6 +66,7 @@ type
     fIsMaximized : boolean;
 		procedure SetDatabaseName(const Value: String); virtual;
 		function GetObjectName : String; override;
+		function GetObjectSchema : String; override;
  	public
 		{ Public declarations }
 
@@ -133,6 +134,11 @@ end;
 function TfrmBaseDocumentDataAwareForm.GetObjectName: String;
 begin
   Result := FObjectName;
+end;
+
+function TfrmBaseDocumentDataAwareForm.GetObjectSchema: String;
+begin
+	Result := FSchema;
 end;
 
 function TfrmBaseDocumentDataAwareForm.GetObjectNewStatus: Boolean;

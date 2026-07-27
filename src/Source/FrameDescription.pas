@@ -19,6 +19,7 @@ type
 	private
 		FDocoModified: Boolean;
 		FForm : IMarathonBaseForm;
+		function SchemaClause: String;
 		function GetDoco: String;
 		procedure SetDoco(const Value: String);
 		{ Private declarations }
@@ -58,9 +59,20 @@ type
 
 implementation
 
+
 uses MarathonIDE;
 
 {$R *.lfm}
+
+{ The fragment that narrows a catalogue query to the object's schema.
+  The frames run their own queries, so an editor whose main tabs were made
+  schema-correct still showed - and in this frame's case wrote - whichever
+  same-named object the search path happened to reach. }
+function TframeDesc.SchemaClause: String;
+begin
+  Result := SchemaClauseFor(FForm.GetActiveConnectionName,
+    FForm.GetObjectSchema);
+end;
 
 { TframeDesc }
 
@@ -95,19 +107,19 @@ begin
 		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
 			MarathonProjectCacheTypes.ctDomain:
-				qryDoco.SQL.Add('select rdb$field_name, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$field_name, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctSP:
-				qryDoco.SQL.Add('select rdb$procedure_name, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$procedure_name, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctTrigger:
-				qryDoco.SQL.Add('select rdb$trigger_name, rdb$description from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$trigger_name, rdb$description from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctException:
-				qryDoco.SQL.Add('select rdb$exception_name, rdb$description from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$exception_name, rdb$description from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctTable:
-				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctView:
-				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctUDF:
-				qryDoco.SQL.Add('select rdb$function_name, rdb$description from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$function_name, rdb$description from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 		end;
 		qryDoco.Open;
 		SetDoco(qryDoco.FieldByName('rdb$description').AsString);
@@ -135,19 +147,19 @@ begin
 		qryDoco.SQL.Clear;
 		case FForm.GetActiveObjectType of
 			MarathonProjectCacheTypes.ctDomain:
-				qryDoco.SQL.Add('select rdb$field_name, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$field_name, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctSP:
-				qryDoco.SQL.Add('select rdb$procedure_name, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$procedure_name, rdb$description from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctTrigger:
-				qryDoco.SQL.Add('select rdb$trigger_name, rdb$description from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$trigger_name, rdb$description from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctException:
-				qryDoco.SQL.Add('select rdb$exception_name, rdb$description from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$exception_name, rdb$description from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctTable:
-				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctView:
-				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$relation_name, rdb$description from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 			MarathonProjectCacheTypes.ctUDF:
-				qryDoco.SQL.Add('select rdb$function_name, rdb$description from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+				qryDoco.SQL.Add('select rdb$function_name, rdb$description from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 		end;
 		qryDoco.Open;
 		if not (qryDoco.BOF and qryDoco.EOF) then

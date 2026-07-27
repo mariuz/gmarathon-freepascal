@@ -1094,6 +1094,9 @@ begin
 	with TfrmEditorConstraint.CreateNewConstraint(Self, FDatabaseName, FObjectName, NewPKName,
 		NewFKName, NewCheckName, NewUniqueName) do
 		try
+			{ The schema too, or the statement this dialog builds names whatever
+			  the unqualified table name reaches. }
+			Schema := FSchema;
 			if ShowModal = mrOK then
 				pgObjectEditor.OnChange(pgObjectEditor);
 		finally
@@ -1138,6 +1141,9 @@ begin
 	// create EditorIndex
 	with TfrmEditorIndex.CreateNewIndex(Self, FDatabaseName, FObjectName, NewIndexName) do
 		try
+			{ The schema too, or the statement this dialog builds names whatever
+			  the unqualified table name reaches. }
+			Schema := FSchema;
 			if ShowModal = mrOK then
 				pgObjectEditor.OnChange(pgObjectEditor);
 		finally
@@ -2363,6 +2369,9 @@ begin
 			PG_INDEX:
 				with TfrmEditorIndex.CreateModifyIndex(Self, FDatabaseName, FObjectName, lvIndex.Selected.Caption) do
 					try
+						{ The schema too, or the statement this dialog builds names
+						  whatever the unqualified table name reaches. }
+						Schema := FSchema;
 						if ShowModal = mrOK then
 							pgObjectEditorChange(pgObjectEditor);
 					finally
@@ -2386,6 +2395,7 @@ begin
 
 					with TfrmEditorConstraint.CreateModifyConstraint(Self, FDatabaseName, FObjectName, lvConstraints.Selected.Caption, ConstraintType) do
 						try
+							Schema := FSchema;
 							if ShowModal = mrOK then
 								pgObjectEditorChange(pgObjectEditor);
 						finally

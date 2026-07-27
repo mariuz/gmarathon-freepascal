@@ -143,6 +143,12 @@ type
   IMarathonBaseForm = interface
     ['{BF14AAD6-1BC3-49F7-A9DA-86620BF1AC18}']
     function GetObjectName: String;
+    { The schema the object lives in, or '' for whatever the search path
+      reaches. On the interface rather than passed to each frame separately,
+      because every frame already reaches its form this way for the object
+      name - and a frame that knows the name but not the schema queries the
+      wrong object on Firebird 6. }
+    function GetObjectSchema: String;
     function GetObjectNewStatus: Boolean;
     function GetActiveConnectionName: String;
     function GetActiveObjectType : TGSSCacheType;

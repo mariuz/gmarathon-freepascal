@@ -597,3 +597,4 @@ because the original reasoning no longer holds:
 | — | SQL Trace | Done — the stub monitor replaced with IBX's |
 | — | Keybinding editor | Done — replaces the removed rmControls grid |
 | — | Code templates and debugger glyphs | Done — the editor wrapper stub filled in |
+| — | Schema sweep of the editor frames | Done — the tabs the editors carry |

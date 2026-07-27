@@ -31,7 +31,7 @@ unit TableDesignIO;
 
 interface
 
-uses SysUtils, Classes, DB, IBDatabase, IBQuery, IBSQL, TableDesign;
+uses SysUtils, Classes, DB, IBDatabase, IBQuery, IBSQL, TableDesign, SchemaNames;
 
 { The table as it is now. Returns nil when there is no such table.
 
@@ -39,14 +39,16 @@ uses SysUtils, Classes, DB, IBDatabase, IBQuery, IBSQL, TableDesign;
   marks it as already existing; a column the designer adds afterwards leaves
   that empty and is told apart by it. }
 function ReadTableDesign(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  const ATableName: String): TTableDesign;
+  const ATableName: String; const ASchema: String = '';
+  ASupportsSchemas: Boolean = False): TTableDesign;
 
 { The name Firebird gave the table's primary key constraint, or '' if it has
   none. Needed because dropping a key needs its name, and an unnamed one is
   called INTEG_nnn - a number that cannot be guessed and differs between two
   databases built from the same script. }
 function PrimaryKeyConstraintName(ADatabase: TIBDatabase;
-  ATransaction: TIBTransaction; const ATableName: String): String;
+  ATransaction: TIBTransaction; const ATableName: String;
+  const ASchema: String = ''; ASupportsSchemas: Boolean = False): String;
 
 { Runs the statements one at a time in the caller's transaction. Stops at the
   first failure and re-raises, leaving the transaction for the caller to roll
@@ -90,7 +92,8 @@ begin
 end;
 
 function PrimaryKeyConstraintName(ADatabase: TIBDatabase;
-  ATransaction: TIBTransaction; const ATableName: String): String;
+  ATransaction: TIBTransaction; const ATableName: String;
+  const ASchema: String = ''; ASupportsSchemas: Boolean = False): String;
 begin
   Result := ScalarSQL(ADatabase, ATransaction,
     'select rdb$constraint_name from rdb$relation_constraints ' +
@@ -102,7 +105,8 @@ end;
 { The key's columns in key order, which is RDB$FIELD_POSITION on the index
   segment - not the order they appear in the table. }
 procedure ReadPrimaryKey(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  const ATableName: String; ADesign: TTableDesign);
+  const ATableName: String; ADesign: TTableDesign; const ASchema: String;
+  ASupportsSchemas: Boolean);
 var
   Q: TIBQuery;
 begin
@@ -121,7 +125,8 @@ begin
       '  join rdb$index_segments s on s.rdb$index_name = rc.rdb$index_name ' +
       'where rc.rdb$relation_name = :name ' +
       '  and rc.rdb$constraint_type = ''PRIMARY KEY'' ' +
-      'order by s.rdb$field_position';
+      SchemaPredicate('rc.', ASchema, ASupportsSchemas) +
+      ' order by s.rdb$field_position';
     Q.ParamByName('name').AsString := ATableName;
     Q.Open;
     while not Q.EOF do
@@ -135,7 +140,8 @@ begin
 end;
 
 function ReadTableDesign(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  const ATableName: String): TTableDesign;
+  const ATableName: String; const ASchema: String = '';
+  ASupportsSchemas: Boolean = False): TTableDesign;
 var
   Q: TIBQuery;
   C: TColumnDesign;
@@ -172,7 +178,8 @@ begin
       'from rdb$relation_fields rf ' +
       '  join rdb$fields f on f.rdb$field_name = rf.rdb$field_source ' +
       'where rf.rdb$relation_name = :name ' +
-      'order by rf.rdb$field_position';
+      SchemaPredicate('rf.', ASchema, ASupportsSchemas) +
+      ' order by rf.rdb$field_position';
     Q.ParamByName('name').AsString := Name;
     Q.Open;
 
@@ -227,7 +234,8 @@ begin
   end;
 
   if Assigned(Result) then
-    ReadPrimaryKey(ADatabase, ATransaction, Name, Result);
+    ReadPrimaryKey(ADatabase, ATransaction, Name, Result, ASchema,
+      ASupportsSchemas);
 end;
 
 function TableDesignStatements(Original, Target: TTableDesign): TStringList;

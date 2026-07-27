@@ -32,6 +32,11 @@ type
   protected
 		FByPassClose: Boolean;
     function GetObjectName: String; virtual;
+    { Overridden by the data-aware descendant the editors are built on. Forms
+      that are not about one object - the preview, the trace window - have no
+      schema, and answering '' means "whatever the search path reaches", which
+      is what they have always done. }
+    function GetObjectSchema: String; virtual;
   public
     { Public declarations }
 
@@ -1113,6 +1118,11 @@ end;
 function TfrmBaseDocumentForm.GetObjectName: String;
 begin
   //
+end;
+
+function TfrmBaseDocumentForm.GetObjectSchema: String;
+begin
+  Result := '';
 end;
 
 procedure TfrmBaseDocumentForm.SetObjectModified(Value: Boolean);

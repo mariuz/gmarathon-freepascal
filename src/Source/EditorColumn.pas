@@ -212,6 +212,7 @@ type
 		property NewColumnName : String read FNewColumnName;
 
 		function GetObjectName : String;
+		function GetObjectSchema : String;
 		function GetActiveConnectionName : String;
 		function GetActiveObjectType : TGSSCacheType;
 		function GetActiveStatusBar : TStatusBar;
@@ -1242,6 +1243,11 @@ end;
 function TfrmColumns.GetObjectName: String;
 begin
 	Result := FObjectName;
+end;
+
+function TfrmColumns.GetObjectSchema: String;
+begin
+	Result := FSchema;
 end;
 
 procedure TfrmColumns.SetObjectModified(Value: Boolean);

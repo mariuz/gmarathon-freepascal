@@ -1396,6 +1396,54 @@ begin
   end;
 end;
 
+{ The Description tab, on both of a pair of same-named objects.
+
+  Chosen over the other frames because it is the one that writes: a description
+  saved against the wrong object changes a table nobody asked to change, and
+  unlike a misread it does not go away when the window is closed.
+
+  The frame is read directly. Switching to its tab is what a user does, and
+  what page a PageControl happens to be on is not something a check should
+  depend on. }
+procedure CheckEditorFrameSchema;
+var
+  Here, There: String;
+
+  function DescriptionOf(const ASchema: String): String;
+  var
+    E: TfrmTables;
+  begin
+    Result := '';
+    E := TfrmTables.Create(nil);
+    try
+      E.ConnectionName := 'EditorHarness';
+      E.Schema := ASchema;
+      try
+        E.LoadTable('EDIT_DUP');
+        { The frame loads when its tab is first shown, which a test cannot
+          rely on - so it is asked directly. }
+        E.framDoco.LoadDoco;
+        Result := E.framDoco.Doco;
+      except
+        on Ex: Exception do
+          Result := '<' + Ex.ClassName + ': ' + Ex.Message + '>';
+      end;
+    finally
+      E.Free;
+    end;
+  end;
+
+begin
+  There := DescriptionOf('EDIT_SCH');
+  Here := DescriptionOf('');
+  Check(Pos('yonder', There) > 0,
+    'the Description tab reads the named schema''s description');
+  Check(Pos('here', There) = 0,
+    'and not the same-named table''s in another schema');
+  Check(Pos('here', Here) > 0, 'the current schema''s is read too');
+  Check(Pos('yonder', Here) = 0, 'and kept apart the other way');
+end;
+
 { The object editors against two schemas holding the same table name.
 
   This is the one that matters. Firebird 6 made an object name unique per
@@ -1488,16 +1536,14 @@ begin
   CheckEditorSchema(sokException, 'EDIT_EXC', 'exoth', 'excur',
     'the exception editor');
   CheckEditorSchema(sokDomain, 'EDIT_DOM', '19', '7', 'the domain editor');
+
+  { And the frames on the editors' tabs, which run their own queries. An
+    editor whose main tabs were made schema-correct still had a Description
+    tab reading - and writing - whichever same-named object the search path
+    reached. }
+  CheckEditorFrameSchema;
 end;
 
-{ The table designer, on a real table.
-
-  The model underneath it is checked twice already - keyword_test says what an
-  edit should generate, and the smoke test says Firebird accepts it. Neither
-  says the form is wired to any of that. What is left to get wrong is exactly
-  what a build cannot catch: an .lfm that does not stream, a grid whose hidden
-  original-name column was dropped so every column looks like an addition, a
-  script pane nothing refreshes, an Apply button enabled with nothing to apply. }
 procedure CheckTableDesignerOn(Conn: TMarathonCacheConnection; const TableName: String);
 var
   F: TfrmTableDesigner;

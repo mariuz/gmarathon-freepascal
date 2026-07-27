@@ -140,6 +140,10 @@ type
 		FModifyConstraint: Boolean;
 		FIsInterbase6, FIsInterbase5: Boolean;
 		FConstraintName, FTableName, FDatabaseName: String;
+		{ The schema of the table this dialog was opened on, handed over by the
+		  table editor - without it the statements it builds name whatever the
+		  unqualified name reaches. }
+		FSchema: String;
 		// Old values, are used to determine if something was changed
 		FOldFKTable, FOldDeleteRule, FOldUpdateRule, FOldCheckText: String;
 		FOldColumns, FOldRefColumns: TStringList;
@@ -152,6 +156,9 @@ type
 		procedure SetObjectModified(Value: Boolean);
 		procedure SetDatabaseName(const Value: String);
 		function GetObjectName: String;
+		{ Set by the table editor before the dialog is shown. }
+		property Schema: String read FSchema write FSchema;
+		function GetObjectSchema: String;
 		function GetActiveConnectionName: String;
 		function GetActiveObjectType: TGSSCacheType;
 		function GetActiveStatusBar: TStatusBar;
@@ -450,6 +457,13 @@ end;
 function TfrmEditorConstraint.GetObjectName: String;
 begin
 	Result := '';
+end;
+
+function TfrmEditorConstraint.GetObjectSchema: String;
+begin
+	{ These dialogs are opened by the table editor and act on its table, so
+	  the schema is the one it handed over. }
+	Result := FSchema;
 end;
 
 procedure TfrmEditorConstraint.OpenMessages;

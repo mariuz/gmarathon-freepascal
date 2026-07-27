@@ -43,6 +43,7 @@ type
 	private
 		{ Private declarations }
 		FForm : IMarathonBaseForm;
+		function SchemaClause: String;
   public
     { Public declarations }
 		procedure SetActive;
@@ -56,9 +57,20 @@ type
 
 implementation
 
-uses MarathonIDE;
+
+uses MarathonIDE, Globals;
 
 {$R *.lfm}
+
+{ The fragment that narrows a catalogue query to the object's schema.
+  The frames run their own queries, so an editor whose main tabs were made
+  schema-correct still showed - and in this frame's case wrote - whichever
+  same-named object the search path happened to reach. }
+function TframePerms.SchemaClause: String;
+begin
+  Result := SchemaClauseFor(FForm.GetActiveConnectionName,
+    FForm.GetObjectSchema);
+end;
 
 function TframePerms.CanPrint: Boolean;
 begin
@@ -99,11 +111,11 @@ begin
 	case FForm.GetActiveObjectType of
     ctTable, ctView :
       begin
-				qryUtil.SQL.Add('select * from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ' and rdb$user <> ''SYSDBA'' order by rdb$user, rdb$privilege;');
+				qryUtil.SQL.Add('select * from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ' and rdb$user <> ''SYSDBA'' order by rdb$user, rdb$privilege;');
       end;
     ctSP :
       begin
-        qryUtil.SQL.Add('select * from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ' and rdb$user <> ''SYSDBA'' order by rdb$user, rdb$privilege;');
+        qryUtil.SQL.Add('select * from rdb$user_privileges where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ' and rdb$user <> ''SYSDBA'' order by rdb$user, rdb$privilege;');
       end;
   end;
   qryUtil.Open;

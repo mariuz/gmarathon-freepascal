@@ -75,6 +75,9 @@ type
     FDatabase: TIBDatabase;
     FConnectionName: String;
     FTableName: String;
+    { The schema the table lives in, so the designer reads and alters the table
+      the tree listed rather than whatever the search path reaches. }
+    FSchema: String;
     { What the table is in the database. Never edited: it is the thing the grid
       is compared against, and it is only replaced by re-reading after an
       apply. Nil for a table that does not exist yet, which is what makes this
@@ -94,7 +97,7 @@ type
   public
     { Opens the designer on an existing table. }
     procedure LoadTable(ADatabase: TIBDatabase; const AConnectionName,
-      ATableName: String);
+      ATableName: String; const ASchema: String = '');
     { Opens it on a table that does not exist yet, so Apply creates it. }
     procedure NewTable(ADatabase: TIBDatabase; const AConnectionName: String);
     function GetObjectName: String; override;
@@ -105,7 +108,7 @@ type
 
 { Opens a designer on a table, or brings up the one already open on it. }
 function ShowTableDesigner(ADatabase: TIBDatabase; const AConnectionName,
-  ATableName: String): TfrmTableDesigner;
+  ATableName: String; const ASchema: String = ''): TfrmTableDesigner;
 
 implementation
 
@@ -129,7 +132,7 @@ const
   colOriginal = 6;
 
 function ShowTableDesigner(ADatabase: TIBDatabase; const AConnectionName,
-  ATableName: String): TfrmTableDesigner;
+  ATableName: String; const ASchema: String = ''): TfrmTableDesigner;
 var
   Idx: Integer;
   Existing: TfrmTableDesigner;
@@ -150,7 +153,7 @@ begin
     end;
 
   Result := TfrmTableDesigner.Create(nil);
-  Result.LoadTable(ADatabase, AConnectionName, ATableName);
+  Result.LoadTable(ADatabase, AConnectionName, ATableName, ASchema);
   Result.ShowDocument;
 end;
 
@@ -199,11 +202,12 @@ begin
 end;
 
 procedure TfrmTableDesigner.LoadTable(ADatabase: TIBDatabase;
-  const AConnectionName, ATableName: String);
+  const AConnectionName, ATableName: String; const ASchema: String);
 begin
   FDatabase := ADatabase;
   FConnectionName := AConnectionName;
   FTableName := ATableName;
+  FSchema := ASchema;
   FIsNew := False;
   Caption := 'Design: ' + ATableName;
   edTableName.Text := ATableName;
@@ -212,7 +216,8 @@ begin
   edTableName.ReadOnly := True;
 
   FreeAndNil(FOriginal);
-  FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, ATableName);
+  FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, ATableName, FSchema,
+    FSchema <> '');
   if not Assigned(FOriginal) then
   begin
     { Not a failure worth refusing to open over - the designer is still usable,
@@ -494,7 +499,8 @@ begin
       may have stored something other than what was asked for, and the next
       comparison has to be against what is actually there. }
     FreeAndNil(FOriginal);
-    FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, FTableName);
+    FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, FTableName, FSchema,
+      FSchema <> '');
     if Assigned(FOriginal) then
       LoadGridFrom(FOriginal);
     RefreshScript;

@@ -210,7 +210,8 @@ type
 		{ The table designer, which is the other way of editing a table: the whole
 		  table in one grid, and the script shown before it is run. OpenTable's
 		  editor stays because it is what you want for one column at a time. }
-		function DesignTable(TableName: String; Connection: String): TForm;
+		function DesignTable(TableName: String; Connection: String;
+			Schema: String = ''): TForm;
 		procedure NewView(Connection: String);
 		function OpenView(ViewName: String; Connection: String;
 			Schema: String = ''): TForm;
@@ -2291,7 +2292,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(DomainName, ctDomain, Connection) then
+		if not DoesObjectExist(DomainName, ctDomain, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2351,7 +2352,7 @@ begin
 	end;
 	if not Found then
 	begin
-		if not DoesObjectExist(ProcedureName, ctSP, Connection) then
+		if not DoesObjectExist(ProcedureName, ctSP, Connection, Schema) then
 		begin
       Result := nil;
       Exit;
@@ -2471,7 +2472,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(TriggerName, ctTrigger, Connection) then
+		if not DoesObjectExist(TriggerName, ctTrigger, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2527,7 +2528,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(ExceptionName, ctException, Connection) then
+		if not DoesObjectExist(ExceptionName, ctException, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2583,7 +2584,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(GeneratorName, ctGenerator, Connection) then
+		if not DoesObjectExist(GeneratorName, ctGenerator, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2644,7 +2645,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(TableName, ctTable, Connection) then
+		if not DoesObjectExist(TableName, ctTable, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2662,19 +2663,20 @@ begin
 	end;
 end;
 
-function TMarathonIDE.DesignTable(TableName, Connection: String): TForm;
+function TMarathonIDE.DesignTable(TableName, Connection: String;
+	Schema: String): TForm;
 var
 	C: TMarathonCacheConnection;
 begin
 	Result := nil;
 	if not CheckConnected(Connection) then
 		Exit;
-	if not DoesObjectExist(TableName, ctTable, Connection) then
+	if not DoesObjectExist(TableName, ctTable, Connection, Schema) then
 		Exit;
 	C := FCurrentProject.Cache.ConnectionByName[Connection];
 	if not Assigned(C) or not Assigned(C.Connection) then
 		Exit;
-	Result := ShowTableDesigner(C.Connection, Connection, TableName);
+	Result := ShowTableDesigner(C.Connection, Connection, TableName, Schema);
 	FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);
 end;
 
@@ -2722,7 +2724,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(ViewName, ctView, Connection) then
+		if not DoesObjectExist(ViewName, ctView, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2783,7 +2785,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(UDFName, ctUDF, Connection) then
+		if not DoesObjectExist(UDFName, ctUDF, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;
@@ -2828,7 +2830,7 @@ begin
 			end;
 	if not Found then
 	begin
-		if not DoesObjectExist(PackageName, ctPackage, Connection) then
+		if not DoesObjectExist(PackageName, ctPackage, Connection, Schema) then
 		begin
 			Result := nil;
 			Exit;

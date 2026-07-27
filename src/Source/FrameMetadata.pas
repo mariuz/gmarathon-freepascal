@@ -43,6 +43,7 @@ type
 		procedure edDDLKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 	private
 		FForm : IMarathonBaseForm;
+		function SchemaClause: String;
 		{ Private declarations }
 	public
 		{ Public declarations }
@@ -66,9 +67,20 @@ type
 
 implementation
 
+
 uses MarathonIDE;
 
 {$R *.lfm}
+
+{ The fragment that narrows a catalogue query to the object's schema.
+  The frames run their own queries, so an editor whose main tabs were made
+  schema-correct still showed - and in this frame's case wrote - whichever
+  same-named object the search path happened to reach. }
+function TframDisplayDDL.SchemaClause: String;
+begin
+  Result := SchemaClauseFor(FForm.GetActiveConnectionName,
+    FForm.GetObjectSchema);
+end;
 
 procedure TframDisplayDDL.Init(Form : IMarathonBaseForm);
 begin
@@ -167,7 +179,7 @@ begin
               qryUtil.Database := Conn.Connection;
               qryUtil.Transaction := Conn.Transaction;
               qryUtil.SQL.Clear;
-              qryUtil.SQL.Add('select rdb$trigger_name, rdb$trigger_type from rdb$triggers where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints);');
+              qryUtil.SQL.Add('select rdb$trigger_name, rdb$trigger_type from rdb$triggers where rdb$relation_name = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints);');
               qryUtil.Open;
               While not qryUtil.EOF do
               begin

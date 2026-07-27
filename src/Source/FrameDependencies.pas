@@ -62,6 +62,7 @@ type
 	private
 		{ Private declarations }
 		FForm : IMarathonBaseForm;
+		function SchemaClause: String;
 	public
 		{ Public declarations }
 		procedure SaveColWidths;
@@ -75,9 +76,20 @@ type
 
 implementation
 
-uses MarathonIDE;
+
+uses MarathonIDE, Globals;
 
 {$R *.lfm}
+
+{ The fragment that narrows a catalogue query to the object's schema.
+  The frames run their own queries, so an editor whose main tabs were made
+  schema-correct still showed - and in this frame's case wrote - whichever
+  same-named object the search path happened to reach. }
+function TframeDepend.SchemaClause: String;
+begin
+  Result := SchemaClauseFor(FForm.GetActiveConnectionName,
+    FForm.GetObjectSchema);
+end;
 
 procedure TframeDepend.Init(Form : IMarathonBaseForm);
 begin
@@ -107,7 +119,7 @@ begin
 				qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
 				qryUtil.SQL.Clear;
 				qryUtil.SQL.Add('select RDB$DEPENDENT_NAME, RDB$DEPENDENT_TYPE, RDB$FIELD_NAME from RDB$DEPENDENCIES where RDB$DEPENDED_ON_NAME = ' +
-					AnsiQuotedStr(FForm.GetObjectName, '''') + ' order by RDB$DEPENDENT_NAME, RDB$FIELD_NAME;');
+					AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ' order by RDB$DEPENDENT_NAME, RDB$FIELD_NAME;');
 				qryUtil.Open;
 				while not qryUtil.EOF do
 				begin
@@ -177,7 +189,7 @@ begin
 						'RDB$INDICES C on B.RDB$INDEX_NAME = C.RDB$INDEX_NAME) inner join ' +
 						'RDB$INDEX_SEGMENTS D on C.RDB$INDEX_NAME = D.RDB$INDEX_NAME ' +
 						'where RDB$CONST_NAME_UQ in (select RDB$CONSTRAINT_NAME from ' +
-						'RDB$RELATION_CONSTRAINTS where RDB$RELATION_NAME = ' + AnsiQuotedStr(FForm.GetObjectName, '''') +
+						'RDB$RELATION_CONSTRAINTS where RDB$RELATION_NAME = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause +
 						'and ((RDB$CONSTRAINT_TYPE = ''PRIMARY KEY'') or (RDB$CONSTRAINT_TYPE = ''UNIQUE'')))';
 					qryUtil.Open;
 					while not qryUtil.EOF do
@@ -213,7 +225,7 @@ begin
 				qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
 				qryUtil.SQL.Clear;
 				qryUtil.SQL.Add('select RDB$DEPENDED_ON_NAME, RDB$DEPENDED_ON_TYPE, RDB$FIELD_NAME from RDB$DEPENDENCIES where RDB$DEPENDENT_NAME = ' +
-					AnsiQuotedStr(FForm.GetObjectName, '''') + ';');
+					AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
 				qryUtil.Open;
 				while not qryUtil.EOF do
 				begin
@@ -285,7 +297,7 @@ begin
 						+ ' join RDB$RELATION_CONSTRAINTS RC2 on REFC.RDB$CONST_NAME_UQ = RC2.RDB$CONSTRAINT_NAME'
 						+ ' join RDB$INDEX_SEGMENTS ISEG on RC2.RDB$INDEX_NAME = ISEG.RDB$INDEX_NAME'
 						+ ' join RDB$INDEX_SEGMENTS ISEG2 on RC.RDB$INDEX_NAME = ISEG2.RDB$INDEX_NAME'
-						+ ' where RC.RDB$RELATION_NAME = ' + AnsiQuotedStr(FForm.GetObjectName, '''')
+						+ ' where RC.RDB$RELATION_NAME = ' + AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause
 						+ ' and RC.RDB$CONSTRAINT_TYPE = ' + AnsiQuotedStr('FOREIGN KEY', '''') + ' order by RC.RDB$RELATION_NAME');
 					qryUtil.Open;
 					while not qryUtil.EOF do

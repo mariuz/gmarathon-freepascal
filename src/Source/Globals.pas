@@ -228,6 +228,14 @@ procedure AddStripMasked(IL: TCustomImageList; Strip: TBitmap; MaskColor: TColor
   permission is granted once here, which is the behaviour this Delphi-era code
   was written against. }
 procedure AllowAutoTransactions(AOwner: TComponent);
+
+{ The predicate that narrows a catalogue query to one schema, for callers that
+  have a connection name rather than a connection.
+
+  The object editors get this from their base class; the frames on their tabs
+  do not have one - they are frames, and reach their form through an interface
+  - so they come here instead. Both end at SchemaNames, so there is one rule. }
+function SchemaClauseFor(const ConnectionName, Schema: String): String;
 function BracketNear(StartCh: Integer; s: String): Boolean;
 function DoNiftyWrap(St: String; Width: Integer): String;
 procedure ExportGrid(ExType : TExportType; Q : TDataSet; FieldList : TStringList; TableName: String; FileName: String);
@@ -238,7 +246,8 @@ function StripQuotesFromQuotedIdentifier(S: String): String;
 function IsIdentifierQuoted(S: String): Boolean;
 function ShouldBeQuoted(S: String): Boolean;
 function CheckNameLength(S: String): Boolean;
-function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String): Boolean;
+function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String;
+	Schema: String = ''): Boolean;
 
 procedure ProcessNextTab(PageControl: TPageControl);
 procedure ProcessPriorTab(PageControl: TPageControl);
@@ -338,7 +347,7 @@ var
 
 implementation
 
-uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, SchemaNames;
 
 const
   // Firebird BLR type constants (from ibase.h), as stored in
@@ -830,7 +839,8 @@ begin
 	end;
 end;
 
-function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String): Boolean;
+function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String;
+	Schema: String): Boolean;
 var
 	DB : TMarathonCacheConnection;
 	Q : TIBQuery;
@@ -856,7 +866,7 @@ begin
 			case ObjType of
 				ctTable :
 					begin
-            Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -877,7 +887,7 @@ begin
 					end;
         ctTrigger :
           begin
-						Q.SQL.Text := 'select rdb$trigger_name from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+						Q.SQL.Text := 'select rdb$trigger_name from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -898,7 +908,7 @@ begin
           end;
         ctSP :
           begin
-            Q.SQL.Text := 'select rdb$procedure_name from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$procedure_name from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -919,7 +929,7 @@ begin
 					end;
         ctView :
           begin
-            Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -940,7 +950,7 @@ begin
           end;
         ctGenerator :
           begin
-            Q.SQL.Text := 'select rdb$generator_name from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$generator_name from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -961,7 +971,7 @@ begin
           end;
         ctException :
           begin
-            Q.SQL.Text := 'select rdb$exception_name from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$exception_name from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
 						Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -986,7 +996,7 @@ begin
               does not exist and the query is a hard error, so treat that as
               "no such object" rather than letting it escape. }
             try
-              Q.SQL.Text := 'select rdb$package_name from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+              Q.SQL.Text := 'select rdb$package_name from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
               Q.Open;
               Result := not (Q.BOF and Q.EOF);
               Q.Close;
@@ -1006,7 +1016,7 @@ begin
           end;
         ctUDF :
           begin
-            Q.SQL.Text := 'select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -1027,7 +1037,7 @@ begin
           end;
 				ctDomain :
           begin
-            Q.SQL.Text := 'select rdb$field_name from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''');
+            Q.SQL.Text := 'select rdb$field_name from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
             Q.Open;
             if (Q.BOF and Q.EOF) then
             begin
@@ -1053,6 +1063,22 @@ begin
       Q.Free;
     end;
   end;
+end;
+
+function SchemaClauseFor(const ConnectionName, Schema: String): String;
+var
+	Conn: TMarathonCacheConnection;
+	Supported: Boolean;
+begin
+	Supported := False;
+	if Assigned(MarathonIDEInstance) and
+	   Assigned(MarathonIDEInstance.CurrentProject) then
+	begin
+		Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ConnectionName];
+		Supported := Assigned(Conn) and Conn.Connected and
+			Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0);
+	end;
+	Result := SchemaPredicate('', Schema, Supported);
 end;
 
 procedure AllowAutoTransactions(AOwner: TComponent);
