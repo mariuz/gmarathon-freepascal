@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument;
 
 var
   Highlighter: TSynSQLSyn;
@@ -175,6 +175,224 @@ begin
   Result.AddColumn(Col('NAME', 'NAME', 'varchar(30)'));
   Result.AddColumn(Col('BALANCE', 'BALANCE', 'numeric(18,2)', False, '0'));
   Result.PrimaryKey.Add('CUST_ID');
+end;
+
+{ Every line of every page, as one string, so a check can ask what is on paper
+  rather than what the layout intended. }
+function AllPages(Doc: TPrintedDocument): String;
+var
+  P, L: Integer;
+begin
+  Result := '';
+  for P := 0 to Doc.PageCount - 1 do
+    for L := 0 to Doc[P].Lines.Count - 1 do
+      Result := Result + Doc[P].Lines[L] + #10;
+end;
+
+function PageText(Doc: TPrintedDocument; Page: Integer): String;
+var
+  L: Integer;
+begin
+  Result := '';
+  for L := 0 to Doc[Page].Lines.Count - 1 do
+    Result := Result + Doc[Page].Lines[L] + #10;
+end;
+
+{ The longest line anywhere, which is what running off the paper looks like. }
+function WidestLine(Doc: TPrintedDocument): Integer;
+var
+  P, L: Integer;
+begin
+  Result := 0;
+  for P := 0 to Doc.PageCount - 1 do
+    for L := 0 to Doc[P].Lines.Count - 1 do
+      if Length(Doc[P].Lines[L]) > Result then
+        Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestPrintDocument;
+var
+  Doc: TPrintDocument;
+  Out_: TPrintedDocument;
+  W: TStringList;
+  Idx, HeaderPages: Integer;
+begin
+  { Wrapping. }
+  W := WrapLine('the quick brown fox jumps over the lazy dog', 12);
+  try
+    Check(W.Count > 1, 'a long line wraps');
+    for Idx := 0 to W.Count - 1 do
+      if Length(W[Idx]) > 12 then
+        Check(False, 'no wrapped line is wider than asked for');
+    Check(W[0] = 'the quick', 'and breaks at a space rather than mid-word');
+  finally
+    W.Free;
+  end;
+
+  W := WrapLine('', 20);
+  try
+    { A blank between paragraphs has to survive, or the report closes up. }
+    Check(W.Count = 1, 'an empty line stays one line');
+  finally
+    W.Free;
+  end;
+
+  W := WrapLine('SUPERCALIFRAGILISTICEXPIALIDOCIOUS', 10);
+  try
+    Check(W.Count > 1, 'a word longer than the line is cut rather than dropped');
+    { Cutting it necessarily splits it, so the check is that the pieces put
+      back together are the word - not that any one piece contains its end. }
+    Check(StringReplace(W.Text, #10, '', [rfReplaceAll]) =
+      'SUPERCALIFRAGILISTICEXPIALIDOCIOUS',
+      'and every character of it survives across the cuts');
+  finally
+    W.Free;
+  end;
+
+  { Columns. }
+  Check(FormatRow(['A', 'B'], [3, 3]) = 'A    B',
+    'cells are padded into columns with a gap between');
+  Check(FormatRow(['TOOLONG', 'B'], [3, 3]) = 'TOO  B',
+    'a cell wider than its column is clipped, not allowed to shove the rest');
+
+  { A report that fits on one page. }
+  Doc := TPrintDocument.Create('Marathon Report');
+  try
+    Doc.AddTitle('CUSTOMERS');
+    Doc.AddText('A short line.');
+    Out_ := PaginateDocument(Doc, 30, 60);
+    try
+      Check(Out_.PageCount = 1, 'a short report is one page');
+      Check(Pos('Marathon Report', PageText(Out_, 0)) > 0,
+        'the running header carries the report title');
+      Check(Pos('Page 1 of 1', PageText(Out_, 0)) > 0, 'and the footer numbers it');
+      Check(Out_[0].Lines.Count = 30, 'the page is padded to its full height, ' +
+        'so the footer sits at the bottom rather than under the text');
+    finally
+      Out_.Free;
+    end;
+  finally
+    Doc.Free;
+  end;
+
+  { Enough text to need several pages. }
+  Doc := TPrintDocument.Create('Long Report');
+  try
+    for Idx := 1 to 60 do
+      Doc.AddText('line ' + IntToStr(Idx));
+    Out_ := PaginateDocument(Doc, 20, 60);
+    try
+      Check(Out_.PageCount > 1, 'a long report runs to several pages');
+      { The count in the footer is only knowable once the layout is done, which
+        is why footers are added last. }
+      Check(Pos('Page 1 of ' + IntToStr(Out_.PageCount), PageText(Out_, 0)) > 0,
+        'every footer counts up to the real total');
+      Check(Pos('Page ' + IntToStr(Out_.PageCount) + ' of ' + IntToStr(Out_.PageCount),
+        PageText(Out_, Out_.PageCount - 1)) > 0, 'including the last');
+      { Nothing may be lost at a page boundary - the failure a reader notices
+        last and trusts least. }
+      Check(Pos('line 1'#10, AllPages(Out_)) > 0, 'the first line is on paper');
+      Check(Pos('line 60', AllPages(Out_)) > 0, 'and so is the last');
+      for Idx := 1 to 60 do
+        if Pos('line ' + IntToStr(Idx) + #10, AllPages(Out_)) = 0 then
+        begin
+          Check(False, 'line ' + IntToStr(Idx) + ' fell down a page break');
+          Break;
+        end;
+      Check(Out_[0].Lines.Count = 20, 'each page is the height asked for');
+    finally
+      Out_.Free;
+    end;
+  finally
+    Doc.Free;
+  end;
+
+  { A table crossing a page boundary. }
+  Doc := TPrintDocument.Create('Table Report');
+  try
+    Doc.AddTableHeader(['COLUMN', 'TYPE']);
+    for Idx := 1 to 40 do
+      Doc.AddTableRow(['FIELD_' + IntToStr(Idx), 'varchar(10)']);
+    Out_ := PaginateDocument(Doc, 20, 60);
+    try
+      Check(Out_.PageCount > 1, 'a long table runs to several pages');
+      HeaderPages := 0;
+      for Idx := 0 to Out_.PageCount - 1 do
+        if Pos('COLUMN', PageText(Out_, Idx)) > 0 then
+          Inc(HeaderPages);
+      { The reason tables are a block kind rather than pre-formatted text:
+        page four has to say which column is which. }
+      Check(HeaderPages = Out_.PageCount,
+        'the column header repeats on every page the table runs onto');
+      for Idx := 1 to 40 do
+        if Pos('FIELD_' + IntToStr(Idx), AllPages(Out_)) = 0 then
+        begin
+          Check(False, 'table row ' + IntToStr(Idx) + ' was lost');
+          Break;
+        end;
+      Check(Pos('FIELD_1 ', PageText(Out_, 0)) > 0,
+        'and the columns line up under it');
+    finally
+      Out_.Free;
+    end;
+  finally
+    Doc.Free;
+  end;
+
+  { A table wider than the paper. Something has to give, and it must not be
+    the page width - a line that overruns is simply lost off the edge. }
+  Doc := TPrintDocument.Create('Wide');
+  try
+    Doc.AddTableHeader(['NAME', 'DESCRIPTION']);
+    Doc.AddTableRow(['SHORT', StringOfChar('x', 200)]);
+    Out_ := PaginateDocument(Doc, 30, 40);
+    try
+      Check(WidestLine(Out_) <= 40, 'a too-wide table is narrowed to the page');
+      { Narrowed by taking it off the widest column, so the short one survives
+        intact rather than every column being mangled equally. }
+      Check(Pos('SHORT', AllPages(Out_)) > 0,
+        'and the narrow column keeps its content');
+    finally
+      Out_.Free;
+    end;
+  finally
+    Doc.Free;
+  end;
+
+  { A heading that would land at the very foot of a page goes with its
+    content instead. }
+  Doc := TPrintDocument.Create('Widow');
+  try
+    for Idx := 1 to 15 do
+      Doc.AddText('filler ' + IntToStr(Idx));
+    Doc.AddHeading('Indices');
+    Doc.AddText('the index');
+    Out_ := PaginateDocument(Doc, 20, 60);
+    try
+      for Idx := 0 to Out_.PageCount - 1 do
+        if Pos('Indices', PageText(Out_, Idx)) > 0 then
+          Check(Pos('the index', PageText(Out_, Idx)) > 0,
+            'a heading is never left alone at the foot of a page');
+    finally
+      Out_.Free;
+    end;
+  finally
+    Doc.Free;
+  end;
+
+  { Long text still fits the paper. }
+  Doc := TPrintDocument.Create('Wrap');
+  try
+    Doc.AddText(StringOfChar('y', 300));
+    Out_ := PaginateDocument(Doc, 30, 50);
+    try
+      Check(WidestLine(Out_) <= 50, 'no line is ever wider than the page');
+    finally
+      Out_.Free;
+    end;
+  finally
+    Doc.Free;
+  end;
 end;
 
 procedure TestSchemaNames;
@@ -626,6 +844,9 @@ begin
 
   WriteLn('Schema-qualified names:');
   TestSchemaNames;
+
+  WriteLn('Print pagination:');
+  TestPrintDocument;
 
   if Failures > 0 then
   begin

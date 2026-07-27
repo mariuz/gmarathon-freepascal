@@ -40,7 +40,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer;
 
 var
   Failures: Integer = 0;
@@ -1848,6 +1848,91 @@ begin
   Check(MenuFound, 'the object tree''s context menu offers it');
 end;
 
+{ Printing, which until now has been a no-op showing "Printing is not
+  available in this build".
+
+  Pagination itself is checked in keyword_test without a printer or a
+  widgetset. What needs a display is the preview: that its .lfm streams, that
+  it can be handed a document and render a page without a printer configured -
+  the machine running this has none - and that the page navigation the toolbar
+  has always offered is now actually wired to something. }
+procedure CheckPrintPreview;
+var
+  F: TfrmPrintPreview;
+  Doc: TPrintDocument;
+  Printed: TPrintedDocument;
+  Bmp: TBitmap;
+  Idx, Ink: Integer;
+begin
+  WriteLn('Print preview:');
+
+  Doc := TPrintDocument.Create('Harness Report');
+  try
+    Doc.AddTitle('A Report');
+    for Idx := 1 to 120 do
+      Doc.AddText('line ' + IntToStr(Idx));
+    Printed := PaginateDocument(Doc, 40, 80);
+  finally
+    Doc.Free;
+  end;
+  Check(Printed.PageCount > 1, 'the harness document runs to several pages');
+
+  try
+    F := TfrmPrintPreview.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the preview .lfm streams (' + E.ClassName + ': ' + E.Message + ')');
+      Printed.Free;
+      Exit;
+    end;
+  end;
+  try
+    Check(True, 'the preview .lfm streams');
+    { Handed over, not copied - the preview frees it. }
+    F.LoadDocument(Printed, 80);
+
+    { Navigation. Every one of these handlers used to be an empty body, so the
+      buttons moved nothing. }
+    F.actNextExecute(nil);
+    Check(Pos('Page 2', F.stsPreview.Panels[0].Text) > 0,
+      'Next moves to the second page');
+    F.actLastExecute(nil);
+    Check(Pos('Page ' + IntToStr(F.PageCount), F.stsPreview.Panels[0].Text) > 0,
+      'Last moves to the end');
+    F.actNextExecute(nil);
+    Check(Pos('Page ' + IntToStr(F.PageCount), F.stsPreview.Panels[0].Text) > 0,
+      'and Next past the end stays there rather than running off it');
+    F.actFirstExecute(nil);
+    Check(Pos('Page 1 ', F.stsPreview.Panels[0].Text) > 0, 'First comes back');
+    F.actPreviousExecute(nil);
+    Check(Pos('Page 1 ', F.stsPreview.Panels[0].Text) > 0,
+      'and Previous before the start stays there');
+
+    { Rendering, onto a bitmap rather than the screen so the check can look at
+      what came out. This is the part that needs no printer: the machine
+      running the tests has none, and the preview still has to work. }
+    Bmp := TBitmap.Create;
+    try
+      Bmp.SetSize(600, 850);
+      Bmp.Canvas.Brush.Color := clWhite;
+      Bmp.Canvas.FillRect(0, 0, Bmp.Width, Bmp.Height);
+      RenderPage(Bmp.Canvas, F.CurrentPage, Rect(20, 20, 580, 830), 80);
+      { Something was actually drawn. A renderer that silently drew nothing
+        would pass every other check here. }
+      Ink := 0;
+      for Idx := 20 to 400 do
+        if Bmp.Canvas.Pixels[Idx, 30] <> clWhite then
+          Inc(Ink);
+      Check(Ink > 0, 'a page renders ink onto the canvas');
+    finally
+      Bmp.Free;
+    end;
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckCommandPalette;
 var
   P: TfrmCommandPalette;
@@ -2372,6 +2457,7 @@ begin
   CheckExplorerFilter;
   CheckResultsUnderEditor;
   CheckCommandPalette;
+  CheckPrintPreview;
   CheckDesignTableReachable;
   CheckConnectionGrouping;
   CheckHighDPIScaling;

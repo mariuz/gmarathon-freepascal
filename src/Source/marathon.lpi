@@ -121,7 +121,7 @@
         <PackageName Value="fbintf"/>
       </Item6>
     </RequiredPackages>
-    <Units Count="100">
+    <Units Count="101">
       <Unit0>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -780,6 +780,11 @@
         <HasResources Value="True"/>
         <UnitName Value="TableDesignerForm"/>
       </Unit115>
+      <Unit116>
+        <Filename Value="PrintRenderer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="PrintRenderer"/>
+      </Unit116>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

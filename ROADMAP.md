@@ -592,3 +592,4 @@ because the original reasoning no longer holds:
 | 9 | Connection groups | Done; dedicated dialog judged not worth it |
 | 9 | Table designer | Done — added alongside the immediate-apply editor, not converting it |
 | 9 | Cleanup enabled by the shell | Done |
+| — | Printing and print preview | Done — replaced the unported report writers |
