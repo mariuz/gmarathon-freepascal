@@ -57,7 +57,7 @@ The application is structured in layers:
 - `NewColorGrd.pas` — color picker
 - `DiagramTree.pas` / `CloseUpCombo.pas`
 
-Note: `adbpedit.pas`, `IBPerformanceMonitor.pas`, and `NewColorGrd.pas` also have newer, FPC-ported copies directly in `src/Source/`. Because `src/Source` is earlier in the unit search path than `lib/Other` (see `marathon.lpi`), the `src/Source` copies are the ones actually compiled into the app — the `lib/Other` originals are shadowed/dead. `lib/Other/CloseUpCombo.pas` has no such duplicate and is the live one.
+Note: the shadowed `lib/Other` copies of `adbpedit.pas`, `IBPerformanceMonitor.pas` and `NewColorGrd.pas` have been deleted — `src/Source` is earlier in the unit search path (see `marathon.lpi`), so those were never compiled and editing one had no effect. `lib/Other/CloseUpCombo.pas` has no duplicate and is live; `DBValCb.pas` is referenced by nothing but has no `src/Source` twin either, so it is left alone rather than guessed at.
 
 ## Database Access Pattern (IBX)
 

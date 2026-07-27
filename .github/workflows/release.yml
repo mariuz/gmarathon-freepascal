@@ -23,6 +23,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          # The release notes are built from the log between this tag and the
+          # previous one, and the default shallow clone has neither.
+          fetch-depth: 0
 
       # Same real Firebird server + client dev headers as the regular build
       # workflow, so the release binary is built and smoke-tested against
@@ -70,11 +73,43 @@ jobs:
           tar -czf "${STAGE}.tar.gz" "$STAGE"
           echo "MARATHON_ASSET=${STAGE}.tar.gz" >> "$GITHUB_ENV"
 
+      # The Linux job writes the notes; the other two only attach their assets.
+      # Three jobs each generating notes is why past releases said nothing but
+      # "Full Changelog" - whichever finished last overwrote the others, and
+      # GitHub's generated body is a commit list rather than a description of
+      # what changed.
+      - name: Describe the release
+        run: |
+          PREV=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          {
+            echo "### What changed"
+            echo
+            if [ -n "$PREV" ]; then
+              # Subjects only, and only of commits that are not merges: the
+              # bodies in this repository are long by design and belong in the
+              # log rather than in a release note.
+              git log --no-merges --pretty='- %s' "${PREV}..${GITHUB_REF_NAME}"
+            else
+              git log --no-merges --pretty='- %s' -20 "${GITHUB_REF_NAME}"
+            fi
+            echo
+            echo "### Downloads"
+            echo
+            echo "- Linux x86_64: \`marathon-${GITHUB_REF_NAME}-linux-x86_64.tar.gz\`"
+            echo "- Windows x86_64: \`marathon-${GITHUB_REF_NAME}-windows-x86_64.zip\`"
+            echo "- macOS arm64: \`marathon-${GITHUB_REF_NAME}-macos-arm64.zip\`"
+            echo
+            if [ -n "$PREV" ]; then
+              echo "**Full changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${GITHUB_REF_NAME}"
+            fi
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.MARATHON_ASSET }}
-          generate_release_notes: true
+          body_path: release-notes.md
 
   build-windows:
     name: Build & Package (Windows x86_64)
