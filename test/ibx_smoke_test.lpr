@@ -472,6 +472,33 @@ begin
   RequireNotInDDL(SchemaDDL, 'IN_OTHER_SCHEMA',
     'a column belonging to the same-named table in another schema');
 
+  { Extraction from a named schema. Until now the extractor could only reach
+    what an unqualified name reaches, so an object in another schema could not
+    be scripted at all; naming the schema both finds it and qualifies the DDL,
+    which is what makes the result runnable. }
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    Ex.Schema := 'SMOKE_OTHER';
+    EnsureTransaction;
+    SchemaDDL := Ex.Extract(ddlTable, ddlstNone, 'SMOKE_DUP');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+  RequireInDDL(SchemaDDL, 'SMOKE_OTHER', 'the schema qualifying the table name');
+  RequireInDDL(SchemaDDL, 'IN_OTHER_SCHEMA', 'the other schema''s own column');
+  { The current schema has a table of the same name with a different column.
+    Naming the schema has to reach past it, or the qualification would be
+    decoration on the wrong object. }
+  RequireNotInDDL(SchemaDDL, 'IN_CURRENT_SCHEMA',
+    'a column from the same-named table in the current schema');
+  WriteLn('Schema-qualified extraction OK (', Trim(Copy(SchemaDDL, 1, Pos('(', SchemaDDL) - 1)), ')');
+
   Run('drop table SMOKE_OTHER.SMOKE_DUP', 'dropping the other schema''s table');
   Run('drop table SMOKE_DUP', 'dropping the table');
   Run('drop schema SMOKE_OTHER', 'dropping the second schema');

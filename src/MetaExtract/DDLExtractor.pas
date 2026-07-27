@@ -75,6 +75,7 @@ type
     FDecimals: Integer;
     FDecSeparator: String;
     FIsIB6: Boolean;
+    FSchema : String;
     FODSMajor: Integer;
     FODSMinor: Integer;
     FODSRead: Boolean;
@@ -97,6 +98,7 @@ type
     function TriggerEventClause(TriggerType: Integer): String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function SchemaClause(const Alias: String; const Column: String = 'rdb$schema_name'): String;
+    function QualifiedIdent(const ObjectName: String): String;
     function ExtractGenerator(ObjectName : String) : String;
     function ExtractGeneratorValue(ObjectName : String) : String;
     function ExtractDomain(ObjectName : String) : String;
@@ -132,6 +134,13 @@ type
     property IncludeDoc : Boolean read FIncludeDoc write FIncludeDoc;
     property SQLDialect : Integer read FSQLDIalect write FSQLDialect;
     property IsInterbase6 : Boolean read FIsIB6 write FIsIB6;
+    { The schema to extract from. Empty - the default - means whatever an
+      unqualified name reaches, which is what every existing caller wants and
+      leaves their output exactly as it was. Set it to a schema name and the
+      queries look in that schema instead, and the DDL comes out qualified, so
+      an object outside the current schema can be scripted into something that
+      will actually run. }
+    property Schema : String read FSchema write FSchema;
   end;
 
 implementation
@@ -665,7 +674,7 @@ end;
 
 function TDDLExtractor.ExtractGenerator(ObjectName : String): String;
 begin
-  Result := 'create generator ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ';';
+  Result := 'create generator ' + QualifiedIdent(ObjectName) + ';';
 end;
 
 function TDDLExtractor.ExtractGeneratorValue(ObjectName: String): String;
@@ -680,9 +689,9 @@ begin
     Q1.Database := FDatabase;
     Q1.Transaction := FTransaction;
 
-    Q1.SelectSQL.Text := 'select gen_id(' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ', 0) as current_val from rdb$database';
+    Q1.SelectSQL.Text := 'select gen_id(' + QualifiedIdent(ObjectName) + ', 0) as current_val from rdb$database';
     Q1.Open;
-    Line := 'set generator ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' to ' + Trim(Q1.FieldByName('current_val').AsString) + ';';
+    Line := 'set generator ' + QualifiedIdent(ObjectName) + ' to ' + Trim(Q1.FieldByName('current_val').AsString) + ';';
     Result := Line;
     Q1.Close;
   finally
@@ -756,7 +765,7 @@ begin
       begin
         User := ParseSection(UserList[Idx], 1, ':');
         Priv := ParseSection(UserList[Idx], 2, ':');
-        Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv))  + ' on ' + ifthen(Priv='X','procedure ','') + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10;
+        Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv))  + ' on ' + ifthen(Priv='X','procedure ','') + QualifiedIdent(ObjectName) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10;
       end;
     finally
       UserList.Free;
@@ -828,14 +837,14 @@ begin
 
 
           if ColList = '' then
-            Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv)) + ' on ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10
+            Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv)) + ' on ' + QualifiedIdent(ObjectName) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10
           else
-            Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv)) + '(' + ColList + ') on ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10;
+            Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv)) + '(' + ColList + ') on ' + QualifiedIdent(ObjectName) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10;
 
         end
         else
         begin
-          Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv))  + ' on ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10;
+          Grant := Grant + 'grant ' + AnsiLowerCase(ConvertPriv(Priv))  + ' on ' + QualifiedIdent(ObjectName) + ' to ' + AnsiLowerCase(User) + ' ' + ParseSection(UserList[Idx], 3, ':') + ';' + #13#10;
         end;
       end;
     finally
@@ -1436,10 +1445,21 @@ end;
   than everything. }
 function TDDLExtractor.SchemaClause(const Alias: String; const Column: String): String;
 begin
-  if ODSAtLeast(14, 0) then
-    Result := ' and (' + Alias + Column + ' = current_schema or current_schema is null)'
+  if not ODSAtLeast(14, 0) then
+    Result := ''
+  else if FSchema <> '' then
+    { A named schema is asked for exactly, not through CURRENT_SCHEMA - the
+      point of naming one is to reach objects the search path does not. }
+    Result := ' and (' + Alias + Column + ' = ' + AnsiQuotedStr(FSchema, '''') + ')'
   else
-    Result := '';
+    Result := ' and (' + Alias + Column + ' = current_schema or current_schema is null)';
+end;
+
+function TDDLExtractor.QualifiedIdent(const ObjectName: String): String;
+begin
+  Result := MakeQuotedIdent(Trim(ObjectName), FIsIB6, FSQLDialect);
+  if FSchema <> '' then
+    Result := MakeQuotedIdent(FSchema, FIsIB6, FSQLDialect) + '.' + Result;
 end;
 
 function TDDLExtractor.SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
@@ -1500,7 +1520,7 @@ begin
     begin
       Src := AdjustLineBreaks(Trim(Q.FieldByName('rdb$package_header_source').AsString));
       if Src <> '' then
-        Result := 'create or alter package ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) +
+        Result := 'create or alter package ' + QualifiedIdent(ObjectName) +
                   SQLSecurityClause('rdb$packages', 'rdb$package_name', ObjectName) +
                   #13#10 + 'as' + #13#10 + Src + #13#10;
     end;
@@ -1531,7 +1551,7 @@ begin
         legitimate state rather than an error - emit nothing. }
       Src := AdjustLineBreaks(Trim(Q.FieldByName('rdb$package_body_source').AsString));
       if Src <> '' then
-        Result := 'recreate package body ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) +
+        Result := 'recreate package body ' + QualifiedIdent(ObjectName) +
                   #13#10 + 'as' + #13#10 + Src + #13#10;
     end;
     Q.Close;
@@ -1770,7 +1790,7 @@ begin
       end;
       Q1.Open;
       First := True;
-      Line := 'create table ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + '(' + #13#10;
+      Line := 'create table ' + QualifiedIdent(ObjectName) + '(' + #13#10;
       While Not Q1.EOF do
       begin
         if First then
@@ -1919,7 +1939,7 @@ begin
             Q2.Transaction := FTransaction;
             Q2.SelectSQL.Add('select a.rdb$trigger_source from rdb$triggers a, rdb$check_constraints b where a.rdb$trigger_name = b.rdb$trigger_name and b.rdb$constraint_name = ' + AnsiQuotedStr(Trim(Q1.FieldByName('rdb$constraint_name').AsString), '''') + ';');
             Q2.Open;
-            Line := 'alter table ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' ' + AdjustLineBreaks(Trim(Q2.FieldByName('rdb$trigger_source').AsString)) + ';';
+            Line := 'alter table ' + QualifiedIdent(ObjectName) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' ' + AdjustLineBreaks(Trim(Q2.FieldByName('rdb$trigger_source').AsString)) + ';';
             Q2.Close;
             OutPut.Add(Line);
           finally
@@ -2047,7 +2067,7 @@ begin
     end;
     Q1.Close;
 
-    Q1.SQL.Text := 'select * from ' + MakeQuotedIdent(ObjectName, IsInterbase6, SQLDialect);
+    Q1.SQL.Text := 'select * from ' + QualifiedIdent(ObjectName);
     Q1.ExecQuery;
 
     HasBlobs := False;
@@ -2077,7 +2097,7 @@ begin
         InsertList := InsertList + MakeQuotedIdent(Q1.Fields[Idy].Name, IsInterbase6, SQLDialect);
       end;
 
-      InsertList := 'insert into ' + MakeQuotedIdent(ObjectName, IsInterbase6, SQLDialect) + '(' + InsertList + ') values (';
+      InsertList := 'insert into ' + QualifiedIdent(ObjectName) + '(' + InsertList + ') values (';
 
       RowCount := 0;
       While Not Q1.EOF do
@@ -2169,7 +2189,7 @@ begin
         ParamList := ParamList + '?' + IntToStr(Idy + 1);
       end;
 
-      InsertList := 'insert into ' + MakeQuotedIdent(ObjectName, IsInterbase6, SQLDialect) + '(' + InsertList + ') values (' + ParamList + ')';
+      InsertList := 'insert into ' + QualifiedIdent(ObjectName) + '(' + InsertList + ') values (' + ParamList + ')';
 
       RowCount := 0;
       While Not Q1.EOF do
@@ -2358,7 +2378,7 @@ begin
           Q2.Next;
         end;
 
-        Line := Line + 'alter table ' + MakeQuotedIdent(ObjectName, FIsIB6, FSQLDialect) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' foreign key (' + Line1 + ') references ';
+        Line := Line + 'alter table ' + QualifiedIdent(ObjectName) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' foreign key (' + Line1 + ') references ';
 
         //get the fk relation and field...
         Q2.Close;
@@ -2470,7 +2490,7 @@ begin
         if Q1.FieldByName('rdb$index_type').AsInteger = 1 then
           Line1 := Line1 + 'descending ';
 
-        Line1 := Line1 + 'index ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$index_name').AsString), FIsIB6, FSQLDialect) + ' on ' + MakeQuotedIdent(ObjectName, FIsIb6, FSQLDialect);
+        Line1 := Line1 + 'index ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$index_name').AsString), FIsIB6, FSQLDialect) + ' on ' + QualifiedIdent(ObjectName);
 
         { An expression index has no RDB$INDEX_SEGMENTS rows, so the column
           list built above is empty and emitting it produced invalid SQL
@@ -2548,7 +2568,7 @@ begin
           Line := Line + MakeQuotedIdent(Trim(Q2.FieldByName('rdb$field_name').AsString), FIsIB6, FSQLDialect);
           Q2.Next;
         end;
-        Line := 'alter table ' + MakeQuotedIdent(ObjectName, FIsIb6, FSQLDialect) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) +  ' primary key (' + Line + ');';
+        Line := 'alter table ' + QualifiedIdent(ObjectName) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) +  ' primary key (' + Line + ');';
         Result := Line;
       finally
         Q2.Free;
