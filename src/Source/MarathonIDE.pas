@@ -187,6 +187,10 @@ type
 
 		//Object Editors
 		procedure NewDomain(Connection: String);
+		{ Opening an object editor, for every kind. The nine Open* functions below
+		  are one-line wrappers on this - see its comment for why. }
+		function OpenObject(ObjectName: String; Connection: String;
+			Kind: TGSSCacheType; Schema: String = ''): TForm;
     function OpenDomain(DomainName: String; COnnection: String;
 			Schema: String = ''): TForm;
     procedure NewProcedure(Connection: String);
@@ -2266,47 +2270,100 @@ begin
 	F.ShowDocument;
 end;
 
-function TMarathonIDE.OpenDomain(DomainName: String; Connection: String;
-	Schema: String): TForm;
+{ Opening an object editor, for every kind of object.
+
+  There were nine of these, one per kind, each about forty lines and each
+  differing from the others only in the form class, the name of its load
+  method and the cache type. They had to be edited in step: this session
+  changed all nine three times over - to take a schema, to compare schemas
+  when looking for an editor already open, and to pass the schema to the
+  existence check - and getting one of them wrong would not have shown up
+  until someone opened that one kind of object.
+
+  The search for an editor already open is by object type rather than by
+  class, which every editor already declares. That is what removes the class
+  from all of this but the one factory below. }
+
+function CreateEditorFor(Kind: TGSSCacheType): TfrmBaseDocumentDataAwareForm;
+begin
+	case Kind of
+		ctTable:     Result := TfrmTables.Create(nil);
+		ctView:      Result := TfrmViewEditor.Create(nil);
+		ctSP:        Result := TfrmStoredProcedure.Create(nil);
+		ctTrigger:   Result := TfrmTriggerEditor.Create(nil);
+		ctDomain:    Result := TfrmDomains.Create(nil);
+		ctGenerator: Result := TfrmGenerators.Create(nil);
+		ctException: Result := TfrmExceptions.Create(nil);
+		ctUDF:       Result := TfrmUDFEditor.Create(nil);
+		ctPackage:   Result := TfrmPackageEditor.Create(nil);
+	else
+		Result := nil;
+	end;
+end;
+
+procedure LoadObjectInto(AForm: TfrmBaseDocumentDataAwareForm;
+	Kind: TGSSCacheType; const ObjectName: String);
+begin
+	case Kind of
+		ctTable:     TfrmTables(AForm).LoadTable(ObjectName);
+		ctView:      TfrmViewEditor(AForm).LoadView(ObjectName);
+		ctSP:        TfrmStoredProcedure(AForm).LoadProcedure(ObjectName);
+		ctTrigger:   TfrmTriggerEditor(AForm).LoadTrigger(ObjectName);
+		ctDomain:    TfrmDomains(AForm).LoadDomain(ObjectName);
+		ctGenerator: TfrmGenerators(AForm).LoadGenerator(ObjectName);
+		ctException: TfrmExceptions(AForm).LoadException(ObjectName);
+		ctUDF:       TfrmUDFEditor(AForm).LoadUDF(ObjectName);
+		ctPackage:   TfrmPackageEditor(AForm).LoadPackage(ObjectName);
+	end;
+end;
+
+function TMarathonIDE.OpenObject(ObjectName, Connection: String;
+	Kind: TGSSCacheType; Schema: String): TForm;
 var
 	Idx: Integer;
-	Found: Boolean;
-	F: TfrmDomains;
-
+	Editor: TfrmBaseDocumentDataAwareForm;
 begin
-  Result := nil;
-  if not CheckConnected(Connection) then
-    Exit;
-  Found := False;
-  for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmDomains then
-			if (TfrmDomains(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmDomains(Screen.Forms[Idx]).ObjectName = DomainName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmDomains(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(DomainName, ctDomain, Connection, Schema) then
+	Result := nil;
+	if not CheckConnected(Connection) then
+		Exit;
+
+	for Idx := 0 to Screen.FormCount - 1 do
+		if Screen.Forms[Idx] is TfrmBaseDocumentDataAwareForm then
 		begin
-			Result := nil;
-			Exit;
+			Editor := TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]);
+			{ Same connection, same kind, same name and same schema. The schema
+			  matters: the same name in another schema is a different object, and
+			  without it the wrong editor would be raised. }
+			if (Editor.ObjectType = Kind) and
+			   (Editor.ConnectionName = Connection) and
+			   (Editor.ObjectName = ObjectName) and
+			   (Editor.Schema = Schema) then
+			begin
+				Screen.Forms[Idx].BringToFront;
+				Exit(Screen.Forms[Idx]);
+			end;
 		end;
-		F := TfrmDomains.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadDomain(DomainName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(DomainName, ctDomain, Connection);
-		Result := F;
-	end;
+
+	if not DoesObjectExist(ObjectName, Kind, Connection, Schema) then
+		Exit;
+
+	Editor := CreateEditorFor(Kind);
+	if not Assigned(Editor) then
+		Exit;
+	Editor.ConnectionName := Connection;
+	{ Before the load: an editor reads its metadata while loading, so a schema
+	  set afterwards would come too late for a single query. }
+	Editor.Schema := Schema;
+	LoadObjectInto(Editor, Kind, ObjectName);
+	Editor.ShowDocument;
+	FCurrentProject.Cache.AddRecentObjectOpen(ObjectName, Kind, Connection);
+	Result := Editor;
+end;
+
+function TMarathonIDE.OpenDomain(DomainName: String; Connection: String;
+	Schema: String): TForm;
+begin
+	Result := OpenObject(DomainName, Connection, ctDomain, Schema);
 end;
 
 procedure TMarathonIDE.NewProcedure(COnnection: String);
@@ -2324,49 +2381,8 @@ end;
 
 function TMarathonIDE.OpenProcedure(ProcedureName, COnnection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmStoredProcedure;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-	begin
-		if SCreen.Forms[Idx] is TfrmStoredProcedure then
-		begin
-			if (TfrmStoredProcedure(Screen.Forms[Idx]).ConnectionName = Connection) and
-				 (TfrmStoredProcedure(Screen.Forms[Idx]).ObjectName = ProcedureName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmStoredProcedure(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				FOund := True;
-				Screen.FOrms[Idx].BringToFront;
-				Break;
-			end;
-		end;
-	end;
-	if not Found then
-	begin
-		if not DoesObjectExist(ProcedureName, ctSP, Connection, Schema) then
-		begin
-      Result := nil;
-      Exit;
-    end;
-    F := TfrmStoredProcedure.Create(nil);
-    F.ConnectionName := Connection;
-    { Before the load: an editor reads its metadata while loading, so a schema
-      set afterwards would come too late for a single query. }
-    F.Schema := Schema;
-    F.LoadProcedure(ProcedureName);
-    F.ShowDocument;
-    FCurrentProject.Cache.AddRecentObjectOpen(ProcedureName, ctSP, Connection);
-    Result := F;
-  end;
+	Result := OpenObject(ProcedureName, Connection, ctSP, Schema);
 end;
 
 function TMarathonIDE.DebugOpenProcedure(ProcedureName,	Connection: String;
@@ -2448,45 +2464,8 @@ end;
 
 function TMarathonIDE.OpenTrigger(TriggerName, Connection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmTriggerEditor;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmTriggerEditor then
-			if (TfrmTriggerEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmTriggerEditor(Screen.Forms[Idx]).ObjectName = TriggerName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmTriggerEditor(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.FOrms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(TriggerName, ctTrigger, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmTriggerEditor.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadTrigger(TriggerName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(TriggerName, ctTrigger, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(TriggerName, Connection, ctTrigger, Schema);
 end;
 
 procedure TMarathonIDE.NewException(Connection: String);
@@ -2504,45 +2483,8 @@ end;
 
 function TMarathonIDE.OpenException(ExceptionName, Connection: String;
 	Schema: String): TForm;
-var
-	F: TfrmExceptions;
-	Idx: Integer;
-	Found: Boolean;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmExceptions then
-			if (TfrmExceptions(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmExceptions(Screen.Forms[Idx]).ObjectName = ExceptionName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmExceptions(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(ExceptionName, ctException, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmExceptions.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadException(ExceptionName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(ExceptionName, ctException, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(ExceptionName, Connection, ctException, Schema);
 end;
 
 procedure TMarathonIDE.NewGenerator(Connection: String);
@@ -2560,45 +2502,8 @@ end;
 
 function TMarathonIDE.OpenGenerator(GeneratorName, Connection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmGenerators;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if SCreen.Forms[Idx] is TfrmGenerators then
-			if (TfrmGenerators(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmGenerators(Screen.Forms[Idx]).ObjectName = GeneratorName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmGenerators(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(GeneratorName, ctGenerator, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmGenerators.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadGenerator(GeneratorName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(GeneratorName, ctGenerator, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(GeneratorName, Connection, ctGenerator, Schema);
 end;
 
 procedure TMarathonIDE.NewTable(Connection: String);
@@ -2621,46 +2526,8 @@ end;
 
 function TMarathonIDE.OpenTable(TableName, Connection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmTables;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmTables then
-			{ Same name in a different schema is a different table, so comparing
-			  the name alone would raise the wrong editor. }
-			if (TfrmTables(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmTables(Screen.Forms[Idx]).ObjectName  = TableName) and
-				(TfrmTables(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(TableName, ctTable, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmTables.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load, not after: the editor reads all its metadata while
-		  loading, so a schema set afterwards would come too late to affect a
-		  single query. }
-		F.Schema := Schema;
-		F.LoadTable(TableName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(TableName, Connection, ctTable, Schema);
 end;
 
 function TMarathonIDE.DesignTable(TableName, Connection: String;
@@ -2700,45 +2567,8 @@ end;
 
 function TMarathonIDE.OpenView(ViewName, Connection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmViewEditor;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmViewEditor then
-			if (TfrmViewEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmViewEditor(Screen.Forms[Idx]).ObjectName = ViewName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmViewEditor(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(ViewName, ctView, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmViewEditor.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadView(ViewName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(ViewName, ctView, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(ViewName, Connection, ctView, Schema);
 end;
 
 procedure TMarathonIDE.NewUDF(Connection: String);
@@ -2761,90 +2591,16 @@ end;
 
 function TMarathonIDE.OpenUDF(UDFName, Connection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmUDFEditor;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmUDFEditor then
-			if (TfrmUDFEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmUDFEditor(Screen.Forms[Idx]).ObjectName = UDFName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmUDFEditor(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(UDFName, ctUDF, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmUDFEditor.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadUDF(UDFName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(UDFName, ctUDF, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(UDFName, Connection, ctUDF, Schema);
 end;
 
 { Packages are read-only, so this opens a viewer rather than an editor - see
   EditorPackage.pas for why. }
 function TMarathonIDE.OpenPackage(PackageName, Connection: String;
 	Schema: String): TForm;
-var
-	Idx: Integer;
-	Found: Boolean;
-	F: TfrmPackageEditor;
-
 begin
-	Result := nil;
-	if not CheckConnected(Connection) then
-		Exit;
-	Found := False;
-	for Idx := 0 to Screen.FormCount - 1 do
-		if Screen.Forms[Idx] is TfrmPackageEditor then
-			if (TfrmPackageEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmPackageEditor(Screen.Forms[Idx]).ObjectName = PackageName) and
-				{ The same name in another schema is a different object, so this
-				  would otherwise raise the wrong editor. }
-				(TfrmPackageEditor(Screen.Forms[Idx]).Schema = Schema) then
-			begin
-				Found := True;
-				Screen.Forms[Idx].BringToFront;
-				Break;
-			end;
-	if not Found then
-	begin
-		if not DoesObjectExist(PackageName, ctPackage, Connection, Schema) then
-		begin
-			Result := nil;
-			Exit;
-		end;
-		F := TfrmPackageEditor.Create(nil);
-		F.ConnectionName := Connection;
-		{ Before the load: an editor reads its metadata while loading, so a
-		  schema set afterwards would come too late for a single query. }
-		F.Schema := Schema;
-		F.LoadPackage(PackageName);
-		F.ShowDocument;
-		FCurrentProject.Cache.AddRecentObjectOpen(PackageName, ctPackage, Connection);
-		Result := F;
-	end;
+	Result := OpenObject(PackageName, Connection, ctPackage, Schema);
 end;
 
 procedure TMarathonIDE.RecordToScript(Script: String; ConnectionName: String);

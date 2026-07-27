@@ -39,7 +39,7 @@ The application is structured in layers:
 
 **UI Layer** (`src/Source/`) — 101 Pascal units, 75 LFM form files. Forms inherit from `TfrmBaseDocumentForm` or `TfrmBaseDocumentDataAwareForm` and implement `IMarathonForm`. MDI-style window management via `WindowList`.
 
-**IDE Core** — `MarathonIDE.pas` manages plugin lifecycle and form services. `MenuModule.pas` is a data module centralizing all `TActionList` actions, decoupling UI from business logic. `MarathonMain.pas` is the main frame.
+**IDE Core** — `MarathonIDE.pas` manages plugin lifecycle and form services. Object editors are opened through `OpenObject(name, connection, kind, schema)`; the nine `OpenTable`/`OpenView`/… functions are one-line wrappers on it. It finds an editor already open by **object type** rather than by class — every editor sets `FObjectType` — so only the two small factory functions beside it name a form class at all. `MenuModule.pas` is a data module centralizing all `TActionList` actions, decoupling UI from business logic. `MarathonMain.pas` is the main frame.
 
 **Project/Connection Cache** — `MarathonProjectCache.pas` manages open Firebird connections (`TIBDatabase`) and caches database metadata (tables, views, SPs, triggers, etc.) in `TMarathonProjectCache`. Persisted to XML via DOM/XMLRead/XMLWrite.
 

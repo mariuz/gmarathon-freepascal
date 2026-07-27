@@ -1444,6 +1444,123 @@ begin
   Check(Pos('yonder', Here) = 0, 'and kept apart the other way');
 end;
 
+{ Opening objects through the IDE, which is the route the object tree uses.
+
+  Every check so far has constructed an editor directly. That is not how the
+  application opens one: it goes through MarathonIDEInstance.OpenTable and its
+  eight siblings, which look for an editor already open, check the object
+  exists, create the right class, set the schema before loading and record the
+  object as recently opened. Those nine functions were forty lines apiece and
+  are now one line apiece over a shared OpenObject - so what needs checking is
+  that every kind still reaches the right editor. }
+procedure CheckOpenThroughIDE(Conn: TMarathonCacheConnection);
+var
+  F, Again: TForm;
+  Editor: TfrmBaseDocumentDataAwareForm;
+  Names: TStringList;
+  Opened: Integer;
+
+  { Opens one kind on whatever object of that kind the database holds, and
+    checks the form that comes back is an editor on that object. }
+  procedure CheckKind(Kind: TSchemaObjectKind; CacheType: TGSSCacheType;
+    const What: String);
+  var
+    Name: String;
+    G: TForm;
+  begin
+    Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, Kind, '',
+      Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+    try
+      if Names.Count = 0 then
+      begin
+        WriteLn('  .... ', What, ': nothing of that kind here');
+        Exit;
+      end;
+      Name := Trim(Names[0]);
+    finally
+      Names.Free;
+    end;
+
+    G := nil;
+    try
+      G := MarathonIDEInstance.OpenObject(Name, 'EditorHarness', CacheType);
+    except
+      on E: Exception do
+      begin
+        Check(False, What + ' opens (' + E.ClassName + ': ' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    if not Assigned(G) then
+    begin
+      Check(False, What + ' opens ' + Name);
+      Exit;
+    end;
+    Inc(Opened);
+    Check(G is TfrmBaseDocumentDataAwareForm, What + ' opens an object editor');
+    { The right kind, not merely some editor - the factory picks the class from
+      the cache type, so a wrong entry there would open the wrong window. }
+    Check(TfrmBaseDocumentDataAwareForm(G).ObjectType = CacheType,
+      What + ' opens the right kind of editor');
+    Check(TfrmBaseDocumentDataAwareForm(G).ObjectName = Name,
+      What + ' opens the object it was asked for');
+    { Hidden and then freed. With no document host in the harness every editor
+      becomes a real top-level window; leaving a run of them open exhausts the
+      bare X server the tests run against, and closing them through the normal
+      path frees them asynchronously, which is one more thing to go wrong here
+      than it is worth. }
+    G.Hide;
+    G.Free;
+  end;
+
+begin
+  WriteLn('Opening objects through the IDE:');
+  Opened := 0;
+
+  CheckKind(sokTable, ctTable, 'a table');
+  CheckKind(sokView, ctView, 'a view');
+  CheckKind(sokProcedure, ctSP, 'a procedure');
+  CheckKind(sokTrigger, ctTrigger, 'a trigger');
+  CheckKind(sokDomain, ctDomain, 'a domain');
+  CheckKind(sokGenerator, ctGenerator, 'a generator');
+  CheckKind(sokException, ctException, 'an exception');
+  Check(Opened >= 6, 'most kinds of object were reachable (' +
+    IntToStr(Opened) + ')');
+
+  { Not checked here: opening an object that does not exist. DoesObjectExist
+    tells the user so with a modal dialog, which is the right thing for it to
+    do and cannot be dismissed under a bare X server - the run would hang
+    rather than fail. }
+
+  { Asked twice, the same editor comes back rather than a second one. }
+  F := MarathonIDEInstance.OpenObject('EDIT_DUP', 'EditorHarness', ctTable);
+  Check(Assigned(F), 'a table opens');
+  if Assigned(F) then
+  begin
+    Again := MarathonIDEInstance.OpenObject('EDIT_DUP', 'EditorHarness', ctTable);
+    Check(Again = F, 'asking again raises the one already open');
+
+    { But the same name in another schema is a different object, and must get
+      an editor of its own. }
+    if Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0) then
+    begin
+      Again := MarathonIDEInstance.OpenObject('EDIT_DUP', 'EditorHarness',
+        ctTable, 'EDIT_SCH');
+      Check(Assigned(Again) and (Again <> F),
+        'the same name in another schema opens a second editor');
+      if Assigned(Again) then
+      begin
+        Editor := TfrmBaseDocumentDataAwareForm(Again);
+        Check(Editor.Schema = 'EDIT_SCH', 'and it carries that schema');
+        Again.Hide;
+        Again.Free;
+      end;
+    end;
+    F.Hide;
+    F.Free;
+  end;
+end;
+
 { The object editors against two schemas holding the same table name.
 
   This is the one that matters. Firebird 6 made an object name unique per
@@ -1741,6 +1858,7 @@ begin
   CheckTableDesignerOn(Conn, TableName);
   CheckSchemaQualifiedEditor(Conn);
   CheckQueryBuilder(Conn);
+  CheckOpenThroughIDE(Conn);
   CheckSQLTrace(Conn);
 end;
 
