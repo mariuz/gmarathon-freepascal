@@ -1768,6 +1768,30 @@ begin
       if Tr.Active then
         Tr.Commit;
 
+      { A name that is not a routine has to answer with nothing. The editor's
+        hover tooltip leans on this: it asks for a signature for whatever word
+        is under the pointer rather than first asking the catalogue what kind
+        of object it is, so a table name must simply produce no hint. }
+      Script := RoutineSignature(Ctx, 'IBX_SMOKE_TEST', False);
+      if Script <> '' then
+      begin
+        WriteLn('FAIL: a table name produced a routine signature: "', Script, '"');
+        Halt(1);
+      end;
+      Script := RoutineSignature(Ctx, 'IBX_SMOKE_TEST', True);
+      if Script <> '' then
+      begin
+        WriteLn('FAIL: a table name produced a function signature: "', Script, '"');
+        Halt(1);
+      end;
+      Script := RoutineSignature(Ctx, 'NO_SUCH_OBJECT_AT_ALL', False);
+      if Script <> '' then
+      begin
+        WriteLn('FAIL: an unknown name produced a signature: "', Script, '"');
+        Halt(1);
+      end;
+      WriteLn('Routine signature OK (nothing for a table or an unknown name)');
+
       { MERGE. The join condition has to come from the real primary key - an ON
         clause that never matches would turn every MERGE into an INSERT - and
         the key columns must not appear in the UPDATE SET list, since they are

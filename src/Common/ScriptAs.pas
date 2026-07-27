@@ -551,12 +551,50 @@ begin
 	end;
 end;
 
+{ True when the catalogue actually holds a routine of that name. Without this
+  RoutineSignature would build its answer from a name alone and report
+  'CUSTOMERS()' for a table, since a routine with no parameters and one that
+  does not exist both produce no parameter rows. }
+function RoutineExists(const Ctx: TScriptAsContext; ObjectName: String;
+	IsFunction: Boolean): Boolean;
+var
+	Q: TIBQuery;
+begin
+	EnsureActive(Ctx);
+	Result := False;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.Database := Ctx.Database;
+		Q.Transaction := Ctx.Transaction;
+		if IsFunction then
+			Q.SQL.Text := 'select 1 from rdb$functions where rdb$function_name = ' +
+				AnsiQuotedStr(ObjectName, '''')
+		else
+			Q.SQL.Text := 'select 1 from rdb$procedures where rdb$procedure_name = ' +
+				AnsiQuotedStr(ObjectName, '''');
+		Q.Open;
+		Result := not Q.EOF;
+		Q.Close;
+		if Assigned(Q.Transaction) and Q.Transaction.Active then
+			Q.Transaction.Commit;
+	finally
+		Q.Free;
+	end;
+end;
+
 function RoutineSignature(const Ctx: TScriptAsContext; ObjectName: String;
   IsFunction: Boolean): String;
 var
 	Args, Returns: String;
 	Name: String;
 begin
+	{ Asked about anything that is not a routine - a table, or a word that names
+	  nothing at all - the answer is nothing. The editor's hover tooltip depends
+	  on this: it asks for a signature for whatever word is under the pointer
+	  rather than establishing first what kind of object it is. }
+	Result := '';
+	if not RoutineExists(Ctx, Trim(ObjectName), IsFunction) then
+		Exit;
 	Result := '';
 	EnsureActive(Ctx);
 	Name := AnsiQuotedStr(ObjectName, '''');

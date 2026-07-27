@@ -33,7 +33,7 @@ unit SQLCompletionHost;
 
 interface
 
-uses SysUtils, Classes, Menus, LCLType, SynEdit, SynCompletion,
+uses SysUtils, Classes, Menus, Controls, LCLType, SynEdit, SynCompletion,
   SQLCompletion, MarathonProjectCacheTypes;
 
 type
@@ -43,6 +43,7 @@ type
     FEditor: TCustomSynEdit;
     FConnectionName: String;
     procedure Execute(Sender: TObject);
+    procedure ShowRoutineHint(Sender: TObject; HintInfo: PHintInfo);
   public
     { Owned by AOwner, so the form frees it. }
     constructor Create(AOwner: TComponent; AEditor: TCustomSynEdit); reintroduce;
@@ -69,6 +70,48 @@ begin
     never seen. }
   FCompletion.EndOfTokenChr := '()[]. ,;:-+*/=<>''"';
   FCompletion.OnExecute := Execute;
+
+  { Hovering a routine name shows its call signature. The same information the
+    object tree puts in its status bar, at the point where it is actually
+    needed - while writing the call. }
+  AEditor.ShowHint := True;
+  AEditor.OnShowHint := ShowRoutineHint;
+end;
+
+procedure TSQLCompletionHost.ShowRoutineHint(Sender: TObject; HintInfo: PHintInfo);
+var
+  Conn: TMarathonCacheConnection;
+  Ctx: TScriptAsContext;
+  Token, Signature: String;
+begin
+  if not Assigned(HintInfo) or (FConnectionName = '') then
+    Exit;
+  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FConnectionName];
+  if not Assigned(Conn) or not Conn.Connected then
+    Exit;
+
+  Token := Trim(FEditor.GetWordAtRowCol(FEditor.PixelsToRowColumn(HintInfo^.CursorPos)));
+  if Token = '' then
+    Exit;
+
+  Ctx := ScriptAsContext(Conn.Connection, Conn.Transaction, Conn.IsIB6,
+    Conn.SQLDialect, Conn.ServerMajorVersion);
+  try
+    { RoutineSignature answers with an empty string for anything that is not a
+      procedure or a PSQL function, so there is no need to ask the catalogue
+      first what kind of thing this is - a table name simply produces nothing
+      and no hint is shown. }
+    Signature := RoutineSignature(Ctx, AnsiUpperCase(Token), False);
+    if Signature = '' then
+      Signature := RoutineSignature(Ctx, AnsiUpperCase(Token), True);
+  except
+    { A hint is a convenience; failing to read one must not interrupt typing. }
+    on E: Exception do
+      Signature := '';
+  end;
+
+  if Signature <> '' then
+    HintInfo^.HintStr := Signature;
 end;
 
 procedure TSQLCompletionHost.Execute(Sender: TObject);
