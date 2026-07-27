@@ -59,6 +59,8 @@ The application is structured in layers:
 
 **Icons** — `icons/*.svg` is the source of truth; `tools/build_icons.sh` renders it to `TreeImagesStrip{,_24,_32}.bmp` at 16/24/32 and recompiles `Toolmenus.RES`. Output is checked in, so a normal build needs neither the script nor ImageMagick — run it after changing an icon. `Globals.LoadScaledStrip` picks the strip for the display; the thresholds live in `src/Common/IconScaling.pas` and are tested headlessly. Note ImageMagick's built-in SVG renderer has no arc command — use Béziers.
 
+**Data grid edits** — the table editor's Data tab runs with IBX `CachedUpdates`, so edits are held. `TfrmTables.PendingDataChanges` renders them through `src/Common/RowEdits.pas`; `ApplyDataChanges` writes them, `CancelDataChanges` drops them. RowEdits refuses to write an UPDATE or DELETE for a table with no primary key rather than emit one that would match every row that looks alike.
+
 **Query plans** — Firebird returns two formats. Firebird 3+ gives an explained plan (indented lines), read by `PlanUnit.FillTreeFromExplainedPlan`; older servers give a parenthesised one-liner, parsed by `src/Common/PlanParser.pas`. `FillTreeFromPlan` picks between them — call that, not either reader directly.
 
 **Schema Designer** — `src/Common/SchemaDiagram.pas` is the model and the layout (breadth-first from the most-referenced table; no canvas, so it is tested headlessly), `SchemaDiagramIO.pas` reads tables and foreign keys from `RDB$RELATION_CONSTRAINTS` + `RDB$REF_CONSTRAINTS` + `RDB$INDEX_SEGMENTS`, and `src/Source/SchemaDiagramForm.pas` draws it on one paint box.

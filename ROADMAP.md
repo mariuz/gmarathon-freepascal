@@ -572,7 +572,7 @@ its headline features have no Firebird counterpart at all.
 | Query results grid | **Done** — results sit under the statement, as theirs do |
 | Backup/restore dialogs | **Done** — the Maintenance dialog, over IBX's services API |
 | Query Plan Visualizer | **Done** — the plan draws as a tree. Firebird has two plan formats: the explained one (3+, several indented lines) always drew, and the older parenthesised one is one line however deeply nested, so it drew as a single box holding the whole plan. `src/Common/PlanParser.pas` parses that form; `PlanUnit.FillTreeFromPlan` picks the reader that suits what arrived |
-| Edit data grid with script preview | **Partly** — the grid edits, but applies rather than showing what it would run. The table designer now has that pattern to copy |
+| Edit data grid with script preview | **Done** — the grid holds its edits (IBX cached updates) and `TfrmTables.PendingDataChanges` renders them as the INSERT/UPDATE/DELETE they would run, with `ApplyDataChanges` and `CancelDataChanges` either side. `src/Common/RowEdits.pas` builds the statements and refuses to write an update or delete for a table with no primary key |
 | **Schema Designer** | **Not done** — see below |
 | SQL Notebooks | Not planned: a VS Code notebook-host feature, with no shell here to host one |
 | Data API Builder | Not planned — generates REST/GraphQL endpoints for Azure SQL |

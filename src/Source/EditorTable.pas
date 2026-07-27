@@ -69,7 +69,7 @@ unit EditorTable;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls, RowEdits, Variants;
 
 type
 	TfrmTables = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor, IGimbalIDETableEditorWindow)
@@ -176,6 +176,20 @@ type
 		function CanObjectDrop: Boolean; override;
 		procedure DoObjectDrop; override;
 
+		{ The rows edited in the data grid but not yet written, as the SQL they
+		  would run. Empty when nothing has been touched.
+
+		  The grid holds its edits (CachedUpdates) so they can be looked at
+		  first; without this the only way to know what a session of editing had
+		  done was to read it back afterwards. }
+		function PendingDataChanges: String;
+		function HasPendingDataChanges: Boolean;
+		{ Runs them, or throws them away. Both leave the grid showing what the
+		  table actually holds. }
+		procedure ApplyDataChanges;
+		procedure CancelDataChanges;
+		procedure CollectKeyColumns(AList: TStrings);
+		procedure CollectDataChanges(AList: TRowEditList);
 		function CanSaveDoco: Boolean; override;
 		procedure DoSaveDoco; override;
 
@@ -922,6 +936,11 @@ begin
 					tblTableData.SQL.Clear;
 					tblTableData.SQL.Add('select * from ' + QualifiedObjectName + ';');
 
+					{ Edits are held rather than posted as each row is left, so there
+					  is something to show before anything runs - the same
+					  design-then-apply the table designer uses. Applying them is
+					  ApplyDataChanges. }
+					tblTableData.CachedUpdates := True;
 					tblTableData.Open;
 
 					case gDefaultView of
@@ -2768,6 +2787,178 @@ end;
 procedure TfrmTables.sizerect1Click(Sender: TObject);
 begin
   showmessage('L:'+inttostr(left) +' T:'+inttostr(top) +' W:'+inttostr(width) +' H:'+inttostr(height));
+end;
+
+{ The key columns of the table being edited, which is what makes an UPDATE or a
+  DELETE pick out one row. A table without one cannot be edited safely, and
+  RowEdits says so rather than writing a statement that would match every row
+  that looks alike. }
+procedure TfrmTables.CollectKeyColumns(AList: TStrings);
+var
+  Q: TIBQuery;
+begin
+  AList.Clear;
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := tblTableData.Database;
+    Q.Transaction := tblTableData.Transaction;
+    Q.AllowAutoActivateTransaction := True;
+    Q.SQL.Text :=
+      'select s.rdb$field_name from rdb$relation_constraints rc ' +
+      '  join rdb$index_segments s on s.rdb$index_name = rc.rdb$index_name ' +
+      'where rc.rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') +
+      '  and rc.rdb$constraint_type = ''PRIMARY KEY''' + SchemaClause('rc.') +
+      ' order by s.rdb$field_position';
+    try
+      Q.Open;
+      while not Q.EOF do
+      begin
+        AList.Add(Trim(Q.Fields[0].AsString));
+        Q.Next;
+      end;
+    except
+      { No key readable is the same as no key: the changes are reported as
+        unsafe rather than written. }
+      on E: Exception do
+        AList.Clear;
+    end;
+  finally
+    Q.Free;
+  end;
+end;
+
+{ Walks the held edits and describes each as a row change. The dataset knows
+  which records were touched and holds both the old and the new value of every
+  field, which is what an UPDATE needs: the new value to set and the old key to
+  find the row by. }
+procedure TfrmTables.CollectDataChanges(AList: TRowEditList);
+var
+  Keys: TStringList;
+  Idx: Integer;
+  E: TRowEdit;
+  F: TField;
+  Bookmark: TBookmark;
+
+  function Unquoted(AField: TField): Boolean;
+  begin
+    Result := AField.DataType in [ftSmallint, ftInteger, ftWord, ftFloat,
+      ftCurrency, ftBCD, ftLargeint, ftFMTBcd];
+  end;
+
+begin
+  AList.Clear;
+  if not tblTableData.Active then
+    Exit;
+
+  Keys := TStringList.Create;
+  Bookmark := nil;
+  try
+    CollectKeyColumns(Keys);
+    Bookmark := tblTableData.GetBookmark;
+    tblTableData.DisableControls;
+    try
+      tblTableData.First;
+      while not tblTableData.EOF do
+      begin
+        case tblTableData.UpdateStatus of
+          usInserted:
+            begin
+              E := AList.Add(reInsert, FObjectName, FSchema);
+              for Idx := 0 to tblTableData.FieldCount - 1 do
+              begin
+                F := tblTableData.Fields[Idx];
+                E.AddValue(F.FieldName, F.AsString, F.IsNull, Unquoted(F));
+              end;
+            end;
+          usModified:
+            begin
+              E := AList.Add(reUpdate, FObjectName, FSchema);
+              for Idx := 0 to tblTableData.FieldCount - 1 do
+              begin
+                F := tblTableData.Fields[Idx];
+                { Only what actually changed - an UPDATE listing every column
+                  is harder to read and says less. }
+                if VarToStr(F.OldValue) <> VarToStr(F.NewValue) then
+                  E.AddValue(F.FieldName, F.AsString, F.IsNull, Unquoted(F));
+              end;
+              for Idx := 0 to Keys.Count - 1 do
+              begin
+                F := tblTableData.FindField(Keys[Idx]);
+                if Assigned(F) then
+                  { The old value: the row is found by what it was, not by what
+                    it has just been changed to. }
+                  E.AddKey(F.FieldName, VarToStr(F.OldValue),
+                    VarIsNull(F.OldValue), Unquoted(F));
+              end;
+            end;
+          usDeleted:
+            begin
+              E := AList.Add(reDelete, FObjectName, FSchema);
+              for Idx := 0 to Keys.Count - 1 do
+              begin
+                F := tblTableData.FindField(Keys[Idx]);
+                if Assigned(F) then
+                  E.AddKey(F.FieldName, VarToStr(F.OldValue),
+                    VarIsNull(F.OldValue), Unquoted(F));
+              end;
+            end;
+        end;
+        tblTableData.Next;
+      end;
+    finally
+      if Assigned(Bookmark) then
+      begin
+        try
+          tblTableData.GotoBookmark(Bookmark);
+        except
+          on E2: Exception do
+            tblTableData.First;
+        end;
+        tblTableData.FreeBookmark(Bookmark);
+      end;
+      tblTableData.EnableControls;
+    end;
+  finally
+    Keys.Free;
+  end;
+end;
+
+function TfrmTables.HasPendingDataChanges: Boolean;
+begin
+  Result := tblTableData.Active and tblTableData.CachedUpdates and
+    tblTableData.UpdatesPending;
+end;
+
+function TfrmTables.PendingDataChanges: String;
+var
+  L: TRowEditList;
+begin
+  Result := '';
+  if not HasPendingDataChanges then
+    Exit;
+  L := TRowEditList.Create;
+  try
+    CollectDataChanges(L);
+    Result := RowEditScript(L);
+  finally
+    L.Free;
+  end;
+end;
+
+procedure TfrmTables.ApplyDataChanges;
+begin
+  if not HasPendingDataChanges then
+    Exit;
+  tblTableData.ApplyUpdates;
+  if Assigned(tblTableData.Transaction) then
+    TIBTransaction(tblTableData.Transaction).CommitRetaining;
+end;
+
+procedure TfrmTables.CancelDataChanges;
+begin
+  if not tblTableData.Active then
+    Exit;
+  tblTableData.CancelUpdates;
 end;
 
 end.

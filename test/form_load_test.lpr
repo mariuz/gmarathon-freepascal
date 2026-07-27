@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase;
 
 var
   Failures: Integer = 0;
@@ -1488,6 +1488,60 @@ begin
   Found.Free;
 end;
 
+{ The data grid, holding its edits until they are looked at.
+
+  The table designer was converted to design-then-apply earlier; the data grid
+  still posted every row as it was left, so there was nothing to review and no
+  way to change your mind. Turning on IBX's cached updates is the whole of that
+  change in behaviour, and it is what is checked here.
+
+  What is *not* checked here, and should be said rather than left looking
+  covered: driving an actual edit through the dataset. Calling Edit and Post on
+  it takes the X connection down in this harness - with the grid detached from
+  its data source as well, so it is not the grid repainting - and a check that
+  brings the run down is worse than one that is absent. The statements those
+  edits produce are covered in keyword_test instead, over the same TRowEditList
+  the editor fills: 26 checks including that an update or delete without a
+  primary key refuses to generate SQL at all. }
+procedure CheckDataGridPreview(Conn: TMarathonCacheConnection);
+var
+  F: TfrmTables;
+begin
+  WriteLn('Data grid preview:');
+  F := TfrmTables.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    try
+      F.LoadTable('SD_PARENT');
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the editor opens SD_PARENT (' + E.Message + ')');
+        Exit;
+      end;
+    end;
+
+    { The data tab opens its dataset when it is shown, so the harness has to
+      show it - LoadTable alone leaves it closed. }
+    F.pgObjectEditor.ActivePage := F.tsData;
+    F.pgObjectEditorChange(F.pgObjectEditor);
+    if not F.tblTableData.Active then
+    begin
+      WriteLn('  .... skipped: the data tab did not open its dataset');
+      Exit;
+    end;
+
+    Check(F.tblTableData.CachedUpdates,
+      'the data grid holds its edits rather than posting them as it goes');
+    Check(not F.HasPendingDataChanges,
+      'and an untouched grid has nothing pending');
+    Check(Trim(F.PendingDataChanges) = '',
+      'so the preview is empty until something is edited');
+  finally
+    F.Free;
+  end;
+end;
+
 { The query plan drawn as a tree.
 
   The parse is checked in keyword_test without a canvas. What the form adds is
@@ -2077,6 +2131,7 @@ begin
   CheckOpenThroughIDE(Conn);
   CheckSchemaDiagram(Conn);
   CheckPlanTree(Conn);
+  CheckDataGridPreview(Conn);
   CheckSQLTrace(Conn);
 end;
 

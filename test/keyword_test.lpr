@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,160 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestRowEdits;
+var
+  L: TRowEditList;
+  E: TRowEdit;
+  S: String;
+begin
+  { An insert makes the row rather than finding it, so it needs no key. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reInsert, 'CUSTOMERS');
+    E.AddValue('ID', '7', False, True);
+    E.AddValue('NAME', 'Smith');
+    S := RowEditStatement(E);
+    Check(Pos('insert into CUSTOMERS', S) > 0, 'an insert names the table');
+    Check(Pos('(ID, NAME)', S) > 0, 'and its columns');
+    Check(Pos('7', S) > 0, 'a numeric value is written unquoted');
+    Check(Pos('''Smith''', S) > 0, 'and a text value quoted');
+  finally
+    L.Free;
+  end;
+
+  { An update must find exactly one row, and that is what the key is for. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reUpdate, 'CUSTOMERS');
+    E.AddValue('NAME', 'Jones');
+    E.AddKey('ID', '7', False, True);
+    S := RowEditStatement(E);
+    Check(Pos('update CUSTOMERS', S) > 0, 'an update names the table');
+    Check(Pos('set NAME = ''Jones''', S) > 0, 'and what it sets');
+    Check(Pos('where ID = 7', S) > 0, 'and finds the row by its key');
+  finally
+    L.Free;
+  end;
+
+  { The corner this unit exists for: no key means no safe statement. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reUpdate, 'NOKEY_TAB');
+    E.AddValue('NAME', 'Jones');
+    Check(RowEditStatement(E) = '',
+      'an update with nothing to identify the row writes no statement');
+    E := L.Add(reDelete, 'NOKEY_TAB');
+    Check(RowEditStatement(E) = '', 'and neither does a delete');
+    Check(L.UnsafeCount = 2, 'both are counted as unsafe');
+    S := RowEditScript(L);
+    { Said out loud rather than dropped - a preview that quietly omits an edit
+      is worse than one that explains it. }
+    Check(Pos('no primary key', S) > 0, 'and the script says why');
+    Check(Pos('update', AnsiLowerCase(S)) = 0, 'without emitting the statement');
+  finally
+    L.Free;
+  end;
+
+  { Deletes. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reDelete, 'CUSTOMERS');
+    E.AddKey('ID', '7', False, True);
+    S := RowEditStatement(E);
+    Check(Pos('delete from CUSTOMERS', S) > 0, 'a delete names the table');
+    Check(Pos('where ID = 7', S) > 0, 'and the row');
+  finally
+    L.Free;
+  end;
+
+  { A compound key needs every part, or it identifies a group rather than a
+    row. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reDelete, 'ORDER_LINE');
+    E.AddKey('ORDER_ID', '3', False, True);
+    E.AddKey('LINE_NO', '2', False, True);
+    S := RowEditStatement(E);
+    Check(Pos('ORDER_ID = 3', S) > 0, 'a compound key uses its first column');
+    Check(Pos('LINE_NO = 2', S) > 0, 'and its second');
+    Check(Pos(' and ', S) > 0, 'joined, so it picks one row');
+  finally
+    L.Free;
+  end;
+
+  { Nulls. = null is never true, so a null key has to be compared with IS
+    NULL or the statement matches nothing at all. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reUpdate, 'T');
+    E.AddValue('NOTE', '', True);
+    E.AddKey('CODE', '', True);
+    S := RowEditStatement(E);
+    Check(Pos('set NOTE = null', S) > 0, 'a null value is set to null');
+    Check(Pos('CODE is null', S) > 0, 'and a null key is matched with IS NULL');
+    Check(Pos('CODE = null', S) = 0, 'never with equals, which is never true');
+  finally
+    L.Free;
+  end;
+
+  { Quoting, which is the whole of escaping a literal. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reInsert, 'T');
+    E.AddValue('NAME', 'O''Brien');
+    S := RowEditStatement(E);
+    Check(Pos('''O''''Brien''', S) > 0, 'a quote in a value is doubled');
+  finally
+    L.Free;
+  end;
+
+  { An empty numeric is null, not an empty expression that would not parse. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reInsert, 'T');
+    E.AddValue('QTY', '', False, True);
+    Check(Pos('null', RowEditStatement(E)) > 0,
+      'an empty numeric value is written as null');
+  finally
+    L.Free;
+  end;
+
+  { A schema, since the editors carry one. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reInsert, 'CUSTOMERS', 'S_ALPHA');
+    E.AddValue('ID', '1', False, True);
+    Check(Pos('S_ALPHA.CUSTOMERS', RowEditStatement(E)) > 0,
+      'a table in a schema is named with it');
+  finally
+    L.Free;
+  end;
+
+  { The script keeps the order the edits were made in: a row inserted and then
+    updated has to be inserted first. }
+  L := TRowEditList.Create;
+  try
+    E := L.Add(reInsert, 'T');
+    E.AddValue('ID', '1', False, True);
+    E := L.Add(reDelete, 'T');
+    E.AddKey('ID', '1', False, True);
+    S := RowEditScript(L);
+    Check(Pos('insert', S) < Pos('delete', S),
+      'the script keeps the order the edits were made in');
+    Check(L.UnsafeCount = 0, 'and neither of them is unsafe');
+  finally
+    L.Free;
+  end;
+
+  { Nothing at all. }
+  L := TRowEditList.Create;
+  try
+    Check(Trim(RowEditScript(L)) = '', 'no edits make no script');
+  finally
+    L.Free;
+  end;
 end;
 
 procedure TestPlanParser;
@@ -1748,6 +1902,9 @@ begin
 
   WriteLn('Query plan:');
   TestPlanParser;
+
+  WriteLn('Data grid edits:');
+  TestRowEdits;
 
   if Failures > 0 then
   begin
