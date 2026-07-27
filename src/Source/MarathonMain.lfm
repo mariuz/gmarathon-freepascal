@@ -4175,10 +4175,6 @@ object frmMarathonMain: TfrmMarathonMain
     Left = 304
     Top = 68
   end
-  object kbgKeys: TComponent
-    Left = 644
-    Top = 68
-  end
   object TBMRUList1: TComponent
     Left = 561
     Top = 57

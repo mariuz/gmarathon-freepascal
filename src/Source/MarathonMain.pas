@@ -251,7 +251,6 @@ type
 		ScriptAppendExisting: TAction;
 		ViewFolders: TAction;
     ViewSearch: TAction;
-		kbgKeys: TComponent;
     ObjectOpenSubObject: TAction;
     ViewList: TAction;
     FileLoad: TAction;
@@ -782,7 +781,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -839,11 +838,10 @@ begin
 
   LoadFormPosition(self);
 
-	// KeyBindings: TrmKeyBindings removed, keybind.dat loading skipped
-	{$IFNDEF FPC}
-	if FileExistsUTF8(ExtractFilePath(Application.ExeName) + 'keybind.dat') then
-     kbgKeys.LoadBindingsFromFile(ExtractFilePath(Application.ExeName) + 'keybind.dat', False);
-	{$ENDIF}
+	{ The user's own shortcuts, before the main form is shown, so the menus come
+	  up with the right keys already on them. Nothing happens when there is no
+	  file, which is the normal case. }
+	LoadKeyBindings(actMain);
 
 	ForceDirectories(ExtractFilePath(Application.ExeName) + 'Projects\'); { *Converted from ForceDirectories*  }
 

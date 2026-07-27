@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus;
 
 var
   Highlighter: TSynSQLSyn;
@@ -208,6 +208,140 @@ begin
     for L := 0 to Doc[P].Lines.Count - 1 do
       if Length(Doc[P].Lines[L]) > Result then
         Result := Length(Doc[P].Lines[L]);
+end;
+
+procedure TestKeyBindings;
+var
+  Map: TKeyMap;
+  Conflicts: TStringList;
+  Saved: String;
+begin
+  { The bits have to be the LCL's, because a value from this unit is assigned
+    straight to TAction.ShortCut. They are repeated rather than imported to
+    keep the unit free of the LCL, so something has to check they still
+    agree - scShift, scCtrl and scAlt from LCL's Menus. }
+  Check(kbShift = scShift, 'the Shift bit matches the LCL''s');
+  Check(kbCtrl = scCtrl, 'and the Ctrl bit');
+  Check(kbAlt = scAlt, 'and the Alt bit');
+
+  { Text form. Written here rather than taken from ShortCutToText because that
+    one is translated - on a German build Ctrl comes back as Strg - so a file
+    written on one machine would not load on another. }
+  Check(ShortCutToStorageText(kbNone) = '', 'no shortcut writes as nothing');
+  Check(ShortCutToStorageText(Ord('S') or kbCtrl) = 'Ctrl+S', 'Ctrl+S writes plainly');
+  Check(ShortCutToStorageText(Ord('P') or kbCtrl or kbShift) = 'Ctrl+Shift+P',
+    'and modifiers come in a fixed order');
+  Check(ShortCutToStorageText($70) = 'F1', 'a function key writes by name');
+  Check(ShortCutToStorageText($2E or kbShift) = 'Shift+Del', 'and so does Delete');
+  { A modifier with no key runs nothing, so it is not a shortcut. }
+  Check(ShortCutToStorageText(kbCtrl) = '',
+    'modifiers with no key are not a shortcut');
+
+  { And back. }
+  Check(StorageTextToShortCut('Ctrl+S') = (Ord('S') or kbCtrl), 'Ctrl+S reads back');
+  Check(StorageTextToShortCut('ctrl+s') = (Ord('S') or kbCtrl), 'case does not matter');
+  Check(StorageTextToShortCut('Ctrl+Shift+P') = (Ord('P') or kbCtrl or kbShift),
+    'two modifiers read back');
+  { Order in the file must not matter, so a hand-edited line still works. }
+  Check(StorageTextToShortCut('Shift+Ctrl+P') = (Ord('P') or kbCtrl or kbShift),
+    'and in either order');
+  Check(StorageTextToShortCut('F5') = $74, 'a function key reads back');
+  Check(StorageTextToShortCut('') = kbNone, 'an empty line is no shortcut');
+  { A corrupt line must clear that binding rather than make one that can never
+    be pressed. }
+  Check(StorageTextToShortCut('Ctrl+') = kbNone, 'a modifier with no key is nothing');
+  Check(StorageTextToShortCut('Ctrl+Nonsense') = kbNone,
+    'and so is a key name nothing recognises');
+
+  { Round trip, which is what actually has to hold for a saved file. }
+  Check(StorageTextToShortCut(ShortCutToStorageText(Ord('X') or kbCtrl or kbAlt)) =
+    (Ord('X') or kbCtrl or kbAlt), 'a shortcut survives being written and read');
+
+  Map := TKeyMap.Create;
+  try
+    Map.Add('FileOpen', '&Open...', 'File', Ord('O') or kbCtrl);
+    Map.Add('FileSave', '&Save', 'File', Ord('S') or kbCtrl);
+    Map.Add('EditCopy', '&Copy', 'Edit', Ord('C') or kbCtrl);
+    Map.Add('NoKey', 'No Shortcut', 'Tools', kbNone);
+    Check(Map.Count = 4, 'a map holds the commands it was given');
+    Check(Map.ShortCutOf('FileSave') = (Ord('S') or kbCtrl),
+      'and the shortcut each came with');
+    Check(Map.ShortCutOf('NotAThing') = kbNone,
+      'an unknown command has no shortcut rather than raising');
+
+    { Nothing changed yet. }
+    Check(Map.ChangedCount = 0, 'a fresh map has nothing changed');
+    Check(not Map.IsChanged('FileSave'), 'and no command reports otherwise');
+
+    Map.Assign_('FileSave', Ord('W') or kbCtrl);
+    Check(Map.ShortCutOf('FileSave') = (Ord('W') or kbCtrl), 'a command can be rebound');
+    Check(Map.IsChanged('FileSave'), 'and says it has changed');
+    Check(Map.ChangedCount = 1, 'and only that one has');
+
+    { Conflicts. A shortcut runs one command, so two holding it means one of
+      them silently never fires - and an editor has to say which. }
+    Conflicts := Map.ConflictsFor('FileOpen', Ord('C') or kbCtrl);
+    try
+      Check(Conflicts.Count = 1, 'a shortcut already in use is reported');
+      Check(Conflicts[0] = 'EditCopy', 'by name, so the editor can say which');
+    finally
+      Conflicts.Free;
+    end;
+
+    Conflicts := Map.ConflictsFor('FileOpen', Ord('Q') or kbCtrl);
+    try
+      Check(Conflicts.Count = 0, 'an unused shortcut conflicts with nothing');
+    finally
+      Conflicts.Free;
+    end;
+
+    { A command does not conflict with itself - otherwise re-confirming a
+      binding would look like a clash. }
+    Conflicts := Map.ConflictsFor('EditCopy', Ord('C') or kbCtrl);
+    try
+      Check(Conflicts.Count = 0, 'a command does not conflict with itself');
+    finally
+      Conflicts.Free;
+    end;
+
+    { Any number of commands may have no shortcut at all. }
+    Map.Assign_('FileOpen', kbNone);
+    Conflicts := Map.ConflictsFor('EditCopy', kbNone);
+    try
+      Check(Conflicts.Count = 0, 'having no shortcut conflicts with nothing');
+    finally
+      Conflicts.Free;
+    end;
+
+    { Saving only the differences, so a command whose built-in shortcut changes
+      in a later build picks the new one up instead of being pinned by a file
+      that recorded the old one. }
+    Saved := Map.SaveToText;
+    Check(Pos('FileSave=Ctrl+W', Saved) > 0, 'a changed binding is saved');
+    Check(Pos('EditCopy', Saved) = 0, 'an unchanged one is not');
+    { A cleared shortcut is a change, and different from never having touched
+      it - so it has to be recorded, with an empty value. }
+    Check(Pos('FileOpen=', Saved) > 0, 'and a deliberately cleared one is');
+
+    Map.ResetAll;
+    Check(Map.ChangedCount = 0, 'reset puts everything back');
+    Check(Map.ShortCutOf('FileSave') = (Ord('S') or kbCtrl),
+      'to the shortcut it was built with');
+
+    Map.LoadFromText(Saved);
+    Check(Map.ShortCutOf('FileSave') = (Ord('W') or kbCtrl), 'and a saved file reloads');
+    Check(Map.ShortCutOf('FileOpen') = kbNone, 'including a cleared shortcut');
+    Check(Map.ShortCutOf('EditCopy') = (Ord('C') or kbCtrl),
+      'while one that was never changed keeps its default');
+
+    { A file naming a command that no longer exists is stale, not a reason to
+      reject everything in it. }
+    Map.LoadFromText('GoneAway=Ctrl+G'#10'EditCopy=Ctrl+E');
+    Check(Map.ShortCutOf('EditCopy') = (Ord('E') or kbCtrl),
+      'an unknown command in the file does not stop the rest loading');
+  finally
+    Map.Free;
+  end;
 end;
 
 procedure TestSQLTrace;
@@ -1139,6 +1273,9 @@ begin
 
   WriteLn('SQL trace:');
   TestSQLTrace;
+
+  WriteLn('Key bindings:');
+  TestKeyBindings;
 
   if Failures > 0 then
   begin

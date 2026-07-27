@@ -121,7 +121,7 @@
         <PackageName Value="fbintf"/>
       </Item6>
     </RequiredPackages>
-    <Units Count="101">
+    <Units Count="102">
       <Unit0>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -785,6 +785,12 @@
         <HasResources Value="True"/>
         <UnitName Value="QueryBuilderForm"/>
       </Unit117>
+      <Unit118>
+        <Filename Value="KeyBindingEditor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="KeyBindingEditor"/>
+      </Unit118>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -175,7 +175,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem, FirebirdKeywords;
+uses Globals, HelpMap, MarathonMain, GSSRegistry, InputDialog, SQLInsightItem, FirebirdKeywords, KeyBindingEditor;
 
 {$R *.lfm}
 
@@ -856,7 +856,9 @@ end;
 
 procedure TfrmMarathonOptions.btnEditKeysClick(Sender: TObject);
 begin
-  // FPC: kbgKeys is a TComponent placeholder on this port; keybinding editor not available
+	{ Empty for the whole of this port: the editor needed TrmKeyBindings, which
+	  went with the rest of rmControls. }
+	EditKeyBindings(frmMarathonMain.actMain);
 end;
 
 end.

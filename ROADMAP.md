@@ -595,3 +595,4 @@ because the original reasoning no longer holds:
 | — | Printing and print preview | Done — replaced the unported report writers |
 | — | Query builder | Done — rewritten; the Win32 original is deleted |
 | — | SQL Trace | Done — the stub monitor replaced with IBX's |
+| — | Keybinding editor | Done — replaces the removed rmControls grid |

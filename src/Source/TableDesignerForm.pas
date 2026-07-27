@@ -396,7 +396,10 @@ begin
   AddGridRow(C);
   grdColumns.Row := grdColumns.RowCount - 1;
   grdColumns.Col := colName;
-  if grdColumns.CanFocus then
+  { Only when the form is actually on screen. Focusing a control on a form that
+    is not showing means nothing, and under a bare X server it is worse than
+    nothing - it takes the connection down. }
+  if Showing and grdColumns.CanFocus then
     grdColumns.SetFocus;
   RefreshScript;
 end;

@@ -118,6 +118,10 @@ type
 		  bar. }
 		function PageCount: Integer;
 		function CurrentPage: TPrintPage;
+		{ How wide the sheet is being drawn, which is what the two zoom buttons
+		  change. Read-only, and only exposed so the harness can tell them
+		  apart. }
+		function PaperWidth: Integer;
 		property PageIndex: Integer read FPageIndex;
 	end;
 
@@ -284,6 +288,14 @@ function TfrmPrintPreview.PageCount: Integer;
 begin
 	if Assigned(FDocument) then
 		Result := FDocument.PageCount
+	else
+		Result := 0;
+end;
+
+function TfrmPrintPreview.PaperWidth: Integer;
+begin
+	if Assigned(FPaper) then
+		Result := FPaper.Width
 	else
 		Result := 0;
 end;

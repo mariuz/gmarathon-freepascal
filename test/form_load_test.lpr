@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType;
 
 var
   Failures: Integer = 0;
@@ -1564,6 +1564,36 @@ begin
     F.btnRevertClick(nil);
     Check(F.memScript.Lines.Count = 0, 'Revert empties the script again');
     Check(not F.btnApply.Enabled, 'and disables Apply');
+
+    { Adding a column through the toolbar, which is the other way the grid
+      changes. }
+    Before := F.grdColumns.RowCount;
+    F.btnAddColumnClick(nil);
+    Check(F.grdColumns.RowCount = Before + 1, 'Add column adds a grid row');
+    { A row with no name yet is one the user has started, not a column called
+      nothing - so it must not reach the script. }
+    Check(F.memScript.Lines.Count = 0, 'an unnamed new row generates nothing');
+    F.grdColumns.Cells[0, F.grdColumns.RowCount - 1] := 'HARNESS_NEW';
+    F.grdColumnsEditingDone(F.grdColumns);
+    Check(Pos('add HARNESS_NEW', F.memScript.Lines.Text) > 0,
+      'and naming it makes it an ADD');
+    { The hidden original-name column is what tells an addition from a rename;
+      a new row must have it empty. }
+    Check(Trim(F.grdColumns.Cells[6, F.grdColumns.RowCount - 1]) = '',
+      'a new row carries no original name, so it is an addition');
+
+    { Removing it again. }
+    F.grdColumns.Row := F.grdColumns.RowCount - 1;
+    F.btnDeleteColumnClick(nil);
+    Check(F.grdColumns.RowCount = Before, 'Remove takes the row away again');
+    Check(F.memScript.Lines.Count = 0, 'and the script goes quiet');
+
+    { Reordering. Moving a row must not be mistaken for renaming two columns -
+      each row carries its own original name with it. }
+    F.grdColumns.Row := 1;
+    F.btnMoveDownClick(nil);
+    Check(F.memScript.Lines.Count = 0,
+      'moving a column generates nothing, since order is not a change to apply');
   finally
     F.Free;
   end;
@@ -2056,7 +2086,7 @@ var
   Doc: TPrintDocument;
   Printed: TPrintedDocument;
   Bmp: TBitmap;
-  Idx, Ink: Integer;
+  Idx, Ink, WideW: Integer;
 begin
   WriteLn('Print preview:');
 
@@ -2103,6 +2133,21 @@ begin
     Check(Pos('Page 1 ', F.stsPreview.Panels[0].Text) > 0,
       'and Previous before the start stays there');
 
+    { The two zoom buttons, whose handlers were empty bodies: the toolbar has
+      always offered Full Page and Page Width and neither did anything. They
+      size the sheet inside the scroll box, so what changes is the paint box. }
+    F.Width := 760;
+    F.Height := 520;
+    F.btnPageWidthClick(nil);
+    WideW := F.PaperWidth;
+    F.btnFullPageClick(nil);
+    Check(F.PaperWidth > 0, 'Full Page gives the sheet a size');
+    Check(WideW > 0, 'and so does Page Width');
+    { Page Width fills the window and lets the page run off the bottom; Full
+      Page fits the whole sheet, so it must be the narrower of the two. }
+    Check(F.PaperWidth < WideW,
+      'and Full Page is narrower than Page Width, as fitting the height requires');
+
     { Rendering, onto a bitmap rather than the screen so the check can look at
       what came out. This is the part that needs no printer: the machine
       running the tests has none, and the preview still has to work. }
@@ -2125,6 +2170,170 @@ begin
   finally
     F.Free;
   end;
+end;
+
+{ The keybinding editor, which the Options dialog has offered a button for
+  since the port began and which has done nothing at all - the component it
+  needed went with the rest of rmControls.
+
+  What a shortcut is called and which commands clash is checked in
+  keyword_test without a widgetset. This is the form: that it lists the real
+  action list, that a keystroke in the capture box becomes a binding, that the
+  clash is named rather than merely counted, and that OK and Cancel differ. }
+procedure CheckKeyBindingEditor;
+var
+  F: TfrmKeyBindings;
+  Idx, Rows, Filtered: Integer;
+  Action, Other: TCustomAction;
+  Key: Word;
+  Saved, WasShortCut: Word;
+  Name: String;
+
+  { Finds the grid row showing a given command, or -1. }
+  function RowOf(const ACaption: String): Integer;
+  var
+    R: Integer;
+  begin
+    Result := -1;
+    for R := 1 to F.grdKeys.RowCount - 1 do
+      if Pos(AnsiUpperCase(ACaption), AnsiUpperCase(F.grdKeys.Cells[0, R])) > 0 then
+        Exit(R);
+  end;
+
+begin
+  WriteLn('Keybinding editor:');
+  try
+    F := TfrmKeyBindings.Create(nil);
+  except
+    on E: Exception do
+    begin
+      Check(False, 'the editor .lfm streams (' + E.ClassName + ': ' + E.Message + ')');
+      Exit;
+    end;
+  end;
+  try
+    Check(Assigned(F.grdKeys) and Assigned(F.edCapture) and Assigned(F.lblConflict),
+      'the editor .lfm streams its grid, capture box and conflict line');
+
+    F.LoadFrom(frmMarathonMain.actMain);
+    Check(F.Map.Count > 20,
+      'it reads the application''s commands (' + IntToStr(F.Map.Count) + ')');
+    Rows := F.grdKeys.RowCount - 1;
+    Check(Rows = F.Map.Count, 'and shows every one of them');
+
+    { Every action, including any with no caption at all, must be identifiable
+      - a blank row cannot be rebound. }
+    for Idx := 1 to F.grdKeys.RowCount - 1 do
+      if Trim(F.grdKeys.Cells[0, Idx]) = '' then
+      begin
+        Check(False, 'row ' + IntToStr(Idx) + ' has no command name');
+        Break;
+      end;
+
+    { Filtering, which is how a list this long is usable at all. }
+    F.edFilter.Text := 'connection';
+    F.edFilterChange(nil);
+    Filtered := F.grdKeys.RowCount - 1;
+    Check((Filtered > 0) and (Filtered < Rows),
+      'the filter narrows the list (' + IntToStr(Filtered) + ' of ' +
+      IntToStr(Rows) + ')');
+    F.edFilter.Text := 'zzz not a command';
+    F.edFilterChange(nil);
+    Check(F.grdKeys.RowCount = 1, 'a filter matching nothing leaves nothing');
+    { And with nothing selectable, a keystroke must not go anywhere. }
+    F.AssignToSelected(Ord('J') or kbCtrl);
+    Check(True, 'assigning with nothing selected does not raise');
+    F.edFilter.Text := '';
+    F.edFilterChange(nil);
+    Check(F.grdKeys.RowCount - 1 = Rows, 'and clearing it brings them all back');
+
+    { Capturing a keystroke, through the handler the keyboard reaches. }
+    F.grdKeys.Row := 1;
+    F.grdKeysSelection(nil, 0, 1);
+    Name := F.grdKeys.Cells[0, 1];
+    Check(Trim(F.lblCommand.Caption) <> '', 'selecting a row names the command');
+
+    Key := Ord('J');
+    F.edCaptureKeyDown(nil, Key, [ssCtrl]);
+    Check(Key = 0, 'the keystroke is swallowed, so the box does not also type it');
+    Check(F.edCapture.Text = 'Ctrl+J', 'and shows what was pressed');
+    Check(F.grdKeys.Cells[2, 1] = 'Ctrl+J', 'and the grid row updates');
+
+    { A modifier on its own is half a keystroke - the user is still pressing -
+      and must not wipe what is there. }
+    Key := VK_CONTROL;
+    F.edCaptureKeyDown(nil, Key, [ssCtrl]);
+    Check(F.edCapture.Text = 'Ctrl+J', 'a modifier alone does not clear the binding');
+
+    { Clearing deliberately. }
+    F.btnClearClick(nil);
+    Check(F.edCapture.Text = '', 'the No Shortcut button clears it');
+
+    { A clash has to be named. Two commands are given the same key, and the
+      second must say which one already has it. }
+    Key := Ord('K');
+    F.grdKeys.Row := 1;
+    F.grdKeysSelection(nil, 0, 1);
+    F.edCaptureKeyDown(nil, Key, [ssCtrl, ssShift]);
+    F.grdKeys.Row := 2;
+    F.grdKeysSelection(nil, 0, 2);
+    Key := Ord('K');
+    F.edCaptureKeyDown(nil, Key, [ssCtrl, ssShift]);
+    Check(Pos('Already used by', F.lblConflict.Caption) > 0,
+      'a shortcut already in use is reported');
+    { Named, not merely counted - "already in use" leaves the user hunting. }
+    Check(Length(Trim(F.lblConflict.Caption)) > Length('Already used by '),
+      'and says which command has it');
+    { Shown, not refused: which of the two should move is the user''s call, and
+      refusing the keystroke would make swapping two shortcuts impossible. }
+    Check(F.grdKeys.Cells[2, 2] = 'Ctrl+Shift+K',
+      'and the binding is still made rather than refused');
+  finally
+    F.Free;
+  end;
+
+  { Applying to the real action list, and the difference between OK and
+    Cancel. Done on a copy of the shortcut so the running application is put
+    back exactly as it was. }
+  Action := nil;
+  for Idx := 0 to frmMarathonMain.actMain.ActionCount - 1 do
+    if frmMarathonMain.actMain.Actions[Idx] is TCustomAction then
+    begin
+      Action := TCustomAction(frmMarathonMain.actMain.Actions[Idx]);
+      Break;
+    end;
+  if not Assigned(Action) then
+  begin
+    Check(False, 'the application has an action to test against');
+    Exit;
+  end;
+  WasShortCut := Action.ShortCut;
+
+  F := TfrmKeyBindings.Create(nil);
+  try
+    F.LoadFrom(frmMarathonMain.actMain);
+    F.Map.Assign_(Action.Name, Ord('Y') or kbCtrl or kbAlt);
+    Check(Action.ShortCut = WasShortCut,
+      'changing the map alone leaves the action alone, so Cancel can work');
+    F.ApplyTo(frmMarathonMain.actMain);
+    Check(Action.ShortCut = (Ord('Y') or kbCtrl or kbAlt),
+      'and applying puts the new shortcut onto the action');
+    Check(F.Map.ChangedCount = 1, 'with one command reported as changed');
+
+    { Only the difference is saved, so a command whose built-in shortcut
+      changes in a later build picks the new one up. }
+    Saved := 0;
+    Check(Pos(Action.Name, F.Map.SaveToText) > 0, 'the change is what gets saved');
+    F.Map.ResetAll;
+    F.ApplyTo(frmMarathonMain.actMain);
+    Check(Action.ShortCut = WasShortCut, 'and Reset All puts it back');
+    Check(F.Map.SaveToText = '', 'leaving nothing to save');
+  finally
+    F.Free;
+  end;
+  { Whatever happened above, the running application is left as it was. }
+  Action.ShortCut := WasShortCut;
+  Check(Action.ShortCut = WasShortCut, 'the application is left as it was found');
 end;
 
 procedure CheckCommandPalette;
@@ -2651,6 +2860,7 @@ begin
   CheckExplorerFilter;
   CheckResultsUnderEditor;
   CheckCommandPalette;
+  CheckKeyBindingEditor;
   CheckPrintPreview;
   CheckDesignTableReachable;
   CheckConnectionGrouping;
