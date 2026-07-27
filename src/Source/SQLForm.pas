@@ -97,7 +97,9 @@ type
     pgSQLStatement: TPageControl;
     tsSQLStatement: TTabSheet;
     edSQLStatement: TSyntaxMemoWithStuff2;
-    tsResultsView: TTabSheet;
+    { The splitter between the SQL text and its results, which now share a
+      tab - see ResultsHaveFocus for what that changed. }
+    splResults: TSplitter;
     nbResults: TrmNoteBookControl;
     tabResults: TrmTabSet;
     grdSQLStatement: TDBGrid;
@@ -261,6 +263,7 @@ type
 
 		function CanFind: Boolean; override;
 		{ Ctrl+Space completion - see SQLCompletionHost. }
+		function ResultsHaveFocus: Boolean;
 		procedure SetUpCompletion;
 		procedure DoFind; override;
 
@@ -661,7 +664,7 @@ begin
     edSQLStatement.SetFocus;
   end;
 
-  if pgSQLStatement.ActivePage = tsResultsView then
+  if ResultsHaveFocus then
   begin
     stsSQLStatement.Panels[0].Text := '';
     stsSQLStatement.Panels[1].Text := '';
@@ -839,7 +842,7 @@ begin
 	if pgSQLStatement.ActivePage = tsSQLStatement then
 		Result := edSQLStatement.Lines.Count > 0;
 
-	if pgSQLStatement.ActivePage = tsResultsView then
+	if ResultsHaveFocus then
 		Result := not (qrySQLStatement.EOF and qrySQLStatement.BOF);
 
 	if pgSQLStatement.ActivePage = tsPerformance then
@@ -871,7 +874,7 @@ begin
 	if pgSQLStatement.ActivePage = tsSQLStatement then
 		MarathonIDEInstance.PrintSyntaxMemo(edSQLStatement, False, FFileName);
 
-	if pgSQLStatement.ActivePage = tsResultsView then
+	if ResultsHaveFocus then
 		MarathonIDEInstance.PrintDataSet(qrySQLStatement, False, FFileName);
 
 	if pgSQLStatement.ActivePage = tsPerformance then
@@ -907,7 +910,7 @@ begin
 	if pgSQLStatement.ActivePage = tsSQLStatement then
 		MarathonIDEInstance.PrintSyntaxMemo(edSQLStatement, True, FFileName);
 
-	if pgSQLStatement.ActivePage = tsResultsView then
+	if ResultsHaveFocus then
 		MarathonIDEInstance.PrintDataSet(qrySQLStatement, True, FFileName);
 
 	if pgSQLStatement.ActivePage = tsPerformance then
@@ -986,7 +989,7 @@ begin
 	if pgSQLStatement.ActivePage = tsSQLStatement then
 		Result := True;
 
-	if pgSQLStatement.ActivePage = tsResultsView then
+	if ResultsHaveFocus then
 		Result := True;
 end;
 
@@ -1062,7 +1065,7 @@ end;
 function TfrmSQLForm.CanRefresh: Boolean;
 begin
 	Result := False;
-	if pgSQLStatement.ActivePage = tsResultsView then
+	if ResultsHaveFocus then
 		Result := True;
 end;
 
@@ -1344,7 +1347,9 @@ begin
 					SQLSelect, SQLSelectForUpdate:
 						begin
 							qrySQLStatement.Open;
-							pgSQLStatement.ActivePage := tsResultsView;
+							{ The results are already on screen under the editor; put the
+							  caret in them so the next Copy or export acts on the rows. }
+							FocusIfPossible(nbResults);
 							pgSQLStatementChange(pgSQLStatement);
 							stsSQLStatement.Panels[3].Text := '      Statement Execution Successful';
 							imgSuccess.Picture.Bitmap.LoadFromResourceName(HInstance, 'SQL_ED_OK');
@@ -1360,7 +1365,10 @@ begin
 							if ExecuteSingletonOutput(qrySQLStatement.SQL.Text) then
 							begin
 								MarathonIDEInstance.RecordToScript(qrySQLStatement.SQL.Text, GetActiveConnectionName);
-								pgSQLStatement.ActivePage := tsResultsView;
+								{ The results are already on screen beneath the editor, so there
+								  is no tab to switch to; put the caret in them instead, so the
+								  next Copy or export acts on the rows. }
+								FocusIfPossible(nbResults);
 								pgSQLStatementChange(pgSQLStatement);
 							end
 							else
@@ -1606,6 +1614,26 @@ begin
 	end;
 end;
 
+{ True when the user is working in the results rather than in the SQL text.
+
+  Results used to live on a tab of their own, so this was "is that tab
+  active". They now sit under the editor and both are visible at once, which is
+  the point of the change - so what Copy, Print and the exporters act on is
+  decided by where the focus is instead. }
+function TfrmSQLForm.ResultsHaveFocus: Boolean;
+var
+	Ctrl: TWinControl;
+begin
+	Result := False;
+	Ctrl := Screen.ActiveControl;
+	while Assigned(Ctrl) do
+	begin
+		if Ctrl = nbResults then
+			Exit(True);
+		Ctrl := Ctrl.Parent;
+	end;
+end;
+
 procedure TfrmSQLForm.SetUpCompletion;
 begin
 	FCompletion := TSQLCompletionHost.Create(Self, edSQLStatement);
@@ -1641,7 +1669,7 @@ end;
 
 procedure TfrmSQLForm.DoRefresh;
 begin
-	if pgSQLStatement.ActivePage = tsResultsView then
+	if ResultsHaveFocus then
 	begin
 		qrySQLStatement.Close;
 		qrySQLStatement.Open;
@@ -2340,7 +2368,7 @@ end;
 
 function TfrmSQLForm.CanExport: Boolean;
 begin
-	Result := (pgSQLStatement.ActivePage = tsResultsView) and
+	Result := (ResultsHaveFocus) and
 		(not (ActiveResultSet.EOF and ActiveResultSet.BOF));
 end;
 

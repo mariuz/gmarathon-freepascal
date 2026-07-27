@@ -1494,6 +1494,39 @@ begin
   end;
 end;
 
+{ SQL text and its results on screen together.
+
+  Marathon used to put results on a tab of their own, so seeing them meant
+  leaving the statement behind. This is the arrangement the VS Code extension
+  uses and the point of the item: editor above, results below, a splitter
+  between them. }
+procedure CheckResultsUnderEditor;
+var
+  F: TfrmSQLForm;
+begin
+  WriteLn('Results under the editor:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    Check(F.nbResults.Parent = F.edSQLStatement.Parent,
+      'the results share the editor''s tab');
+    Check(F.nbResults.Align = alBottom, 'sitting below it');
+    Check(F.edSQLStatement.Align = alClient, 'with the editor taking the rest');
+    Check(Assigned(F.splResults) and (F.splResults.Parent = F.nbResults.Parent),
+      'and a splitter between them');
+    { Both on screen at once is the whole point, so it is asserted rather than
+      inferred from the alignments. }
+    Check(F.nbResults.Visible and F.edSQLStatement.Visible,
+      'both are visible at the same time');
+
+    { The menu guards used to ask which tab was active. They now ask where the
+      focus is, so they must not claim the results have it when nothing does. }
+    Check(not F.ResultsHaveFocus,
+      'the results do not claim focus when nothing has it');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1893,6 +1926,7 @@ begin
   CheckShellWiring;
   CheckExplorerDocks;
   CheckExplorerFilter;
+  CheckResultsUnderEditor;
   CheckHighDPIScaling;
   CheckCompletionWiring;
   CheckEditorSearch;

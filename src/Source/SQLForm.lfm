@@ -141,6 +141,182 @@ object frmSQLForm: TfrmSQLForm
           OnGetHintText = edSQLStatementGetHintText
           UseNavigateHyperLinks = True
         end
+        object splResults: TSplitter
+          Cursor = crVSplit
+          Left = 0
+          Top = 300
+          Width = 631
+          Height = 5
+          Align = alBottom
+          ResizeAnchor = akBottom
+        end
+        object nbResults: TrmNoteBookControl
+        Left = 0
+        Top = 0
+        Width = 631
+        Height = 348
+        Align = alBottom
+        object nbpDatasheet: TrmNotebookPage
+          Left = 0
+          Top = 0
+          Width = 631
+          Height = 348
+          Caption = 'Datasheet'
+          Data = 0
+          Visible = False
+          ImageIndex = -1
+          object grdSQLStatement: TDBGrid
+            Left = 0
+            Top = 26
+            Width = 631
+            Height = 322
+            Align = alClient
+            DataSource = dsSQLStatement
+            PopupMenu = dmMenus.mnuDataMenu
+            TabOrder = 0
+            TitleFont.Charset = DEFAULT_CHARSET
+            TitleFont.Color = clWindowText
+            TitleFont.Height = -11
+            TitleFont.Name = 'MS Sans Serif'
+            TitleFont.Style = []
+            OnDblClick = grdSQLStatementDblClick
+          end
+          object pnlNavigator: TPanel
+            Left = 0
+            Top = 0
+            Width = 631
+            Height = 26
+            Align = alTop
+            BevelOuter = bvNone
+            TabOrder = 1
+            object btnRefresh: TSpeedButton
+              Left = 235
+              Top = 0
+              Width = 69
+              Height = 25
+              Caption = '&Refresh'
+              Flat = True
+            end
+            object navResults: TDBNavigator
+              Left = 1
+              Top = 0
+              Width = 234
+              Height = 25
+              DataSource = dsSQLStatement
+              VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel]
+              Flat = True
+              Hints.Strings = (
+                'First'
+                'Previous'
+                'Next'
+                'Last'
+                'Append'
+                'Delete'
+                'Edit'
+                'Post'
+                'Cancel')
+              ParentShowHint = False
+              ShowHint = True
+              TabOrder = 0
+            end
+            object lblFilter: TLabel
+              Left = 310
+              Top = 6
+              Width = 30
+              Height = 13
+              Caption = 'Filter:'
+              FocusControl = edFilter
+            end
+            object edFilter: TEdit
+              Left = 344
+              Top = 2
+              Width = 280
+              Height = 21
+              Anchors = [akLeft, akTop, akRight]
+              TabOrder = 1
+              OnChange = edFilterChange
+            end
+          end
+        end
+        object nbpForm: TrmNotebookPage
+          Left = 0
+          Top = 0
+          Width = 631
+          Height = 348
+          Caption = 'Form'
+          Data = 0
+          Enabled = False
+          Visible = False
+          ImageIndex = -1
+          object pnlResForm: TDBPanelEdit
+            Left = 0
+            Top = 26
+            Width = 631
+            Height = 322
+            DataSource = dsSQLStatement
+            Align = alClient
+            ReadOnly = False
+            TabOrder = 0
+            ReadOnly = False
+          end
+          object pnlPerformance: TPanel
+            Left = 0
+            Top = 0
+            Width = 631
+            Height = 26
+            Align = alTop
+            BevelOuter = bvNone
+            TabOrder = 1
+            object SpeedButton1: TSpeedButton
+              Left = 235
+              Top = 0
+              Width = 69
+              Height = 25
+              Caption = '&Refresh'
+              Flat = True
+            end
+            object DBNavigator1: TDBNavigator
+              Left = 1
+              Top = 0
+              Width = 234
+              Height = 25
+              DataSource = dsSQLStatement
+              VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel]
+              Flat = True
+              Hints.Strings = (
+                'First'
+                'Previous'
+                'Next'
+                'Last'
+                'Append'
+                'Delete'
+                'Edit'
+                'Post'
+                'Cancel')
+              ParentShowHint = False
+              ShowHint = True
+              TabOrder = 0
+            end
+          end
+        end
+      end
+      object tabResults: TrmTabSet
+        Left = 0
+        Top = 348
+        Width = 631
+        Height = 21
+        Align = alBottom
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        Tabs.Strings = (
+          'Datasheet'
+          'Form')
+        TabIndex = 0
+        OnChange = tabResultsChange
+      end
         object pnlMessages: TPanel
           Left = 0
           Top = 258
@@ -169,176 +345,6 @@ object frmSQLForm: TfrmSQLForm
             TabOrder = 0
             OnDblClick = lstResultsClick
           end
-        end
-      end
-      object tsResultsView: TTabSheet
-        Caption = 'Results View'
-        object nbResults: TrmNoteBookControl
-          Left = 0
-          Top = 0
-          Width = 631
-          Height = 348
-          Align = alClient
-          object nbpDatasheet: TrmNotebookPage
-            Left = 0
-            Top = 0
-            Width = 631
-            Height = 348
-            Caption = 'Datasheet'
-            Data = 0
-            Visible = False
-            ImageIndex = -1
-            object grdSQLStatement: TDBGrid
-              Left = 0
-              Top = 26
-              Width = 631
-              Height = 322
-              Align = alClient
-              DataSource = dsSQLStatement
-              PopupMenu = dmMenus.mnuDataMenu
-              TabOrder = 0
-              TitleFont.Charset = DEFAULT_CHARSET
-              TitleFont.Color = clWindowText
-              TitleFont.Height = -11
-              TitleFont.Name = 'MS Sans Serif'
-              TitleFont.Style = []
-              OnDblClick = grdSQLStatementDblClick
-            end
-            object pnlNavigator: TPanel
-              Left = 0
-              Top = 0
-              Width = 631
-              Height = 26
-              Align = alTop
-              BevelOuter = bvNone
-              TabOrder = 1
-              object btnRefresh: TSpeedButton
-                Left = 235
-                Top = 0
-                Width = 69
-                Height = 25
-                Caption = '&Refresh'
-                Flat = True
-              end
-              object navResults: TDBNavigator
-                Left = 1
-                Top = 0
-                Width = 234
-                Height = 25
-                DataSource = dsSQLStatement
-                VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel]
-                Flat = True
-                Hints.Strings = (
-                  'First'
-                  'Previous'
-                  'Next'
-                  'Last'
-                  'Append'
-                  'Delete'
-                  'Edit'
-                  'Post'
-                  'Cancel')
-                ParentShowHint = False
-                ShowHint = True
-                TabOrder = 0
-              end
-              object lblFilter: TLabel
-                Left = 310
-                Top = 6
-                Width = 30
-                Height = 13
-                Caption = 'Filter:'
-                FocusControl = edFilter
-              end
-              object edFilter: TEdit
-                Left = 344
-                Top = 2
-                Width = 280
-                Height = 21
-                Anchors = [akLeft, akTop, akRight]
-                TabOrder = 1
-                OnChange = edFilterChange
-              end
-            end
-          end
-          object nbpForm: TrmNotebookPage
-            Left = 0
-            Top = 0
-            Width = 631
-            Height = 348
-            Caption = 'Form'
-            Data = 0
-            Enabled = False
-            Visible = False
-            ImageIndex = -1
-            object pnlResForm: TDBPanelEdit
-              Left = 0
-              Top = 26
-              Width = 631
-              Height = 322
-              DataSource = dsSQLStatement
-              Align = alClient
-              ReadOnly = False
-              TabOrder = 0
-              ReadOnly = False
-            end
-            object pnlPerformance: TPanel
-              Left = 0
-              Top = 0
-              Width = 631
-              Height = 26
-              Align = alTop
-              BevelOuter = bvNone
-              TabOrder = 1
-              object SpeedButton1: TSpeedButton
-                Left = 235
-                Top = 0
-                Width = 69
-                Height = 25
-                Caption = '&Refresh'
-                Flat = True
-              end
-              object DBNavigator1: TDBNavigator
-                Left = 1
-                Top = 0
-                Width = 234
-                Height = 25
-                DataSource = dsSQLStatement
-                VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel]
-                Flat = True
-                Hints.Strings = (
-                  'First'
-                  'Previous'
-                  'Next'
-                  'Last'
-                  'Append'
-                  'Delete'
-                  'Edit'
-                  'Post'
-                  'Cancel')
-                ParentShowHint = False
-                ShowHint = True
-                TabOrder = 0
-              end
-            end
-          end
-        end
-        object tabResults: TrmTabSet
-          Left = 0
-          Top = 348
-          Width = 631
-          Height = 21
-          Align = alBottom
-          Font.Charset = DEFAULT_CHARSET
-          Font.Color = clWindowText
-          Font.Height = -11
-          Font.Name = 'MS Sans Serif'
-          Font.Style = []
-          Tabs.Strings = (
-            'Datasheet'
-            'Form')
-          TabIndex = 0
-          OnChange = tabResultsChange
         end
       end
       object tsPerformance: TTabSheet

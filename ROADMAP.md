@@ -343,9 +343,23 @@ and schema comparison all exist here already. The gap is arrangement.
   expanding every branch to find out would query the whole database on each
   keystroke. Metadata Search still exists for the case this does not cover -
   searching inside procedure and trigger *source*.
-- [ ] **4. Results pane** — the SQL editor's grid moves to a shared results
-  area below the document tabs, with the existing exporters, so results are in
-  one predictable place rather than per-window.
+- [x] **4. Results beneath the statement** — the gap here turned out to be
+  sharper than "results should be in one place": Marathon put results on a *tab
+  of their own*, so seeing them meant leaving the SQL text behind. They now sit
+  under the editor with a splitter between, both on screen at once, which is
+  what the VS Code extension does and the actual point of the item. A
+  shell-level pane shared between documents was considered and rejected — each
+  document keeping its own results is better here, and reparenting a live data
+  grid on every tab switch is risk with nothing to show for it.
+
+  Merging the panes changed what seven menu guards meant. They asked *which tab
+  is active* to decide whether Copy, Print and the exporters act on rows or on
+  text; with both panes visible that question no longer has an answer, so they
+  ask where the focus is instead. That is a silent kind of change — a wrong
+  guard disables a menu item rather than crashing — so `ResultsHaveFocus` is
+  one named function rather than seven inline conditions, and the test pins the
+  case that would otherwise pass by accident: nothing focused must not count as
+  the results being focused.
 - [ ] **5. Command palette** — `Ctrl+Shift+P` over the existing `TActionList`,
   which already names and groups every command in the application.
 - [ ] **6. Connection dialog and connection groups** — one dialog rather than
@@ -424,7 +438,7 @@ because the original reasoning no longer holds:
 | 9 | Docked shell and tabbed documents | Done |
 | 9 | Object explorer in the shell | Done |
 | 9 | Explorer filtering and type-aware search | Done |
-| 9 | Shared results pane | Not started |
+| 9 | Results beneath the statement | Done |
 | 9 | Command palette | Not started |
 | 9 | Connection dialog and groups | Not started |
 | 9 | Table designer | Not started |
