@@ -1421,6 +1421,79 @@ begin
   end;
 end;
 
+{ The explorer's filter box against a tree, rather than the matcher alone -
+  what a filter means is covered without a GUI in keyword_test. What matters
+  here is that filtering hides the right nodes and, more importantly, never
+  strands one: an object that survives must keep a visible path to it, or it
+  is filtered into somewhere the user cannot reach. }
+procedure CheckExplorerFilter;
+var
+  Explorer: TfrmDatabaseExplorer;
+  Conn, Tables, Views, Cust, Ord, SomeView: TTreeNode;
+begin
+  WriteLn('Explorer filter:');
+  Explorer := nil;
+  try
+    try
+      Explorer := TfrmDatabaseExplorer.Create(nil);
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped: the explorer could not be built here (',
+          E.ClassName, ')');
+        Exit;
+      end;
+    end;
+
+    { A tree shaped like a real one: connection, groups, objects. Built by hand
+      so the check does not need a database. }
+    Explorer.tvDatabase.Items.Clear;
+    Conn := Explorer.tvDatabase.Items.Add(nil, 'MyConnection');
+    Tables := Explorer.tvDatabase.Items.AddChild(Conn, 'Tables');
+    Cust := Explorer.tvDatabase.Items.AddChild(Tables, 'CUSTOMERS');
+    Ord := Explorer.tvDatabase.Items.AddChild(Tables, 'ORDERS');
+    Views := Explorer.tvDatabase.Items.AddChild(Conn, 'Views');
+    SomeView := Explorer.tvDatabase.Items.AddChild(Views, 'CUSTOMER_VIEW');
+
+    Explorer.edFilter.Text := '';
+    Explorer.ApplyTreeFilter;
+    Check(Cust.Visible and Ord.Visible and SomeView.Visible,
+      'an empty filter shows everything');
+
+    Explorer.edFilter.Text := 'cust';
+    Explorer.ApplyTreeFilter;
+    Check(Cust.Visible, 'a matching table stays');
+    Check(not Ord.Visible, 'a table that does not match goes');
+    Check(SomeView.Visible, 'a matching view stays');
+    { The path has to survive with them, or the objects are unreachable. }
+    Check(Tables.Visible and Views.Visible and Conn.Visible,
+      'and the groups and connection above them stay visible');
+
+    Explorer.edFilter.Text := 'table:cust';
+    Explorer.ApplyTreeFilter;
+    Check(Cust.Visible, 'a type-qualified filter keeps the right object');
+    Check(not SomeView.Visible, 'and drops one of the wrong type');
+    Check(not Views.Visible, 'along with the group that is now empty');
+
+    Explorer.edFilter.Text := 'zzz_nothing_matches';
+    Explorer.ApplyTreeFilter;
+    Check(not Cust.Visible and not SomeView.Visible,
+      'a filter matching nothing hides the objects');
+
+    { And it has to be reversible - a filter box is typed into and cleared. }
+    Explorer.edFilter.Text := '';
+    Explorer.ApplyTreeFilter;
+    Check(Cust.Visible and Ord.Visible and SomeView.Visible,
+      'clearing the filter brings everything back');
+  finally
+    if Assigned(Explorer) then
+    begin
+      Explorer.Parent := nil;
+      Explorer.Free;
+    end;
+  end;
+end;
+
 procedure CheckHighDPIScaling;
 var
   Idx, Unscaled: Integer;
@@ -1819,6 +1892,7 @@ begin
   CheckDocumentHost;
   CheckShellWiring;
   CheckExplorerDocks;
+  CheckExplorerFilter;
   CheckHighDPIScaling;
   CheckCompletionWiring;
   CheckEditorSearch;

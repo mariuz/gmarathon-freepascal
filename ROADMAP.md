@@ -323,9 +323,26 @@ and schema comparison all exist here already. The gap is arrangement.
   was true only at startup and ran after a project had been opened; it is now
   the invariant that the dock shows exactly when it holds something, which is
   checkable at any point.
-- [ ] **3. Explorer filtering and type-aware search** — the extension filters
-  large trees by name and by object type; Marathon has metadata search as a
-  separate window, which is the same capability in the wrong place.
+- [x] **3. Explorer filtering and type-aware search** — a filter box above the
+  tree, in one line rather than a dialog: `cust` finds anything containing it,
+  `table:cust` restricts that to tables, `table:` shows every table, and
+  `"CUST"` matches the whole name rather than part of it. Types are matched
+  loosely in both directions, so `procedure`, `proc` and `sp` all reach the
+  *Stored Procedures* group without anyone having to know Marathon's wording.
+  Matching folds case, since Firebird stores unquoted names upper-cased and
+  nobody types them that way.
+
+  `src/Common/TreeFilter.pas` holds what a filter *means* and has no tree and
+  no LCL in it, so the sixteen cases that decide it run without a widgetset. The
+  tree side is checked separately against a hand-built tree: what it must never
+  do is strand an object, so a surviving object keeps its group and connection
+  visible above it, and clearing the box brings everything back.
+
+  It deliberately does not expand anything. Walking a collapsed tree would
+  report an object as absent when it has merely not been read yet, and
+  expanding every branch to find out would query the whole database on each
+  keystroke. Metadata Search still exists for the case this does not cover -
+  searching inside procedure and trigger *source*.
 - [ ] **4. Results pane** — the SQL editor's grid moves to a shared results
   area below the document tabs, with the existing exporters, so results are in
   one predictable place rather than per-window.
@@ -406,7 +423,7 @@ because the original reasoning no longer holds:
 | 8 | HiDPI / scalable icons | Done (DPI scaling); scalable artwork needs new icons |
 | 9 | Docked shell and tabbed documents | Done |
 | 9 | Object explorer in the shell | Done |
-| 9 | Explorer filtering and type-aware search | Not started |
+| 9 | Explorer filtering and type-aware search | Done |
 | 9 | Shared results pane | Not started |
 | 9 | Command palette | Not started |
 | 9 | Connection dialog and groups | Not started |

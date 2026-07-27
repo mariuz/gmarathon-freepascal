@@ -51,7 +51,7 @@ interface
 uses {$IFDEF FPC}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetaDataSearchObject, ScriptAs, GimbalToolsAPI, GimbalToolsAPIImpl;
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, Menus, StdCtrls, Printers, ToolWin, Buttons, FileCtrl, ActnList, Registry, MarathonProjectCacheTypes, Globals, BaseDocumentForm, MarathonIDE, MarathonInternalInterfaces, MetaDataSearchObject, ScriptAs, TreeFilter, StrUtils, GimbalToolsAPI, GimbalToolsAPIImpl;
 
 type
 	TfrmDatabaseExplorer = class(TfrmBaseDocumentForm, IMarathonBrowser, IGimbalIDEBrowserWindow)
@@ -77,6 +77,9 @@ type
 		ViewSearch: TAction;
 		pnlFolderSearch: TPanel;
 		tvDatabase: TTreeView;
+		{ Filters the tree by name, and by object type when given one - see
+		  TreeFilter for what the text means. }
+		edFilter: TEdit;
 		sbSearch: TScrollBox;
 		Label4: TLabel;
 		edSearchString: TComboBox;
@@ -117,6 +120,8 @@ type
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure WindowListClick(Sender: TObject);
 		procedure tvDatabaseMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+		procedure edFilterChange(Sender: TObject);
+		procedure ApplyTreeFilter;
 		procedure tvDatabaseChange(Sender: TObject; Node: TTreeNode);
 		procedure lvDatabaseKeyPress(Sender: TObject; var Key: Char);
 		procedure tvDatabaseKeyPress(Sender: TObject; var Key: Char);
@@ -494,6 +499,66 @@ begin
 			end;
 	end;
 	stsDatabase.Panels[0].Text := ' ' + Signature;
+end;
+
+procedure TfrmDatabaseExplorer.edFilterChange(Sender: TObject);
+begin
+	ApplyTreeFilter;
+end;
+
+{ Hides the tree nodes a filter excludes.
+
+  Only leaves are judged: a group is shown when something in it survives, and a
+  connection when any of its groups do, so filtering never leaves an object
+  stranded with no visible path to it. A group's own caption is what gives an
+  object its type, which is why the kind is taken from the parent rather than
+  from the node.
+
+  Nothing is expanded to do this. Walking a collapsed tree would say an object
+  is absent when it has simply not been read yet, and expanding every branch to
+  find out would query the whole database on each keystroke. }
+procedure TfrmDatabaseExplorer.ApplyTreeFilter;
+var
+	Filter: TTreeFilter;
+
+	{ True when this node or anything under it survives. }
+	function KeepNode(Node: TTreeNode; const KindCaption: String): Boolean;
+	var
+		Child: TTreeNode;
+		AnyChild: Boolean;
+	begin
+		AnyChild := False;
+		Child := Node.GetFirstChild;
+		while Assigned(Child) do
+		begin
+			{ A node's children are of the kind this node names, unless this node
+			  is itself an object, in which case the kind carries down. }
+			if KeepNode(Child, IfThen(Node.Level >= 2, KindCaption, Node.Text)) then
+				AnyChild := True;
+			Child := Child.GetNextSibling;
+		end;
+
+		Result := AnyChild or TreeFilterMatches(Filter, Node.Text, KindCaption);
+		{ A group with no surviving children is only kept if it matches on its
+		  own account - 'table:' should leave the Tables group showing. }
+		Node.Visible := Result;
+	end;
+
+var
+	Root: TTreeNode;
+begin
+	Filter := ParseTreeFilter(edFilter.Text);
+	tvDatabase.Items.BeginUpdate;
+	try
+		Root := tvDatabase.Items.GetFirstNode;
+		while Assigned(Root) do
+		begin
+			KeepNode(Root, '');
+			Root := Root.GetNextSibling;
+		end;
+	finally
+		tvDatabase.Items.EndUpdate;
+	end;
 end;
 
 procedure TfrmDatabaseExplorer.tvDatabaseChange(Sender: TObject; Node: TTreeNode);

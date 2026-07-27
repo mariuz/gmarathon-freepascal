@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter;
 
 var
   Highlighter: TSynSQLSyn;
@@ -80,6 +80,15 @@ begin
   Ctx := CompletionContextAt(Line, CaretX);
   Check((Ctx.Kind = ExpectKind) and (Ctx.Partial = ExpectPartial) and
         (Ctx.Qualifier = ExpectQualifier), What);
+end;
+
+procedure CheckFilter(const FilterText, ObjectName, KindCaption: String;
+  Expect: Boolean; const What: String);
+var
+  F: TTreeFilter;
+begin
+  F := ParseTreeFilter(FilterText);
+  Check(TreeFilterMatches(F, ObjectName, KindCaption) = Expect, What);
 end;
 
 procedure CheckAlias(const SQLText, Alias, Expect, What: String);
@@ -174,6 +183,39 @@ begin
     'a table named in full');
   CheckAlias('select * from CUSTOMERS c', 'zz', 'zz',
     'an unknown alias is left alone');
+
+  { --- What an object tree filter shows --- }
+  WriteLn('Tree filter:');
+
+  CheckFilter('', 'CUSTOMERS', 'Tables', True, 'an empty filter shows everything');
+  CheckFilter('   ', 'CUSTOMERS', 'Tables', True, 'and so does whitespace');
+  CheckFilter('cust', 'CUSTOMERS', 'Tables', True, 'a fragment matches by name');
+  CheckFilter('cust', 'ORDERS', 'Tables', False, 'and excludes what it does not match');
+  { Firebird folds unquoted names to upper case and nobody types them that way. }
+  CheckFilter('CUST', 'customers', 'Tables', True, 'matching ignores case');
+
+  CheckFilter('table:cust', 'CUSTOMERS', 'Tables', True, 'a type and a fragment');
+  CheckFilter('table:cust', 'CUSTOMERS', 'Views', False,
+    'the type has to match too');
+  CheckFilter('table:', 'ANYTHING', 'Tables', True, 'a type on its own shows that type');
+  CheckFilter('table:', 'ANYTHING', 'Views', False, 'and hides the others');
+
+  { The group captions are Marathon's, and the user should not have to know
+    their exact wording. }
+  CheckFilter('procedure:x', 'XYZ', 'Stored Procedures', True,
+    'a singular type finds a plural group');
+  CheckFilter('proc:x', 'XYZ', 'Stored Procedures', True, 'an abbreviation does too');
+  CheckFilter('sp:x', 'XYZ', 'Stored Procedures', True,
+    'and one that shares no letters with the caption');
+
+  CheckFilter('"CUSTOMERS"', 'CUSTOMERS', 'Tables', True, 'a quoted name matches exactly');
+  CheckFilter('"CUST"', 'CUSTOMERS', 'Tables', False,
+    'and a quoted fragment does not match a longer name');
+  CheckFilter('table:"CUSTOMERS"', 'CUSTOMERS', 'Tables', True,
+    'a type and a quoted name together');
+
+  { A colon inside a quoted name is part of the name, not a type prefix. }
+  CheckFilter('"A:B"', 'A:B', 'Tables', True, 'a colon inside quotes is not a type');
 
   if Failures > 0 then
   begin
