@@ -39,10 +39,17 @@ type
     { Engine major version, or 0 when the caller does not know. Only consulted
       for syntax the older engines reject outright. }
     EngineMajor: Integer;
+    { The schema to script from, or empty for whatever an unqualified name
+      reaches - which is what every caller wanted before schemas existed, and
+      what they still get by leaving it alone. Set it and the generated SQL
+      names the object in full, which is the only form that runs outside the
+      search path. }
+    Schema: String;
   end;
 
 function ScriptAsContext(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  AIsIB6: Boolean; ADialect: Integer; AEngineMajor: Integer = 0): TScriptAsContext;
+  AIsIB6: Boolean; ADialect: Integer; AEngineMajor: Integer = 0;
+  const ASchema: String = ''): TScriptAsContext;
 
 function ScriptAsColumnNames(const Ctx: TScriptAsContext; ObjectName: String): TStringList;
 function ScriptAsPrimaryKeyColumns(const Ctx: TScriptAsContext; ObjectName: String): TStringList;
@@ -68,13 +75,24 @@ function RoutineSignature(const Ctx: TScriptAsContext; ObjectName: String;
 implementation
 
 function ScriptAsContext(ADatabase: TIBDatabase; ATransaction: TIBTransaction;
-  AIsIB6: Boolean; ADialect: Integer; AEngineMajor: Integer): TScriptAsContext;
+  AIsIB6: Boolean; ADialect: Integer; AEngineMajor: Integer;
+  const ASchema: String): TScriptAsContext;
 begin
   Result.Database := ADatabase;
   Result.Transaction := ATransaction;
   Result.IsIB6 := AIsIB6;
   Result.Dialect := ADialect;
   Result.EngineMajor := AEngineMajor;
+  Result.Schema := ASchema;
+end;
+
+{ The name an emitted statement should carry: qualified when the context names
+  a schema, bare otherwise. }
+function ContextIdent(const Ctx: TScriptAsContext; const ObjectName: String): String;
+begin
+  Result := MakeQuotedIdent(Trim(ObjectName), Ctx.IsIB6, Ctx.Dialect);
+  if Ctx.Schema <> '' then
+    Result := MakeQuotedIdent(Ctx.Schema, Ctx.IsIB6, Ctx.Dialect) + '.' + Result;
 end;
 
 { "Script as ..." helpers: build column-list-driven SELECT/INSERT/UPDATE/DELETE
@@ -288,6 +306,7 @@ begin
 		Extractor.Transaction := Ctx.Transaction;
 		Extractor.SQLDialect := Ctx.Dialect;
 		Extractor.IsInterbase6 := Ctx.IsIB6;
+		Extractor.Schema := Ctx.Schema;
 		if CacheType = ctPackage then
 			{ Header and body together - recreating a package takes both, and a
 			  package may legitimately have a header and no body. }
@@ -315,7 +334,9 @@ function ScriptAsDrop(const Ctx: TScriptAsContext; ObjectName: String; CacheType
 var
 	Ident: String;
 begin
-	Ident := MakeQuotedIdent(ObjectName, Ctx.IsIB6, Ctx.Dialect);
+	{ Qualified when the context names a schema: an unqualified DROP outside the
+	  search path removes a different object, or nothing. }
+	Ident := ContextIdent(Ctx, ObjectName);
 	case CacheType of
 		ctDomain:
 			Result := 'drop domain ' + Ident + ';';
@@ -435,7 +456,7 @@ var
 	Ident, ColList, FirstCol: String;
 begin
 	EnsureActive(Ctx);
-	Ident := MakeQuotedIdent(ObjectName, Ctx.IsIB6, Ctx.Dialect);
+	Ident := ContextIdent(Ctx, ObjectName);
 
 	if CacheType = ctTable then
 	begin
@@ -491,6 +512,7 @@ begin
 		Extractor.Transaction := Ctx.Transaction;
 		Extractor.SQLDialect := Ctx.Dialect;
 		Extractor.IsInterbase6 := Ctx.IsIB6;
+		Extractor.Schema := Ctx.Schema;
 		case CacheType of
 			ctView:
 				Result := Extractor.Extract(ddlView, ddlstAlter, ObjectName);

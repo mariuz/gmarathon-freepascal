@@ -4872,19 +4872,17 @@ begin
 	FCacheType := ctTable;
 end;
 
-{ Nothing is offered yet, deliberately. Every action reaches its object through
-  an unqualified name - the editors, the drop dialog, and the bulk extract
-  wizard alike - and outside the search path that names a different object or
-  none at all. An action that quietly works on the wrong table is worse than an
-  action that is not there.
+{ Scripting is offered, because those generators now name the schema and so
+  produce statements that run outside the search path.
 
-  TDDLExtractor does now understand a schema, so wiring these up is a matter of
-  carrying the schema through those callers rather than of new machinery. Until
-  then this branch is for seeing what a schema holds, which is itself something
-  that was not possible before: those objects were invisible. }
+  Open, Drop and the bulk extract wizard are not. They reach their object
+  through an unqualified name, which outside the search path finds a different
+  object or none - and something that quietly works on the wrong table is worse
+  than something that is not offered. Wiring them up means carrying the schema
+  into the editor forms and the wizard, not new machinery. }
 function TMarathonCacheSchemaMember.CanDoOperation(Op: TGSSCacheOp; Multiple: Boolean): Boolean;
 begin
-	Result := False;
+	Result := (not Multiple) and (Op in [opScriptCreate, opScriptDrop]);
 end;
 
 constructor TMarathonCacheSchemaObjectsHeader.Create;

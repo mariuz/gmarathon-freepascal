@@ -502,6 +502,18 @@ begin
 		Conn.ServerMajorVersion);
 end;
 
+{ The context to script a particular node from. Identical to the connection's
+  own, except for a node that lives in a named schema - there the generated
+  statement has to name it, or it would run against whatever the search path
+  reaches instead. }
+function ItemScriptContext(Conn: TMarathonCacheConnection;
+	Item: TMarathonCacheBaseNode): TScriptAsContext;
+begin
+	Result := ConnScriptContext(Conn);
+	if Item is TMarathonCacheSchemaMember then
+		Result.Schema := TMarathonCacheSchemaMember(Item).Schema;
+end;
+
 procedure ScriptAsOpenEditor(ConnName, SQLText: String);
 var
 	F: TfrmSQLForm;
@@ -999,23 +1011,23 @@ begin
 				try
 					case Event of
 						opScriptSelect:
-							ScriptAsOpenEditor(ConnectName, ScriptAsSelect(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsSelect(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName));
 						opScriptInsert:
-							ScriptAsOpenEditor(ConnectName, ScriptAsInsert(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsInsert(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName));
 						opScriptUpdate:
-							ScriptAsOpenEditor(ConnectName, ScriptAsUpdate(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsUpdate(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName));
 						opScriptDelete:
-							ScriptAsOpenEditor(ConnectName, ScriptAsDelete(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsDelete(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName));
 						opScriptCreate:
-							ScriptAsOpenEditor(ConnectName, ScriptAsCreate(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+							ScriptAsOpenEditor(ConnectName, ScriptAsCreate(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
 						opScriptExecute:
-							ScriptAsOpenEditor(ConnectName, ScriptAsExecute(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsExecute(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName));
 						opScriptAlter:
-							ScriptAsOpenEditor(ConnectName, ScriptAsAlter(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+							ScriptAsOpenEditor(ConnectName, ScriptAsAlter(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
 						opScriptDrop:
-							ScriptAsOpenEditor(ConnectName, ScriptAsDrop(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
+							ScriptAsOpenEditor(ConnectName, ScriptAsDrop(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName, Item.CacheType));
 						opScriptMerge:
-							ScriptAsOpenEditor(ConnectName, ScriptAsMerge(ConnScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName]), TMarathonCacheObject(Item).ObjectName));
+							ScriptAsOpenEditor(ConnectName, ScriptAsMerge(ItemScriptContext(FCurrentProject.Cache.ConnectionByName[ConnectName], Item), TMarathonCacheObject(Item).ObjectName));
 					end;
 				finally
 					Screen.Cursor := crDefault;

@@ -544,6 +544,29 @@ begin
     Halt(1);
   end;
 
+  { The Script As generators reach the same schema, so what the tree offers on a
+    schema's object is a statement that will run rather than one that names
+    whatever the search path happens to hold. }
+  SchemaDDL := ScriptAsCreate(
+    ScriptAsContext(DB, Tr, True, 3, EngineMajor, 'SMOKE_OTHER'),
+    'SMOKE_DUP', ctTable);
+  RequireInDDL(SchemaDDL, 'SMOKE_OTHER', 'the schema in a scripted CREATE');
+  RequireInDDL(SchemaDDL, 'IN_OTHER_SCHEMA', 'the other schema''s column');
+  RequireNotInDDL(SchemaDDL, 'IN_CURRENT_SCHEMA',
+    'a column from the same-named table in the current schema');
+
+  SchemaDDL := ScriptAsDrop(
+    ScriptAsContext(DB, Tr, True, 3, EngineMajor, 'SMOKE_OTHER'),
+    'SMOKE_DUP', ctTable);
+  RequireInDDL(SchemaDDL, 'SMOKE_OTHER', 'the schema in a scripted DROP');
+
+  { And naming no schema still produces exactly what it always did. }
+  SchemaDDL := ScriptAsDrop(
+    ScriptAsContext(DB, Tr, True, 3, EngineMajor), 'SMOKE_DUP', ctTable);
+  RequireNotInDDL(SchemaDDL, 'SMOKE_OTHER',
+    'a schema in a statement that named none');
+  WriteLn('Schema-qualified Script As OK');
+
   Run('drop table SMOKE_OTHER.SMOKE_DUP', 'dropping the other schema''s table');
   Run('drop table SMOKE_DUP', 'dropping the table');
   Run('drop schema SMOKE_OTHER', 'dropping the second schema');
