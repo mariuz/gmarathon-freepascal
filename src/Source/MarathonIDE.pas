@@ -89,7 +89,8 @@ type
 		procedure DoViewLocalVars;
 		procedure RefreshForms;
 		procedure DoStatus(Status: String);
-		procedure CloseDroppedWindow(Connection: String; ObjectName: String);
+		procedure CloseDroppedWindow(Connection: String; ObjectName: String;
+			Schema: String = '');
 		procedure RecordToScript(Script: String; ConnectionName: String);
     procedure CaptureSnippet(Snip: String);
 		procedure AddMenuToMainForm(MenuItem: TMenuItem);
@@ -186,18 +187,23 @@ type
 
 		//Object Editors
 		procedure NewDomain(Connection: String);
-    function OpenDomain(DomainName: String; COnnection: String): TForm;
+    function OpenDomain(DomainName: String; COnnection: String;
+			Schema: String = ''): TForm;
     procedure NewProcedure(Connection: String);
 		function DebugOpenProcedure(ProcedureName, Connection: String;
 			OpenEditor, MakeVisible: Boolean): IMarathonStoredProcEditor;
-		function OpenProcedure(ProcedureName: String; Connection: String): TForm;
+		function OpenProcedure(ProcedureName: String; Connection: String;
+			Schema: String = ''): TForm;
 		procedure NewTrigger(Connection: String);
 		procedure NewTriggerWithInfo(Connection: String; TriggerType: String; Table: String);
-		function OpenTrigger(TriggerName: String; Connection: String): TForm;
+		function OpenTrigger(TriggerName: String; Connection: String;
+			Schema: String = ''): TForm;
 		procedure NewException(Connection: String);
-		function OpenException(ExceptionName: String; Connection: String): TForm;
+		function OpenException(ExceptionName: String; Connection: String;
+			Schema: String = ''): TForm;
 		procedure NewGenerator(Connection: String);
-		function OpenGenerator(GeneratorName: String; Connection: String): TForm;
+		function OpenGenerator(GeneratorName: String; Connection: String;
+			Schema: String = ''): TForm;
 		procedure NewTable(Connection: String);
 		function OpenTable(TableName: String; Connection: String;
 			Schema: String = ''): TForm;
@@ -206,10 +212,13 @@ type
 		  editor stays because it is what you want for one column at a time. }
 		function DesignTable(TableName: String; Connection: String): TForm;
 		procedure NewView(Connection: String);
-		function OpenView(ViewName: String; Connection: String): TForm;
+		function OpenView(ViewName: String; Connection: String;
+			Schema: String = ''): TForm;
 		procedure NewUDF(Connection: String);
-		function OpenUDF(UDFName: String; Connection: String): TForm;
-		function OpenPackage(PackageName: String; Connection: String): TForm;
+		function OpenUDF(UDFName: String; Connection: String;
+			Schema: String = ''): TForm;
+		function OpenPackage(PackageName: String; Connection: String;
+			Schema: String = ''): TForm;
 
 		//stuff for external Tools API
 		//actual
@@ -601,19 +610,39 @@ begin
 						end;
 
 					ctDomain:
-						OpenDomain(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenDomain(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenDomain(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctSP:
-						OpenProcedure(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenProcedure(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenProcedure(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctTrigger:
-						OpenTrigger(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenTrigger(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenTrigger(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctException:
-						OpenException(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenException(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenException(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctGenerator:
-						OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenGenerator(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctTable:
 						{ A node under a schema branch carries the schema it was listed
@@ -626,13 +655,25 @@ begin
 							OpenTable(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctView:
-						OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenView(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctUDF:
-						OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenUDF(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctPackage:
-						OpenPackage(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
+						if Item is TMarathonCacheSchemaMember then
+							OpenPackage(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								TMarathonCacheSchemaMember(Item).Schema)
+						else
+							OpenPackage(Item.Caption, TMarathonCacheObject(Item).ConnectionName);
 
 					ctRecentItem:
 						begin
@@ -2224,7 +2265,8 @@ begin
 	F.ShowDocument;
 end;
 
-function TMarathonIDE.OpenDomain(DomainName: String; Connection: String): TForm;
+function TMarathonIDE.OpenDomain(DomainName: String; Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2238,7 +2280,10 @@ begin
   for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmDomains then
 			if (TfrmDomains(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmDomains(Screen.Forms[Idx]).ObjectName  = DomainName) then
+				(TfrmDomains(Screen.Forms[Idx]).ObjectName = DomainName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmDomains(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2253,6 +2298,9 @@ begin
 		end;
 		F := TfrmDomains.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadDomain(DomainName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(DomainName, ctDomain, Connection);
@@ -2273,7 +2321,8 @@ begin
   F.ShowDocument;
 end;
 
-function TMarathonIDE.OpenProcedure(ProcedureName, COnnection: String): TForm;
+function TMarathonIDE.OpenProcedure(ProcedureName, COnnection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2289,7 +2338,10 @@ begin
 		if SCreen.Forms[Idx] is TfrmStoredProcedure then
 		begin
 			if (TfrmStoredProcedure(Screen.Forms[Idx]).ConnectionName = Connection) and
-				 (TfrmStoredProcedure(Screen.Forms[Idx]).ObjectName  = ProcedureName) then
+				 (TfrmStoredProcedure(Screen.Forms[Idx]).ObjectName = ProcedureName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmStoredProcedure(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				FOund := True;
 				Screen.FOrms[Idx].BringToFront;
@@ -2306,6 +2358,9 @@ begin
     end;
     F := TfrmStoredProcedure.Create(nil);
     F.ConnectionName := Connection;
+    { Before the load: an editor reads its metadata while loading, so a schema
+      set afterwards would come too late for a single query. }
+    F.Schema := Schema;
     F.LoadProcedure(ProcedureName);
     F.ShowDocument;
     FCurrentProject.Cache.AddRecentObjectOpen(ProcedureName, ctSP, Connection);
@@ -2337,7 +2392,7 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmStoredProcedure then
 			if (TfrmStoredProcedure(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmStoredProcedure(Screen.Forms[Idx]).ObjectName  = ProcedureName) then
+				(TfrmStoredProcedure(Screen.Forms[Idx]).ObjectName = ProcedureName) then
 			begin
 				Found := True;
 				F := TfrmStoredProcedure(Screen.Forms[Idx]);
@@ -2390,7 +2445,8 @@ begin
 	F.ShowDocument;
 end;
 
-function TMarathonIDE.OpenTrigger(TriggerName, Connection: String): TForm;
+function TMarathonIDE.OpenTrigger(TriggerName, Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2404,7 +2460,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmTriggerEditor then
 			if (TfrmTriggerEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmTriggerEditor(Screen.Forms[Idx]).ObjectName  = TriggerName) then
+				(TfrmTriggerEditor(Screen.Forms[Idx]).ObjectName = TriggerName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmTriggerEditor(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.FOrms[Idx].BringToFront;
@@ -2419,6 +2478,9 @@ begin
 		end;
 		F := TfrmTriggerEditor.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadTrigger(TriggerName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(TriggerName, ctTrigger, Connection);
@@ -2439,7 +2501,8 @@ begin
 	F.ShowDocument;
 end;
 
-function TMarathonIDE.OpenException(ExceptionName, Connection: String): TForm;
+function TMarathonIDE.OpenException(ExceptionName, Connection: String;
+	Schema: String): TForm;
 var
 	F: TfrmExceptions;
 	Idx: Integer;
@@ -2453,7 +2516,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmExceptions then
 			if (TfrmExceptions(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmExceptions(Screen.Forms[Idx]).ObjectName  = ExceptionName) then
+				(TfrmExceptions(Screen.Forms[Idx]).ObjectName = ExceptionName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmExceptions(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2468,6 +2534,9 @@ begin
 		end;
 		F := TfrmExceptions.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadException(ExceptionName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(ExceptionName, ctException, Connection);
@@ -2488,7 +2557,8 @@ begin
 	F.ShowDocument;
 end;
 
-function TMarathonIDE.OpenGenerator(GeneratorName, Connection: String): TForm;
+function TMarathonIDE.OpenGenerator(GeneratorName, Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2502,7 +2572,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if SCreen.Forms[Idx] is TfrmGenerators then
 			if (TfrmGenerators(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmGenerators(Screen.Forms[Idx]).ObjectName  = GeneratorName) then
+				(TfrmGenerators(Screen.Forms[Idx]).ObjectName = GeneratorName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmGenerators(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2517,6 +2590,9 @@ begin
 		end;
 		F := TfrmGenerators.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadGenerator(GeneratorName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(GeneratorName, ctGenerator, Connection);
@@ -2620,7 +2696,8 @@ begin
 	end;
 end;
 
-function TMarathonIDE.OpenView(ViewName, Connection: String): TForm;
+function TMarathonIDE.OpenView(ViewName, Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2634,7 +2711,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmViewEditor then
 			if (TfrmViewEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmViewEditor(Screen.Forms[Idx]).ObjectName  = ViewName) then
+				(TfrmViewEditor(Screen.Forms[Idx]).ObjectName = ViewName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmViewEditor(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2649,6 +2729,9 @@ begin
 		end;
 		F := TfrmViewEditor.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadView(ViewName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(ViewName, ctView, Connection);
@@ -2674,7 +2757,8 @@ begin
 	end;
 end;
 
-function TMarathonIDE.OpenUDF(UDFName, Connection: String): TForm;
+function TMarathonIDE.OpenUDF(UDFName, Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2688,7 +2772,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmUDFEditor then
 			if (TfrmUDFEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmUDFEditor(Screen.Forms[Idx]).ObjectName  = UDFName) then
+				(TfrmUDFEditor(Screen.Forms[Idx]).ObjectName = UDFName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmUDFEditor(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2703,6 +2790,9 @@ begin
 		end;
 		F := TfrmUDFEditor.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadUDF(UDFName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(UDFName, ctUDF, Connection);
@@ -2712,7 +2802,8 @@ end;
 
 { Packages are read-only, so this opens a viewer rather than an editor - see
   EditorPackage.pas for why. }
-function TMarathonIDE.OpenPackage(PackageName, Connection: String): TForm;
+function TMarathonIDE.OpenPackage(PackageName, Connection: String;
+	Schema: String): TForm;
 var
 	Idx: Integer;
 	Found: Boolean;
@@ -2726,7 +2817,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmPackageEditor then
 			if (TfrmPackageEditor(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmPackageEditor(Screen.Forms[Idx]).ObjectName = PackageName) then
+				(TfrmPackageEditor(Screen.Forms[Idx]).ObjectName = PackageName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmPackageEditor(Screen.Forms[Idx]).Schema = Schema) then
 			begin
 				Found := True;
 				Screen.Forms[Idx].BringToFront;
@@ -2741,6 +2835,9 @@ begin
 		end;
 		F := TfrmPackageEditor.Create(nil);
 		F.ConnectionName := Connection;
+		{ Before the load: an editor reads its metadata while loading, so a
+		  schema set afterwards would come too late for a single query. }
+		F.Schema := Schema;
 		F.LoadPackage(PackageName);
 		F.ShowDocument;
 		FCurrentProject.Cache.AddRecentObjectOpen(PackageName, ctPackage, Connection);
@@ -2781,7 +2878,8 @@ begin
 	end;
 end;
 
-procedure TMarathonIDE.CloseDroppedWindow(Connection: String; ObjectName: String);
+procedure TMarathonIDE.CloseDroppedWindow(Connection: String; ObjectName: String;
+	Schema: String);
 var
 	Idx: Integer;
 
@@ -2789,7 +2887,10 @@ begin
 	for Idx := 0 to Screen.FormCount - 1 do
 		if Screen.Forms[Idx] is TfrmBaseDocumentDataAwareForm then
 			if (TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]).ConnectionName = Connection) and
-				(TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]).ObjectName = ObjectName) then
+				(TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]).ObjectName = ObjectName) and
+				{ The same name in another schema is a different object, so this
+				  would otherwise raise the wrong editor. }
+				(TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]).Schema = Schema) then
 				TfrmBaseDocumentDataAwareForm(Screen.Forms[Idx]).DropClose;
 end;
 

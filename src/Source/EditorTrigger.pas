@@ -296,11 +296,11 @@ begin
 	try
 		FNewObject := False;
 		if ShouldbeQuoted(FObjectName) then
-			FHeader.TriggerName := MakeQuotedIdent(FObjectName, FIsInterbase6, FSQLDialect)
+			FHeader.TriggerName := QualifiedObjectName
 		else
 			FHeader.TriggerName := FObjectName;
 
-		qryTrigger.SQL.Add('select * from RDB$TRIGGERS where RDB$TRIGGER_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+		qryTrigger.SQL.Add('select * from RDB$TRIGGERS where RDB$TRIGGER_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 		qryTrigger.Open;
 		if not (qryTrigger.EOF and qryTrigger.BOF) then
 		begin
@@ -1420,7 +1420,7 @@ begin
 		qryTrigger.Close;
 		qryTrigger.SQL.Clear;
 		if ShouldBeQuoted(FObjectName) then
-			qryTrigger.SQL.Add('select * from RDB$TRIGGERS where RDB$TRIGGER_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ';')
+			qryTrigger.SQL.Add('select * from RDB$TRIGGERS where RDB$TRIGGER_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';')
 		else
 			qryTrigger.SQL.Add('select * from RDB$TRIGGERS where RDB$TRIGGER_NAME = ' + AnsiQuotedStr(AnsiUpperCase(FObjectName), '''') + ';');
 		qryTrigger.Open;
@@ -1474,7 +1474,7 @@ begin
 					try
 						qryTrigger.SQL.Clear;
 						if ShouldBeQuoted(FObjectName) then
-							qryTrigger.SQL.Add('alter trigger ' + MakeQuotedIdent(FObjectName, ISInterbase6, SQLDialect) + ' inactive')
+							qryTrigger.SQL.Add('alter trigger ' + QualifiedObjectName + ' inactive')
 						else
 							qryTrigger.SQL.Add('alter trigger ' + FObjectName + ' inactive');
 						qryTrigger.ExecSQL;
@@ -1505,7 +1505,7 @@ begin
 					try
 						qryTrigger.SQL.Clear;
 						if ShouldBeQuoted(FObjectName) then
-							qryTrigger.SQL.Add('alter trigger ' + MakeQuotedIdent(FObjectName, ISInterbase6, SQLDialect) + ' active')
+							qryTrigger.SQL.Add('alter trigger ' + QualifiedObjectName + ' active')
 						else
 							qryTrigger.SQL.Add('alter trigger ' + FObjectName + ' active');
 						qryTrigger.ExecSQL;

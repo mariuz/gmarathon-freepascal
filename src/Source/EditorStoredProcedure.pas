@@ -313,15 +313,15 @@ begin
 	qryStoredProc.Close;
 	qryStoredProc.SQL.Clear;
 	if ShouldBeQuoted(FObjectName) then
-		tmp := 'create procedure ' + MakeQuotedIdent(FObjectName, FIsInterbase6, FSQLDialect) + ' '
+		tmp := 'create procedure ' + QualifiedObjectName + ' '
 	else
 		tmp := 'create procedure ' + FObjectName + ' ';
 	if FIsinterbase6 {and (FSQLDialect = 3)} then
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
-			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;')
+			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('A.') + ' order by RDB$PARAMETER_NUMBER asc;')
 	else
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
-			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;');
+			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('A.') + ' order by RDB$PARAMETER_NUMBER asc;');
 	qryStoredProc.Open;
 	if not (qryStoredProc.EOF and qryStoredProc.BOF) Then
 	begin
@@ -372,10 +372,10 @@ begin
 	qryStoredProc.SQL.Clear;
 	if FIsInterbase6 {and (FSQLDialect = 3)} then
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
-			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 1 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;')
+			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 1 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('A.') + ' order by RDB$PARAMETER_NUMBER asc;')
 	else
 		qryStoredProc.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$CHARACTER_SET_ID from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
-			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 1 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;');
+			'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 1 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('A.') + ' order by RDB$PARAMETER_NUMBER asc;');
 	qryStoredProc.Open;
 	if not (qryStoredProc.EOF and qryStoredProc.BOF) Then
 	begin
@@ -433,7 +433,7 @@ begin
 	P := TStringList.Create;
 	try
 		qryStoredProc.SQL.Clear;
-		qryStoredProc.SQL.Add('select RDB$PROCEDURE_SOURCE from RDB$PROCEDURES where RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+		qryStoredProc.SQL.Add('select RDB$PROCEDURE_SOURCE from RDB$PROCEDURES where RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 		qryStoredProc.Open;
 		if not (qryStoredProc.EOF and qryStoredProc.BOF) Then
 		begin
@@ -602,10 +602,10 @@ begin
 		qryUtil.SQL.Clear;
 		if FIsInterbase6 then
 			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE, B.RDB$FIELD_SUB_TYPE, B.RDB$FIELD_PRECISION from RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
-				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;')
+				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('A.') + ' order by RDB$PARAMETER_NUMBER asc;')
 		else
 			qryUtil.SQL.Add('select A.RDB$PARAMETER_NAME, B.RDB$FIELD_TYPE, B.RDB$FIELD_LENGTH, B.RDB$CHARACTER_LENGTH, B.RDB$FIELD_SCALE FROM RDB$PROCEDURE_PARAMETERS A, RDB$FIELDS B where ' +
-				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + ' order by RDB$PARAMETER_NUMBER asc;');
+				'A.RDB$FIELD_SOURCE = B.RDB$FIELD_NAME and A.RDB$PARAMETER_TYPE = 0 and A.RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('A.') + ' order by RDB$PARAMETER_NUMBER asc;');
 		qryUtil.Open;
 		FAppendFlag := True;
 		while not qryUtil.EOF do
@@ -1197,7 +1197,7 @@ begin
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select count(*) from RDB$PROCEDURE_PARAMETERS where RDB$PARAMETER_TYPE = 0 ' +
-			'and RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, ''''));
+			'and RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause());
 		qryUtil.Open;
 		if qryUtil.FieldByName('COUNT').AsInteger > 0 then
 			Result := True
@@ -1220,7 +1220,7 @@ begin
 		qryUtil.Close;
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select count(*) from RDB$PROCEDURE_PARAMETERS where RDB$PARAMETER_TYPE = 1 ' +
-			'and RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, ''''));
+			'and RDB$PROCEDURE_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause());
 		qryUtil.Open;
 		if qryUtil.FieldByName('COUNT').AsInteger > 0 then
 			Result := True
@@ -1591,7 +1591,7 @@ begin
 			// Does this proc have any dependents
 			qryStoredProc.SQL.Clear;
 			qryStoredProc.SQL.Add('select RDB$DEPENDENT_NAME, RDB$DEPENDENT_TYPE, RDB$FIELD_NAME from RDB$DEPENDENCIES where RDB$DEPENDED_ON_NAME = ' +
-				AnsiQuotedStr(FObjectName, '''') + ' and (RDB$DEPENDENT_TYPE in (5, 2)) order by RDB$DEPENDENT_NAME, RDB$FIELD_NAME;');
+				AnsiQuotedStr(FObjectName, '''') + SchemaClause('', 'rdb$depended_on_schema_name') + ' and (RDB$DEPENDENT_TYPE in (5, 2)) order by RDB$DEPENDENT_NAME, RDB$FIELD_NAME;');
 			qryStoredProc.Open;
 			try
 				if not (qryStoredProc.EOF and qryStoredProc.BOF) Then

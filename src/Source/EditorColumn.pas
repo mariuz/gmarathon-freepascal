@@ -173,6 +173,10 @@ type
 		FDomainName: String;
 		FSQLDialect : Integer;
 		FDatabaseName : String;
+		{ The schema of the table being edited, handed over by the table editor.
+		  Without it this dialog would ALTER whatever the unqualified name reaches
+		  while the editor it belongs to was showing a different table. }
+		FSchema : String;
 		FNewTableObject : Boolean;
 		FNewObject : Boolean;
 		FModifyObject: Boolean;
@@ -203,6 +207,7 @@ type
 
 		property TableEditor : IMarathonTableEditor read FTableEditor write FTableEditor;
 		property DatabaseName : String read FDatabaseName write SetDatabaseName;
+		property Schema : String read FSchema write FSchema;
 		property State : TColumnEditState read FSTate write SetState;
 		property NewColumnName : String read FNewColumnName;
 
@@ -221,7 +226,7 @@ type
 
 implementation
 
-uses Globals, MarathonIDE, HelpMap, CompileDBObject, DropObject, PrintPreviewForm, ArrayDialog, EditorDomain, IBDatabase;
+uses Globals, MarathonIDE, SchemaNames, HelpMap, CompileDBObject, DropObject, PrintPreviewForm, ArrayDialog, EditorDomain, IBDatabase;
 
 const
 	TY_NONE              = -1;
@@ -653,7 +658,8 @@ begin
 		qryUtil.SQL.Clear;
 		qryUtil.SQL.Add('select RDB$FIELD_SOURCE, RDB$DESCRIPTION, RDB$DEFAULT_SOURCE, RDB$NULL_FLAG ' +
 			'from RDB$RELATION_FIELDS where RDB$FIELD_NAME = ''' + FObjectName +
-			''' and RDB$RELATION_NAME = ' + AnsiQuotedStr(edTableName.Text, '''') + ';');
+			''' and RDB$RELATION_NAME = ' + AnsiQuotedStr(edTableName.Text, '''') +
+			SchemaPredicate('', FSchema, FSchema <> '') + ';');
 		qryUtil.Open;
 
 		edColumnName.Text := FObjectName;
@@ -1092,7 +1098,7 @@ begin
 						Exit;
 					end;
 
-					FCompileText := 'alter table ' + MakeQuotedIdent(edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' ' + GetDataType + GetDefault + GetNotNull + GetCheck + GetCollate;
+					FCompileText := 'alter table ' + QualifiedIdent(FSchema, edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' ' + GetDataType + GetDefault + GetNotNull + GetCheck + GetCollate;
 				end;
 				1:
 				begin
@@ -1105,7 +1111,7 @@ begin
 						Exit;
 					end;
 
-					FCompileText := 'alter table ' + MakeQuotedIdent(edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' ' + MakeQuotedIdent(cmbDomain.Text, FIsInterbase6, FSQLDialect);
+					FCompileText := 'alter table ' + QualifiedIdent(FSchema, edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' ' + MakeQuotedIdent(cmbDomain.Text, FIsInterbase6, FSQLDialect);
 				end;
 				2:
 				begin
@@ -1118,7 +1124,7 @@ begin
 						Exit;
 					end;
 
-					FCompileText := 'alter table ' + MakeQuotedIdent(edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' computed by ' + edComputed.Text;
+					FCompileText := 'alter table ' + QualifiedIdent(FSchema, edTableName.Text, FIsInterbase6, FSQLDialect) + ' add ' + edColumnName.Text + ' computed by ' + edComputed.Text;
 				end;
 			end;
 			FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBDatabase(qryUtil.Database), TIBTransaction(qryUtil.Transaction), ctSQL, FCompileText);
@@ -1181,7 +1187,7 @@ begin
 				// update the new column name
 				if (FChangeName) and (FObjectName <> edColumnName.Text) then
 				begin
-					FCompileText := 'alter table ' + MakeQuotedIdent(edTableName.Text, FIsInterbase6, FSQLDialect) + ' alter column ' + MakeQuotedIdent(FObjectName, FIsInterbase6, FSQLDialect) + ' to ' + MakeQuotedIdent(edColumnName.Text, FIsInterbase6, FSQLDialect);
+					FCompileText := 'alter table ' + QualifiedIdent(FSchema, edTableName.Text, FIsInterbase6, FSQLDialect) + ' alter column ' + MakeQuotedIdent(FObjectName, FIsInterbase6, FSQLDialect) + ' to ' + MakeQuotedIdent(edColumnName.Text, FIsInterbase6, FSQLDialect);
 
 					FCompile := TfrmCompileDBObject.CreateCompile(Self, Self, TIBDatabase(qryUtil.Database), TIBTransaction(qryUtil.Transaction), ctSQL, FCompileText);
 					FErrors := FCompile.CompileErrors;

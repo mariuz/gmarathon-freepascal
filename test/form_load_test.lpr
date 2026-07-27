@@ -40,7 +40,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm;
 
 var
   Failures: Integer = 0;
@@ -1116,6 +1116,94 @@ end;
 
   Skipped, loudly, when the variables are unset, so a run without a server
   still means something and does not quietly report success it did not earn. }
+{ Everything an editor is showing, as one string.
+
+  Read generically from the controls rather than from each editor's own fields:
+  six editors surface their content six different ways, and what matters here
+  is only whether a name belonging to the other schema's object appears
+  anywhere on the form. }
+function EditorContentText(Form: TComponent): String;
+var
+  Idx, N: Integer;
+  C: TComponent;
+begin
+  Result := '';
+  for Idx := 0 to Form.ComponentCount - 1 do
+  begin
+    C := Form.Components[Idx];
+    if C is TCustomListView then
+      for N := 0 to TCustomListView(C).Items.Count - 1 do
+        Result := Result + ' ' + TCustomListView(C).Items[N].Caption
+    else if C is TCustomMemo then
+      Result := Result + ' ' + TCustomMemo(C).Lines.Text
+    else if C is TCustomSynEdit then
+      Result := Result + ' ' + TCustomSynEdit(C).Lines.Text
+    else if C is TCustomEdit then
+      Result := Result + ' ' + TCustomEdit(C).Text;
+    { Frames own their own controls, so a tab built on one is invisible from
+      the form's list. }
+    if C.ComponentCount > 0 then
+      Result := Result + ' ' + EditorContentText(C);
+  end;
+end;
+
+{ One editor kind, opened on its own object in each of the two schemas. }
+procedure CheckEditorSchema(Kind: TSchemaObjectKind;
+  const ObjName, OnlyThere, OnlyHere, What: String);
+
+  function ContentOf(const ASchema: String): String;
+  var
+    Form: TfrmBaseDocumentDataAwareForm;
+  begin
+    Result := '';
+    Form := nil;
+    try
+      case Kind of
+        sokView:      Form := TfrmViewEditor.Create(nil);
+        sokProcedure: Form := TfrmStoredProcedure.Create(nil);
+        sokException: Form := TfrmExceptions.Create(nil);
+        sokGenerator: Form := TfrmGenerators.Create(nil);
+        sokDomain:    Form := TfrmDomains.Create(nil);
+      else
+        Exit;
+      end;
+      Form.ConnectionName := 'EditorHarness';
+      Form.Schema := ASchema;
+      try
+        case Kind of
+          sokView:      TfrmViewEditor(Form).LoadView(ObjName);
+          sokProcedure: TfrmStoredProcedure(Form).LoadProcedure(ObjName);
+          sokException: TfrmExceptions(Form).LoadException(ObjName);
+          sokGenerator: TfrmGenerators(Form).LoadGenerator(ObjName);
+          sokDomain:    TfrmDomains(Form).LoadDomain(ObjName);
+        end;
+      except
+        on E: Exception do
+          Exit('<' + E.ClassName + ': ' + E.Message + '>');
+      end;
+      Result := EditorContentText(Form);
+    finally
+      Form.Free;
+    end;
+  end;
+
+var
+  There, Here: String;
+begin
+  There := ContentOf('EDIT_SCH');
+  Here := ContentOf('');
+  Check(Pos(OnlyThere, There) > 0, What + ' shows the named schema''s object');
+  Check(Pos(OnlyHere, There) = 0,
+    What + ' does not show the other schema''s object');
+  Check(Pos(OnlyHere, Here) > 0, What + ' shows the current schema''s object');
+  Check(Pos(OnlyThere, Here) = 0, What + ' keeps the two apart the other way');
+  if (Pos(OnlyHere, There) > 0) or (Pos(OnlyThere, Here) > 0) then
+  begin
+    WriteLn('       EDIT_SCH showed: ', Copy(Trim(There), 1, 200));
+    WriteLn('       current showed:  ', Copy(Trim(Here), 1, 200));
+  end;
+end;
+
 { The object editors against two schemas holding the same table name.
 
   This is the one that matters. Firebird 6 made an object name unique per
@@ -1199,6 +1287,15 @@ begin
     WriteLn('       EDIT_SCH.EDIT_DUP showed: ', There);
     WriteLn('       EDIT_DUP showed:          ', Here);
   end;
+
+  { And the other six editors, each on its own pair. Every one of them ran the
+    same kind of name-only query, so every one of them had the same defect. }
+  CheckEditorSchema(sokView, 'EDIT_VW', 'VOTH', 'VCUR', 'the view editor');
+  CheckEditorSchema(sokProcedure, 'EDIT_SP', 'POTH', 'PCUR',
+    'the procedure editor');
+  CheckEditorSchema(sokException, 'EDIT_EXC', 'exoth', 'excur',
+    'the exception editor');
+  CheckEditorSchema(sokDomain, 'EDIT_DOM', '19', '7', 'the domain editor');
 end;
 
 { The table designer, on a real table.

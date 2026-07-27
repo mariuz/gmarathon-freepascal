@@ -3180,7 +3180,62 @@ begin
         Q.ExecSQL;
         if Tr.Active then
           Tr.Commit;
-        WriteLn('Schema editor fixture OK (EDIT_DUP in the current schema and in EDIT_SCH)');
+        EnsureTransaction;
+        Q.SQL.Text := 'execute block as begin ' +
+          'if (exists(select 1 from rdb$relations where rdb$relation_name = ''EDIT_VW'' and rdb$schema_name = current_schema)) then execute statement ''drop view EDIT_VW''; ' +
+          'if (exists(select 1 from rdb$relations where rdb$relation_name = ''EDIT_VW'' and rdb$schema_name = ''EDIT_SCH'')) then execute statement ''drop view EDIT_SCH.EDIT_VW''; ' +
+          'if (exists(select 1 from rdb$procedures where rdb$procedure_name = ''EDIT_SP'' and rdb$schema_name = current_schema)) then execute statement ''drop procedure EDIT_SP''; ' +
+          'if (exists(select 1 from rdb$procedures where rdb$procedure_name = ''EDIT_SP'' and rdb$schema_name = ''EDIT_SCH'')) then execute statement ''drop procedure EDIT_SCH.EDIT_SP''; ' +
+          'if (exists(select 1 from rdb$exceptions where rdb$exception_name = ''EDIT_EXC'' and rdb$schema_name = current_schema)) then execute statement ''drop exception EDIT_EXC''; ' +
+          'if (exists(select 1 from rdb$exceptions where rdb$exception_name = ''EDIT_EXC'' and rdb$schema_name = ''EDIT_SCH'')) then execute statement ''drop exception EDIT_SCH.EDIT_EXC''; ' +
+          'end';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+
+        { One object of every editable kind, in both schemas, each with a marker
+          saying which schema it came from. The markers are deliberately not
+          substrings of one another - an earlier pair, HERE_V and THERE_V, made
+          a correct editor look wrong. One kind at a time
+          because a failed statement in an EXECUTE BLOCK abandons the rest. }
+        EnsureTransaction;
+        Q.SQL.Text := 'execute block as begin ' +
+          'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''EDIT_VW'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create view EDIT_VW (VCUR) as select HERE_A from EDIT_DUP''; ' +
+          'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''EDIT_VW'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create view EDIT_SCH.EDIT_VW (VOTH) as select OVER_THERE from EDIT_SCH.EDIT_DUP''; ' +
+          'if (not exists(select 1 from rdb$procedures where rdb$procedure_name = ''EDIT_SP'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create procedure EDIT_SP returns (PCUR integer) as begin PCUR = 1; suspend; end''; ' +
+          'if (not exists(select 1 from rdb$procedures where rdb$procedure_name = ''EDIT_SP'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create procedure EDIT_SCH.EDIT_SP returns (POTH integer) as begin POTH = 2; suspend; end''; ' +
+          'if (not exists(select 1 from rdb$exceptions where rdb$exception_name = ''EDIT_EXC'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create exception EDIT_EXC ''''excur''''''; ' +
+          'if (not exists(select 1 from rdb$exceptions where rdb$exception_name = ''EDIT_EXC'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create exception EDIT_SCH.EDIT_EXC ''''exoth''''''; ' +
+          'if (not exists(select 1 from rdb$generators where rdb$generator_name = ''EDIT_GEN'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create generator EDIT_GEN''; ' +
+          'if (not exists(select 1 from rdb$generators where rdb$generator_name = ''EDIT_GEN'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create generator EDIT_SCH.EDIT_GEN''; ' +
+          'if (not exists(select 1 from rdb$fields where rdb$field_name = ''EDIT_DOM'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create domain EDIT_DOM as varchar(7)''; ' +
+          'if (not exists(select 1 from rdb$fields where rdb$field_name = ''EDIT_DOM'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create domain EDIT_SCH.EDIT_DOM as varchar(19)''; ' +
+          'end';
+        Q.ExecSQL;
+        if Tr.Active then
+          Tr.Commit;
+        WriteLn('Schema editor fixture OK (table, view, procedure, exception, ' +
+          'generator and domain in the current schema and in EDIT_SCH)');
       end;
     except
       on E: Exception do

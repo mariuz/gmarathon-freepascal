@@ -247,7 +247,7 @@ begin
   {$IFNDEF FPC}qryGenerator.BeginBusy(False);{$ENDIF}
   try
     qryGenerator.SQL.Clear;
-    qryGenerator.SQL.Add('select rdb$generator_name from rdb$generators where rdb$generator_name = ''' + GeneratorName + ''';');
+    qryGenerator.SQL.Add('select rdb$generator_name from rdb$generators where rdb$generator_name = ''' + GeneratorName + '''' + SchemaClause() + ';');
     qryGenerator.Open;
     edGeneratorName.Text := qryGenerator.FieldByName('rdb$generator_name').AsString;
     qryGenerator.Close;
@@ -389,7 +389,7 @@ begin
   begin
     qryGenerator.Close;
     qryGenerator.SQL.Clear;
-    qryGenerator.SQL.Add('set generator ' + FObjectName + ' to ' + IntToStr(udGenerator.Value) + ';');
+    qryGenerator.SQL.Add('set generator ' + QualifiedObjectName + ' to ' + IntToStr(udGenerator.Value) + ';');
     try
       qryGenerator.ExecSQL;
       TIBTransaction(qryGenerator.Transaction).Commit;

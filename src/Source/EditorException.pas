@@ -350,7 +350,7 @@ begin
   try
     {$IFNDEF FPC}qryException.BeginBusy(False);{$ENDIF}
     qryException.SQL.Clear;
-    qryException.SQL.Add('select rdb$exception_name, rdb$message from rdb$exceptions where rdb$exception_name = ''' + ExceptionName + ''';');
+    qryException.SQL.Add('select rdb$exception_name, rdb$message from rdb$exceptions where rdb$exception_name = ''' + ExceptionName + '''' + SchemaClause() + ';');
     qryException.Open;
     edExceptionName.Text := qryException.FieldByName('rdb$exception_name').AsString;
     edExceptionText.Text := qryException.FieldByName('rdb$message').AsString;

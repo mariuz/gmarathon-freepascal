@@ -363,7 +363,7 @@ begin
 				begin
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 1 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 1 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -373,7 +373,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 2 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 2 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -383,7 +383,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 3 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 3 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -393,7 +393,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 4 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 4 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -403,7 +403,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 5 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 5 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -413,7 +413,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 6 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name from rdb$triggers where rdb$trigger_type = 6 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_name asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -425,7 +425,7 @@ begin
 				begin
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 1 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 1 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -435,7 +435,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 2 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 2 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -445,7 +445,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 3 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 3 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -455,7 +455,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 4 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 4 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -465,7 +465,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 5 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 5 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -475,7 +475,7 @@ begin
 
 					qryTriggers.Close;
 					qryTriggers.SQL.Clear;
-					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 6 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
+					qryTriggers.SQL.Add('select rdb$trigger_name, rdb$trigger_sequence from rdb$triggers where rdb$trigger_type = 6 and rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' and rdb$trigger_name not in (select rdb$trigger_name from rdb$check_constraints) order by rdb$trigger_sequence asc;');
 					qryTriggers.Open;
 					while not qryTriggers.EOF do
 					begin
@@ -534,7 +534,7 @@ begin
 			'b.rdb$field_scale, b.rdb$field_type, b.rdb$field_sub_type from ' +
 			'rdb$relation_fields a, rdb$fields b where ' +
 			'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
-			AnsiQuotedStr(FObjectName, '''') + ' ' + ' order by a.rdb$field_position asc;')
+			AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' + ' order by a.rdb$field_position asc;')
 	else
 		qryTable.SQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
 			'b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, ' +
@@ -543,7 +543,7 @@ begin
 			'b.rdb$field_scale, b.rdb$field_type, b.rdb$field_sub_type from ' +
 			'rdb$relation_fields a, rdb$fields b where ' +
 			'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
-			AnsiQuotedStr(FObjectName, '''') + ' ' + ' order by a.rdb$field_position asc;');
+			AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' + ' order by a.rdb$field_position asc;');
 	qryTable.Open;
 	while not qryTable.EOF do
 	begin
@@ -663,7 +663,7 @@ begin
 					stsEditor.Panels[2].Text := '';
 
 					tblTableData.SQL.Clear;
-					tblTableData.SQL.Add('select * from ' + MakeQuotedIdent(FObjectName, IsInterbase6, FSQLDialect) + ';');
+					tblTableData.SQL.Add('select * from ' + QualifiedObjectName + ';');
 					tblTableData.Open;
 					case gDefaultView of
 						0:
@@ -1804,14 +1804,14 @@ begin
 	qryUtil.Close;
 	qryUtil.SQL.Clear;
 	if ShouldBeQuoted(FObjectName) then
-		tmp := 'create view ' + MakeQuotedIdent(FObjectName, FIsInterbase6, FSQLDialect) + ' (' + #13#10
+		tmp := 'create view ' + QualifiedObjectName + ' (' + #13#10
 	else
 		tmp := 'create view ' + FObjectName + ' (' + #13#10;
 
 
 	qryUtil.Close;
 	qryUtil.SQL.Clear;
-	qryUtil.SQL.Add('select rdb$view_source from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+	qryUtil.SQL.Add('select rdb$view_source from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 	qryUtil.Open;
 	Tmp1 := ConvertTabs(AdjustLineBreaks(qryUtil.FieldByName('rdb$view_source').AsString), edEditor);
 	qryUtil.Close;
@@ -1819,7 +1819,7 @@ begin
 	qryUtil.Close;
 	qryUtil.SQL.Clear;
 	qryUtil.SQL.Add('select a.rdb$field_name ' +
-									 'from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + ' ' +
+									 'from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' +
 									 ' order by a.rdb$field_position asc;');
 	qryUtil.Open;
 	while not qryUtil.EOF do

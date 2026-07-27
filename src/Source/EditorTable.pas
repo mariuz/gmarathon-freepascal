@@ -1002,6 +1002,9 @@ begin
 	F := TfrmColumns.Create(Self);
 	try
 		F.DatabaseName := FDatabaseName;
+		{ The dialog builds its own ALTER TABLE, so it needs the schema too or it
+		  would alter whatever the unqualified name reaches. }
+		F.Schema := FSchema;
 		F.TableEditor := Self;
 		F.Caption := 'New Column';
 		F.State := stNewColumn;
@@ -1412,6 +1415,9 @@ begin
 	F := TfrmColumns.Create(Self);
 	try
 		F.DatabaseName := FDatabaseName;
+		{ The dialog builds its own ALTER TABLE, so it needs the schema too or it
+		  would alter whatever the unqualified name reaches. }
+		F.Schema := FSchema;
 		F.TableEditor := Self;
 		F.Caption := 'Create New Table and Add First Column';
 		F.State := stNewTable;
@@ -2336,6 +2342,7 @@ begin
 									''' and RDB$RELATION_NAME = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 								qryFields.Open;
 								DatabaseName := FDatabaseName;
+								Schema := FSchema;
 								TableEditor := Self;
 								State := stColumnProperties;
 								Caption := 'Properties for ' + lvFieldList.Selected.Caption;

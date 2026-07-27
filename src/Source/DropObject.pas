@@ -275,7 +275,13 @@ begin
       MarathonIDEInstance.RecordToScript(SQL, TMarathonCacheObject(Item).ConnectionName);
 
       //update any open linked windows...
-      MarathonIDEInstance.CloseDroppedWindow(TMarathonCacheObject(Item).ConnectionName, Item.Caption);
+      { The schema too, so dropping one schema's object does not close an
+                editor open on a same-named object in another. }
+              if Item is TMarathonCacheSchemaMember then
+                MarathonIDEInstance.CloseDroppedWindow(TMarathonCacheObject(Item).ConnectionName,
+                  Item.Caption, TMarathonCacheSchemaMember(Item).Schema)
+              else
+                MarathonIDEInstance.CloseDroppedWindow(TMarathonCacheObject(Item).ConnectionName, Item.Caption);
 
       //update the tree view in the database manager...
       MarathonIDEInstance.CurrentProject.Cache.RemoveCacheItem(Item);
@@ -735,7 +741,13 @@ begin
               //write to script system
               MarathonIDEInstance.RecordToScript(SQL, TMarathonCacheObject(Item).ConnectionName);
 
-              MarathonIDEInstance.CloseDroppedWindow(TMarathonCacheObject(Item).ConnectionName, Item.Caption);
+              { The schema too, so dropping one schema's object does not close an
+                editor open on a same-named object in another. }
+              if Item is TMarathonCacheSchemaMember then
+                MarathonIDEInstance.CloseDroppedWindow(TMarathonCacheObject(Item).ConnectionName,
+                  Item.Caption, TMarathonCacheSchemaMember(Item).Schema)
+              else
+                MarathonIDEInstance.CloseDroppedWindow(TMarathonCacheObject(Item).ConnectionName, Item.Caption);
 
               MarathonIDEInstance.CurrentProject.Cache.RemoveCacheItem(Item);
 

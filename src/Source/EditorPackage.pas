@@ -96,7 +96,7 @@ begin
   try
     qryPackage.SQL.Text :=
       'select rdb$package_header_source, rdb$package_body_source ' +
-      'from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(PackageName, '''');
+      'from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(PackageName, '''') + SchemaClause();
     qryPackage.Open;
     if not qryPackage.EOF then
     begin

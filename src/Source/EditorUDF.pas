@@ -367,7 +367,7 @@ begin
 		FObjectName := UDFName;
 		{$IFNDEF FPC}qryUtil.BeginBusy(False);{$ENDIF}
 		qryUtil.SQL.Clear;
-		qryUtil.SQL.Add('select * from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+		qryUtil.SQL.Add('select * from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 		qryUtil.Open;
 
 		// Now fill the controls
@@ -380,7 +380,7 @@ begin
 		TIBTransaction(qryUtil.Transaction).Commit;
 
 		qryUtil.SQL.Clear;
-		qryUtil.SQL.Add('select * from rdb$function_arguments where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + ' order by rdb$argument_position asc;');
+		qryUtil.SQL.Add('select * from rdb$function_arguments where rdb$function_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ' order by rdb$argument_position asc;');
 		qryUtil.Open;
 
 		while not qryUtil.EOF do

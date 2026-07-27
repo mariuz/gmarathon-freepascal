@@ -518,7 +518,7 @@ begin
     qryDomain.Close;
     qryDomain.SQL.Clear;
     // qryDomain.RequestLive := True; // IBO-only, not available in IBQuery
-		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
     qryDomain.Open;
     try
       try
@@ -527,13 +527,13 @@ begin
 				if chkColNotNull.Checked then
 				begin
 					qryDomain.FieldByName('rdb$null_flag').AsInteger := 1;
-					Rec := 'update rdb$fields set rdb$null_flag = 1 where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';';
+					Rec := 'update rdb$fields set rdb$null_flag = 1 where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';';
 					MarathonIDEInstance.RecordToScript(Rec, FDatabaseName);
 				end
 				else
 				begin
 					qryDomain.FieldByName('rdb$null_flag').Clear;
-					Rec := 'update rdb$fields set rdb$null_flag = NULL where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';';
+					Rec := 'update rdb$fields set rdb$null_flag = NULL where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';';
 					MarathonIDEInstance.RecordToScript(Rec, FDatabaseName);
 				end;
 
@@ -542,27 +542,27 @@ begin
 
 				if FChangeDataType then
 				begin
-					qryDomain.SQL.Text := 'alter domain ' + MakeQuotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' type ' + GetDataType;
+					qryDomain.SQL.Text := 'alter domain ' + QualifiedObjectName + ' type ' + GetDataType;
 					qryDomain.ExecSQL;
 					MarathonIDEInstance.RecordToScript(qryDomain.SQL.Text, FDatabaseName);
 				end;
 
 				if FChangeName then
 				begin
-					qryDomain.SQL.Text := 'alter domain ' + MakeQuotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' to ' + edColumn.Text;
+					qryDomain.SQL.Text := 'alter domain ' + QualifiedObjectName + ' to ' + edColumn.Text;
 					qryDomain.ExecSQL;
 					MarathonIDEInstance.RecordToScript(qryDomain.SQL.Text, FDatabaseName);
 				end;
 
 				if FChangeDefault then
 				begin
-					qryDomain.SQL.Text := 'alter domain ' + MakeQuotedIdent(FObjectName, IsInterbase6, SQLDialect)  + ' drop default';
+					qryDomain.SQL.Text := 'alter domain ' + QualifiedObjectName  + ' drop default';
 					qryDomain.ExecSQL;
 					MarathonIDEInstance.RecordToScript(qryDomain.SQL.Text, FDatabaseName);
 
 					if edDefault.Text <> '' then
 					begin
-						qryDomain.SQL.Text := 'alter domain ' + MakeQuotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' set' + GetDefault;
+						qryDomain.SQL.Text := 'alter domain ' + QualifiedObjectName + ' set' + GetDefault;
 						qryDomain.ExecSQL;
 						MarathonIDEInstance.RecordToScript(qryDomain.SQL.Text, FDatabaseName);
 					end;
@@ -570,13 +570,13 @@ begin
 
 				if FChangeCheck then
 				begin
-					qryDomain.SQL.Text := 'alter domain ' + MakeQuotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' drop constraint';
+					qryDomain.SQL.Text := 'alter domain ' + QualifiedObjectName + ' drop constraint';
 					qryDomain.ExecSQL;
 					MarathonIDEInstance.RecordToScript(qryDomain.SQL.Text, FDatabaseName);
 
 					if edConstraint.Text <> '' then
 					begin
-						qryDomain.SQL.Text := 'alter domain ' + MakeQuotedIdent(FObjectName, IsInterbase6, SQLDialect) + ' add' + GetCheck;
+						qryDomain.SQL.Text := 'alter domain ' + QualifiedObjectName + ' add' + GetCheck;
 						qryDomain.ExecSQL;
 						MarathonIDEInstance.RecordToScript(qryDomain.SQL.Text, FDatabaseName);
 					end;
@@ -600,7 +600,7 @@ begin
 		qryDomain.Close;
 		qryDomain.SQL.Clear;
 		// qryDomain.RequestLive := True; // IBO-only, not available in IBQuery
-		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+		qryDomain.SQL.Add('select rdb$field_name, rdb$field_type, rdb$null_flag, rdb$field_length, rdb$field_scale, rdb$description from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 		qryDomain.Open;
 		try
 			// Check to see if we are changing from or to a blob
@@ -624,7 +624,7 @@ begin
 					Rec := 'update rdb$fields set rdb$null_flag = 1, rdb$field_type = ' + IntToStr(GetSaveFieldType) +
 						'rdb$field_length = ' + IntToStr(GetSaveFieldLength) +
 						'rdb$field_scale = ' + IntToStr(GetSaveFieldScale) +
-						'where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';';
+						'where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';';
 					MarathonIDEInstance.RecordToScript(Rec, FDatabaseName);
 				end
 				else
@@ -636,7 +636,7 @@ begin
 					Rec := 'update rdb$fields set rdb$null_flag = NULL, rdb$field_type = ' + IntToStr(GetSaveFieldType) +
 						'rdb$field_length = ' + IntToStr(GetSaveFieldLength) +
 						'rdb$field_scale = ' + IntToStr(GetSaveFieldScale) +
-						'where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';';
+						'where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';';
 					MarathonIDEInstance.RecordToScript(Rec, FDatabaseName);
 				end;
 
@@ -824,7 +824,7 @@ begin
 	InternalCaption := 'Domain [' + FObjectName + ']';
 	It.Caption := '&1 Domain - [' + FObjectName + ']';
 
-	qryDomain.SQL.Add('select * from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+	qryDomain.SQL.Add('select * from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 	qryDomain.Open;
 
 	edColumn.Text := FObjectName;
@@ -1046,7 +1046,7 @@ begin
 			qryDomain.Close;
 			qryDomain.SQL.Clear;
 			qryDomain.SQL.Add('select rdb$lower_bound, rdb$upper_bound from rdb$field_dimensions where ' +
-										'rdb$dimension = ' + IntToStr(Idx)  + 'and rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + ';');
+										'rdb$dimension = ' + IntToStr(Idx)  + ' and rdb$field_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause() + ';');
 			qryDomain.Open;
 			if not (qryDomain.EOF and qryDomain.BOF) then
 				with lvArray.Items.Add do
