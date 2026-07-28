@@ -25,7 +25,7 @@ uses
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
   ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
   TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
-  SchemaDiagram, SchemaDiagramIO, RowEdits;
+  SchemaDiagram, SchemaDiagramIO, RowEdits, StrUtils;
 
 type
   { The trace's event is "of object", so it needs a method to hand it to - a
@@ -1429,6 +1429,20 @@ end;
 { Schema DDL, round-tripped: extract it, drop the schema, run what was
   extracted, and require the schema back with the same attributes. Anything
   less only proves a string was produced. }
+{ How many times Needle occurs in Haystack. }
+function OccurrenceCount(const Haystack, Needle: String): Integer;
+var
+  At: Integer;
+begin
+  Result := 0;
+  At := Pos(Needle, Haystack);
+  while At > 0 do
+  begin
+    Inc(Result);
+    At := PosEx(Needle, Haystack, At + Length(Needle));
+  end;
+end;
+
 procedure TestSchemaDDL;
 var
   Ex: TDDLExtractor;
@@ -1615,6 +1629,60 @@ begin
   RequireNotInDDL(SchemaDDL, 'IN_CURRENT_SCHEMA',
     'a column from the same-named table in the current schema');
   WriteLn('Schema-qualified extraction OK (', Trim(Copy(SchemaDDL, 1, Pos('(', SchemaDDL) - 1)), ')');
+
+  { A column whose domain lives in another schema.
+
+    RDB$RELATION_FIELDS records the domain's name and, separately, the schema
+    it is in. Matching on the name alone finds it in every schema - which
+    duplicates the column once per schema that has one - while restricting the
+    lookup to the table's own schema drops it entirely. Neither shows up
+    without a domain that is genuinely somewhere else, which is what this
+    makes. }
+  Run('create domain SMOKE_OTHER.CROSS_DOM as varchar(23)',
+    'creating a domain in the other schema');
+  { The same name in this schema too, and a different width. Without both, a
+    lookup that ignores the schema still finds exactly one row and the test
+    proves nothing - which is what a first version of it did. The width is what
+    says which of the two was used. }
+  Run('create domain CROSS_DOM as varchar(7)',
+    'creating a domain of the same name in this one');
+  Run('create table CROSS_TAB (ID integer, TAG SMOKE_OTHER.CROSS_DOM)',
+    'creating a table using a domain from another schema');
+
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    EnsureTransaction;
+    SchemaDDL := Ex.Extract(ddlTable, ddlstNone, 'CROSS_TAB');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+
+  { Both columns, once each. A duplicate would show as the column named twice;
+    a dropped one as it missing altogether. }
+  RequireInDDL(SchemaDDL, 'TAG', 'the column whose domain is in another schema');
+  RequireInDDL(SchemaDDL, 'ID', 'and the ordinary one beside it');
+  { The domain that was actually used, not the same-named one next door. }
+  RequireInDDL(SchemaDDL, 'CROSS_DOM', 'named as the domain it was declared with');
+  RequireNotInDDL(SchemaDDL, 'varchar(7)',
+    'and not the width of the same-named domain in this schema');
+  if OccurrenceCount(AnsiUpperCase(SchemaDDL), 'TAG') <> 1 then
+  begin
+    WriteLn('FAIL: the cross-schema column appears ',
+      OccurrenceCount(AnsiUpperCase(SchemaDDL), 'TAG'), ' times, expected once');
+    WriteLn(SchemaDDL);
+    Halt(1);
+  end;
+  WriteLn('Cross-schema domain OK (the column is extracted once, not per schema)');
+
+  Run('drop table CROSS_TAB', 'dropping the cross-schema table');
+  Run('drop domain CROSS_DOM', 'dropping this schema''s domain');
+  Run('drop domain SMOKE_OTHER.CROSS_DOM', 'dropping the other schema''s domain');
 
   { Listing what a *named* schema holds, which is what a tree needs to offer
     those objects at all. The current schema has a table of the same name, so

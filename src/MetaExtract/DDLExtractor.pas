@@ -98,6 +98,19 @@ type
     function TriggerEventClause(TriggerType: Integer): String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function SchemaClause(const Alias: String; const Column: String = 'rdb$schema_name'): String;
+    { Ties a column to the domain behind it *in the schema that domain lives
+      in*, which is not necessarily the object's own.
+
+      RDB$RELATION_FIELDS records both: RDB$FIELD_SOURCE names the domain and
+      RDB$FIELD_SOURCE_SCHEMA_NAME says where it is. Matching on the name alone
+      finds that name in every schema, which duplicates a column once per
+      schema holding one; restricting the domain to the object's schema instead
+      silently drops a column whose domain lives elsewhere. Only this says what
+      is meant.
+
+      Empty before Firebird 6, which has no such column and no schemas for it
+      to distinguish. }
+    function FieldSourceJoin(const RelAlias, FieldAlias: String): String;
     function QualifiedIdent(const ObjectName: String): String;
     function ExtractGenerator(ObjectName : String) : String;
     function ExtractGeneratorValue(ObjectName : String) : String;
@@ -1450,6 +1463,15 @@ begin
   Result := SchemaPredicate(Alias, Column, FSchema, ODSAtLeast(14, 0));
 end;
 
+function TDDLExtractor.FieldSourceJoin(const RelAlias, FieldAlias: String): String;
+begin
+  if not ODSAtLeast(14, 0) then
+    Result := ''
+  else
+    Result := ' and (' + FieldAlias + 'rdb$schema_name = ' +
+      RelAlias + 'rdb$field_source_schema_name)';
+end;
+
 function TDDLExtractor.QualifiedIdent(const ObjectName: String): String;
 begin
   Result := SchemaNames.QualifiedIdent(FSchema, ObjectName, FIsIB6, FSQLDialect);
@@ -1767,7 +1789,8 @@ begin
                    'b.rdb$field_sub_type, b.rdb$segment_length, ' +
                    'b.rdb$field_type, b.rdb$dimensions from rdb$relation_fields a, rdb$fields b where ' +
                    'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
-                    AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') + ' order by a.rdb$field_position asc;');
+                    AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') +
+                    FieldSourceJoin('a.', 'b.') + ' order by a.rdb$field_position asc;');
       end
       else
       begin
@@ -1778,7 +1801,8 @@ begin
                    'b.rdb$field_sub_type, b.rdb$segment_length, ' +
                    'b.rdb$field_type, b.rdb$dimensions from rdb$relation_fields a, rdb$fields b where ' +
                    'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
-                    AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') + ' order by a.rdb$field_position asc;');
+                    AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') +
+                    FieldSourceJoin('a.', 'b.') + ' order by a.rdb$field_position asc;');
 
       end;
       Q1.Open;
@@ -3019,14 +3043,14 @@ begin
         begin
           Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, ' +
                     'b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$field_type from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$relation_name').AsString), '''') + ' ' +
-                    SchemaClause('a.') + SchemaClause('b.') +
+                    SchemaClause('a.') + FieldSourceJoin('a.', 'b.') +
                     ' order by a.rdb$field_position asc;');
         end
         else
         begin
           Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, ' +
                     'b.rdb$field_scale, b.rdb$field_type from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$relation_name').AsString), '''') + ' ' +
-                    SchemaClause('a.') + SchemaClause('b.') +
+                    SchemaClause('a.') + FieldSourceJoin('a.', 'b.') +
                     ' order by a.rdb$field_position asc;');
         end;
         Q1.Open;

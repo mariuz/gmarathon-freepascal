@@ -260,6 +260,21 @@ confirmed to exist rather than taken from release notes.
   finding the column, and inferring the gap without checking the extractor —
   left here as a correction rather than deleted.
 
+- [x] **Cross-schema domains in extracted DDL** — a column's domain need not
+  live in the object's own schema. `RDB$RELATION_FIELDS` records both the
+  domain's name and, separately, `RDB$FIELD_SOURCE_SCHEMA_NAME`; the extractor
+  joined on the name alone, which finds it in *every* schema and emits the
+  column once per schema holding one. `TDDLExtractor.FieldSourceJoin` ties the
+  two together, on the table branch and the view branch, gated on Firebird 6.
+
+  Tested by a domain of the same name in two schemas with different widths.
+  Removing the join makes the column appear twice and the test says so. The
+  test does **not** catch the other way of getting it wrong — restricting the
+  lookup to the object's own schema, which would pick the wrong same-named
+  domain — because the extracted DDL names the domain rather than its type, so
+  both candidates render identically. Catching that needs a check against the
+  rebuilt database rather than the script.
+
 - [x] **Backup history** — the Maintenance dialog has a Backup History tab
   reading `RDB$BACKUP_HISTORY`, beside the backup and restore it already
   performs. That table is written by the server, so it shows nbackup runs made
