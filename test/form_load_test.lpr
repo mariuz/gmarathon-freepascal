@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3250,6 +3250,78 @@ begin
   end;
 end;
 
+type
+  { The search reports through an event, so it needs a method to hand it to. }
+  TSearchSink = class
+  public
+    Found: Integer;
+    Errors: String;
+    procedure Event(Sender: TObject; EventType: TSearchEventType;
+      Status: String; Item: TResultItem);
+  end;
+
+procedure TSearchSink.Event(Sender: TObject; EventType: TSearchEventType;
+  Status: String; Item: TResultItem);
+begin
+  case EventType of
+    setItemFound: Inc(Found);
+    setError: Errors := Errors + Status + ' ';
+  end;
+end;
+
+{ Metadata search, against the live database.
+
+  Never driven before, and reading it turned up a defect a test would not have
+  found by accident: it built its own connection from the connection's file
+  name alone, which to IBX is a *local* file of that path whatever server the
+  connection belongs to. On this harness both mean the same file, so what is
+  checked here is the part a test can settle - that the search connects, walks
+  the metadata and finds something known to be there - and the connection
+  string itself is checked separately below, where it can be checked for a
+  remote server without needing one. }
+procedure CheckMetadataSearch(Conn: TMarathonCacheConnection);
+var
+  SO: TMDSearchObject;
+  Sink: TSearchSink;
+begin
+  WriteLn('Metadata search:');
+
+  { What the connection hands its own database string to IBX as. The bug was
+    here: for a server that is not local this has to carry the host, or the
+    search opens a local file of the same path. }
+  Check(Pos('/', Conn.DatabaseConnectString) > 0,
+    'a connection can say what database string to use');
+  if Pos(':', Conn.Connection.DatabaseName) > 0 then
+    Check(Conn.DatabaseConnectString = Conn.Connection.DatabaseName,
+      'and for a remote server it is the one the connection itself opened');
+
+  Sink := TSearchSink.Create;
+  SO := TMDSearchObject.Create;
+  try
+    SO.OnSearchEvent := Sink.Event;
+    SO.ConnectionList.Add('EditorHarness');
+    { A table this suite's fixtures are known to have left behind. }
+    SO.SearchString := 'EDIT_DUP';
+    SO.Options := [soTables];
+    try
+      SO.Execute;
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the search runs (' + E.ClassName + ': ' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    Check(True, 'the search runs');
+    Check(Sink.Errors = '', 'without reporting a connection error (' + Sink.Errors + ')');
+    Check(Sink.Found > 0,
+      'and finds the object it was asked for (' + IntToStr(Sink.Found) + ' hit(s))');
+  finally
+    SO.Free;
+    Sink.Free;
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -3505,6 +3577,7 @@ begin
   CheckResultExport(Conn);
   CheckResultFilter(Conn);
   CheckSessionMonitorLive(Conn);
+  CheckMetadataSearch(Conn);
   CheckSQLTrace(Conn);
 end;
 

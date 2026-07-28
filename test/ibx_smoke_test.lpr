@@ -23,7 +23,7 @@ uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils, Classes, DB, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
+  IBXServices, MaintenanceOps, IBPerformanceMonitor, ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
   TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
   SchemaDiagram, SchemaDiagramIO, RowEdits, StrUtils;
 
@@ -1461,6 +1461,318 @@ end;
   Filtered/OnFilterRecord at all is a fact about the server-side dataset rather
   than about the window, so it is settled here; that the edit box is wired to
   it is checked in the GUI harness. }
+{ Backup and restore through the Services API, end to end.
+
+  The Maintenance dialog has offered both since Phase 5 and neither had ever
+  been run by a test: the dialog's controls were checked, which says nothing
+  about whether a backup can be taken or whether what comes back is a
+  database. This takes one, restores it to a file of its own, connects to the
+  result and looks for a table that was in the original.
+
+  The service runs on the *server*, so both paths are the server's: the backup
+  file is written beside the database rather than into the client's temp
+  directory, which would be the wrong machine for a remote connection. }
+procedure TestBackupAndRestore;
+var
+  SvcConn: TIBXServicesConnection;
+  Backup: TIBXClientSideBackupService;
+  Restore: TIBXClientSideRestoreService;
+  Log: TStringList;
+  Restored: TIBDatabase;
+  RestoredTr: TIBTransaction;
+  Probe: TIBQuery;
+  BackupFile, TargetFile, Base, Prefix: String;
+  BytesWritten, Tables: Integer;
+begin
+  { Refusals first - they need no server, and they are what stands between a
+    stray click and an overwritten database. }
+  if BackupRefusalReason('') = '' then
+  begin
+    WriteLn('FAIL: a backup with no file name should be refused');
+    Halt(1);
+  end;
+  if BackupRefusalReason('/tmp/x.fbk') <> '' then
+  begin
+    WriteLn('FAIL: a backup with a file name should not be refused');
+    Halt(1);
+  end;
+  if RestoreRefusalReason('', '/tmp/t.fdb', False) = '' then
+  begin
+    WriteLn('FAIL: a restore with no source should be refused');
+    Halt(1);
+  end;
+  if RestoreRefusalReason('/tmp/s.fbk', '', False) = '' then
+  begin
+    WriteLn('FAIL: a restore with no target should be refused');
+    Halt(1);
+  end;
+  { The one that matters: restore creates the database it writes. }
+  if RestoreRefusalReason('/tmp/s.fbk', '/tmp/t.fdb', True) = '' then
+  begin
+    WriteLn('FAIL: a restore over an existing file should be refused');
+    Halt(1);
+  end;
+  if RestoreRefusalReason('/tmp/s.fbk', '/tmp/t.fdb', False) <> '' then
+  begin
+    WriteLn('FAIL: a restore to a new file should not be refused');
+    Halt(1);
+  end;
+  if (ParallelWorkersFor(0) <> 1) or (ParallelWorkersFor(-3) <> 1) or
+     (ParallelWorkersFor(4) <> 4) then
+  begin
+    WriteLn('FAIL: parallel worker count is not clamped to something sensible');
+    Halt(1);
+  end;
+
+  { Beside the database, because the service is the server's. }
+  Prefix := HostPrefixOf(DatabaseName);
+  Base := ChangeFileExt(Copy(DatabaseName, Length(Prefix) + 1, MaxInt), '');
+  BackupFile := Base + '_svc_test.fbk';
+  TargetFile := Base + '_svc_restored.fdb';
+  { Only the backup file: the target is the server's to make and the server's
+    to remove, and deleting it from here does nothing when the server runs as
+    another user. }
+  DeleteFile(BackupFile);
+
+  SvcConn := TIBXServicesConnection.Create(nil);
+  Backup := TIBXClientSideBackupService.Create(nil);
+  Restore := TIBXClientSideRestoreService.Create(nil);
+  Log := TStringList.Create;
+  Restored := TIBDatabase.Create(nil);
+  RestoredTr := TIBTransaction.Create(nil);
+  Probe := TIBQuery.Create(nil);
+  try
+    SvcConn.LoginPrompt := False;
+    SvcConn.SetDBParams(DB.Params);
+    try
+      SvcConn.ConnectUsing(DB);
+    except
+      on E: Exception do
+      begin
+        WriteLn('Backup/restore skipped (no services access: ', E.Message, ')');
+        Exit;
+      end;
+    end;
+
+    Backup.ServicesConnection := SvcConn;
+    Backup.DatabaseName := DB.DatabaseName;
+    Backup.Options := [];
+    Backup.ParallelWorkers := ParallelWorkersFor(1);
+    BytesWritten := 0;
+    try
+      Backup.BackupToFile(BackupFile, BytesWritten);
+    except
+      on E: Exception do
+      begin
+        WriteLn('FAIL: the backup service would not run: ', E.Message);
+        Halt(1);
+      end;
+    end;
+    { Bytes rather than "no exception": a backup that wrote nothing is not a
+      backup, and the client side of this service streams it back itself. }
+    if BytesWritten <= 0 then
+    begin
+      WriteLn('FAIL: the backup wrote ', BytesWritten, ' bytes');
+      Halt(1);
+    end;
+
+    Restore.ServicesConnection := SvcConn;
+    Restore.DatabaseFiles.Clear;
+    Restore.DatabaseFiles.Add(TargetFile);
+    Restore.Options := [CreateNewDB];
+    try
+      Restore.RestoreFromFile(BackupFile, Log);
+    except
+      on E: Exception do
+      begin
+        WriteLn('FAIL: the restore service would not run: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    { And now the only question worth asking: is the thing it wrote a database
+      holding what the original held. }
+    Restored.DatabaseName := Prefix + TargetFile;
+    Restored.Params.Assign(DB.Params);
+    Restored.LoginPrompt := False;
+    RestoredTr.DefaultDatabase := Restored;
+    Restored.DefaultTransaction := RestoredTr;
+    try
+      Restored.Connected := True;
+    except
+      on E: Exception do
+      begin
+        WriteLn('FAIL: the restored database will not open: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    RestoredTr.StartTransaction;
+    Probe.Database := Restored;
+    Probe.Transaction := RestoredTr;
+    Probe.SQL.Text := 'select count(*) from rdb$relations ' +
+      'where coalesce(rdb$system_flag, 0) = 0 and rdb$view_source is null';
+    Probe.Open;
+    Tables := Probe.Fields[0].AsInteger;
+    Probe.Close;
+
+    if Tables <= 0 then
+    begin
+      WriteLn('FAIL: the restored database holds no user tables');
+      Halt(1);
+    end;
+
+    { A table this suite is known to have made, by name - a count alone would
+      pass on a database restored from the wrong backup. }
+    Probe.SQL.Text := 'select count(*) from rdb$relations ' +
+      'where rdb$relation_name = ''IBX_SMOKE_TEST''';
+    Probe.Open;
+    if Probe.Fields[0].AsInteger <> 1 then
+    begin
+      WriteLn('FAIL: the restored database does not hold IBX_SMOKE_TEST');
+      Halt(1);
+    end;
+    Probe.Close;
+    if RestoredTr.Active then
+      RestoredTr.Commit;
+
+    { Dropped rather than deleted: the server created this file and owns it, so
+      a client-side DeleteFile silently fails and the next run trips over a
+      database that already exists - which is how this was found. Dropping it
+      asks the side that made it to remove it. }
+    try
+      Restored.DropDatabase;
+    except
+      on E: Exception do
+        WriteLn('       (could not drop the restored database: ', E.Message, ')');
+    end;
+    if Restored.Connected then
+      Restored.Connected := False;
+
+    WriteLn('Backup and restore OK (', BytesWritten,
+      ' bytes backed up, restored to a database holding ', Tables, ' table(s))');
+  finally
+    Probe.Free;
+    RestoredTr.Free;
+    Restored.Free;
+    Log.Free;
+    Restore.Free;
+    Backup.Free;
+    if SvcConn.Connected then
+      SvcConn.Connected := False;
+    SvcConn.Free;
+    { The backup file is the client's - this service streams it here - so this
+      one really is ours to delete. The database is not; see above. }
+    DeleteFile(BackupFile);
+  end;
+end;
+
+{ The per-statement performance counters, which come from the MON$ tables.
+
+  This component was a stub for most of the port - it had every property and no
+  behaviour, because the Delphi original read them through a raw
+  isc_database_info call that IBX does not expose - and was rewritten against
+  MON$IO_STATS and MON$RECORD_STATS. Nothing had driven it since: the SQL
+  editor shows the numbers, and a component reporting zeroes looks exactly like
+  a quiet database.
+
+  So the test makes the database not quiet: it counts reads, does work that
+  must produce some, and requires the numbers to have moved. }
+procedure TestPerformanceMonitor;
+var
+  Perf: TIBPerformanceMonitor;
+  PerfTr: TIBTransaction;
+  Work: TIBQuery;
+  Idx, Before, After_: Integer;
+  Seen: Boolean;
+begin
+  Perf := TIBPerformanceMonitor.Create(nil);
+  PerfTr := TIBTransaction.Create(nil);
+  Work := TIBQuery.Create(nil);
+  try
+    PerfTr.DefaultDatabase := DB;
+    Perf.IB_Connection := DB;
+    Perf.Transaction := PerfTr;
+    try
+      Perf.Initialise;
+    except
+      on E: Exception do
+      begin
+        WriteLn('FAIL: the performance monitor would not initialise: ', E.Message);
+        Halt(1);
+      end;
+    end;
+    if not Perf.Initialised then
+    begin
+      WriteLn('FAIL: the performance monitor reports itself uninitialised');
+      Halt(1);
+    end;
+
+    { The counters are the monitored *transaction's*, not the attachment's -
+      that is what the SQL editor wants, since its statements run in its own
+      transaction - so the work has to happen there or nothing moves. Writing
+      this test against another transaction is what showed that. }
+    if not PerfTr.Active then
+      PerfTr.StartTransaction;
+    Perf.Refresh;
+    Before := Perf.ReadFetchesCount.ThisRead;
+
+    Work.Database := DB;
+    Work.Transaction := PerfTr;
+    Work.SQL.Text := 'select count(*) from IBX_SMOKE_TEST';
+    Work.Open;
+    Work.Close;
+
+    Perf.Refresh;
+    After_ := Perf.ReadFetchesCount.ThisRead;
+
+    { Counters that never move are the failure this is written for - a stub
+      returns zero and looks like an idle server. }
+    if After_ <= 0 then
+    begin
+      WriteLn('FAIL: the fetch counter is still ', After_, ' after reading a table');
+      Halt(1);
+    end;
+    if After_ < Before then
+    begin
+      WriteLn('FAIL: the fetch counter went backwards (', Before, ' -> ', After_, ')');
+      Halt(1);
+    end;
+
+    { The page buffer count comes from MON$DATABASE and is a property of the
+      database rather than of the session, so it is positive on any server. }
+    if Perf.ReadNumBuffers <= 0 then
+    begin
+      WriteLn('FAIL: the page buffer count reads ', Perf.ReadNumBuffers);
+      Halt(1);
+    end;
+
+    { And the per-table lists: the table just read has to be in one of them. }
+    Seen := False;
+    for Idx := 0 to Perf.ReadSeqCount.Count - 1 do
+      if Perf.ReadSeqCount[Idx].Metric = 'IBX_SMOKE_TEST' then
+        Seen := True;
+    for Idx := 0 to Perf.ReadIdxCount.Count - 1 do
+      if Perf.ReadIdxCount[Idx].Metric = 'IBX_SMOKE_TEST' then
+        Seen := True;
+    if not Seen then
+    begin
+      WriteLn('FAIL: the table just read is in neither the sequential nor the ' +
+              'indexed read list');
+      Halt(1);
+    end;
+
+    if PerfTr.Active then
+      PerfTr.Commit;
+    WriteLn('Performance counters OK (fetches ', Before, ' -> ', After_,
+      ', ', Perf.ReadNumBuffers, ' page buffers)');
+  finally
+    Work.Free;
+    Perf.Free;
+    PerfTr.Free;
+  end;
+end;
+
 procedure TestResultFilter;
 var
   FQ: TIBQuery;
@@ -4388,6 +4700,8 @@ begin
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestResultFilter;
+    TestBackupAndRestore;
+    TestPerformanceMonitor;
     TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));
 

@@ -85,7 +85,7 @@ type
 
 implementation
 
-uses MarathonIDE, MarathonProjectCache;
+uses MarathonIDE, MarathonProjectCache, MaintenanceOps;
 
 {$R *.lfm}
 
@@ -342,10 +342,12 @@ end;
 procedure TfrmMaintenance.btnBackupClick(Sender: TObject);
 var
 	BytesWritten: Integer;
+	Refusal: String;
 begin
-	if Trim(edBackupFile.Text) = '' then
+	Refusal := BackupRefusalReason(edBackupFile.Text);
+	if Refusal <> '' then
 	begin
-		MessageDlg('Choose a backup file first.', mtError, [mbOK], 0);
+		MessageDlg(Refusal, mtError, [mbOK], 0);
 		Exit;
 	end;
 
@@ -358,7 +360,7 @@ begin
 			svcBackup.Options := [];
 		{ Firebird 5 and later; the service only sends the parameter when the
 		  server can take it, so an older server simply backs up as before. }
-		svcBackup.ParallelWorkers := edParallelWorkers.Value;
+		svcBackup.ParallelWorkers := ParallelWorkersFor(edParallelWorkers.Value);
 		if edParallelWorkers.Value > 1 then
 			Log(Format('Requesting %d parallel workers', [edParallelWorkers.Value]));
 		Log('Backup started: ' + edBackupFile.Text);
@@ -387,22 +389,14 @@ begin
 end;
 
 procedure TfrmMaintenance.btnRestoreClick(Sender: TObject);
+var
+	Refusal: String;
 begin
-	if Trim(edRestoreSource.Text) = '' then
+	Refusal := RestoreRefusalReason(edRestoreSource.Text, edRestoreTarget.Text,
+		FileExists(edRestoreTarget.Text));
+	if Refusal <> '' then
 	begin
-		MessageDlg('Choose a backup file to restore from first.', mtError, [mbOK], 0);
-		Exit;
-	end;
-	if Trim(edRestoreTarget.Text) = '' then
-	begin
-		MessageDlg('Choose a target database file first.', mtError, [mbOK], 0);
-		Exit;
-	end;
-	if FileExists(edRestoreTarget.Text) then
-	begin
-		MessageDlg('The target file already exists. Restore always creates a new database - ' +
-			'choose a target file that does not exist yet, to avoid any risk to an existing database.',
-			mtError, [mbOK], 0);
+		MessageDlg(Refusal, mtError, [mbOK], 0);
 		Exit;
 	end;
 

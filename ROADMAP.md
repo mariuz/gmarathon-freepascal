@@ -747,6 +747,40 @@ inside it.
   local file or failed. Both places now build the string through
   `TMarathonCacheConnection.DatabaseConnectString`.
 
+- [x] **Backup and restore had never been run by a test** — the largest of the
+  remaining gaps, and the operation with the most to lose: a restore writes a
+  whole database file. The smoke test now takes a real backup through the
+  Services API, restores it to a database of its own, connects to the result
+  and requires a table the suite made to be in it. The guards moved to
+  `src/Common/MaintenanceOps.pas` so they can be checked without a window - the
+  dialog asked its three questions between `MessageDlg` calls, and a modal
+  dialog under Xvfb is a hang rather than a failure. The one that earns its
+  place is the refusal to restore onto a file that already exists: Firebird
+  would refuse too, but only after reading the backup and only in the engine's
+  words.
+
+  Writing it turned up something worth keeping: **the restored database is the
+  server's file, not the client's**, so deleting it from the test silently did
+  nothing when the server runs as another user, and the next run failed with
+  "database already exists". It is dropped through a connection to it now,
+  which asks the side that made it to remove it. The backup file really is the
+  client's - this service streams it back - so that one is deleted.
+
+- [x] **Per-statement performance counters** — the `MON$`-sourced component
+  behind the SQL editor's stats panel was rewritten from a stub earlier in this
+  port and never driven since, which matters because a component reporting
+  zeroes looks exactly like a quiet database. The smoke test now reads the
+  counters, does work that must move them, and requires that they moved.
+
+  The test as first written failed, and the component was right: the counters
+  are the monitored **transaction's**, not the attachment's, so work done on
+  another transaction shows nothing. That is what the SQL editor wants, since
+  its statements run in its own transaction.
+
+- [x] **Metadata search** — driven end to end for the first time, which also
+  pins the connection-string fix above: for a remote server the string it
+  builds must be the one the connection itself opened.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT
