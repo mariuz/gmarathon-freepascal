@@ -3019,12 +3019,14 @@ begin
         begin
           Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, ' +
                     'b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$field_type from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$relation_name').AsString), '''') + ' ' +
+                    SchemaClause('a.') + SchemaClause('b.') +
                     ' order by a.rdb$field_position asc;');
         end
         else
         begin
           Q1.SelectSQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, b.rdb$null_flag as fnull_flag, a.rdb$field_source, a.rdb$default_source, b.rdb$computed_source, b.rdb$field_length, b.rdb$character_length, ' +
                     'b.rdb$field_scale, b.rdb$field_type from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$relation_name').AsString), '''') + ' ' +
+                    SchemaClause('a.') + SchemaClause('b.') +
                     ' order by a.rdb$field_position asc;');
         end;
         Q1.Open;

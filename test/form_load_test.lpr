@@ -1624,8 +1624,14 @@ procedure CheckBulkMetadataExtract(Conn: TMarathonCacheConnection);
 var
   Extract: TIBMetaExtract;
   Script: TStringList;
-  FileName: String;
+  FileName, DBPath, Runnable, Err: String;
   Names: TStringList;
+  Opts: TCreateDatabaseOptions;
+  Fresh: TIBDatabase;
+  FreshTr: TIBTransaction;
+  FreshQ: TIBQuery;
+  Runner: TIBXScript;
+  Tmp, Tables: Integer;
 begin
   WriteLn('Bulk metadata extract:');
   FileName := GetTempDir + 'marathon_extract_test.sql';
@@ -1692,18 +1698,103 @@ begin
     Check(Pos('EDIT_DUP', AnsiUpperCase(Script.Text)) > 0,
       'naming one that is actually there');
 
-    { The rebuild is not done here, and the reason is worth stating rather
-      than leaving the check absent. Running the script into a database made
-      for the purpose is the test this wants to be - a script that is merely
-      non-empty proves less than one that rebuilds what it came from. TIBXScript
-      refuses with "DB is currently open" against a connection that is already
-      up, and IgnoreCreateDatabase does not change that; getting it to run
-      needs the connection handed over differently, which I did not work out.
+    { And now the part that matters: run it into a database of its own.
 
-      What is checked is therefore the extract itself: that the engine writes
-      the objects it was given, that they are the ones the database holds, and
-      that a named one is among them. That is real coverage of an engine
-      nothing had driven before, and it is not the whole of what is wanted. }
+      The CONNECT the extract writes is dropped first. It names the database
+      the script came from, which is right for a script fed to isql and wrong
+      for one being replayed anywhere else - TIBXScript honours it and fails
+      with "DB is currently open" against a connection that is already up. The
+      schema is what is being proved, not the header. }
+    for Tmp := Script.Count - 1 downto 0 do
+      if (Pos('CONNECT', AnsiUpperCase(Trim(Script[Tmp]))) = 1) or
+         (Pos('SET SQL DIALECT', AnsiUpperCase(Trim(Script[Tmp]))) = 1) then
+        Script.Delete(Tmp);
+    Runnable := GetTempDir + 'marathon_extract_run.sql';
+    Script.SaveToFile(Runnable);
+
+    { A name of its own each run. A database file belongs to the server
+      process, so a leftover from an interrupted run cannot be deleted from
+      here and would block every later one. }
+    DBPath := GetTempDir + 'marathon_extract_' +
+      FormatDateTime('yyyymmddhhnnsszzz', Now) + '.fdb';
+    Opts.ServerName := 'localhost';
+    Opts.FileName := DBPath;
+    Opts.UserName := GetEnvironmentVariable('MARATHON_TEST_USER');
+    Opts.Password := GetEnvironmentVariable('MARATHON_TEST_PASSWORD');
+    Opts.CharacterSet := 'UTF8';
+    Opts.PageSize := 16384;
+    Opts.Dialect := 3;
+    if not CreateFirebirdDatabase(Opts, Err) then
+    begin
+      Check(False, 'a target database can be made (' + Err + ')');
+      Exit;
+    end;
+
+    Fresh := TIBDatabase.Create(nil);
+    FreshTr := TIBTransaction.Create(nil);
+    FreshQ := TIBQuery.Create(nil);
+    Runner := TIBXScript.Create(nil);
+    try
+      Fresh.DatabaseName := DatabaseConnectString(Opts);
+      Fresh.LoginPrompt := False;
+      Fresh.Params.Values['user_name'] := Opts.UserName;
+      Fresh.Params.Values['password'] := Opts.Password;
+      Fresh.SQLDialect := 3;
+      FreshTr.DefaultDatabase := Fresh;
+      Fresh.Connected := True;
+      Runner.Database := Fresh;
+      Runner.Transaction := FreshTr;
+      { Not fatal on the first complaint: a whole-schema script from a database
+        this harness has been editing all run has statements the target cannot
+        take - a grant to a user it does not have, say. What is checked is what
+        arrived, not that nothing objected. }
+      Runner.StopOnFirstError := False;
+      Runner.Echo := False;
+      Runner.IgnoreCreateDatabase := True;
+      try
+        Runner.RunScript(Runnable);
+      except
+        on E: Exception do
+          WriteLn('       (the script reported: ', E.Message, ')');
+      end;
+
+      FreshQ.Database := Fresh;
+      FreshQ.Transaction := FreshTr;
+      FreshQ.AllowAutoActivateTransaction := True;
+      FreshQ.SQL.Text := 'select count(*) from rdb$relations ' +
+        'where coalesce(rdb$system_flag, 0) = 0 and rdb$view_source is null';
+      FreshQ.Open;
+      Tables := FreshQ.Fields[0].AsInteger;
+      FreshQ.Close;
+      Check(Tables > 0,
+        'the script rebuilds the tables in a fresh database (' +
+        IntToStr(Tables) + ')');
+
+      FreshQ.SQL.Text := 'select count(*) from rdb$relations ' +
+        'where rdb$relation_name = ''EDIT_DUP''';
+      FreshQ.Open;
+      Check(FreshQ.Fields[0].AsInteger = 1,
+        'including the one the script was checked for by name');
+      FreshQ.Close;
+
+      { And its columns, not just its name - a table created empty would pass
+        the count above. }
+      FreshQ.SQL.Text := 'select count(*) from rdb$relation_fields ' +
+        'where rdb$relation_name = ''EDIT_DUP''';
+      FreshQ.Open;
+      Check(FreshQ.Fields[0].AsInteger > 0,
+        'with the columns it was declared with (' +
+        IntToStr(FreshQ.Fields[0].AsInteger) + ')');
+      FreshQ.Close;
+      Fresh.Connected := False;
+    finally
+      Runner.Free;
+      FreshQ.Free;
+      FreshTr.Free;
+      Fresh.Free;
+      if FileExists(Runnable) then
+        DeleteFile(Runnable);
+    end;
   finally
     Script.Free;
     if FileExists(FileName) then
