@@ -16,6 +16,7 @@ src/Source/marathon
 test/ibx_smoke_test
 test/keyword_test
 test/form_load_test
+test/debugger_test
 # data files the form loading test creates so forms do not prompt on create
 test/sqlref.dta
 test/fnref.dta

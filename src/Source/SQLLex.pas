@@ -1,4 +1,4 @@
-{******************************************************************} 
+{******************************************************************}
 { The contents of this file are used with permission, subject to   }
 { the Mozilla Public License Version 1.1 (the "License"); you may  }
 { not use this file except in compliance with the License. You may }
@@ -10,8 +10,7 @@
 { implied. See the License for the specific language governing     }
 { rights and limitations under the License.                        }
 {                                                                  }
-{******************************************************************} 
-// $Id: SQLLex.pas,v 1.2 2002/04/25 07:21:30 tmuetze Exp $
+{******************************************************************}
 
 
 (* lexical analyzer template (TP Lex V3.0), V1.0 3-2-91 AG *)
@@ -23,8 +22,8 @@
 
 
 
-procedure TSQLLexer.yyaction ( yyruleno : Integer );
 
+procedure TSQLLexer.yyaction ( yyruleno : Integer );
   (* local definitions: *)
 
 
@@ -56,7 +55,7 @@ begin
                           Statement := Statement + yyText;
                         end;
   4:
-
+         
                         begin
                           yyOutput.Add('LEX:RL: ' + yyText);
                           return(_REAL);
@@ -90,7 +89,7 @@ begin
                         begin
                           yyOutput.Add('LEX:ST: "' + yyText + '"');
                           return(STRING_CONST);
-													Statement := Statement + yyText;
+                          Statement := Statement + yyText;
                         end;
 
   7:
@@ -124,7 +123,7 @@ begin
                           yyOutput.Add('LEX:SM: ' + yyText);
                           return(COLON);
                           Statement := Statement + yyText;
-												end;
+                        end;
   11:
    			begin
                           yyOutput.Add('LEX:SM: ' + yyText);
@@ -158,7 +157,7 @@ begin
   16:
     			begin
                           yyOutput.Add('LEX:OP: ' + yyText);
-													return(LE);
+                          return(LE);
                           Statement := Statement + yyText;
                         end;
   17:
@@ -192,7 +191,7 @@ begin
                           Statement := Statement + yyText;
                         end;
   22:
-					begin
+    			begin
                           yyOutput.Add('LEX:OP: ' + yyText);
                           return(NOT_EQUAL);
                           Statement := Statement + yyText;
@@ -226,7 +225,7 @@ begin
                           yyOutput.Add('LEX:SM: ' + yyText);
                           return(RSQB);
                           Statement := Statement + yyText;
-												end;
+                        end;
   28:
    			begin
                           yyOutput.Add('LEX:OP: ' + yyText);
@@ -985,7 +984,7 @@ action:
       yyaction(yyrule);
       if yyreject then goto action;
     end
-  else if not yydefault and yywrap then
+  else if not yydefault and yywrap() then
     begin
       yyclear;
       return(0);
@@ -997,9 +996,3 @@ action:
 
 end(*yylex*);
 
-{
-$Log: SQLLex.pas,v $
-Revision 1.2  2002/04/25 07:21:30  tmuetze
-New CVS powered comment block
-
-}

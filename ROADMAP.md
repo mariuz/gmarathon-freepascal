@@ -929,6 +929,52 @@ inside it.
   breakpoint UI, so driving them needs more than a connection. The parser is
   what this pins.
 
+- [x] **Closing the first of those gaps: `CASE`, `BOOLEAN`/`TRUE`/`FALSE` and
+  `EXECUTE STATEMENT`** — the count above is now **24 understood, 8 gaps**, and
+  the grammar is regenerated from its own source rather than hand-edited.
+
+  Making the `.y` the source of truth had to come first, because it was not
+  one: `SQLYacc.pas` had been hand-patched since the port and `sqlyacc.y` still
+  carried the Delphi original, so regenerating it would have silently undone
+  the port. Three things stood in the way.
+
+  **The stock `pyacc` cannot build this grammar at all.** TP Yacc's table
+  sizes are compile-time constants from an era of smaller grammars, and this
+  one overflows the type table before it starts. `tools/build_pyacc.sh` fetches
+  TP Yacc's sources and raises them.
+
+  **The generated units are not what the project compiles.** `yylex` is the
+  lexer's, `yylex`/`yyaction`/`yyparse` are *methods* of `TSQLLexer` and
+  `TSQLParser`, and - the one that matters - every terminal carries a
+  `TStatement` of its own holding its text and its line and column, which is
+  what the debugger steps through and what every action reads as `$1`. The
+  stock template shifts whatever `yylval` holds, which here is nil, so the
+  parser segfaults inside a Variant conversion on the first identifier it
+  reads, nowhere near the cause. `tools/build_parser.sh` applies all of these,
+  so the generated files are still generated.
+
+  With that in place the round trip was checked *before* any rule changed:
+  regenerate, rebuild, and the same 17 constructs parse and the same 12 do not.
+
+  Then the rules. `CASE`, `TRUE`/`FALSE`, `BOOLEAN` and `EXECUTE STATEMENT`
+  are tokens, keyword-table entries and rules; `BOOLEAN` needed one more thing
+  than a type name, because Firebird 3 made a boolean a *value*, so a bare one
+  is a condition on its own - `IF (B)`, not just `IF (B = TRUE)`. That is a
+  `predicate : column_name` alternative, and it costs three reduce/reduce
+  conflicts against `value : column_name`, all of them on `RPAREN` and all
+  resolved towards the predicate. Whether that resolution breaks anything is
+  not a matter of opinion, so it was measured: parenthesised values, nested
+  parentheses, a value in parentheses on the right of a comparison, function
+  calls with a single column argument, and `select (ID)` all still parse. One
+  gap closed itself on the way - `INSERTING`/`UPDATING`/`DELETING` are bare
+  identifiers, so a trigger context predicate is now a predicate too.
+
+  Two traps in the grammar source, recorded because neither reports itself
+  anywhere near where it happens: inside a yacc action a `{ }` Pascal comment
+  closes the action, and an apostrophe - an English possessive in a comment
+  will do - opens a Pascal string that swallows the rest of the rule. Use
+  `(* *)` inside actions, `/* */` between them, and no apostrophes in either.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

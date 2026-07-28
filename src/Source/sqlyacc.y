@@ -1,11 +1,15 @@
 %{
 unit SQLYacc;
 
+{$MODE Delphi}
+
 interface
 
-uses
-  SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection,
-  Forms, MemData, IBDebuggerVM, PlanUnit;
+{$I compilerdefines.inc}
+
+uses SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection, Forms, IBDebuggerVM, {$IFDEF D6_OR_HIGHER}
+	Variants, {$ENDIF}
+	BufDataset, PlanUnit, DB;
 
 
 %}
@@ -35,6 +39,9 @@ uses
 %type <TStatement> singleton_select
 %type <TStatement> for_select
 %type <TStatement> exec_procedure
+%type <TStatement> exec_statement
+%type <TStatement> case_when_list
+%type <TStatement> boolean_predicate
 %type <TStatement> insert
 %type <TStatement> update
 %type <TStatement> delete
@@ -172,6 +179,7 @@ uses
 %token <TStatement> _DROP_
 %token <TStatement> _ECHO_
 %token <TStatement> _EDIT_
+%token <TStatement> _CASE_
 %token <TStatement> _ELSE_
 %token <TStatement> _END_
 %token <TStatement> _ENTRY_POINT_
@@ -365,6 +373,9 @@ uses
 %token <TStatement> _WAIT_
 %token <TStatement> _WEEKDAY_
 %token <TStatement> _WHILE_
+%token <TStatement> _TRUE_
+%token <TStatement> _FALSE_
+%token <TStatement> _BOOLEAN_
 %token <TStatement> _WHEN_
 %token <TStatement> _WHENEVER_
 %token <TStatement> _WHERE_
@@ -883,7 +894,15 @@ out_proc_parameter
                               SymSize := $2.SymSize;
                               SymbolType := stOutput;
                             end;
-                            with Module.ExecutionResults.FieldRoster.Add do
+                            (* TBufDataset rather than the MemData this was
+                               ported from: the port changed it in the generated
+                               parser and never here, so regenerating undid it.
+                               Note the comment form: a brace inside an action
+                               closes the action as far as yacc is concerned,
+                               and an apostrophe in a comment opens a string
+                               that swallows the rest of it. Neither belongs
+                               in here. *)
+                            with TFieldDef(Module.ExecutionResults.FieldDefs.Add) do
                             begin
                               Name := $1.Value;
                               case $2.Symtype of
@@ -892,29 +911,29 @@ out_proc_parameter
                                 ty_blr_varying,
                                 ty_blr_varying2:
                                   begin
-                                    FieldType := fdtString;
+                                    DataType := ftString;
                                     Size := $2.SymSize;
                                   end;
 
                                 ty_blr_short,
                                 ty_blr_long,
                                 ty_blr_int64:
-                                  FieldType := fdtInteger;
+                                  DataType := ftInteger;
 
                                 ty_blr_float,
                                 ty_blr_double,
                                 ty_blr_d_float:
-                                  FieldType := fdtFloat;
+                                  DataType := ftFloat;
 
 
                                 ty_blr_blob:
-                                  FieldType := fdtMemo;
+                                  DataType := ftMemo;
 
 
                                 ty_blr_sql_date,
                                 ty_blr_sql_time,
                                 ty_blr_timestamp:
-                                  FieldType := fdtDateTime;
+                                  DataType := ftDateTime;
                               end;
                             end;
                             Module.GetSymbolTable.UpdateSym($1.Value, Null);
@@ -1053,7 +1072,14 @@ proc_statements
                     ;
 
 proc_statement
-                    : assignment TERM
+                    : exec_statement
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                            $$ := $1;
+                        end;
+                      }
+                    | assignment TERM
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1207,6 +1233,31 @@ proc_statement
                             FItemList.Add(Module.RootStatement);
                             $$ := Module.RootStatement;
                             $$.Name := 'exit';
+                          end;
+                        end;
+                      }
+                    ;
+
+/* Firebird 1.5. The statement is a value rather than something this grammar
+   parses: it is built at run time, so there is nothing to parse until then. */
+exec_statement
+                    : _EXECUTE_ _STATEMENT_ value TERM
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $3;
+                            $$.Name := 'execstatement';
+                          end;
+                        end;
+                      }
+                    | _EXECUTE_ _STATEMENT_ value _INTO_ variable_list TERM
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $3;
+                            $$.Name := 'execstatement';
                           end;
                         end;
                       }
@@ -1750,7 +1801,20 @@ simple_type
                     ;
 
 non_charset_simple_type
-                    : national_character_type
+                    /* Firebird 3. Stored as a short: the debugger has no
+                       boolean of its own, and one and zero are what the
+                       engine gives it. */
+                    : _BOOLEAN_
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptCheckInputParms] then
+                          begin
+                            $$.SymType := ty_blr_short;
+                            $$.SymSize := 0;
+                          end;
+                        end;
+                      }
+                    | national_character_type
                     | numeric_type
                     | float_type
                     | integer_keyword
@@ -2875,12 +2939,50 @@ predicate
                     | containing_predicate
                     | starting_predicate
                     | unique_predicate
+                    /* Firebird 3. A BOOLEAN is a value, so a bare one is a
+                       condition on its own: IF (B), WHERE B, IF (TRUE). */
+                    | boolean_predicate
                     | LPAREN search_condition RPAREN
                       {
                         begin
                           if FParserType = ptDebugger then
                           begin
                             $$ := $2;
+                            $$.Name := 'expression';
+                          end;
+                        end;
+                      }
+                    ;
+
+boolean_predicate
+                    : column_name
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'expression';
+                          end;
+                        end;
+                      }
+                    | _TRUE_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Value := 'TRUE';
+                            $$.Name := 'expression';
+                          end;
+                        end;
+                      }
+                    | _FALSE_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Value := 'FALSE';
                             $$.Name := 'expression';
                           end;
                         end;
@@ -3354,6 +3456,53 @@ value
                           end;
                         end;
                       }
+                    /* Firebird 3 boolean literals. */
+                    | _TRUE_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Value := 'TRUE';
+                            $$.Name := 'constant';
+                          end;
+                        end;
+                      }
+                    | _FALSE_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Value := 'FALSE';
+                            $$.Name := 'constant';
+                          end;
+                        end;
+                      }
+                    /* Searched CASE. The simple form, CASE <value> WHEN ...,
+                       is not here yet - it needs the value to be carried into
+                       each comparison, which this grammar has nowhere to put
+                       without a wider change. */
+                    | _CASE_ case_when_list _END_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $2;
+                            $$.Name := 'case';
+                          end;
+                        end;
+                      }
+                    | _CASE_ case_when_list _ELSE_ value _END_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $2;
+                            $$.Name := 'case';
+                          end;
+                        end;
+                      }
                     | ID DOT _DB_KEY_
                       {
                         begin
@@ -3361,6 +3510,29 @@ value
                           begin
                             $$ := $1;
                             $$.Name := 'identifier';
+                          end;
+                        end;
+                      }
+                    ;
+
+case_when_list
+                    : _WHEN_ search_condition _THEN_ value
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $4;
+                            $$.Name := 'casewhen';
+                          end;
+                        end;
+                      }
+                    | case_when_list _WHEN_ search_condition _THEN_ value
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'casewhen';
                           end;
                         end;
                       }
@@ -3726,7 +3898,9 @@ expression_eval     : _CAST_ LPAREN expression_eval _AS_ data_type_descriptor RP
                             if VarIsNull($2.Value) then
                               $$.Value := NULL
                             else
-                              $$.Value := +$2.Value;
+                              (* No unary + on a Variant in FPC, and it would
+                                 be the identity anyway. *)
+                              $$.Value := $2.Value;
                           end;
                         end;
                       }
@@ -3965,7 +4139,7 @@ type
 
 const
   (* table of Delphi Pascal keywords: *)
-    no_of_keywords = 279;
+    no_of_keywords = 283;
     keyword : array [1..no_of_keywords] of Ident = (
       'ACTION',
       'ACTIVE',
@@ -3990,11 +4164,13 @@ const
       'BEGIN',
       'BETWEEN',
       'BLOB',
+      'BOOLEAN',
       'BLOBEDIT',
       'BUFFER',
       'BY',
       'CACHE',
       'CASCADE',
+      'CASE',
       'CAST',
       'CHAR',
       'CHARACTER',
@@ -4058,6 +4234,7 @@ const
       'EXTERN',
       'EXTERNAL',
       'EXTRACT',
+      'FALSE',
       'FETCH',
       'FILE',
       'FILTER',
@@ -4217,6 +4394,7 @@ const
       'TIMESTAMP',
       'TO',
       'TRANSACTION',
+      'TRUE',
       'TRANSLATE',
       'TRANSLATION',
       'TRIGGER',
@@ -4271,11 +4449,13 @@ const
       _BEGIN_,
       _BETWEEN_,
       _BLOB_,
+      _BOOLEAN_,
       _BLOBEDIT_,
       _BUFFER_,
       _BY_,
       _CACHE_,
       _CASCADE_,
+      _CASE_,
       _CAST_,
       _CHAR_,
       _CHARACTER_,
@@ -4339,6 +4519,7 @@ const
       _EXTERN_,
       _EXTERNAL_,
       _EXTRACT_,
+      _FALSE_,
       _FETCH_,
       _FILE_,
       _FILTER_,
@@ -4498,6 +4679,7 @@ const
       _TIMESTAMP_,
       _TO_,
       _TRANSACTION_,
+      _TRUE_,
       _TRANSLATE_,
       _TRANSLATION_,
       _TRIGGER_,
