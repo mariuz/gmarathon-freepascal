@@ -1667,8 +1667,17 @@ begin
     finally
       Names.Free;
     end;
+    Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, sokDomain, '',
+      Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+    try
+      Extract.Domains.Assign(Names);
+    finally
+      Names.Free;
+    end;
     Check(Extract.Tables.Count > 0, 'there are tables to extract (' +
       IntToStr(Extract.Tables.Count) + ')');
+    Check(Extract.Domains.Count > 0, 'and domains (' +
+      IntToStr(Extract.Domains.Count) + ')');
     try
       Extract.ExtractFullMetaData;
     except
@@ -1697,6 +1706,8 @@ begin
       'including the tables');
     Check(Pos('EDIT_DUP', AnsiUpperCase(Script.Text)) > 0,
       'naming one that is actually there');
+    Check(Pos('EDIT_DOM', AnsiUpperCase(Script.Text)) > 0,
+      'and the domain a column is declared with');
 
     { And now the part that matters: run it into a database of its own.
 
@@ -1785,6 +1796,46 @@ begin
       Check(FreshQ.Fields[0].AsInteger > 0,
         'with the columns it was declared with (' +
         IntToStr(FreshQ.Fields[0].AsInteger) + ')');
+      FreshQ.Close;
+
+      { The domains, checked against the rebuilt database rather than against
+        the script. This is the check the script cannot make: extracted DDL
+        names a column's domain, so a wrong same-named domain from another
+        schema renders identically to the right one and reads correctly. Only
+        the type it turns into on the far side tells them apart.
+
+        DOM_USER.TAG is declared with EDIT_DOM, which is varchar(7) here and
+        varchar(19) in EDIT_SCH. If the extractor ever matched the wrong one,
+        the rebuilt column would be nineteen characters wide. }
+      FreshQ.SQL.Text := 'select count(*) from rdb$fields ' +
+        'where rdb$field_name = ''EDIT_DOM''';
+      FreshQ.Open;
+      Check(FreshQ.Fields[0].AsInteger = 1, 'the domain is rebuilt too');
+      FreshQ.Close;
+
+      FreshQ.SQL.Text :=
+        'select rf.rdb$field_source, f.rdb$character_length, f.rdb$field_length ' +
+        'from rdb$relation_fields rf ' +
+        '  join rdb$fields f on f.rdb$field_name = rf.rdb$field_source ' +
+        'where rf.rdb$relation_name = ''DOM_USER'' ' +
+        '  and rf.rdb$field_name = ''TAG''';
+      FreshQ.Open;
+      if FreshQ.EOF then
+        Check(False, 'the column declared with a domain is rebuilt')
+      else
+      begin
+        Check(Trim(FreshQ.Fields[0].AsString) = 'EDIT_DOM',
+          'and still names the domain it was declared with (' +
+          Trim(FreshQ.Fields[0].AsString) + ')');
+        { Character length where the server records one, byte length otherwise -
+          a multi-byte character set makes the two differ. }
+        Tables := FreshQ.Fields[1].AsInteger;
+        if Tables = 0 then
+          Tables := FreshQ.Fields[2].AsInteger;
+        Check(Tables = 7,
+          'and the domain is the one from this schema, not the same-named one ' +
+          'next door (width ' + IntToStr(Tables) + ', not 19)');
+      end;
       FreshQ.Close;
       Fresh.Connected := False;
     finally

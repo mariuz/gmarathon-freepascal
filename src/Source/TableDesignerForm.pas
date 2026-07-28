@@ -89,6 +89,10 @@ type
       one maintained alongside it is only usually. }
     FIsNew: Boolean;
     FLoading: Boolean;
+    { True when this server has schemas at all - which is not the same question
+      as whether a schema was named. A table opened without one still lives in
+      a schema on Firebird 6, and its domain lookup still has to say which. }
+    function ServerHasSchemas: Boolean;
     function DesignFromGrid: TTableDesign;
     procedure LoadGridFrom(ADesign: TTableDesign);
     procedure AddGridRow(const AColumn: TColumnDesign);
@@ -114,7 +118,7 @@ implementation
 
 {$R *.lfm}
 
-uses TableDesignIO, IB;
+uses TableDesignIO, IB, MarathonIDE, MarathonProjectCache;
 
 const
   { The grid's columns. Named rather than numbered because the order is a
@@ -177,6 +181,19 @@ begin
     FTransaction.Rollback;
 end;
 
+function TfrmTableDesigner.ServerHasSchemas: Boolean;
+var
+  Conn: TMarathonCacheConnection;
+begin
+  Result := False;
+  if not Assigned(MarathonIDEInstance) or
+     not Assigned(MarathonIDEInstance.CurrentProject) then
+    Exit;
+  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FConnectionName];
+  Result := Assigned(Conn) and Conn.Connected and
+    Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0);
+end;
+
 function TfrmTableDesigner.CurrentTransaction: TIBTransaction;
 begin
   Result := nil;
@@ -217,7 +234,7 @@ begin
 
   FreeAndNil(FOriginal);
   FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, ATableName, FSchema,
-    FSchema <> '');
+    ServerHasSchemas);
   if not Assigned(FOriginal) then
   begin
     { Not a failure worth refusing to open over - the designer is still usable,
@@ -500,7 +517,7 @@ begin
       comparison has to be against what is actually there. }
     FreeAndNil(FOriginal);
     FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, FTableName, FSchema,
-      FSchema <> '');
+      ServerHasSchemas);
     if Assigned(FOriginal) then
       LoadGridFrom(FOriginal);
     RefreshScript;

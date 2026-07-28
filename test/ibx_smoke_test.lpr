@@ -4145,6 +4145,13 @@ begin
           'if (not exists(select 1 from rdb$fields where rdb$field_name = ''EDIT_DOM'' ' +
           '   and rdb$schema_name = current_schema)) then ' +
           '  execute statement ''create domain EDIT_DOM as varchar(7)''; ' +
+          { A table using that domain, left behind so the GUI harness can
+            extract it and check the domain survives into a rebuilt
+            database. The same name exists in EDIT_SCH with a different
+            width, so the width says which one the extractor picked. }
+          'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''DOM_USER'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create table DOM_USER (ID integer, TAG EDIT_DOM)''; ' +
           'if (not exists(select 1 from rdb$fields where rdb$field_name = ''EDIT_DOM'' ' +
           '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
           '  execute statement ''create domain EDIT_SCH.EDIT_DOM as varchar(19)''; ' +

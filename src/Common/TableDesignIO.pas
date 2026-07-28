@@ -31,7 +31,7 @@ unit TableDesignIO;
 
 interface
 
-uses SysUtils, Classes, DB, IBDatabase, IBQuery, IBSQL, TableDesign, SchemaNames;
+uses SysUtils, Classes, DB, IBDatabase, IBQuery, IBSQL, TableDesign, SchemaNames, StrUtils;
 
 { The table as it is now. Returns nil when there is no such table.
 
@@ -176,7 +176,15 @@ begin
       '       f.rdb$default_source as domain_default, ' +
       '       f.rdb$computed_source ' +
       'from rdb$relation_fields rf ' +
-      '  join rdb$fields f on f.rdb$field_name = rf.rdb$field_source ' +
+      '  join rdb$fields f on f.rdb$field_name = rf.rdb$field_source' +
+      { And in the schema the column says its domain is in. Matching on the
+        name alone finds that domain in every schema: with the same name in
+        two of them the join returns a row per schema, and the designer
+        reads whichever came first. Opening a table then proposed altering
+        a column to the width of a domain belonging to somewhere else -
+        a destructive ALTER on a table nobody had touched. }
+      IfThen(ASupportsSchemas,
+        ' and (f.rdb$schema_name = rf.rdb$field_source_schema_name)', '') + ' ' +
       'where rf.rdb$relation_name = :name ' +
       SchemaPredicate('rf.', ASchema, ASupportsSchemas) +
       ' order by rf.rdb$field_position';
