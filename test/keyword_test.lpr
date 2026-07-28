@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, ServerMetrics, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -646,6 +646,85 @@ begin
     end;
   finally
     Lines.Free;
+  end;
+end;
+
+{ How busy the database is, over time.
+
+  Firebird's counters are cumulative, so a snapshot says almost nothing: what
+  is worth watching is the rate between two of them. Three things that rate has
+  to survive, all of which produce nonsense if ignored - two samples in the
+  same instant, a counter that went backwards, and the first sample, which has
+  nothing to compare against. }
+procedure TestServerMetrics;
+var
+  A, B: TMetricSample;
+  H: TMetricHistory;
+  Idx: Integer;
+
+  function SampleAt(ASeconds: Double; AFetches: Int64): TMetricSample;
+  var
+    K: TMetricKind;
+  begin
+    Result.Taken := ASeconds / SecsPerDay;
+    for K := Low(TMetricKind) to High(TMetricKind) do
+      Result.Counts[K] := 0;
+    Result.Counts[mkPageFetches] := AFetches;
+    Result.Valid := True;
+  end;
+
+begin
+  { Ten seconds apart, a thousand fetches on: a hundred a second. }
+  A := SampleAt(0, 1000);
+  B := SampleAt(10, 2000);
+  Check(Abs(MetricRate(A, B, mkPageFetches) - 100) < 0.001,
+    'a thousand fetches over ten seconds is a hundred a second (' +
+    FormatFloat('0.0', MetricRate(A, B, mkPageFetches)) + ')');
+  Check(MetricRate(A, B, mkPageReads) = 0, 'a counter that did not move has no rate');
+
+  { The same instant twice. Dividing by that is how a dashboard shows
+    infinity. }
+  Check(MetricRate(A, SampleAt(0, 5000), mkPageFetches) = 0,
+    'two samples in the same instant have no rate between them');
+
+  { A counter lower than it was means the server started counting again, not
+    that work was undone. }
+  Check(MetricRate(B, SampleAt(20, 5), mkPageFetches) = 0,
+    'a counter that went backwards reads as nothing, not as a negative spike');
+
+  { A sample that could not be read is not a zero reading. }
+  A.Valid := False;
+  Check(MetricRate(A, B, mkPageFetches) = 0, 'an unread sample has no rate');
+
+  Check(MetricName(mkPageFetches) = 'Page fetches', 'the counters have names');
+  Check(Pos('mon$database', DatabaseMetricsSQL) > 0,
+    'and the query reads the database rather than one attachment');
+  Check(Pos('left join', DatabaseMetricsSQL) > 0,
+    'left-joined, so a missing stats row is zeroes rather than no row');
+
+  { The history: oldest first, capped, and no rate until there are two. }
+  H := TMetricHistory.Create(3);
+  try
+    Check(H.LatestRate(mkPageFetches) = 0, 'an empty history has no rate');
+    H.Add(SampleAt(0, 100));
+    Check(H.LatestRate(mkPageFetches) = 0, 'and neither has one sample');
+    H.Add(SampleAt(1, 200));
+    Check(Abs(H.LatestRate(mkPageFetches) - 100) < 0.001,
+      'two samples give the rate between them');
+
+    H.Add(SampleAt(2, 300));
+    H.Add(SampleAt(3, 400));
+    Check(H.Count = 3, 'the history is capped (' + IntToStr(H.Count) + ')');
+    { Oldest dropped, order kept - a plot reads left to right. }
+    Check(Abs(H[0].Counts[mkPageFetches] - 200) < 0.001,
+      'dropping the oldest rather than the newest');
+    Check(H[H.Count - 1].Counts[mkPageFetches] = 400, 'and keeping the order');
+
+    for Idx := 1 to 10 do
+      H.Add(SampleAt(3 + Idx, 400 + Idx * 10));
+    Check(H.Count = 3, 'however long it is left running');
+  finally
+    H.Free;
   end;
 end;
 
@@ -2516,6 +2595,9 @@ begin
 
   WriteLn('CSV import:');
   TestCsvImport;
+
+  WriteLn('Server metrics:');
+  TestServerMetrics;
 
   if Failures > 0 then
   begin

@@ -577,6 +577,7 @@ type
     procedure ToolsProfilerExecute(Sender: TObject);
     procedure ToolsSystemPrivilegesExecute(Sender: TObject);
     procedure ToolsImportFlatFileExecute(Sender: TObject);
+    procedure ToolsServerDashboardExecute(Sender: TObject);
     procedure ToolsMaintenanceExecute(Sender: TObject);
 		procedure ProjectCreateFolderExecute(Sender: TObject);
     procedure ProjectCreateFolderUpdate(Sender: TObject);
@@ -1356,6 +1357,11 @@ end;
 procedure TfrmMarathonMain.ToolsImportFlatFileExecute(Sender: TObject);
 begin
 	MarathonIDEInstance.ToolsImportFlatFile;
+end;
+
+procedure TfrmMarathonMain.ToolsServerDashboardExecute(Sender: TObject);
+begin
+	MarathonIDEInstance.ToolsServerDashboard;
 end;
 
 procedure TfrmMarathonMain.ToolsSessionMonitorExecute(Sender: TObject);

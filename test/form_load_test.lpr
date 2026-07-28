@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3776,6 +3776,83 @@ begin
   end;
 end;
 
+{ The server dashboard, against a live database.
+
+  The arithmetic - a rate from two cumulative counters, and what to do when
+  they cannot be compared - is checked without a server in keyword_test. What
+  is left for here is that the window reads the counters at all, that a second
+  sample differs from the first (Firebird takes a fresh MON$ snapshot per
+  transaction, and re-using one would sample the same instant for ever), and
+  that work done in between shows up as a rate rather than as nothing. }
+procedure CheckServerDashboard(Conn: TMarathonCacheConnection);
+var
+  F: TfrmServerDashboard;
+  Busy: TIBQuery;
+  Idx: Integer;
+  Fetches1, Fetches2: Int64;
+begin
+  WriteLn('Server dashboard:');
+  F := TfrmServerDashboard.Create(nil);
+  Busy := TIBQuery.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    { Starts stopped: sampling costs a MON$ query every few seconds, and a
+      window that begins hammering the server on open would be its own worst
+      example. }
+    Check(not F.Sampling, 'the dashboard starts stopped');
+    Check(F.History.Count = 0, 'with nothing sampled yet');
+
+    F.SampleNow;
+    Check(F.History.Count = 1, 'one reading after one sample');
+    Check(F.History[0].Valid, 'and it was actually read');
+    Fetches1 := F.History[0].Counts[mkPageFetches];
+    Check(Fetches1 > 0, 'the page fetch counter is not zero (' +
+      IntToStr(Fetches1) + ')');
+    { A rate needs two readings. Drawing the first counter as though it were a
+      rate would put a meaningless spike at the left of every session. }
+    Check(F.History.LatestRate(mkPageFetches) = 0,
+      'and one reading is not yet a rate');
+
+    { Something for the counters to count. }
+    Busy.Database := Conn.Connection;
+    Busy.Transaction := Conn.Transaction;
+    Busy.AllowAutoActivateTransaction := True;
+    for Idx := 1 to 5 do
+    begin
+      Busy.SQL.Text := 'select count(*) from rdb$relation_fields';
+      Busy.Open;
+      Busy.Close;
+    end;
+
+    F.SampleNow;
+    Check(F.History.Count = 2, 'two readings after two samples');
+    Fetches2 := F.History[1].Counts[mkPageFetches];
+    { The second sample must be a fresh snapshot: MON$ is per transaction, and
+      re-using one would read the same instant for ever. }
+    Check(Fetches2 > Fetches1,
+      'the second reading sees the work done since the first (' +
+      IntToStr(Fetches1) + ' -> ' + IntToStr(Fetches2) + ')');
+    Check(F.History.LatestRate(mkPageFetches) > 0,
+      'which gives a rate above zero (' +
+      FormatFloat('0.0', F.History.LatestRate(mkPageFetches)) + '/s)');
+
+    { The grid shows every counter, the chart the three worth plotting. }
+    Check(F.grdRates.RowCount = Ord(High(TMetricKind)) + 2,
+      'the grid lists every counter (' + IntToStr(F.grdRates.RowCount - 1) + ')');
+    Check(F.chtRates.SeriesCount = 3,
+      'and the chart plots three of them (' +
+      IntToStr(F.chtRates.SeriesCount) + ')');
+
+    F.StartSampling;
+    Check(F.Sampling, 'Start begins sampling');
+    F.StopSampling;
+    Check(not F.Sampling, 'and Stop ends it');
+  finally
+    Busy.Free;
+    F.Free;
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -4037,6 +4114,7 @@ begin
   CheckBlobViewer;
   CheckSystemPrivilegesWindow(Conn);
   CheckImportFlatFile(Conn);
+  CheckServerDashboard(Conn);
   CheckSQLTrace(Conn);
 end;
 

@@ -898,6 +898,9 @@ object frmMarathonMain: TfrmMarathonMain
         object ToolsSystemPrivileges1: TMenuItem
           Action = ToolsSystemPrivileges
         end
+        object ToolsServerDashboard1: TMenuItem
+          Action = ToolsServerDashboard
+        end
         object ToolsImportFlatFile1: TMenuItem
           Action = ToolsImportFlatFile
         end
@@ -1865,6 +1868,12 @@ object frmMarathonMain: TfrmMarathonMain
       Caption = 'System Pri&vileges...'
       Hint = 'Which roles may do what to the server'
       OnExecute = ToolsSystemPrivilegesExecute
+    end
+    object ToolsServerDashboard: TAction
+      Category = 'Tools'
+      Caption = 'Server &Dashboard...'
+      Hint = 'How busy the database is, over time'
+      OnExecute = ToolsServerDashboardExecute
     end
     object ToolsImportFlatFile: TAction
       Category = 'Tools'

@@ -992,10 +992,30 @@ worth having:
 - [ ] **Result grid column control** — freeze, hide and show columns, which
   vscode-mssql shipped as its new results grid. Small, and the grid is already
   ours to change.
-- [ ] **A server dashboard** — vscode-pgsql's headline monitoring feature.
-  Marathon has the per-statement performance panel and the Session Monitor;
-  what it lacks is anything showing a value *over time*. `TAChartLazarusPkg` is
-  already a dependency, so the charting is there.
+- [x] **A server dashboard** — done. Tools > Server Dashboard samples the
+  database's own `MON$IO_STATS` and `MON$RECORD_STATS` counters on a timer and
+  plots them. Everything else here that reads `MON$` shows a snapshot; this is
+  the only thing that answers "is this getting worse".
+
+  What is plotted is the **rate**, not the counter. Firebird's counters are
+  cumulative since the attachment began, so 19,772 page fetches is a number
+  with nothing to compare it to. `src/Common/ServerMetrics.pas` does that
+  arithmetic and is checked without a window, including the three ways a naive
+  rate goes wrong and each of which draws nonsense: two samples in the same
+  instant (a division by zero), a counter lower than it was because the
+  database was reattached in between (a large negative spike), and the first
+  sample, which has nothing behind it - so the plot starts one reading in
+  rather than drawing a raw counter as though it were a rate.
+
+  It starts **stopped**. Sampling costs a `MON$` query every few seconds, which
+  is not free on the server being watched, so the window says so and the
+  interval is the user's to choose - a dashboard that began hammering the
+  server the moment it opened would be its own worst example. Each sample takes
+  a new transaction, because Firebird takes a fresh `MON$` snapshot for the
+  first statement of one: re-using a transaction would sample the same instant
+  for ever, which is this window's whole point got wrong. Checked live - a
+  second reading after real work sees more fetches than the first, and turns
+  into a rate above zero.
 
 Deliberately not adopted: plan *severity* colouring and the icicle chart from
 vscode-pgsql's plan visualiser. They rank nodes by cost, and Firebird's
