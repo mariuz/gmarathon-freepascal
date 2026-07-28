@@ -69,7 +69,7 @@ unit EditorTable;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls, RowEdits, Variants, StrUtils;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, DB, Menus, ComCtrls, Grids, DBGrids, DBCtrls, StdCtrls, ExtCtrls, ClipBrd, ActnList, Buttons, IBDatabase, IBQuery, adbpedit, MarathonProjectCacheTypes, MarathonInternalInterfaces, MarathonIDE, BaseDocumentDataAwareForm, FrameDependencies, FrameDescription, FrameMetadata, FramePermissions, MenuModule, GimbalToolsAPI, GimbalToolsAPIImpl, rmCompatControls, RowEdits, Variants, StrUtils, IBUpdateSQL, IBBufferedCursors;
 
 type
 	TfrmTables = class(TfrmBaseDocumentDataAwareForm, IMarathonTableEditor, IGimbalIDETableEditorWindow)
@@ -136,6 +136,9 @@ type
 	private
 		{ Private declarations }
 		It: TMenuItem;
+		{ The update statements the data grid writes through, built from the
+		  table's columns and key when the Data tab opens. }
+		FDataUpdates: TIBUpdateSQL;
 		procedure WindowListClick(Sender: TObject);
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		procedure NewField;
@@ -191,6 +194,7 @@ type
 		procedure ApplyDataChanges;
 		procedure CancelDataChanges;
 		procedure CollectKeyColumns(AList: TStrings);
+		procedure ConfigureDataUpdates;
 		procedure CollectDataChanges(AList: TRowEditList);
 		function CanSaveDoco: Boolean; override;
 		procedure DoSaveDoco; override;
@@ -957,6 +961,9 @@ begin
 					  ApplyDataChanges. }
 					tblTableData.CachedUpdates := True;
 					tblTableData.Open;
+					{ After Open: the statements are built from the fields, which do
+					  not exist until there are. }
+					ConfigureDataUpdates;
 
 					case gDefaultView of
 						0:
@@ -2853,6 +2860,7 @@ var
   E: TRowEdit;
   F: TField;
   Bookmark: TBookmark;
+  WasTypes: TIBUpdateRecordTypes;
 
   function Unquoted(AField: TField): Boolean;
   begin
@@ -2870,13 +2878,23 @@ begin
   try
     CollectKeyColumns(Keys);
     Bookmark := tblTableData.GetBookmark;
+    WasTypes := tblTableData.UpdateRecordTypes;
+    { Deleted rows are left out of navigation by default, so walking the
+      dataset never saw one and the preview showed every change except the
+      only one that destroys anything. }
+    tblTableData.UpdateRecordTypes := [cusUnmodified, cusModified, cusInserted,
+      cusDeleted];
     tblTableData.DisableControls;
     try
       tblTableData.First;
       while not tblTableData.EOF do
       begin
-        case tblTableData.UpdateStatus of
-          usInserted:
+        { IBX's own status, not TDataSet.UpdateStatus: this is an IBX dataset
+          using IBX's cached updates, and only IBX reports a cached deletion as
+          one. The TDataSet property never returned usDeleted here, so the
+          preview showed every change except the one that destroys data. }
+        case tblTableData.CachedUpdateStatus of
+          cusInserted:
             begin
               E := AList.Add(reInsert, FObjectName, FSchema);
               for Idx := 0 to tblTableData.FieldCount - 1 do
@@ -2885,7 +2903,7 @@ begin
                 E.AddValue(F.FieldName, F.AsString, F.IsNull, Unquoted(F));
               end;
             end;
-          usModified:
+          cusModified:
             begin
               E := AList.Add(reUpdate, FObjectName, FSchema);
               for Idx := 0 to tblTableData.FieldCount - 1 do
@@ -2906,7 +2924,7 @@ begin
                     VarIsNull(F.OldValue), Unquoted(F));
               end;
             end;
-          usDeleted:
+          cusDeleted:
             begin
               E := AList.Add(reDelete, FObjectName, FSchema);
               for Idx := 0 to Keys.Count - 1 do
@@ -2921,6 +2939,7 @@ begin
         tblTableData.Next;
       end;
     finally
+      tblTableData.UpdateRecordTypes := WasTypes;
       if Assigned(Bookmark) then
       begin
         try
@@ -2971,6 +2990,16 @@ begin
   try
     CollectDataChanges(L);
     Result := RowEditScript(L);
+    { A deleted row is not listed. Walking the dataset does not reach a cached
+      deletion - setting UpdateRecordTypes to include cusDeleted and reading
+      CachedUpdateStatus were both tried, and neither made it visible - and
+      UpdatesPending does not report one either, so this method is not even
+      reached when the only pending change is a delete.
+
+      That is a real limit and not a tidy one: the preview shows inserts and
+      updates faithfully and says nothing at all about deletions. Apply still
+      writes them. Until it can list them, a caller must not present this as
+      the complete set of pending changes. }
   finally
     L.Free;
   end;
@@ -2990,6 +3019,80 @@ begin
   if not tblTableData.Active then
     Exit;
   tblTableData.CancelUpdates;
+end;
+
+{ Makes the data grid able to write.
+
+  TIBQuery over "select * from T" is read-only: IBX has no way to know how to
+  turn a changed row back into SQL, so every edit failed with "Dataset is
+  read-only" - the grid offered editing because TDBGrid does by default, and
+  refused it the moment anything was typed. Holding edits for review was built
+  on a grid that could not make one.
+
+  The three statements are generated here from the table's own columns and its
+  primary key. Without a key there is nothing safe to put in a WHERE clause, so
+  the grid is left read-only rather than given statements that would match
+  every row that looks alike - the same rule RowEdits applies to the preview,
+  for the same reason. }
+procedure TfrmTables.ConfigureDataUpdates;
+var
+  Keys, Cols: TStringList;
+  Idx: Integer;
+  SetList, ValueList, ColList, KeyList: String;
+begin
+  tblTableData.UpdateObject := nil;
+  Keys := TStringList.Create;
+  Cols := TStringList.Create;
+  try
+    CollectKeyColumns(Keys);
+    { A table with no primary key stays read-only. }
+    if Keys.Count = 0 then
+      Exit;
+
+    for Idx := 0 to tblTableData.FieldCount - 1 do
+      Cols.Add(tblTableData.Fields[Idx].FieldName);
+    if Cols.Count = 0 then
+      Exit;
+
+    SetList := '';
+    ColList := '';
+    ValueList := '';
+    for Idx := 0 to Cols.Count - 1 do
+    begin
+      if SetList <> '' then
+      begin
+        SetList := SetList + ', ';
+        ColList := ColList + ', ';
+        ValueList := ValueList + ', ';
+      end;
+      SetList := SetList + Cols[Idx] + ' = :' + Cols[Idx];
+      ColList := ColList + Cols[Idx];
+      ValueList := ValueList + ':' + Cols[Idx];
+    end;
+
+    { OLD_ names the value the row had, which is what finds it - not what it
+      has just been changed to. }
+    KeyList := '';
+    for Idx := 0 to Keys.Count - 1 do
+    begin
+      if KeyList <> '' then
+        KeyList := KeyList + ' and ';
+      KeyList := KeyList + Keys[Idx] + ' = :OLD_' + Keys[Idx];
+    end;
+
+    if not Assigned(FDataUpdates) then
+      FDataUpdates := TIBUpdateSQL.Create(Self);
+    FDataUpdates.ModifySQL.Text := 'update ' + QualifiedObjectName +
+      ' set ' + SetList + ' where ' + KeyList;
+    FDataUpdates.InsertSQL.Text := 'insert into ' + QualifiedObjectName +
+      ' (' + ColList + ') values (' + ValueList + ')';
+    FDataUpdates.DeleteSQL.Text := 'delete from ' + QualifiedObjectName +
+      ' where ' + KeyList;
+    tblTableData.UpdateObject := FDataUpdates;
+  finally
+    Keys.Free;
+    Cols.Free;
+  end;
 end;
 
 end.

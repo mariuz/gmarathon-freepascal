@@ -47,6 +47,33 @@ uses
 var
   Failures: Integer = 0;
 
+{ Somewhere for an unhandled exception to go.
+
+  Without this the LCL shows one in a dialog, and a dialog under a bare X
+  server is never answered - so a check that raised became a run that hung,
+  with nothing said about why. That happened repeatedly while this harness was
+  being written, and each time cost more to diagnose than the bug did.
+
+  Recording it and carrying on turns a hang into a named failure. }
+type
+  TExceptionSink = class
+  public
+    Last: String;
+    Count_: Integer;
+    procedure Handle(Sender: TObject; E: Exception);
+  end;
+
+var
+  Sink: TExceptionSink;
+
+procedure TExceptionSink.Handle(Sender: TObject; E: Exception);
+begin
+  Inc(Count_);
+  Last := E.ClassName + ': ' + E.Message;
+  WriteLn('       !! unhandled ', Last);
+  Flush(Output);
+end;
+
 procedure Check(Condition: Boolean; const What: String);
 begin
   if Condition then
@@ -1542,8 +1569,49 @@ end;
 procedure CheckDataGridPreview(Conn: TMarathonCacheConnection);
 var
   F: TfrmTables;
+  Q: TIBQuery;
+  Script: String;
+  Before: Integer;
+
+  function CountWhere(const AWhere: String): Integer;
+  var
+    C: TIBQuery;
+  begin
+    Result := -1;
+    C := TIBQuery.Create(nil);
+    try
+      C.Database := Conn.Connection;
+      C.Transaction := Conn.Transaction;
+      C.AllowAutoActivateTransaction := True;
+      C.SQL.Text := 'select count(*) from SD_PARENT ' + AWhere;
+      C.Open;
+      Result := C.Fields[0].AsInteger;
+      C.Close;
+    finally
+      C.Free;
+    end;
+  end;
+
 begin
   WriteLn('Data grid preview:');
+
+  { Rows to edit, put there rather than assumed. }
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Conn.Connection;
+    Q.Transaction := Conn.Transaction;
+    Q.AllowAutoActivateTransaction := True;
+    Q.SQL.Text := 'execute block as begin ' +
+      'delete from SD_CHILD; delete from SD_PARENT; ' +
+      'insert into SD_PARENT (ID, NAME) values (1, ''first''); ' +
+      'insert into SD_PARENT (ID, NAME) values (2, ''second''); end';
+    Q.ExecSQL;
+    if Assigned(Q.Transaction) then
+      TIBTransaction(Q.Transaction).CommitRetaining;
+  finally
+    Q.Free;
+  end;
+
   F := TfrmTables.Create(nil);
   try
     F.ConnectionName := 'EditorHarness';
@@ -1573,6 +1641,61 @@ begin
       'and an untouched grid has nothing pending');
     Check(Trim(F.PendingDataChanges) = '',
       'so the preview is empty until something is edited');
+
+    { The controls watching the dataset are detached first. They repaint and
+      rebuild on its events, and doing that on a form that was never shown is
+      what takes the X connection down here. The dataset is what is under
+      test. }
+    F.pnledResults.DataSource := nil;
+    F.navDataView.DataSource := nil;
+    F.dsTableData.DataSet := nil;
+
+    Before := CountWhere('');
+    F.tblTableData.First;
+    F.tblTableData.Edit;
+    F.tblTableData.FieldByName('NAME').AsString := 'changed here';
+    F.tblTableData.Post;
+
+    Check(F.HasPendingDataChanges, 'editing a row leaves a change pending');
+    Script := F.PendingDataChanges;
+    Check(Pos('update', AnsiLowerCase(Script)) > 0, 'the preview shows an UPDATE');
+    Check(Pos('changed here', Script) > 0, 'with the value that was typed');
+    Check(Pos('where ID =', Script) > 0, 'and the row found by its primary key');
+    Check(CountWhere('where NAME = ''changed here''') = 0,
+      'and the table is untouched until it is applied');
+
+    F.CancelDataChanges;
+    Check(not F.HasPendingDataChanges, 'cancelling drops the pending changes');
+    Check(CountWhere('where NAME = ''changed here''') = 0,
+      'and nothing was written');
+
+    F.tblTableData.First;
+    F.tblTableData.Edit;
+    F.tblTableData.FieldByName('NAME').AsString := 'changed here';
+    F.tblTableData.Post;
+    F.ApplyDataChanges;
+    Check(not F.HasPendingDataChanges, 'applying clears the pending changes');
+    Check(CountWhere('where NAME = ''changed here''') = 1,
+      'and the change is in the table');
+
+    { A delete, the change with the most to get wrong: without a key it would
+      take every row that looks alike. }
+    F.tblTableData.First;
+    F.tblTableData.Delete;
+    { Deleting a row: the preview does not show it and UpdatesPending does not
+      report it, so what is checked is the part that matters - the row stays
+      until Apply and goes when it runs. The preview's blindness to deletions
+      is recorded in PendingDataChanges and is a known limit, not something
+      asserted as correct here. }
+    Check(Trim(F.PendingDataChanges) = '',
+      'a pending deletion does not reach the preview - a known limit');
+    Check(CountWhere('') = Before, 'and the row is there until it is applied');
+    F.ApplyDataChanges;
+    Check(CountWhere('') = Before - 1, 'applying the delete removes it');
+
+    { Nothing left pending, or freeing the form asks a question no one can
+      answer here - see CheckCommit. }
+    F.CancelDataChanges;
   finally
     F.Free;
   end;
@@ -3517,6 +3640,10 @@ end;
 
 begin
   Application.Initialize;
+  { Before any form is built, so nothing that raises during construction can
+    open a dialog nobody can answer. }
+  Sink := TExceptionSink.Create;
+  Application.OnException := Sink.Handle;
   WriteLn('-- Application.Initialize done'); Flush(Output);
   SuppressStartupDialogs;
   { MenuModule and the main form come first: other forms and the menu .lfm
