@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -425,6 +425,36 @@ begin
   finally
     L.Free;
   end;
+end;
+
+{ Reading MON$MEMORY_USAGE.
+
+  The table is a stat id, a group number and four byte counts; the group
+  numbers are the engine's and nothing in the catalogue explains them, which is
+  why they are in one named place. }
+procedure TestMemoryUsage;
+begin
+  Check(StatGroupName(StatGroupDatabase) = 'Database', 'group 0 is the database');
+  Check(StatGroupName(StatGroupAttachment) = 'Attachment', 'group 1 is an attachment');
+  Check(StatGroupName(StatGroupTransaction) = 'Transaction', 'group 2 is a transaction');
+  Check(StatGroupName(StatGroupStatement) = 'Statement', 'group 3 is a statement');
+  Check(StatGroupName(StatGroupCall) = 'Call', 'group 4 is a call');
+  { A later Firebird adding a group should read as itself rather than as one of
+    the ones that exist. }
+  Check(StatGroupName(9) = 'Group 9', 'and an unknown group is shown as its number');
+
+  Check(FormatBytes(512) = '512 B', 'small pools are bytes');
+  Check(FormatBytes(2048) = '2.0 KB', 'and larger ones scale (' + FormatBytes(2048) + ')');
+  Check(FormatBytes(3 * 1024 * 1024) = '3.0 MB', 'up to megabytes');
+  Check(Pos('GB', FormatBytes(Int64(5) * 1024 * 1024 * 1024)) > 0, 'and gigabytes');
+  Check(FormatBytes(-1) = '', 'a null count reads as nothing rather than as -1 B');
+
+  { Left-joined, because the database's own pool has no attachment and is
+    usually the largest row - an inner join would drop it. }
+  Check(Pos('left join mon$attachments', MemoryUsageSQL) > 0,
+    'the query keeps pools that belong to no attachment');
+  Check(Pos('order by m.mon$memory_allocated desc', MemoryUsageSQL) > 0,
+    'and puts the largest first, which is the question being asked');
 end;
 
 procedure TestSessionAdmin;
@@ -2218,6 +2248,9 @@ begin
 
   WriteLn('Blob viewing:');
   TestBlobText;
+
+  WriteLn('Memory usage:');
+  TestMemoryUsage;
 
   if Failures > 0 then
   begin

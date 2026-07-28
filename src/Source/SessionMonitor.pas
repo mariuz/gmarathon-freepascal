@@ -32,6 +32,10 @@ type
 		tsStatements: TTabSheet;
 		tsTransactions: TTabSheet;
 		tsCompiled: TTabSheet;
+		tsMemory: TTabSheet;
+		grdMemory: TDBGrid;
+		dsMemory: TDataSource;
+		qryMemory: TIBQuery;
 		pnlAttachmentsBottom: TPanel;
 		btnDisconnectAttachment: TButton;
 		pnlStatementsBottom: TPanel;
@@ -62,10 +66,12 @@ type
 	private
 		FConnectionName: String;
 		FCompiledSupported: Boolean;
+		FMemorySupported: Boolean;
 		FTimeZoneSupported: Boolean;
 		procedure SetConnectionName(const Value: String);
 		function GetCurrentAttachmentId: Integer;
 		procedure ExecuteAdminStatement(const SQL: String);
+		function MemoryUsageAvailable: Boolean;
 	public
 		procedure RefreshData;
 		property ConnectionName: String read FConnectionName write SetConnectionName;
@@ -73,7 +79,7 @@ type
 
 implementation
 
-uses Globals, MarathonIDE, MarathonProjectCache, SessionAdmin;
+uses Globals, MarathonIDE, MarathonProjectCache, SessionAdmin, MemoryUsage;
 
 {$R *.lfm}
 
@@ -109,9 +115,12 @@ begin
 		qryStatements.Database := nil;
 		qryTransactions.Database := nil;
 		qryCompiled.Database := nil;
+		qryMemory.Database := nil;
 		FCompiledSupported := False;
+		FMemorySupported := False;
 		FTimeZoneSupported := False;
 		tsCompiled.TabVisible := False;
+		tsMemory.TabVisible := False;
 		lblConnection.Caption := 'Connection: none';
 		Exit;
 	end;
@@ -124,13 +133,22 @@ begin
 	qryTransactions.Transaction := tranMonitor;
 	qryCompiled.Database := Conn.Connection;
 	qryCompiled.Transaction := tranMonitor;
+	qryMemory.Database := Conn.Connection;
+	qryMemory.Transaction := tranMonitor;
 
 	{ MON$COMPILED_STATEMENTS is Firebird 5 (ODS 13.1). Querying a table that
 	  does not exist is a hard error, so hide the tab rather than let a refresh
 	  fail on older servers. }
 	FCompiledSupported := Conn.IsODSAtLeast(ODS_FB4_MAJOR, ODS_FB5_MINOR);
+	{ MON$MEMORY_USAGE has been there since Firebird 2.1, which is older than
+	  anything this connects to - but this program still claims to support
+	  InterBase-era servers, and querying a table that is not there is a hard
+	  error rather than an empty result. Asked once, and the tab is simply
+	  absent when the answer is no. }
+	FMemorySupported := MemoryUsageAvailable;
 	FTimeZoneSupported := Conn.IsODSAtLeast(ODS_FB4_MAJOR, 0);
 	tsCompiled.TabVisible := FCompiledSupported;
+	tsMemory.TabVisible := FMemorySupported;
 
 	RefreshData;
 end;
@@ -279,6 +297,43 @@ begin
 	end;
 end;
 
+{ Whether this server has MON$MEMORY_USAGE at all. Asking the catalogue rather
+  than the version, because that is the question - a table either is there or
+  is not. }
+function TfrmSessionMonitor.MemoryUsageAvailable: Boolean;
+var
+	Q: TIBQuery;
+	Tr: TIBTransaction;
+begin
+	Result := False;
+	Tr := TIBTransaction.Create(nil);
+	Q := TIBQuery.Create(nil);
+	try
+		Tr.DefaultDatabase := qryAttachments.Database;
+		Q.Database := qryAttachments.Database;
+		Q.Transaction := Tr;
+		try
+			Tr.StartTransaction;
+			Q.SQL.Text := 'select count(*) from rdb$relations ' +
+				'where rdb$relation_name = ''MON$MEMORY_USAGE''';
+			Q.Open;
+			Result := (not Q.EOF) and (Q.Fields[0].AsInteger > 0);
+			Q.Close;
+			Tr.Commit;
+		except
+			on E: Exception do
+			begin
+				if Tr.Active then
+					Tr.Rollback;
+				Result := False;
+			end;
+		end;
+	finally
+		Q.Free;
+		Tr.Free;
+	end;
+end;
+
 procedure TfrmSessionMonitor.RefreshData;
 begin
 	{ Firebird takes a fresh MON$ snapshot for the first statement of each new
@@ -288,6 +343,7 @@ begin
 	qryStatements.Close;
 	qryTransactions.Close;
 	qryCompiled.Close;
+	qryMemory.Close;
 	if tranMonitor.Active then
 		tranMonitor.Commit;
 	tranMonitor.StartTransaction;
@@ -364,6 +420,17 @@ begin
 			'left join rdb$types ot on ot.rdb$field_name = ''RDB$OBJECT_TYPE'' and ot.rdb$type = c.mon$object_type ' +
 			'order by c.mon$compiled_statement_id';
 		qryCompiled.Open;
+	end;
+
+	if FMemorySupported then
+	begin
+		{ What the server is holding memory for. On its own MON$MEMORY_USAGE is a
+		  stat id, a group number and four byte counts, which says almost
+		  nothing - so it is joined back to the attachment that owns each pool,
+		  and left-joined because the database's own pool has no attachment and
+		  is usually the largest row in the table. }
+		qryMemory.SQL.Text := MemoryUsageSQL;
+		qryMemory.Open;
 	end;
 end;
 

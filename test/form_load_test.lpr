@@ -115,11 +115,15 @@ begin
     end;
   end;
   try
-    Check(F.pgMonitor.PageCount = 4, 'has four tabs');
+    Check(F.pgMonitor.PageCount = 5, 'has five tabs');
     Check(FindPage(F.pgMonitor, 'Attachments') <> nil, 'Attachments tab present');
     Check(FindPage(F.pgMonitor, 'Statements') <> nil, 'Statements tab present');
     Check(FindPage(F.pgMonitor, 'Transactions') <> nil, 'Transactions tab present');
     Check(FindPage(F.pgMonitor, 'Compiled Statements') <> nil, 'Compiled Statements tab present');
+    Check(FindPage(F.pgMonitor, 'Memory') <> nil, 'Memory tab present');
+    Check(Assigned(F.grdMemory) and (F.grdMemory.DataSource = F.dsMemory),
+      'the memory grid is bound');
+    Check(F.dsMemory.DataSet = F.qryMemory, 'and its datasource to the query');
 
     Check(Assigned(F.grdCompiled), 'grdCompiled exists');
     Check(Assigned(F.memCompiled), 'memCompiled exists');
@@ -3156,6 +3160,27 @@ begin
     else
       Check(not F.tsCompiled.TabVisible,
         'the compiled-statements tab is hidden on an older server');
+
+    { The memory tab, which is new: MON$MEMORY_USAGE is joined back to the
+      attachments so a pool can be told from the one next to it. }
+    Check(F.tsMemory.TabVisible, 'the memory tab is shown on a server that has the table');
+    Check(F.qryMemory.Active, 'and its query opens');
+    if F.qryMemory.Active then
+    begin
+      Rows := 0;
+      F.qryMemory.First;
+      while not F.qryMemory.EOF do
+      begin
+        Inc(Rows);
+        F.qryMemory.Next;
+      end;
+      Check(Rows > 0, 'with pools to show (' + IntToStr(Rows) + ')');
+      { The database's own pool has no attachment: an inner join would have
+        dropped the largest row in the table. }
+      F.qryMemory.First;
+      Check(F.qryMemory.FieldByName('mon$memory_allocated').AsLargeInt > 0,
+        'and the largest pool first, with a size');
+    end;
 
     { A second connection, so there is something to disconnect that is not
       this harness. }

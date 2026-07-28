@@ -198,6 +198,23 @@ object frmSessionMonitor: TfrmSessionMonitor
         TitleFont.Style = []
       end
     end
+    object tsMemory: TTabSheet
+      Caption = 'Memory'
+      object grdMemory: TDBGrid
+        Left = 0
+        Top = 0
+        Width = 744
+        Height = 391
+        Align = alClient
+        DataSource = dsMemory
+        TabOrder = 0
+        TitleFont.Charset = DEFAULT_CHARSET
+        TitleFont.Color = clWindowText
+        TitleFont.Height = -11
+        TitleFont.Name = 'MS Sans Serif'
+        TitleFont.Style = []
+      end
+    end
   end
   object dsAttachments: TDataSource
     DataSet = qryAttachments
@@ -223,6 +240,16 @@ object frmSessionMonitor: TfrmSessionMonitor
   object qryCompiled: TIBQuery
     Params = <>
     Left = 200
+    Top = 120
+  end
+  object dsMemory: TDataSource
+    DataSet = qryMemory
+    Left = 200
+    Top = 80
+  end
+  object qryMemory: TIBQuery
+    Params = <>
+    Left = 240
     Top = 120
   end
   object qryAttachments: TIBQuery

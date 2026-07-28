@@ -874,10 +874,23 @@ from theirs and both are now almost entirely ticked — so what follows is only
 what they have and Marathon does not, with each judged against the 6.0.0 test
 server rather than against the release notes.
 
-- [ ] **Memory diagnostics** — `MON$MEMORY_USAGE` exists on the test server
-  (confirmed). A fifth Session Monitor tab showing pool and attachment memory
-  is a real, implementable item, and the closest thing here to their
-  "connection pool & memory diagnostics dashboard".
+- [x] **Memory diagnostics** — done. A fifth Session Monitor tab over
+  `MON$MEMORY_USAGE`, which on its own says almost nothing: a stat id, a group
+  number and four byte counts. What makes it readable is joining it back to the
+  attachment that owns each pool, and *left*-joining - the database's own pool
+  belongs to no attachment and is usually the largest row in the table, so an
+  inner join would drop exactly the row worth seeing. Largest first, since
+  "which pool is big" is the question being asked.
+
+  `src/Common/MemoryUsage.pas` holds the query, the byte formatting and the
+  group names. Those numbers are the engine's and nothing in the catalogue
+  explains them, so they are in one named place rather than a case statement
+  inside a form - and a group a later Firebird adds reads as "Group 5" rather
+  than as one of the ones that exist today. The tab is present or absent
+  according to whether the server has the table at all, asked of the catalogue
+  rather than of the version number, in the same shape as the Firebird 5
+  compiled-statements tab beside it. Checked live: the tab appears, the query
+  opens, and it comes back with pools.
 - [ ] **System privileges** — FlameRobin's "granular system privilege matrix"
   names an `RDB$SYSTEM_PRIVILEGES` *table*, which does not exist. What does
   exist is `RDB$ROLES.RDB$SYSTEM_PRIVILEGES`, a bitmask column, so the item is
