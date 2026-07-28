@@ -23,6 +23,11 @@ type
 		chkReadOnlyValidation: TCheckBox;
 		btnUpgradeODS: TButton;
 		btnValidate: TButton;
+		tsBackupHistory: TTabSheet;
+		lstBackupHistory: TListView;
+		pnlHistoryBottom: TPanel;
+		lblHistoryNote: TLabel;
+		btnRefreshHistory: TButton;
 		tsStatistics: TTabSheet;
 		lstIndexes: TCheckListBox;
 		pnlStatsBottom: TPanel;
@@ -55,6 +60,7 @@ type
 		svcBackup: TIBXClientSideBackupService;
 		svcRestore: TIBXClientSideRestoreService;
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
+		procedure btnRefreshHistoryClick(Sender: TObject);
 		procedure btnSweepClick(Sender: TObject);
 		procedure btnValidateClick(Sender: TObject);
 		procedure btnUpgradeODSClick(Sender: TObject);
@@ -410,6 +416,76 @@ begin
 			Log('Restore FAILED: ' + E.Message);
 			MessageDlg('Restore failed: ' + E.Message, mtError, [mbOK], 0);
 		end;
+	end;
+end;
+
+{ What the server has recorded of its own incremental backups.
+
+  RDB$BACKUP_HISTORY is Firebird's own log of nbackup runs - it is written by
+  the server, not by this program, so it shows backups taken by anything
+  including a scheduled job. An older server has no such table, which is why
+  the failure is reported in the list rather than raised: a missing table is an
+  answer, not an error.
+
+  Shown beside the backup and restore this dialog already performs, which is
+  where someone asking "when was this last backed up" would look. }
+procedure TfrmMaintenance.btnRefreshHistoryClick(Sender: TObject);
+var
+	Q: TIBQuery;
+	Tr: TIBTransaction;
+	Item: TListItem;
+begin
+	lstBackupHistory.Items.BeginUpdate;
+	try
+		lstBackupHistory.Items.Clear;
+		{ Its own transaction, as the index list beside it does: this dialog holds
+		  a connection rather than one of the shared metadata transactions.
+
+		  The whole read is guarded, not just the Open: a server with no such
+		  table, a connection that is not there, and a transaction that will not
+		  start are all the same answer to the user - this database has no
+		  backup history to show - and none of them is worth an exception
+		  dialog. }
+		Tr := TIBTransaction.Create(nil);
+		Q := TIBQuery.Create(nil);
+		try
+			try
+				Tr.DefaultDatabase := FDatabase;
+				Q.Database := FDatabase;
+				Q.Transaction := Tr;
+				Tr.StartTransaction;
+				Q.SQL.Text :=
+					'select rdb$timestamp, rdb$backup_level, rdb$scn, rdb$file_name ' +
+					'from rdb$backup_history order by rdb$timestamp desc';
+				Q.Open;
+				while not Q.EOF do
+				begin
+					Item := lstBackupHistory.Items.Add;
+					Item.Caption := Q.Fields[0].AsString;
+					Item.SubItems.Add(Q.Fields[1].AsString);
+					Item.SubItems.Add(Q.Fields[2].AsString);
+					Item.SubItems.Add(Trim(Q.Fields[3].AsString));
+					Q.Next;
+				end;
+				Q.Close;
+				if lstBackupHistory.Items.Count = 0 then
+					{ An empty table is the ordinary case on a database nobody has
+					  run nbackup against, and saying so beats an empty list. }
+					lstBackupHistory.Items.Add.Caption :=
+						'(the server has recorded no incremental backups)';
+			except
+				on E: Exception do
+					lstBackupHistory.Items.Add.Caption :=
+						'This server keeps no backup history: ' + E.Message;
+			end;
+		finally
+			if Tr.InTransaction then
+				Tr.Commit;
+			Q.Free;
+			Tr.Free;
+		end;
+	finally
+		lstBackupHistory.Items.EndUpdate;
 	end;
 end;
 

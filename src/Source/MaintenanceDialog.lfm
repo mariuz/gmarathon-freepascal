@@ -118,6 +118,62 @@ object frmMaintenance: TfrmMaintenance
         OnClick = btnValidateClick
       end
     end
+    object tsBackupHistory: TTabSheet
+      Caption = 'Backup History'
+      object lstBackupHistory: TListView
+        Left = 0
+        Top = 0
+        Width = 684
+        Height = 245
+        Align = alClient
+        Columns = <
+          item
+            Caption = 'When'
+            Width = 150
+          end
+          item
+            Caption = 'Level'
+            Width = 60
+          end
+          item
+            Caption = 'SCN'
+            Width = 90
+          end
+          item
+            Caption = 'File'
+            Width = 340
+          end>
+        ReadOnly = True
+        RowSelect = True
+        TabOrder = 0
+        ViewStyle = vsReport
+      end
+      object pnlHistoryBottom: TPanel
+        Left = 0
+        Top = 245
+        Width = 684
+        Height = 40
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 1
+        object lblHistoryNote: TLabel
+          Left = 8
+          Top = 12
+          Width = 400
+          Caption = 'Incremental backups recorded by the server (nbackup).'
+        end
+        object btnRefreshHistory: TButton
+          Left = 560
+          Top = 8
+          Width = 110
+          Height = 25
+          Anchors = [akTop, akRight]
+          Caption = '&Refresh'
+          TabOrder = 0
+          OnClick = btnRefreshHistoryClick
+        end
+      end
+    end
     object tsStatistics: TTabSheet
       Caption = 'Index Statistics'
       object lstIndexes: TCheckListBox

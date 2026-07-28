@@ -722,6 +722,42 @@ end;
   backup or restore use several workers; the service only sends the parameter
   when the server can take it, so the default has to be the single-worker
   behaviour an older server expects. }
+{ The backup history tab, which reads Firebird's own record of nbackup runs.
+
+  RDB$BACKUP_HISTORY is written by the server, so it shows backups taken by
+  anything - including a scheduled job this program knows nothing about. A
+  server too old to have the table must say so in the list rather than raise,
+  which is what is checked here: the harness has no connection at this point,
+  so the query cannot succeed, and the tab has to survive that gracefully. }
+procedure CheckBackupHistoryTab;
+var
+  F: TfrmMaintenance;
+begin
+  WriteLn('Backup history:');
+  F := TfrmMaintenance.Create(nil);
+  try
+    Check(Assigned(F.tsBackupHistory) and Assigned(F.lstBackupHistory),
+      'the maintenance dialog has a backup history tab');
+    Check(F.lstBackupHistory.Columns.Count = 4,
+      'listing when, level, SCN and file');
+
+    { With no connection the query cannot run, and the tab must report that
+      rather than raise - the same way it will on a server with no such
+      table. }
+    try
+      F.btnRefreshHistoryClick(nil);
+      Check(True, 'refreshing without a connection does not raise');
+    except
+      on E: Exception do
+        Check(False, 'refreshing without a connection raised ' + E.ClassName);
+    end;
+    Check(F.lstBackupHistory.Items.Count > 0,
+      'and says why the list is empty rather than showing nothing');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckMaintenanceParallelWorkers;
 var
   F: TfrmMaintenance;
@@ -3502,6 +3538,7 @@ begin
   CheckNodeOperations;
   CheckProfilerWindow;
   CheckMaintenanceParallelWorkers;
+  CheckBackupHistoryTab;
   CheckSchemaCompareDialog;
   CheckCreateDatabaseDialog;
   CheckMasterPropertiesTabs;
