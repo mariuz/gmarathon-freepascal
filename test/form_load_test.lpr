@@ -814,12 +814,14 @@ var
   Proc: TMarathonCacheProcedure;
   Pkg: TMarathonCachePackage;
   Pub: TMarathonCachePublication;
+  Sch: TMarathonCacheSchema;
 begin
   WriteLn('Tree node operations:');
   Table := TMarathonCacheTable.Create;
   Proc := TMarathonCacheProcedure.Create;
   Pkg := TMarathonCachePackage.Create;
   Pub := TMarathonCachePublication.Create;
+  Sch := TMarathonCacheSchema.Create;
   try
     { A classic object type: the dispatch covers all of these. }
     Expect(Table, 'a table can be opened', opOpen, True);
@@ -845,7 +847,20 @@ begin
     Expect(Pub, 'a publication cannot be opened', opOpen, False);
     Expect(Pub, 'a publication cannot be dropped', opDrop, False);
     Expect(Pub, 'a publication does not offer New', opNew, False);
+
+    { A schema. Its ALTER is the last thing on the schema item Firebird has -
+      the default character set, which is all ALTER SCHEMA can change - so the
+      node has to offer it and the dispatch has to reach it. }
+    Expect(Sch, 'a schema can be scripted as CREATE', opScriptCreate, True);
+    Expect(Sch, 'a schema can be scripted as ALTER', opScriptAlter, True);
+    Expect(Sch, 'a schema can be dropped', opDrop, True);
+    Expect(Sch, 'a schema can be extracted', opExtractDDL, True);
+    { Neither has a ctSchema branch anywhere in the dispatch. }
+    Expect(Sch, 'a schema does not offer New', opNew, False);
+    Expect(Sch, 'a schema does not offer Print', opPrint, False);
+    Expect(Sch, 'a schema cannot be scripted as SELECT', opScriptSelect, False);
   finally
+    Sch.Free;
     Pub.Free;
     Pkg.Free;
     Proc.Free;

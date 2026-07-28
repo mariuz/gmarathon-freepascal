@@ -94,7 +94,8 @@ type
     function ExtractPackageHeader(ObjectName : String) : String;
     function ExtractPackageBody(ObjectName : String) : String;
     function ExtractPublication(ObjectName : String) : String;
-    function ExtractSchema(ObjectName : String) : String;
+    function ExtractSchema(ObjectName : String;
+      ObjectSubType : TDDLSubType = ddlstNone) : String;
     function TriggerEventClause(TriggerType: Integer): String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function SchemaClause(const Alias: String; const Column: String = 'rdb$schema_name'): String;
@@ -413,7 +414,7 @@ begin
         end;
       ddlSchema:
         begin
-          Result := ExtractSchema(ObjectName);
+          Result := ExtractSchema(ObjectName, ObjectSubType);
         end;
       ddlPublication:
         begin
@@ -1571,10 +1572,11 @@ begin
   end;
 end;
 
-function TDDLExtractor.ExtractSchema(ObjectName: String): String;
+function TDDLExtractor.ExtractSchema(ObjectName: String;
+  ObjectSubType: TDDLSubType): String;
 var
   Q : TIBDataSet;
-  Line : String;
+  Line, CharSet : String;
 begin
   { SQL schemas are Firebird 6 (ODS 14). RDB$SCHEMAS does not exist earlier and
     naming it is a hard error, not an empty result. }
@@ -1594,14 +1596,47 @@ begin
       Q.Close;
       Exit;
     end;
-    Line := 'create schema ' +
-      MakeQuotedIdent(Trim(Q.FieldByName('rdb$schema_name').AsString), FIsIB6, FSQLDialect);
     { Null rather than the database default when the schema was created without
       one - PUBLIC is the case in point - and writing a DEFAULT CHARACTER SET
       clause naming nothing would not compile. }
-    if not Q.FieldByName('rdb$character_set_name').IsNull then
-      Line := Line + ' default character set ' +
-        MakeQuotedIdent(Trim(Q.FieldByName('rdb$character_set_name').AsString), FIsIB6, FSQLDialect);
+    if Q.FieldByName('rdb$character_set_name').IsNull then
+      CharSet := ''
+    else
+      CharSet := MakeQuotedIdent(
+        Trim(Q.FieldByName('rdb$character_set_name').AsString), FIsIB6, FSQLDialect);
+
+    if ObjectSubType = ddlstAlter then
+    begin
+      { What ALTER SCHEMA can actually change, probed against the 6.0.0 test
+        server rather than read from the notes: SET DEFAULT CHARACTER SET and
+        DROP DEFAULT CHARACTER SET, and nothing else. SQL SECURITY and OWNER TO
+        are both rejected outright ("Token unknown - sql", "- owner"), in any
+        position, so a schema's ALTER is its character set or nothing.
+
+        A schema with no character set restates as the DROP form: that is the
+        state it is in, and it is what makes the statement runnable against a
+        schema that has one. }
+      Line := 'alter schema ' +
+        MakeQuotedIdent(Trim(Q.FieldByName('rdb$schema_name').AsString), FIsIB6, FSQLDialect);
+      if CharSet = '' then
+        Line := Line + ' drop default character set'
+      else
+        Line := Line + ' set default character set ' + CharSet;
+      Result := Line + ';' + #13#10;
+      Q.Close;
+      Exit;
+    end;
+
+    Line := 'create schema ' +
+      MakeQuotedIdent(Trim(Q.FieldByName('rdb$schema_name').AsString), FIsIB6, FSQLDialect);
+    if CharSet <> '' then
+      Line := Line + ' default character set ' + CharSet;
+    { Firebird 6.0.0 has the column but no syntax that writes it - CREATE
+      SCHEMA rejects a SQL SECURITY clause in either position, and so does
+      ALTER (both verified). So this branch cannot be reached on any server
+      that exists: the column is null on every schema, including PUBLIC. Kept
+      because it is what the clause would be, and because reaching it would
+      mean a release that accepts it. }
     if not Q.FieldByName('rdb$sql_security').IsNull then
     begin
       if Q.FieldByName('rdb$sql_security').AsInteger <> 0 then

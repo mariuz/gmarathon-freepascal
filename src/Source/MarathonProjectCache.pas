@@ -4965,7 +4965,7 @@ begin
 		{ Extract Metadata on a schema takes everything in it - the wizard now
 		  accepts a schema, so the objects it lists and the DDL it writes are
 		  both that schema's. }
-		Result := Op in [opDrop, opScriptCreate, opExtractDDL];
+		Result := Op in [opDrop, opScriptCreate, opScriptAlter, opExtractDDL];
 end;
 
 constructor TMarathonCachePublicationsHeader.Create;

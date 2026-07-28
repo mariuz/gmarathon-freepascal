@@ -1522,6 +1522,7 @@ begin
   Discard('drop table SMOKE_DUP');
   Discard('drop schema SMOKE_OTHER');
   Discard('drop schema SMOKE_SCH');
+  Discard('drop schema SMOKE_PLAIN');
 
   Run('create schema SMOKE_SCH default character set WIN1252', 'creating a schema');
 
@@ -1571,8 +1572,92 @@ begin
     Halt(1);
   end;
 
+  { ALTER SCHEMA, which is the last thing on this item that Firebird has.
+
+    What it can change was probed against the server rather than read from the
+    notes: SET DEFAULT CHARACTER SET and DROP DEFAULT CHARACTER SET work, and
+    nothing else does - SQL SECURITY and OWNER TO are rejected outright in
+    every position tried. So a schema's ALTER is its character set.
+
+    Proved by running it rather than by reading it: the schema is moved to a
+    different character set behind the extractor's back, then the statement it
+    produced is run, and the catalogue has to hold what the statement said. }
+  Run('alter schema SMOKE_SCH set default character set UTF8',
+    'moving the schema to another character set');
+
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    EnsureTransaction;
+    { Extracted while it is UTF8, so this is the statement that puts it back
+      to UTF8 - and it is run below against a schema left on WIN1252. }
+    SchemaDDL := Ex.Extract(ddlSchema, ddlstAlter, 'SMOKE_SCH');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+
+  RequireInDDL(SchemaDDL, 'alter schema', 'the ALTER SCHEMA verb');
+  RequireInDDL(SchemaDDL, 'set default character set', 'the SET form');
+  RequireInDDL(SchemaDDL, 'UTF8', 'the character set it is on now');
+
+  Run('alter schema SMOKE_SCH set default character set WIN1252',
+    'moving it back so the extracted ALTER has something to do');
+  Run(SchemaDDL, 'the extracted ALTER SCHEMA');
+
+  EnsureTransaction;
+  Probe := TIBQuery.Create(nil);
+  try
+    Probe.Database := DB;
+    Probe.Transaction := Tr;
+    Probe.SQL.Text := 'select rdb$character_set_name from rdb$schemas ' +
+      'where rdb$schema_name = ''SMOKE_SCH''';
+    Probe.Open;
+    Found := (not Probe.EOF) and (Trim(Probe.Fields[0].AsString) = 'UTF8');
+    Probe.Close;
+  finally
+    Probe.Free;
+  end;
+  if Tr.Active then
+    Tr.Commit;
+  if not Found then
+  begin
+    WriteLn('FAIL: the extracted ALTER SCHEMA did not change the character set');
+    WriteLn(SchemaDDL);
+    Halt(1);
+  end;
+
+  { A schema with no character set at all - PUBLIC is the case in point - has
+    nothing to SET, so its ALTER is the DROP form. That is the state it is in,
+    and unlike an omitted clause it is a statement that runs. }
+  Run('create schema SMOKE_PLAIN', 'creating a schema with no character set');
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    EnsureTransaction;
+    SchemaDDL := Ex.Extract(ddlSchema, ddlstAlter, 'SMOKE_PLAIN');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+  RequireInDDL(SchemaDDL, 'drop default character set',
+    'the DROP form for a schema that has no character set');
+  { And it runs - which is the whole reason for emitting it rather than an
+    ALTER with no clause on the end. }
+  Run(SchemaDDL, 'the extracted ALTER for a schema with no character set');
+  Run('drop schema SMOKE_PLAIN', 'cleaning up the plain schema');
+
   Run('drop schema SMOKE_SCH', 'cleaning up the schema');
-  WriteLn('Schema DDL OK (round-trips with its default character set)');
+  WriteLn('Schema DDL OK (round-trips with its default character set, ' +
+    'and ALTER changes it)');
 
   { The same table name in two schemas. Object names are unique per schema, not
     per database, so a catalogue query filtering on the name alone matches both

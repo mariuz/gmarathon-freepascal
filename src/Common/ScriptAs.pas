@@ -528,6 +528,10 @@ begin
 			ctPackage:
 				Result := Extractor.Extract(ddlPackage, ddlstHeader, ObjectName) + #13#10 +
 					Extractor.Extract(ddlPackage, ddlstProc, ObjectName);
+			{ A schema's ALTER is its default character set - the only thing
+			  Firebird 6 lets one change. }
+			ctSchema:
+				Result := Extractor.Extract(ddlSchema, ddlstAlter, ObjectName);
 		else
 			Result := '/* No ALTER statement applies to this object. */';
 		end;
