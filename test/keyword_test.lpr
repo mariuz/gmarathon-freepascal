@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -290,6 +290,59 @@ end;
   first, and a modal dialog under Xvfb is a hang rather than a failure - so
   what the buttons decide is checked here and what the statements do to a real
   server is checked by the GUI harness. }
+{ Rewriting the verb of a compile script.
+
+  An editor writes CREATE and only finds out afterwards whether the object is
+  already there, so the text is edited in place before it is run. The edit was
+  three inline lines that indexed into a string at a position a parser handed
+  them, with nothing checking the position was on the line - so a parse that
+  surprised it wrote into the wrong place, or raised out of a compile that had
+  nothing wrong with it. }
+procedure TestCompileScript;
+var
+  L: TStringList;
+begin
+  L := TStringList.Create;
+  try
+    { The ordinary case: the lexer stops one past the token it read. }
+    L.Text := 'create procedure P returns (R integer)' + LineEnding +
+              'as begin R = 1; suspend; end';
+    Check(ReplaceVerbAt(L, 1, 7, 6, 'alter'), 'the verb is replaced');
+    Check(Copy(L[0], 1, 16) = 'alter procedure ',
+      'and the line now says alter: ' + Copy(L[0], 1, 16));
+    Check(Pos('returns (R integer)', L[0]) > 0, 'with the rest of the line intact');
+    Check(Pos('R = 1', L[1]) > 0, 'and the other lines untouched');
+
+    { Indented, and not on the first line - both of which a real script does. }
+    L.Text := '/* a comment */' + LineEnding + '   create trigger T for X';
+    Check(ReplaceVerbAt(L, 2, 10, 6, 'alter'), 'a verb further in is replaced');
+    Check(L[1] = '   alter trigger T for X',
+      'at the right place (' + L[1] + ')');
+    Check(L[0] = '/* a comment */', 'leaving the line above alone');
+
+    { The replacement need not be the same length as what it replaces. }
+    L.Text := 'alter procedure P';
+    Check(ReplaceVerbAt(L, 1, 6, 5, 'recreate'), 'a longer verb fits');
+    Check(L[0] = 'recreate procedure P', 'and the rest follows it: ' + L[0]);
+
+    { Positions that are not in the text change nothing. Before, each of these
+      either raised or wrote somewhere else. }
+    L.Text := 'create procedure P';
+    Check(not ReplaceVerbAt(L, 2, 7, 6, 'alter'), 'a line past the end is refused');
+    Check(not ReplaceVerbAt(L, 0, 7, 6, 'alter'), 'and so is line zero');
+    Check(not ReplaceVerbAt(L, 1, 400, 6, 'alter'),
+      'a column past the end of the line is refused');
+    Check(not ReplaceVerbAt(L, 1, 3, 6, 'alter'),
+      'and a token reaching back past the start');
+    Check(not ReplaceVerbAt(L, 1, 7, 0, 'alter'), 'an empty token is refused');
+    Check(not ReplaceVerbAt(nil, 1, 7, 6, 'alter'), 'and no text at all');
+    Check(L[0] = 'create procedure P',
+      'none of which changed the text (' + L[0] + ')');
+  finally
+    L.Free;
+  end;
+end;
+
 procedure TestSessionAdmin;
 begin
   Check(DisconnectAttachmentSQL(17) =
@@ -2075,6 +2128,9 @@ begin
 
   WriteLn('Session admin actions:');
   TestSessionAdmin;
+
+  WriteLn('Compile script rewriting:');
+  TestCompileScript;
 
   if Failures > 0 then
   begin

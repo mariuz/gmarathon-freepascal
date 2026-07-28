@@ -60,7 +60,7 @@ type
 
 implementation
 
-uses MarathonIDE;
+uses MarathonIDE, CompileScript;
 
 {$R *.lfm}
 
@@ -239,29 +239,22 @@ begin
 
 //							  if (AnsiUpperCase(FParser.yyText) = 'CREATE') or (AnsiUpperCase(FParser.yyText) = 'ALTER') then //Removed by RJM
 //								begin  //Removed by RJM
-                  Q.SQL.Text := 'select rdb$procedure_name from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(ThisObject, '''');
-                  Q.Open;
-                  if (Q.BOF and Q.EOF) then
+                  { A procedure that is already there is altered rather than
+                    created. This asked the catalogue itself, twice, in a
+                    fourth copy of the query that ObjectExists now owns - and
+                    unlike that one it named no schema, so on Firebird 6 it
+                    answered about whatever an unqualified name reached. Both
+                    branches of the copy then did the same four lines. }
+                  if ObjectExists(ThisObject, ctSP, FForm.GetActiveConnectionName,
+                       FForm.GetObjectSchema) then
                   begin
-                    Q.Close;
-										Q.SQL.Text := 'select rdb$procedure_name from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ThisObject), '''');
-                    Q.Open;
-										if Not (Q.BOF and Q.EOF) then
-                    begin
-                      DTmp := FCompileText[FParser.yyLineNo - 1];
-                      Delete(DTmp, FParser.yycolno - Length(FParser.yyText), Length(FParser.yyText));
-                      Insert('alter', DTmp, FParser.yycolno - Length(FParser.yyText));
-                      FCompileText[FParser.yyLineNo - 1] := DTmp;
-											FNewFlag := False;
-										end;
-                  end
-                  else
-                  begin
-                    DTmp := FCompileText[FParser.yyLineNo - 1];
-                    Delete(DTmp, FParser.yycolno - Length(FParser.yyText), Length(FParser.yyText));
-                    Insert('alter', DTmp, FParser.yycolno - Length(FParser.yyText));
-                    FCompileText[FParser.yyLineNo - 1] := DTmp;
-										FNewFlag := False;
+                    { CompileScript checks the position is on the line before
+                      writing into it - the three lines this replaces did not,
+                      and a parse that surprised them wrote into the wrong
+                      place. }
+                    if ReplaceVerbAt(FCompileText, FParser.yyLineNo,
+                         FParser.yycolno, Length(FParser.yyText), 'alter') then
+                      FNewFlag := False;
                   end;
                   Q.Close;
                   FTransaction.Commit;
@@ -653,14 +646,12 @@ begin
                 try
                   Q.Database := FDatabase;
                   Q.Transaction := FTransaction;
-									Q.SQL.Add('select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(ThisObject, '''') + ';');
-                  Q.Open;
-                  If not (Q.BOF and Q.EOF) then
-                    FNewFlag := False
-                  else
-                    FNewFlag := True;
-                  Q.Close;
-                  Q.Transaction.Commit;
+                  { The same question as the procedure path above, asked the
+                    same way: see ObjectExists. }
+                  FNewFlag := not ObjectExists(ThisObject, ctUDF,
+                    FForm.GetActiveConnectionName, FForm.GetObjectSchema);
+                  if Q.Transaction.Active then
+                    Q.Transaction.Commit;
                   Q.SQL.Clear;
 
 

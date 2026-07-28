@@ -817,13 +817,24 @@ inside it.
   catalogue cannot answer" and "there is no such object" mean the same thing to
   every caller of this.
 
-- [ ] **The compile path keeps a fourth copy** — `CompileDBObject.pas` asks
-  whether a procedure or function exists with its own inline queries, to decide
-  whether to rewrite `CREATE` as `ALTER`, and it does not qualify by schema. It
-  should ask `ObjectExists` like everything else. Left for its own change
-  rather than folded into this one: it is 900 lines of parser-driven text
-  rewriting with no coverage, and changing it blind is worth less than the
-  duplication costs.
+- [x] **The compile path's fourth copy** — `CompileDBObject.pas` asked whether
+  a procedure or function was already there with its own inline queries, to
+  decide whether to rewrite `CREATE` as `ALTER`, and named no schema while
+  doing it: on Firebird 6 it answered about whatever an unqualified name
+  reached, so compiling a procedure in a second schema could create a duplicate
+  in the search path's instead of altering the one being edited. It asks
+  `ObjectExists` now, which qualifies and is tested. The stored-procedure path
+  also had the same four lines in both branches of its own if.
+
+  The rewrite itself is `src/Common/CompileScript.pas` — three lines that
+  indexed into a string at a position the parser handed them, with nothing
+  checking the position was on the line. A parse that surprised them wrote into
+  the wrong place or raised out of a compile that had nothing wrong with it.
+  Refusing an impossible position and changing nothing is now checked six ways.
+
+  What is still not covered is the compile *flow* - the parser walk, the
+  prompts, the execution - which needs the form, a database and a way past
+  three modal confirmations. The pieces it is built from are covered instead.
 
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
