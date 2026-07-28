@@ -204,6 +204,9 @@ type
 
 		FFileName: String;
 		FNew: Boolean;
+		{ Set while the filter is being switched on or off, because doing that
+		  re-opens the dataset and AfterOpen would otherwise undo it. }
+		FApplyingFilter: Boolean;
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
@@ -766,6 +769,12 @@ end;
 procedure TfrmSQLForm.qrySQLStatementAfterOpen(DataSet: TDataSet);
 begin
 	GlobalFormatFields(DataSet);
+	{ A new result starts unfiltered - but only a new *result*. Switching the
+	  filter on re-opens the dataset, so clearing the box here used to run in the
+	  middle of applying a filter and turn it straight back off: the box emptied
+	  itself as it was typed in and nothing was ever filtered. }
+	if FApplyingFilter then
+		Exit;
 	edFilter.Text := '';
 	qrySQLStatement.Filtered := False;
 end;
@@ -776,8 +785,13 @@ begin
 	  the in-memory singleton result the grid may be showing instead. }
 	if not qrySQLStatement.Active then
 		Exit;
-	qrySQLStatement.Filtered := (Trim(edFilter.Text) <> '');
-	qrySQLStatement.First;
+	FApplyingFilter := True;
+	try
+		qrySQLStatement.Filtered := (Trim(edFilter.Text) <> '');
+		qrySQLStatement.First;
+	finally
+		FApplyingFilter := False;
+	end;
 end;
 
 procedure TfrmSQLForm.qrySQLStatementFilterRecord(DataSet: TDataSet; var Accept: Boolean);

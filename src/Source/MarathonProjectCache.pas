@@ -300,6 +300,13 @@ type
 		function Connect: Boolean;
 		procedure Disconnect;
 		function IsIB5: Boolean;
+		{ The database as IBX must be told it: 'host:/path/to/db.fdb' for a
+		  remote server and a bare path for a local one. IBX has no HostName
+		  property - the host lives in the database name - so anything that opens
+		  a connection of its own has to build the same string, and the metadata
+		  search did not: it used the file name alone, which on a remote server
+		  means a local file of that path rather than the server's. }
+		function DatabaseConnectString: String;
 		function IsIB6: Boolean;
 		{ True when the connected engine is at least the given major version.
 		  Returns False while disconnected rather than guessing. }
@@ -1948,6 +1955,19 @@ begin
 		Result := False;
 end;
 
+function TMarathonCacheConnection.DatabaseConnectString: String;
+var
+	Server: TMarathonCacheServer;
+begin
+	Result := FDBFileName;
+	if not Assigned(MarathonIDEInstance) or
+	   not Assigned(MarathonIDEInstance.CurrentProject) then
+		Exit;
+	Server := MarathonIDEInstance.CurrentProject.Cache.ServerByName[FServerName];
+	if Assigned(Server) and not Server.Local and (Trim(Server.HostName) <> '') then
+		Result := Server.HostName + ':' + FDBFileName;
+end;
+
 function TMarathonCacheConnection.Connect: Boolean;
 var
 	Server: TMarathonCacheServer;
@@ -1965,11 +1985,7 @@ begin
 	if FErrorOnConnection then
 		Exit;
 
-	Server := MarathonIDEInstance.CurrentProject.Cache.ServerByName[FServerName];
-	if not Server.Local then
-		FConnection.DatabaseName := Server.HostName + ':' + FDBFileName
-	else
-		FConnection.DatabaseName := FDBFileName;
+	FConnection.DatabaseName := DatabaseConnectString;
 
 	FConnection.Params.Values['user_name'] := FUserName;
 	FConnection.Params.Values['password'] := FPassword;

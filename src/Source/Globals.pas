@@ -367,7 +367,7 @@ var
 
 implementation
 
-uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, SchemaNames, IconScaling, SchemaObjects, FirebirdKeywords;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, RowEdits, SchemaNames, IconScaling, SchemaObjects, FirebirdKeywords;
 
 const
   // Firebird BLR type constants (from ibase.h), as stored in
@@ -1773,89 +1773,15 @@ begin
 
                 if Found then
                 begin
-									Case Q.Fields[idx].DataType of
-                    ftString:
-                      begin
-												Rec := Rec + '''' + Q.Fields[idx].AsString + '''';
-                      end;
-
-                    ftSmallint:
-                      begin
-                        Rec := Rec + Q.Fields[idx].AsString;
-                      end;
-
-                    ftInteger:
-                      begin
-                        Rec := Rec + Q.Fields[idx].AsString;
-                      end;
-
-                    ftLargeint:
-                      begin
-                        Rec := Rec + Q.Fields[idx].AsString;
-                      end;
-
-                    ftWord:
-                      begin
-												Rec := Rec + Q.Fields[idx].AsString;
-                      end;
-
-                    ftFloat:
-                      begin
-                        Rec := Rec + FormatFloat('##########0.000000', Q.Fields[idx].AsFloat);
-                      end;
-
-                    ftCurrency:
-                      begin
-                        Rec := Rec + FormatFloat('##########0.00', Q.Fields[idx].AsFloat);
-                      end;
-
-                    ftDate:
-                      begin
-                        Rec := Rec + '''' + DateTimeToStr(Q.Fields[idx].AsDateTime) + '''';
-                      end;
-
-                    ftTime:
-                      begin
-                        Rec := Rec + '''' + DateTimeToStr(Q.Fields[idx].AsDateTime) + '''';
-											end;
-
-                    ftDateTime:
-											begin
-                        Rec := Rec + '''' + DateTimeToStr(Q.Fields[idx].AsDateTime) + '''';
-                      end;
-
-                    ftVarBytes:
-                      begin
-                        Rec := Rec + '''' + Q.Fields[idx].AsString + '''';
-                      end;
-
-                    ftBlob:
-                      begin
-                        Rec := Rec + 'null';
-                      end;
-
-                    ftMemo:
-											begin
-                        Rec := Rec + 'null';
-											end;
-
-                    ftGraphic:
-                      begin
-                        Rec := Rec + 'null';
-                      end;
-
-                    ftFmtMemo:
-                      begin
-                        Rec := Rec + 'null';
-                      end;
-
-                    ftTypedBinary:
-                      begin
-                        Rec := Rec + 'null';
-                      end;
-                  else
-                    Rec := Rec + '''' + Q.Fields[idx].AsString + '''';
-                  end;
+                  { One rule for what a value looks like written into a
+                    statement, shared with the data grid's own edits -
+                    see RowEdits.SQLFieldLiteral. The hundred lines of
+                    type switch this replaces had no null test at all, so
+                    a null column emitted nothing and left
+                    "values (1, , 'x')", and it did not double quotes, so
+                    one apostrophe in the data ended the literal. Neither
+                    script would run. }
+                  Rec := Rec + SQLFieldLiteral(Q.Fields[idx]);
 
                   FCnt := FCnt + 1;
                   If FCnt < FieldList.Count then

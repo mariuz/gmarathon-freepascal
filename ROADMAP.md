@@ -689,6 +689,129 @@ was already there.
   is not there is a hard error rather than a null.
 - `SKIP LOCKED`, `RDB$PUBLICATIONS`, `RDB$SCHEMAS` — already supported.
 
+## Phase 11 — a coverage audit, and a review of FlameRobin and the VS Code extensions
+
+Three things at once: every roadmap item checked against what actually tests it,
+FlameRobin's feature set re-read, and the two VS Code database extensions
+re-read for anything worth taking. The audit is the part that found bugs.
+
+### What the audit found
+
+The suites cover the roadmap well, with one large hole and two shipped bugs
+inside it.
+
+- [x] **Result grid export had no test at all** — five of the six formats had
+  never been driven. Only XLSX did, and that goes through `XlsxWriter` rather
+  than through `ExportGrid`, so the procedure the Save dialog actually calls
+  had never run in a test. Now exercised against a live result set holding the
+  things the formats disagree about: a number, text containing a comma, a
+  double quote and a tab, a NULL, and a boolean.
+
+  **`Export as INSERT` produced scripts that would not run.** The 100-line type
+  switch had no null test at all, so a null column emitted *nothing* and left
+  `values (42, 'x', , true)`, and text was wrapped in quotes without doubling
+  the ones inside it, so a single apostrophe ended the literal. Both are the
+  kind of defect that looks fine in the file and fails at the server, which is
+  why the test now runs the exported script back into a table shaped like the
+  row it came from and reads the row back — apostrophe, null and boolean
+  intact. The rules live in `RowEdits.SQLFieldLiteral` now, shared with the
+  data grid's own edits and checked headlessly over a `TBufDataset`; dates are
+  written year-first rather than through `DateTimeToStr`, whose format is the
+  machine's and not Firebird's.
+
+- [x] **The result grid filter did not filter** — the box cleared itself as it
+  was typed in. Switching the filter on re-opens the dataset, and the editor's
+  `AfterOpen` cleared the filter box and switched filtering off, so the two
+  undid each other and nothing was ever filtered. Guarded with a flag now, so
+  a new *result* still starts unfiltered while applying a filter does not.
+  Split across two suites for a reason: that IBX honours
+  `Filtered`/`OnFilterRecord` at all is a fact about the dataset and is settled
+  in the console harness, and that the box is wired to it is checked in the GUI
+  harness. Removing the guard fails the GUI checks.
+
+- [x] **The Session Monitor's admin actions** — Firebird has no CANCEL or KILL
+  verb: both are done by deleting a row from a monitoring table, which is the
+  one place the engine reads a DELETE as a command. That is now
+  `src/Common/SessionAdmin.pas` — the two statements and the guard that stops
+  the window disconnecting itself — checked headlessly, with the window itself
+  driven against a live server: a second connection is opened, the monitor is
+  required to list it, the disconnect statement is run the way the button runs
+  it, and the attachment has to be *gone from the server* afterwards. The
+  buttons cannot be pressed in the harness because both confirm first, and a
+  modal dialog under Xvfb is a hang rather than a failure.
+
+- [x] **Metadata search connected to the wrong database** — found while reading
+  for coverage rather than by a test. It built its own connection from
+  `DBFileName` alone, which to IBX means a *local* file of that path whatever
+  server the connection belongs to, so searching a remote database opened a
+  local file or failed. Both places now build the string through
+  `TMarathonCacheConnection.DatabaseConnectString`.
+
+One harness lesson worth recording: a check that borrows the caller's open
+query and then commits leaves the next export sitting on a dataset whose
+transaction has gone, and that hangs rather than failing. The runnable-INSERT
+check owns its query now, and runs last.
+
+### FlameRobin, re-read
+
+Checked against [mariuz/flamerobin](https://github.com/mariuz/flamerobin) as of
+2026-07-28. Its roadmap and this one have converged — this document was adapted
+from theirs and both are now almost entirely ticked — so what follows is only
+what they have and Marathon does not, with each judged against the 6.0.0 test
+server rather than against the release notes.
+
+- [ ] **Memory diagnostics** — `MON$MEMORY_USAGE` exists on the test server
+  (confirmed). A fifth Session Monitor tab showing pool and attachment memory
+  is a real, implementable item, and the closest thing here to their
+  "connection pool & memory diagnostics dashboard".
+- [ ] **System privileges** — FlameRobin's "granular system privilege matrix"
+  names an `RDB$SYSTEM_PRIVILEGES` *table*, which does not exist. What does
+  exist is `RDB$ROLES.RDB$SYSTEM_PRIVILEGES`, a bitmask column, so the item is
+  really "decode that bitmask into a readable list", which is smaller than it
+  sounds.
+- [ ] **JSON / document field editor** — a tree view and validator for
+  `BLOB SUB_TYPE TEXT` holding JSON. Marathon has a blob viewer to extend.
+  Firebird 6.0.0 has no JSON functions (already recorded above), but a viewer
+  needs none.
+- [ ] **CSV external tables** — Firebird's `EXTERNAL FILE` tables, exposed in
+  the table editor.
+- **Vector / AI embeddings** — depends on `fbvector`, a third-party UDF package
+  that is not part of Firebird. Out of scope here, as it already was.
+- **Temporal tables** — still nothing to target: `PERIOD FOR SYSTEM_TIME` is
+  rejected outright by 6.0.0 (`Token unknown - FOR`), same as the `ROW` types
+  probed earlier.
+- **Backup scheduler with cloud sync** — needs a scheduling daemon; out of
+  scope for a desktop tool with no background service.
+
+### The VS Code extensions, re-read
+
+[microsoft/vscode-mssql](https://github.com/microsoft/vscode-mssql) and
+[microsoft/vscode-pgsql](https://github.com/microsoft/vscode-pgsql). Most of
+what they offer is either already here (object explorer with type-aware search,
+query results with export, plan visualisation, table designer, schema designer,
+schema compare, connection groups with colour coding, backup and restore,
+shortcut configuration) or belongs to their ecosystem rather than to a Firebird
+desktop tool (Copilot integration, Azure and Fabric provisioning, DACPAC,
+notebooks, containers, Data API builder, Apache AGE graphs). What is left and
+worth having:
+
+- [ ] **Flat-file import** — both extensions have a guided CSV-to-table wizard,
+  and FlameRobin's CSV external tables point the same way. The parsing, the
+  type guessing and the generated DDL are all decidable without a window, which
+  makes it a good fit for the pattern the rest of this document follows.
+- [ ] **Result grid column control** — freeze, hide and show columns, which
+  vscode-mssql shipped as its new results grid. Small, and the grid is already
+  ours to change.
+- [ ] **A server dashboard** — vscode-pgsql's headline monitoring feature.
+  Marathon has the per-statement performance panel and the Session Monitor;
+  what it lacks is anything showing a value *over time*. `TAChartLazarusPkg` is
+  already a dependency, so the charting is there.
+
+Deliberately not adopted: plan *severity* colouring and the icicle chart from
+vscode-pgsql's plan visualiser. They rank nodes by cost, and Firebird's
+explained plans carry no cost figures — there is nothing to rank by, and a
+colour scale computed from nothing would be an invented number.
+
 ## Explicitly out of scope
 
 Adapted-but-rejected FlameRobin roadmap items, and why:

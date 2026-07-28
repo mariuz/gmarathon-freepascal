@@ -73,7 +73,7 @@ type
 
 implementation
 
-uses Globals, MarathonIDE, MarathonProjectCache;
+uses Globals, MarathonIDE, MarathonProjectCache, SessionAdmin;
 
 {$R *.lfm}
 
@@ -184,7 +184,7 @@ begin
 		Q.Transaction := Tr;
 		Tr.StartTransaction;
 		try
-			Q.SQL.Text := 'select current_connection from rdb$database';
+			Q.SQL.Text := CurrentAttachmentSQL;
 			Q.Open;
 			if not Q.EOF then
 				Result := Q.FieldByName('current_connection').AsInteger;
@@ -211,7 +211,7 @@ begin
 		Exit;
 	AttachId := qryAttachments.FieldByName('mon$attachment_id').AsInteger;
 
-	if AttachId = GetCurrentAttachmentId then
+	if IsOwnAttachment(AttachId, GetCurrentAttachmentId) then
 	begin
 		MessageDlg('That is this Session Monitor''s own connection - disconnecting it would break this window. Choose a different attachment.',
 			mtWarning, [mbOK], 0);
@@ -225,7 +225,7 @@ begin
 		Exit;
 
 	try
-		ExecuteAdminStatement('delete from mon$attachments where mon$attachment_id = ' + IntToStr(AttachId));
+		ExecuteAdminStatement(DisconnectAttachmentSQL(AttachId));
 		MessageDlg('Attachment disconnected.', mtInformation, [mbOK], 0);
 	except
 		on E: Exception do
@@ -250,7 +250,7 @@ begin
 		Exit;
 
 	try
-		ExecuteAdminStatement('delete from mon$statements where mon$statement_id = ' + IntToStr(StmtId));
+		ExecuteAdminStatement(CancelStatementSQL(StmtId));
 		MessageDlg('Statement cancelled.', mtInformation, [mbOK], 0);
 	except
 		on E: Exception do

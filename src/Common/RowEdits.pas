@@ -34,7 +34,7 @@ unit RowEdits;
 
 interface
 
-uses SysUtils, Classes;
+uses SysUtils, Classes, DB;
 
 type
   TRowEditKind = (reInsert, reUpdate, reDelete);
@@ -93,6 +93,22 @@ type
 { A value as SQL spells it. Strings are quoted with their own quotes doubled,
   which is the whole of SQL escaping for a literal. }
 function SQLLiteral(const AValue: TRowValue): String;
+
+{ The same question asked of a field in an open dataset: what would this value
+  look like written into a statement.
+
+  Here rather than beside the grid export that needed it, because it is the
+  same decision this unit already makes for a row edit and because a dataset is
+  all it needs - no LCL, so the rules can be checked without a window.
+
+  The rules are the ones that make a generated INSERT run rather than merely
+  look right: a null is the word null and not an empty pair of quotes or, worse,
+  nothing at all; a quote inside text is doubled; numbers, and booleans, are
+  written unquoted, so a boolean column takes them; and a date is written in the
+  order Firebird reads regardless of what the machine's locale would print.
+  Blobs are written as null, which is what the export has always done - the
+  value is not in the grid to write. }
+function SQLFieldLiteral(AField: TField): String;
 
 { The statement for one change, or '' when it cannot be written safely -
   an update or delete with nothing to identify the row by. }
@@ -237,6 +253,43 @@ begin
       Result := Result + K.Name + ' is null'
     else
       Result := Result + K.Name + ' = ' + SQLLiteral(K);
+  end;
+end;
+
+function SQLFieldLiteral(AField: TField): String;
+begin
+  if not Assigned(AField) or AField.IsNull then
+    Exit('null');
+  case AField.DataType of
+    ftSmallint, ftInteger, ftLargeint, ftWord, ftAutoInc:
+      Result := Trim(AField.AsString);
+    { DECFLOAT, INT128 and NUMERIC all arrive as BCD. Their text form is the
+      exact one; AsFloat would round away the precision they exist for. The
+      decimal separator is the machine's, and SQL wants a point. }
+    ftBCD, ftFMTBcd:
+      Result := StringReplace(Trim(AField.AsString), ',', '.', [rfReplaceAll]);
+    ftFloat, ftCurrency:
+      Result := StringReplace(FloatToStr(AField.AsFloat), ',', '.', [rfReplaceAll]);
+    ftBoolean:
+      if AField.AsBoolean then
+        Result := 'true'
+      else
+        Result := 'false';
+    { Written the way Firebird reads it whatever the machine prints, which
+      DateTimeToStr does not promise - a script exported on one machine has to
+      run on another. }
+    ftDate:
+      Result := '''' + FormatDateTime('yyyy-mm-dd', AField.AsDateTime) + '''';
+    ftTime:
+      Result := '''' + FormatDateTime('hh:nn:ss', AField.AsDateTime) + '''';
+    ftDateTime, ftTimeStamp:
+      Result := '''' + FormatDateTime('yyyy-mm-dd hh:nn:ss', AField.AsDateTime) + '''';
+    { Not in the grid to write out. }
+    ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftTypedBinary:
+      Result := 'null';
+  else
+    Result := '''' +
+      StringReplace(AField.AsString, '''', '''''', [rfReplaceAll]) + '''';
   end;
 end;
 

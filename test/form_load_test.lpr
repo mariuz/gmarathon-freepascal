@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -2901,6 +2901,499 @@ begin
   end;
 end;
 
+{ The INSERT export, run back into the database it came from.
+
+  The table is made to match the probe row - a number, text, a null column and
+  a boolean - and the exported script has to insert into it and read back what
+  went in, apostrophe included. Anything less proves only that a file was
+  written. }
+procedure CheckInsertExportRuns(Conn: TMarathonCacheConnection;
+  Fields: TStringList; var Ex: TExportType; const Dir: String);
+var
+  Src: TIBQuery;
+  Runner: TIBXScript;
+  Probe: TIBQuery;
+  FileName: String;
+
+  procedure Discard(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      S.SQL.Text := SQLText;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+begin
+  Discard('drop table EXPORT_ROW');
+  Discard('create table EXPORT_ROW (N integer, T varchar(40), NUL integer, B boolean)');
+
+  { Text with an apostrophe in it - the character that ended the literal and
+    broke the statement before SQLFieldLiteral doubled it.
+
+    On a query of its own: borrowing the caller's left it open across the
+    script run below, which commits, and the export that followed then sat on
+    a dataset whose transaction had gone. }
+  Src := TIBQuery.Create(nil);
+  Src.Database := Conn.Connection;
+  Src.Transaction := Conn.Transaction;
+  Src.AllowAutoActivateTransaction := True;
+  Src.SQL.Text := 'select 42 as N, cast(''O''''Brien'' as varchar(40)) as T, ' +
+    'cast(null as integer) as NUL, true as B from rdb$database';
+  Src.Open;
+
+  FileName := Dir + 'marathon_export_run.sql';
+  if FileExists(FileName) then
+    DeleteFile(FileName);
+  Ex.ExType := 1;
+  ExportGrid(Ex, Src, Fields, 'EXPORT_ROW', FileName);
+  Src.Close;
+  FreeAndNil(Src);
+
+  Runner := TIBXScript.Create(nil);
+  Probe := TIBQuery.Create(nil);
+  try
+    Runner.Database := Conn.Connection;
+    Runner.Transaction := Conn.Transaction;
+    Runner.Echo := False;
+    Runner.StopOnFirstError := True;
+    if not Conn.Transaction.Active then
+      Conn.Transaction.StartTransaction;
+    try
+      Runner.RunScript(FileName);
+      if Conn.Transaction.Active then
+        Conn.Transaction.Commit;
+      Check(True, 'the exported INSERT script runs');
+    except
+      on E: Exception do
+      begin
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+        Check(False, 'the exported INSERT script runs (' + E.Message + ')');
+        Exit;
+      end;
+    end;
+
+    Probe.Database := Conn.Connection;
+    Probe.Transaction := Conn.Transaction;
+    Probe.AllowAutoActivateTransaction := True;
+    Probe.SQL.Text := 'select N, T, NUL, B from EXPORT_ROW';
+    Probe.Open;
+    if Probe.EOF then
+      Check(False, 'and the row arrives')
+    else
+    begin
+      Check(Probe.FieldByName('N').AsInteger = 42, 'and the row arrives intact');
+      Check(Probe.FieldByName('T').AsString = 'O''Brien',
+        'with the apostrophe still in the text (' + Probe.FieldByName('T').AsString + ')');
+      Check(Probe.FieldByName('NUL').IsNull,
+        'and the null column still null rather than zero');
+      Check(Probe.FieldByName('B').AsBoolean,
+        'and the boolean true rather than the text True');
+    end;
+    Probe.Close;
+  finally
+    Probe.Free;
+    Runner.Free;
+    Src.Free;
+    if FileExists(FileName) then
+      DeleteFile(FileName);
+    Discard('drop table EXPORT_ROW');
+  end;
+end;
+
+{ The result grid's filter box, against a real result set.
+
+  Filtering is client-side by design - it must not re-run the statement, which
+  is the whole reason it exists - so what it has to get right is which rows
+  survive. Nothing had ever driven it: the roadmap item was covered by the
+  form's controls being present, which says nothing about what the filter does.
+
+  Run through the SQL editor rather than the dataset alone, because the filter
+  is the editor's OnFilterRecord reading the editor's own edit box, and the
+  wiring between those two is as much of it as the matching. }
+procedure CheckResultFilter(Conn: TMarathonCacheConnection);
+var
+  F: TfrmSQLForm;
+  All_, Some_, None_: Integer;
+
+  function RowCount: Integer;
+  begin
+    Result := 0;
+    F.qrySQLStatement.First;
+    while not F.qrySQLStatement.EOF do
+    begin
+      Inc(Result);
+      F.qrySQLStatement.Next;
+    end;
+  end;
+
+begin
+  WriteLn('Result filter:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    F.qrySQLStatement.Close;
+    { Three rows with known text in them, from the one table every Firebird
+      database has. }
+    F.qrySQLStatement.SQL.Text :=
+      'select ' + '''' + 'ALPHA' + '''' + ' as W from rdb$database ' +
+      'union all select ' + '''' + 'BETA' + '''' + ' from rdb$database ' +
+      'union all select ' + '''' + 'ALPACA' + '''' + ' from rdb$database';
+    try
+      if not F.transSQLStatement.Active then
+        F.transSQLStatement.StartTransaction;
+      F.qrySQLStatement.Open;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped: the probe rows would not run (', E.Message, ')');
+        Exit;
+      end;
+    end;
+
+    All_ := RowCount;
+    Check(All_ = 3, 'the unfiltered result has all three rows');
+
+    { Typing in the box is what the editor reacts to. }
+    F.edFilter.Text := 'alp';
+    F.edFilterChange(F.edFilter);
+    Some_ := RowCount;
+    { Case-insensitive and anywhere in the value: ALPHA and ALPACA, not BETA. }
+    Check(Some_ = 2, 'a filter keeps the rows that match it, whatever the case (' +
+      IntToStr(Some_) + ')');
+    Check(F.qrySQLStatement.Filtered, 'and the dataset is filtered rather than re-run');
+
+    F.edFilter.Text := 'no such value';
+    F.edFilterChange(F.edFilter);
+    None_ := RowCount;
+    Check(None_ = 0, 'a filter that matches nothing leaves nothing');
+
+    { And clearing it brings everything back - a filter that could not be
+      undone would mean re-running the statement to see the rest. }
+    F.edFilter.Text := '';
+    F.edFilterChange(F.edFilter);
+    Check(RowCount = All_, 'clearing the filter brings every row back');
+    Check(not F.qrySQLStatement.Filtered, 'and switches filtering off');
+
+    F.qrySQLStatement.Close;
+    if F.transSQLStatement.Active then
+      F.transSQLStatement.Commit;
+  finally
+    F.Free;
+  end;
+end;
+
+{ The Session Monitor against a live server, rather than only its controls.
+
+  What it had was a check that the grids were bound. What it never had was
+  anything showing that the MON$ queries run, that the window sees the session
+  it is monitoring, or that disconnecting an attachment actually disconnects
+  it. The buttons themselves cannot be pressed here - they confirm first, and a
+  modal dialog under Xvfb hangs - so the statements they build are run the way
+  the handler runs them, which is what SessionAdmin exists to make possible. }
+procedure CheckSessionMonitorLive(Conn: TMarathonCacheConnection);
+var
+  F: TfrmSessionMonitor;
+  Victim: TIBDatabase;
+  VictimTr: TIBTransaction;
+  Probe: TIBQuery;
+  Admin: TIBSQL;
+  AdminTr: TIBTransaction;
+  VictimId, Mine, Rows: Integer;
+  Found: Boolean;
+begin
+  WriteLn('Session monitor against a live database:');
+  F := TfrmSessionMonitor.Create(nil);
+  Victim := TIBDatabase.Create(nil);
+  VictimTr := TIBTransaction.Create(nil);
+  Probe := TIBQuery.Create(nil);
+  Admin := TIBSQL.Create(nil);
+  AdminTr := TIBTransaction.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    try
+      F.RefreshData;
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the monitor refreshes (' + E.ClassName + ': ' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    Check(F.qryAttachments.Active, 'the attachments query opens');
+    Rows := 0;
+    F.qryAttachments.First;
+    while not F.qryAttachments.EOF do
+    begin
+      Inc(Rows);
+      F.qryAttachments.Next;
+    end;
+    Check(Rows > 0, 'and sees at least this session (' + IntToStr(Rows) + ')');
+    Check(F.qryTransactions.Active, 'the transactions query opens');
+    Check(F.qryStatements.Active, 'the statements query opens');
+    { MON$COMPILED_STATEMENTS is Firebird 5 and later; the tab is hidden
+      rather than left to fail on an older server. }
+    if Conn.IsODSAtLeast(ODS_FB4_MAJOR, ODS_FB5_MINOR) then
+    begin
+      Check(F.tsCompiled.TabVisible, 'the compiled-statements tab is shown on FB5+');
+      Check(F.qryCompiled.Active, 'and its query opens');
+    end
+    else
+      Check(not F.tsCompiled.TabVisible,
+        'the compiled-statements tab is hidden on an older server');
+
+    { A second connection, so there is something to disconnect that is not
+      this harness. }
+    Victim.DatabaseName := Conn.Connection.DatabaseName;
+    Victim.Params.Assign(Conn.Connection.Params);
+    Victim.LoginPrompt := False;
+    VictimTr.DefaultDatabase := Victim;
+    try
+      Victim.Connected := True;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped the disconnect: a second connection would not open (',
+          E.Message, ')');
+        Exit;
+      end;
+    end;
+
+    Probe.Database := Victim;
+    Probe.Transaction := VictimTr;
+    Probe.AllowAutoActivateTransaction := True;
+    Probe.SQL.Text := CurrentAttachmentSQL;
+    Probe.Open;
+    VictimId := Probe.Fields[0].AsInteger;
+    Probe.Close;
+    Check(VictimId > 0, 'the second connection has an attachment id');
+
+    F.RefreshData;
+    Found := False;
+    F.qryAttachments.First;
+    while not F.qryAttachments.EOF do
+    begin
+      if F.qryAttachments.FieldByName('mon$attachment_id').AsInteger = VictimId then
+        Found := True;
+      F.qryAttachments.Next;
+    end;
+    Check(Found, 'and the monitor lists it');
+
+    { The harness's own attachment must not be the one picked, which is what
+      the guard on the button is for. }
+    Probe.Database := Conn.Connection;
+    Probe.Transaction := Conn.Transaction;
+    Probe.SQL.Text := CurrentAttachmentSQL;
+    Probe.Open;
+    Mine := Probe.Fields[0].AsInteger;
+    Probe.Close;
+    Check(not IsOwnAttachment(VictimId, Mine),
+      'the second connection is not this one');
+
+    { What the button does once the question has been answered. }
+    AdminTr.DefaultDatabase := Conn.Connection;
+    Admin.Database := Conn.Connection;
+    Admin.Transaction := AdminTr;
+    Admin.SQL.Text := DisconnectAttachmentSQL(VictimId);
+    AdminTr.StartTransaction;
+    try
+      Admin.ExecQuery;
+      AdminTr.Commit;
+      Check(True, 'the disconnect statement runs');
+    except
+      on E: Exception do
+      begin
+        if AdminTr.Active then
+          AdminTr.Rollback;
+        Check(False, 'the disconnect statement runs (' + E.Message + ')');
+        Exit;
+      end;
+    end;
+
+    F.RefreshData;
+    Found := False;
+    F.qryAttachments.First;
+    while not F.qryAttachments.EOF do
+    begin
+      if F.qryAttachments.FieldByName('mon$attachment_id').AsInteger = VictimId then
+        Found := True;
+      F.qryAttachments.Next;
+    end;
+    { The row going is the whole claim: the attachment is gone from the
+      server, not merely from the grid. }
+    Check(not Found, 'and the attachment is gone from the server');
+  finally
+    Admin.Free;
+    AdminTr.Free;
+    Probe.Free;
+    { The server has already killed this attachment, so closing it the ordinary
+      way can fault inside IBX - which is what SafeDisconnect exists for. }
+    DisconnectQuietly(Victim);
+    VictimTr.Free;
+    Victim.Free;
+    F.Free;
+  end;
+end;
+
+{ Exporting a result set, in every format the grid offers.
+
+  Five of the six had no test at all: only XLSX did, and that one goes through
+  XlsxWriter rather than through ExportGrid, so nothing had ever driven the
+  procedure the Save dialog actually calls. The formats differ in exactly the
+  places that are easy to get wrong - quoting, NULLs, and which values are
+  written as numbers rather than as text - so the row exported here is built to
+  contain each of those.
+
+  Run against the live database rather than a stand-in dataset, because the
+  types that make the JSON decision interesting (DECFLOAT, BOOLEAN, NUMERIC)
+  only arrive as themselves from a real server. }
+procedure CheckResultExport(Conn: TMarathonCacheConnection);
+var
+  Q: TIBQuery;
+  Fields: TStringList;
+  Ex: TExportType;
+  Text_: TStringList;
+  Dir, Body: String;
+
+  procedure ExportAs(AType: Integer; const AExt: String; out AFile: String);
+  begin
+    AFile := Dir + 'marathon_export_test.' + AExt;
+    if FileExists(AFile) then
+      DeleteFile(AFile);
+    Ex.ExType := AType;
+    ExportGrid(Ex, Q, Fields, 'EXPORT_ROW', AFile);
+  end;
+
+  function LoadExported(const AFile: String): String;
+  begin
+    Result := '';
+    if not FileExists(AFile) then
+      Exit;
+    Text_.LoadFromFile(AFile);
+    Result := Text_.Text;
+  end;
+
+var
+  FileName: String;
+begin
+  WriteLn('Result grid export:');
+  Dir := GetTempDir;
+  Q := TIBQuery.Create(nil);
+  Fields := TStringList.Create;
+  Text_ := TStringList.Create;
+  try
+    Q.Database := Conn.Connection;
+    Q.Transaction := Conn.Transaction;
+    Q.AllowAutoActivateTransaction := True;
+    { One row carrying everything the formats disagree about: a number, text
+      holding the separator and the quote of three different formats at once, a
+      NULL, and a boolean - which the JSON exporter must write as a JSON value
+      rather than as a string. }
+    Q.SQL.Text :=
+      'select 42 as N, ' +
+      '  cast(''a,b"c' + #9 + 'd|e'' as varchar(20)) as T, ' +
+      '  cast(null as integer) as NUL, ' +
+      '  true as B ' +
+      'from rdb$database';
+    try
+      Q.Open;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped: the probe row would not run (', E.Message, ')');
+        Exit;
+      end;
+    end;
+    Check(not Q.EOF, 'the probe row is there to export');
+    if Q.EOF then
+      Exit;
+
+    Fields.Add('N');
+    Fields.Add('T');
+    Fields.Add('NUL');
+    Fields.Add('B');
+
+    FillChar(Ex, SizeOf(Ex), 0);
+    Ex.FirstRowNames := True;
+    Ex.SepChar := ',';
+    Ex.QualChar := '"';
+    Ex.InsertColumnNames := True;
+
+    { Separated values. }
+    ExportAs(0, 'csv', FileName);
+    Body := LoadExported(FileName);
+    Check(Pos('N,T,NUL,B', Body) > 0, 'the CSV starts with the column names');
+    Check(Pos('42', Body) > 0, 'and holds the row');
+    Check(Pos('"', Body) > 0, 'with the qualifier applied to text');
+
+    { INSERT statements. }
+    ExportAs(1, 'sql', FileName);
+    Body := UpperCase(LoadExported(FileName));
+    Check(Pos('INSERT INTO EXPORT_ROW', Body) > 0,
+      'the INSERT export names the table it was given');
+    Check(Pos('NULL', Body) > 0, 'and writes a null as NULL rather than as text');
+
+    { JSON - the format with the decisions in it. }
+    ExportAs(2, 'json', FileName);
+    Body := LoadExported(FileName);
+    Check((Pos('[', Body) > 0) and (Pos(']', Body) > 0), 'the JSON export is an array');
+    Check(Pos('"N": 42', Body) > 0, 'a number is a JSON number, not a string');
+    Check(Pos('"NUL": null', Body) > 0, 'a null is JSON null');
+    Check((Pos('"B": true', Body) > 0) or (Pos('"B": false', Body) > 0),
+      'a boolean is a JSON boolean, not a quoted string');
+    Check(Pos('\"', Body) > 0, 'and a quote inside text is escaped');
+
+    { Markdown. }
+    ExportAs(3, 'md', FileName);
+    Body := LoadExported(FileName);
+    Check(Pos('| N |', Body) > 0, 'the Markdown export has a header row');
+    Check(Pos('---', Body) > 0, 'and the separator row a table needs');
+    Check(Pos('\|', Body) > 0,
+      'with a pipe inside a value escaped, or it would end the cell');
+
+    { Tab separated. }
+    ExportAs(4, 'tsv', FileName);
+    Body := LoadExported(FileName);
+    Check(Pos('N' + #9 + 'T', Body) > 0, 'the TSV export separates with tabs');
+    Check(Pos('a,b"c' + #9 + 'd', Body) = 0,
+      'and a tab inside a value does not survive as a tab');
+
+    { XLSX, through ExportGrid rather than through the writer directly. }
+    ExportAs(5, 'xlsx', FileName);
+    Check(FileExists(FileName),
+      'the XLSX export writes a file through the same entry point');
+    if FileExists(FileName) then
+      DeleteFile(FileName);
+
+    { And now the part that makes the INSERT export worth having: the script
+      it writes is run back into the database, into a table shaped like the
+      row it came from. A script that merely looks right is what this export
+      produced for years. Last, and on a query of its own, because it commits. }
+    Q.Close;
+    CheckInsertExportRuns(Conn, Fields, Ex, Dir);
+  finally
+    Text_.Free;
+    Fields.Free;
+    Q.Close;
+    Q.Free;
+  end;
+end;
+
 procedure CheckTableEditorAgainstDatabase(const DatabaseName, User, Password: String);
 var
   Conn: TMarathonCacheConnection;
@@ -3004,6 +3497,14 @@ begin
   CheckPlanTree(Conn);
   CheckDataGridPreview(Conn);
   CheckBulkMetadataExtract(Conn);
+  { Before the trace window rather than after it. Opening that window turns on
+    IBX's global monitor hook, and it stays on when the form goes - so every
+    statement run afterwards writes into a buffer with no reader draining it,
+    and eventually blocks. That is a hang rather than a failure, which is a
+    slow thing to recognise. }
+  CheckResultExport(Conn);
+  CheckResultFilter(Conn);
+  CheckSessionMonitorLive(Conn);
   CheckSQLTrace(Conn);
 end;
 

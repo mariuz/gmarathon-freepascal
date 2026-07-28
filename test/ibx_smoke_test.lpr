@@ -21,7 +21,7 @@ uses
     support compiled in" the moment one is created. The application itself gets
     this from the LCL; a console harness has to say so. }
   {$IFDEF UNIX}cthreads,{$ENDIF}
-  SysUtils, Classes, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
+  SysUtils, Classes, DB, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
   ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
   TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
@@ -36,6 +36,14 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Collect(Sender: TObject; const NewString: String);
+  end;
+
+  { OnFilterRecord is "of object" as well. This is what the SQL editor's
+    filter box does to its result set, minus the box. }
+  TRowFilter = class
+  public
+    Needle: String;
+    procedure Accept(DataSet: TDataSet; var Accepted: Boolean);
   end;
 
 var
@@ -1440,6 +1448,90 @@ begin
   begin
     Inc(Result);
     At := PosEx(Needle, Haystack, At + Length(Needle));
+  end;
+end;
+
+procedure TRowFilter.Accept(DataSet: TDataSet; var Accepted: Boolean);
+begin
+  Accepted := Pos(Needle, UpperCase(DataSet.Fields[0].AsString)) > 0;
+end;
+
+{ The result grid's filter, which is a client-side filter on the open dataset -
+  the point of it is not to re-run the statement. Whether IBX honours
+  Filtered/OnFilterRecord at all is a fact about the server-side dataset rather
+  than about the window, so it is settled here; that the edit box is wired to
+  it is checked in the GUI harness. }
+procedure TestResultFilter;
+var
+  FQ: TIBQuery;
+  Filter: TRowFilter;
+  Rows: Integer;
+
+  function CountRows: Integer;
+  begin
+    Result := 0;
+    FQ.First;
+    while not FQ.EOF do
+    begin
+      Inc(Result);
+      FQ.Next;
+    end;
+  end;
+
+begin
+  FQ := TIBQuery.Create(nil);
+  Filter := TRowFilter.Create;
+  try
+    EnsureTransaction;
+    FQ.Database := DB;
+    FQ.Transaction := Tr;
+    FQ.SQL.Text :=
+      'select ''ALPHA'' as W from rdb$database ' +
+      'union all select ''BETA'' from rdb$database ' +
+      'union all select ''ALPACA'' from rdb$database';
+    Filter.Needle := 'ALP';
+    FQ.OnFilterRecord := Filter.Accept;
+    FQ.Open;
+    Rows := CountRows;
+    if Rows <> 3 then
+    begin
+      WriteLn('FAIL: the filter probe should return three rows, got ', Rows);
+      Halt(1);
+    end;
+
+    FQ.Filtered := True;
+    if not FQ.Filtered then
+    begin
+      WriteLn('FAIL: IBX did not accept Filtered on an open dataset - the ' +
+              'result grid filter cannot work this way');
+      Halt(1);
+    end;
+    Rows := CountRows;
+    if Rows <> 2 then
+    begin
+      WriteLn('FAIL: filtering on ALP should leave ALPHA and ALPACA, got ',
+              Rows, ' row(s)');
+      Halt(1);
+    end;
+
+    { And off again, which is what clearing the box does. Without this a filter
+      would be a one-way trip and the rest of the result unreachable. }
+    FQ.Filtered := False;
+    Rows := CountRows;
+    if Rows <> 3 then
+    begin
+      WriteLn('FAIL: clearing the filter should bring all three rows back, got ',
+              Rows);
+      Halt(1);
+    end;
+
+    FQ.Close;
+    if Tr.Active then
+      Tr.Commit;
+    WriteLn('Result filter OK (filters in the client, and can be switched off)');
+  finally
+    Filter.Free;
+    FQ.Free;
   end;
 end;
 
@@ -4295,6 +4387,7 @@ begin
     TestServerKeywordList;
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
+    TestResultFilter;
     TestSchemaDDL;
     TestSchemaCompare(HostPrefixOf(DatabaseName));
 

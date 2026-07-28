@@ -126,7 +126,10 @@ begin
               XAct.Commit;
 
             DB.Connected := False;
-            DB.DatabaseName := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].DBFileName;
+            { The file name alone is a *local* database to IBX, whatever
+              server the connection belongs to - searching a remote database
+              opened a local file of the same path, or failed. }
+            DB.DatabaseName := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].DatabaseConnectString;
             DB.Params.Values['user_name'] := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].UserName;
             DB.Params.Values['password'] := MarathonIdeInstance.CurrentProject.Cache.ConnectionByName[FConnectionList[DBCOunt]].Password;
             try

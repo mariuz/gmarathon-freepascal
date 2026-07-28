@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -266,6 +266,106 @@ begin
   finally
     Server.Free;
     Chosen.Free;
+  end;
+end;
+
+{ What a value looks like written into a statement.
+
+  This is what the grid's "export as INSERT" produces, and until it was given
+  this function it produced scripts that would not run: there was no null test
+  at all, so a null column emitted nothing and left "values (1, , 'x')", and
+  text was wrapped in quotes without doubling the ones inside it, so a single
+  apostrophe ended the literal. Both are checked here rather than only through
+  the export, because the rules are the interesting part and they need no
+  database and no window - a TBufDataset is enough to hold a field of each
+  type. }
+{ The Session Monitor's two admin actions, as statements.
+
+  Firebird has no CANCEL or KILL verb - both are done by deleting a row from a
+  monitoring table, which is the one place the engine reads a DELETE as a
+  command. Worth pinning: a typo in either statement would look like a working
+  button that quietly does nothing to the wrong table.
+
+  The window itself cannot be driven here - both handlers ask for confirmation
+  first, and a modal dialog under Xvfb is a hang rather than a failure - so
+  what the buttons decide is checked here and what the statements do to a real
+  server is checked by the GUI harness. }
+procedure TestSessionAdmin;
+begin
+  Check(DisconnectAttachmentSQL(17) =
+    'delete from mon$attachments where mon$attachment_id = 17',
+    'disconnecting an attachment deletes its MON$ATTACHMENTS row');
+  Check(CancelStatementSQL(9) =
+    'delete from mon$statements where mon$statement_id = 9',
+    'cancelling a statement deletes its MON$STATEMENTS row, not the attachment');
+  Check(Pos('current_connection', CurrentAttachmentSQL) > 0,
+    'and this window finds its own attachment through CURRENT_CONNECTION');
+
+  { The guard that stops the monitor disconnecting itself. Its own attachment
+    is normally in the list, and often the first row. }
+  Check(IsOwnAttachment(12, 12), 'an attachment matching this one is its own');
+  Check(not IsOwnAttachment(12, 13), 'and a different one is not');
+  { An id that could not be read must not match everything, or the button
+    would refuse every disconnect rather than just this window's. }
+  Check(not IsOwnAttachment(-1, 13), 'an unreadable id is not a match');
+  Check(not IsOwnAttachment(12, -1), 'and neither is an unreadable current id');
+end;
+
+procedure TestFieldLiterals;
+var
+  DS: TBufDataset;
+begin
+  DS := TBufDataset.Create(nil);
+  try
+    DS.FieldDefs.Add('N', ftInteger);
+    DS.FieldDefs.Add('T', ftString, 40);
+    DS.FieldDefs.Add('B', ftBoolean);
+    DS.FieldDefs.Add('D', ftDate);
+    DS.FieldDefs.Add('TS', ftDateTime);
+    DS.FieldDefs.Add('BL', ftMemo);
+    DS.CreateDataset;
+    DS.Open;
+
+    { Every column left unset - which is what a null column is. }
+    DS.Append;
+    DS.Post;
+    DS.First;
+    Check(SQLFieldLiteral(DS.FieldByName('N')) = 'null',
+      'a null number is the word null, not nothing at all');
+    Check(SQLFieldLiteral(DS.FieldByName('T')) = 'null',
+      'and a null string is not an empty pair of quotes');
+    Check(SQLFieldLiteral(nil) = 'null', 'and no field at all is null too');
+
+    DS.Edit;
+    DS.FieldByName('N').AsInteger := 42;
+    DS.FieldByName('T').AsString := 'O' + '''' + 'Brien';
+    DS.FieldByName('B').AsBoolean := True;
+    DS.FieldByName('D').AsDateTime := EncodeDate(2026, 7, 28);
+    DS.FieldByName('TS').AsDateTime :=
+      EncodeDate(2026, 7, 28) + EncodeTime(13, 45, 6, 0);
+    DS.Post;
+
+    Check(SQLFieldLiteral(DS.FieldByName('N')) = '42',
+      'a number is written unquoted');
+    { The one that made a generated script fail to parse. }
+    Check(SQLFieldLiteral(DS.FieldByName('T')) =
+      '''' + 'O' + '''' + '''' + 'Brien' + '''',
+      'a quote inside text is doubled: ' + SQLFieldLiteral(DS.FieldByName('T')));
+    Check(SQLFieldLiteral(DS.FieldByName('B')) = 'true',
+      'a boolean is a boolean literal, not the quoted word True');
+    { Written in the order Firebird reads rather than the machine's locale -
+      a script exported here has to run somewhere else. }
+    Check(SQLFieldLiteral(DS.FieldByName('D')) = '''' + '2026-07-28' + '''',
+      'a date is written year first: ' + SQLFieldLiteral(DS.FieldByName('D')));
+    Check(Pos('2026-07-28 13:45:06', SQLFieldLiteral(DS.FieldByName('TS'))) > 0,
+      'and a timestamp carries its time: ' + SQLFieldLiteral(DS.FieldByName('TS')));
+    { Not in the grid to write out. }
+    Check(SQLFieldLiteral(DS.FieldByName('BL')) = 'null',
+      'a blob exports as null rather than as its handle');
+
+    DS.Close;
+  finally
+    DS.Free;
   end;
 end;
 
@@ -1969,6 +2069,12 @@ begin
 
   WriteLn('Data grid edits:');
   TestRowEdits;
+
+  WriteLn('Values written into statements:');
+  TestFieldLiterals;
+
+  WriteLn('Session admin actions:');
+  TestSessionAdmin;
 
   if Failures > 0 then
   begin
