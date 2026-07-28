@@ -47,6 +47,8 @@ type
 		tsText: TTabSheet;
 		tsHex: TTabSheet;
 		edBlobHex: TMemo;		edBlobText: TMemo;
+		tsJson: TTabSheet;
+		edBlobJson: TMemo;
 		procedure pgBlobViewerChanging(Sender: TObject;	var AllowChange: Boolean);
 		procedure btnOKClick(Sender: TObject);
 		procedure FormKeyDown(Sender: TObject; var Key: Word;	Shift: TShiftState);
@@ -56,6 +58,7 @@ type
     FData: TMemoryStream;
     FReadOnly: Boolean;
     FBinary: Boolean;
+    procedure ShowJsonView(const AText: String);
     procedure SetData(const Value: TMemoryStream);
     procedure SetReadOnly(const Value: Boolean);
     { Private declarations }
@@ -89,6 +92,8 @@ begin
 	begin
 		edBlobText.Lines.Clear;
 		edBlobHex.Lines.Clear;
+		edBlobJson.Lines.Clear;
+		tsJson.TabVisible := False;
 		FBinary := False;
 		Exit;
 	end;
@@ -105,6 +110,8 @@ begin
 	  here does that. }
 	edBlobHex.ReadOnly := True;
 
+	ShowJsonView(edBlobText.Lines.Text);
+
 	{ A binary blob cannot survive a memo - line endings are normalised and
 	  anything unprintable is lost - so it is shown and not edited, whatever
 	  the caller asked for. Before this, opening one and pressing OK wrote the
@@ -117,6 +124,33 @@ begin
 		edBlobText.ReadOnly := True;
 		Caption := Caption + ' - binary, shown read-only';
 	end;
+end;
+
+{ Firebird has no JSON type - a document lives in a BLOB SUB_TYPE TEXT, and
+  the 6.0.0 server has none of the SQL/JSON functions either - so nothing on
+  the server side will say that what was stored is malformed. This will.
+
+  The tab is there when the blob *starts* like JSON rather than when it parses:
+  a document that begins with a brace and then goes wrong is exactly the case
+  where someone wants to see where. }
+procedure TfrmBlobViewer.ShowJsonView(const AText: String);
+var
+	Formatted, Error_: String;
+begin
+	tsJson.TabVisible := (not FBinary) and LooksLikeJSON(AText);
+	if not tsJson.TabVisible then
+	begin
+		edBlobJson.Lines.Clear;
+		Exit;
+	end;
+
+	Formatted := FormatJSON(AText, Error_);
+	if Error_ = '' then
+		edBlobJson.Lines.Text := Formatted
+	else
+		{ The parser's message carries the line and position, which is the useful
+		  half of being told a document is broken. }
+		edBlobJson.Lines.Text := 'This is not valid JSON.' + #13#10#13#10 + Error_;
 end;
 
 procedure TfrmBlobViewer.pgBlobViewerChanging(Sender: TObject; var AllowChange: Boolean);

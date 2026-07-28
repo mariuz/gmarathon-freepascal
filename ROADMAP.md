@@ -918,10 +918,25 @@ server rather than against the release notes.
   lacks are listed unmarked, and `RDB$ADMIN` has all 27. A role fixture rather
   than `RDB$ADMIN` alone, since an all-ones mask would pass a decoder that
   answered yes to everything.
-- [ ] **JSON / document field editor** — a tree view and validator for
-  `BLOB SUB_TYPE TEXT` holding JSON. Marathon has a blob viewer to extend.
-  Firebird 6.0.0 has no JSON functions (already recorded above), but a viewer
-  needs none.
+- [x] **JSON view of a blob** — done, as a third tab on the blob viewer rather
+  than a window of its own. Firebird has no JSON type: a document lives in a
+  `BLOB SUB_TYPE TEXT`, and 6.0.0 has none of the SQL/JSON functions either, so
+  nothing on the server will show a document with its nesting visible or say
+  that what was stored is malformed. This does both.
+
+  The tab is there when the blob *starts* like JSON - the first thing that is
+  not white space begins an object or an array - rather than when it parses. A
+  document that begins with a brace and then goes wrong is exactly the case
+  where someone needs to see where, and deciding by parsing would hide it: a
+  broken document would simply have no tab. When it does not parse, the tab
+  says so and gives the parser's own line and position.
+
+  FPC's `fpjson` does the parsing and the formatting, so there is no
+  hand-rolled JSON in here and no new dependency - it ships with the compiler.
+  Read-only, like the hex tab: it is a rendering, and writing it back would
+  mean deciding what to do with the reformatting. Not done, and worth saying:
+  this is a formatter and a validator rather than the *tree* view FlameRobin
+  describes.
 - [ ] **CSV external tables** — Firebird's `EXTERNAL FILE` tables, exposed in
   the table editor.
 - **Vector / AI embeddings** — depends on `fbvector`, a third-party UDF package

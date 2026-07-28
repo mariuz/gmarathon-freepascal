@@ -3489,6 +3489,30 @@ begin
     F.btnOKClick(F.btnOK);
     Check(Pos('changed', StreamText) > 0, 'an edit is written back on OK');
 
+    { The JSON view, which is there only when the blob starts like JSON. A
+      SQL script is text and perfectly editable, but there is nothing to
+      format. }
+    Check(not F.tsJson.TabVisible, 'a text blob that is not JSON has no JSON tab');
+
+    LoadText('{"id":1,"tags":["a","b"],"note":null}');
+    F.Data := M;
+    Check(F.tsJson.TabVisible, 'a JSON blob gets one');
+    Check(Pos('"tags"', F.edBlobJson.Lines.Text) > 0, 'holding the document');
+    Check(F.edBlobJson.Lines.Count > 1, 'formatted over several lines (' +
+      IntToStr(F.edBlobJson.Lines.Count) + ')');
+    Check(F.edBlobJson.ReadOnly, 'and read-only, since it is a rendering');
+
+    { A document that begins like JSON and then goes wrong: the tab stays, and
+      says where. Nothing on the Firebird side would have said so - a document
+      lives in a text blob and 6.0.0 has no JSON functions. }
+    LoadText('{"id":1,"broken":');
+    F.Data := M;
+    Check(F.tsJson.TabVisible, 'a broken document still offers the tab');
+    Check(Pos('not valid JSON', F.edBlobJson.Lines.Text) > 0,
+      'which says it is not valid');
+    Check(Pos('Pos', F.edBlobJson.Lines.Text) > 0,
+      'and where the parser stopped');
+
     { Now the one that lost data: bytes that are not text. }
     M.Clear;
     { A PNG's first eight bytes: no NUL among them, and plainly not text. }

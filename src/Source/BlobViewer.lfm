@@ -95,5 +95,24 @@ object frmBlobViewer: TfrmBlobViewer
         TabOrder = 0
       end
     end
+    object tsJson: TTabSheet
+      Caption = 'JSON'
+      object edBlobJson: TMemo
+        Left = 0
+        Top = 0
+        Width = 465
+        Height = 161
+        Align = alClient
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Courier New'
+        Font.Style = []
+        ParentFont = False
+        ReadOnly = True
+        ScrollBars = ssBoth
+        TabOrder = 0
+      end
+    end
   end
 end

@@ -16,7 +16,8 @@ unit BlobText;
 
 {$MODE Delphi}
 
-{ Showing a blob: as a hex dump, and deciding whether it is text at all.
+{ Showing a blob: as a hex dump, as formatted JSON, and deciding whether it is
+  text at all.
 
   The blob viewer had a tab labelled Hex that loaded the blob into a second
   memo as text - there was no hex anywhere in it - and it wrote whatever the
@@ -26,11 +27,17 @@ unit BlobText;
   pressing OK replaced it with a mangled transcription of itself.
 
   Both halves of the fix are decisions about bytes, so they are here and can be
-  checked without a window. }
+  checked without a window.
+
+  The JSON side is here for the same reason. Firebird has no JSON type - a
+  document lives in a BLOB SUB_TYPE TEXT, and the 6.0.0 server has none of the
+  SQL/JSON functions either - so nothing on the server will tell anyone that
+  what they stored is malformed, or show it to them with the nesting visible.
+  FPC's own parser does both, and it reports where it stopped. }
 
 interface
 
-uses SysUtils, Classes;
+uses SysUtils, Classes, fpjson, jsonparser;
 
 const
   { Bytes per line of the dump. Sixteen is what every hex dump does, and it
@@ -58,6 +65,23 @@ function IsBinaryData(const AData: TBytes): Boolean; overload;
   dump that silently stops looks like a blob that ends there. }
 function HexDump(AData: TStream; ALimit: Integer = 0): String; overload;
 function HexDump(const AData: TBytes; ALimit: Integer = 0): String; overload;
+
+{ True when this text is worth offering a JSON view of - the first thing in it
+  that is not white space begins an object or an array.
+
+  Deliberately a cheap look rather than a parse: the question it answers is
+  "should the JSON tab be there at all", and a blob that starts like JSON and
+  then turns out to be broken is exactly the case where someone wants to see
+  where it went wrong. Parsing to decide would hide that. }
+function LooksLikeJSON(const AText: String): Boolean;
+
+{ The same JSON, indented. AError is empty when it parsed; when it did not, the
+  result is empty and AError says what the parser objected to and where.
+
+  Firebird has no JSON type - a document lives in a BLOB SUB_TYPE TEXT - so
+  nothing on the server side will tell anyone that what they stored is not
+  valid. This is where that gets noticed. }
+function FormatJSON(const AText: String; out AError: String): String;
 
 implementation
 
@@ -153,6 +177,50 @@ end;
 function HexDump(AData: TStream; ALimit: Integer): String;
 begin
   Result := HexDump(StreamBytes(AData), ALimit);
+end;
+
+function LooksLikeJSON(const AText: String): Boolean;
+var
+  Idx: Integer;
+begin
+  Result := False;
+  Idx := 1;
+  while (Idx <= Length(AText)) and (AText[Idx] in [' ', #9, #13, #10]) do
+    Inc(Idx);
+  if Idx > Length(AText) then
+    Exit;
+  Result := AText[Idx] in ['{', '['];
+end;
+
+function FormatJSON(const AText: String; out AError: String): String;
+var
+  Data: TJSONData;
+begin
+  Result := '';
+  AError := '';
+  if Trim(AText) = '' then
+  begin
+    AError := 'There is nothing here to read as JSON.';
+    Exit;
+  end;
+  try
+    Data := GetJSON(AText);
+  except
+    on E: Exception do
+    begin
+      { The parser's own message carries the line and position, which is the
+        useful half of knowing that a document is broken. }
+      AError := E.Message;
+      Exit;
+    end;
+  end;
+  try
+    { Two spaces per level, which is what everything else that prints JSON
+      does. }
+    Result := Data.FormatJSON([], 2);
+  finally
+    Data.Free;
+  end;
 end;
 
 end.

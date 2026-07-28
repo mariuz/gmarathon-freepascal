@@ -465,6 +465,44 @@ end;
   role granted USER_MANAGEMENT (type 1) reads 0200000000000000, READ_RAW_PAGES
   (2) reads 0400..., CREATE_DATABASE (9) reads 0002..., and all of 1, 9 and 27
   together read 0202000800000000. So bit n is privilege n, low byte first. }
+{ The JSON view of a blob.
+
+  Firebird has no JSON type - a document lives in a BLOB SUB_TYPE TEXT, and
+  6.0.0 has none of the SQL/JSON functions either - so nothing on the server
+  will say that what was stored is malformed, or show it with the nesting
+  visible. Both are decisions about text. }
+procedure TestBlobJSON;
+var
+  Formatted, Error_: String;
+begin
+  { Whether to offer the view at all: the first thing that is not white space
+    begins an object or an array. }
+  Check(LooksLikeJSON('{"a":1}'), 'an object looks like JSON');
+  Check(LooksLikeJSON('   ' + LineEnding + ' [1,2]'), 'and so does an array after white space');
+  Check(not LooksLikeJSON('select * from T'), 'a SQL script does not');
+  Check(not LooksLikeJSON(''), 'and neither does nothing at all');
+  { A document that begins like JSON and then goes wrong still offers the view
+    - that is the case where someone wants to see where it went wrong. }
+  Check(LooksLikeJSON('{"broken":'), 'a broken object still looks like one');
+
+  Formatted := FormatJSON('{"b":2,"a":[1,2]}', Error_);
+  Check(Error_ = '', 'valid JSON formats without complaint');
+  Check(Pos(LineEnding, Formatted) > 0, 'and comes back on more than one line');
+  Check(Pos('"b"', Formatted) > 0, 'keeping its keys');
+  { Two spaces per level, which is what everything else that prints JSON does. }
+  Check(Pos('  "b"', Formatted) > 0, 'indented by two spaces: ' +
+    StringReplace(Copy(Formatted, 1, 20), LineEnding, '|', [rfReplaceAll]));
+
+  Formatted := FormatJSON('{"broken":', Error_);
+  Check(Formatted = '', 'invalid JSON formats to nothing');
+  Check(Error_ <> '', 'and says so');
+  { The parser reports where it stopped, which is the useful half. }
+  Check(Pos('Pos', Error_) > 0, 'naming the position: ' + Error_);
+
+  Formatted := FormatJSON('   ', Error_);
+  Check((Formatted = '') and (Error_ <> ''), 'and empty text is not valid JSON either');
+end;
+
 procedure TestSystemPrivileges;
 const
   UserManagement = 1;
@@ -2320,6 +2358,9 @@ begin
 
   WriteLn('Blob viewing:');
   TestBlobText;
+
+  WriteLn('Blob JSON view:');
+  TestBlobJSON;
 
   WriteLn('Memory usage:');
   TestMemoryUsage;
