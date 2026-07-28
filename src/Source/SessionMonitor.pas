@@ -98,7 +98,23 @@ begin
 	Caption := 'Session Monitor - ' + Value;
 	lblConnection.Caption := 'Connection: ' + Value;
 
-	Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value];
+	Conn := CacheConnectionNamed(Value);
+	{ A name the project does not hold - what removing or renaming a connection
+	  with this window open leaves behind. Everything below reads the connection,
+	  so the window goes inert rather than taking the dereference. }
+	if not Assigned(Conn) then
+	begin
+		tranMonitor.DefaultDatabase := nil;
+		qryAttachments.Database := nil;
+		qryStatements.Database := nil;
+		qryTransactions.Database := nil;
+		qryCompiled.Database := nil;
+		FCompiledSupported := False;
+		FTimeZoneSupported := False;
+		tsCompiled.TabVisible := False;
+		lblConnection.Caption := 'Connection: none';
+		Exit;
+	end;
 	tranMonitor.DefaultDatabase := Conn.Connection;
 	qryAttachments.Database := Conn.Connection;
 	qryAttachments.Transaction := tranMonitor;

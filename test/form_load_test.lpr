@@ -615,6 +615,37 @@ procedure CheckEditorsSurviveAMissingConnection;
       What + ' survives a connection that is not there' + Failure);
   end;
 
+  { The tool windows take their connection by name too, through a setter of
+    their own rather than the editors' shared one. }
+  procedure TryNamed_(AClass: TFormClass; const What: String);
+  var
+    F: TForm;
+    Failure: String;
+  begin
+    Failure := '';
+    F := nil;
+    try
+      try
+        F := AClass.Create(nil);
+        if F is TfrmSessionMonitor then
+          TfrmSessionMonitor(F).ConnectionName := 'NoSuchConnection'
+        else if F is TfrmProfiler then
+          TfrmProfiler(F).ConnectionName := 'NoSuchConnection'
+        else if F is TfrmMaintenance then
+          TfrmMaintenance(F).ConnectionName := 'NoSuchConnection';
+      except
+        on E: Exception do
+          Failure := E.ClassName + ': ' + E.Message;
+      end;
+    finally
+      F.Free;
+    end;
+    if Failure <> '' then
+      Failure := ' (' + Failure + ')';
+    Check(Failure = '',
+      What + ' survives a connection that is not there' + Failure);
+  end;
+
 begin
   WriteLn('Editors pointed at a connection that is gone:');
   Try_(TfrmTables, 'the table editor');
@@ -627,6 +658,9 @@ begin
   Try_(TfrmUDFEditor, 'the function editor');
   Try_(TfrmPackageEditor, 'the package editor');
   Try_(TfrmSQLForm, 'the SQL editor');
+  TryNamed_(TfrmSessionMonitor, 'the session monitor');
+  TryNamed_(TfrmProfiler, 'the profiler window');
+  TryNamed_(TfrmMaintenance, 'the maintenance dialog');
 end;
 
 procedure CheckConnectionSwitcher;

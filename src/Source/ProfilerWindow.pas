@@ -124,7 +124,22 @@ begin
   Caption := 'SQL Profiler - ' + Value;
   lblConnection.Caption := 'Connection: ' + Value;
 
-  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value];
+  Conn := CacheConnectionNamed(Value);
+  { The same inert state a server without a profiler gets, for the same reason:
+    there is nothing to record against. }
+  if not Assigned(Conn) then
+  begin
+    tranProfiler.DefaultDatabase := nil;
+    qrySessions.Database := nil;
+    qryStatements.Database := nil;
+    qryRecordSources.Database := nil;
+    lblConnection.Caption := 'Connection: none';
+    stsProfiler.Panels[0].Text := 'No connection';
+    btnStart.Enabled := False;
+    btnRefresh.Enabled := False;
+    btnClear.Enabled := False;
+    Exit;
+  end;
   tranProfiler.DefaultDatabase := Conn.Connection;
   qrySessions.Database := Conn.Connection;
   qrySessions.Transaction := tranProfiler;

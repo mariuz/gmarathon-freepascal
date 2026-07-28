@@ -104,7 +104,16 @@ begin
 	Caption := 'Database Maintenance - ' + Value;
 	lblConnection.Caption := 'Connection: ' + Value;
 
-	Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value];
+	Conn := CacheConnectionNamed(Value);
+	{ Everything this dialog does needs a database. Without one it holds nil and
+	  lists nothing, rather than dereferencing a connection that is not there. }
+	if not Assigned(Conn) then
+	begin
+		FDatabase := nil;
+		lblConnection.Caption := 'Connection: none';
+		lstIndexes.Items.Clear;
+		Exit;
+	end;
 	FDatabase := Conn.Connection;
 
 	RefreshIndexes;
