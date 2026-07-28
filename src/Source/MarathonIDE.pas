@@ -168,6 +168,7 @@ type
     procedure ToolsSessionMonitor;
     procedure ToolsProfiler;
     procedure ToolsSystemPrivileges;
+    procedure ToolsImportFlatFile;
     procedure ToolsMaintenance;
 		procedure ToolsMetadataExtract;
     procedure ToolsCompareSchemas;
@@ -277,7 +278,7 @@ function ItemScriptContext(Conn: TMarathonCacheConnection;
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SystemPrivilegesWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SystemPrivilegesWindow, ImportFlatFileDialog, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -1708,6 +1709,49 @@ begin
 		Exit;
 
 	F := TfrmSessionMonitor.Create(nil);
+	F.ConnectionName := ConnectName;
+	F.Show;
+end;
+
+{ And again for the flat-file import: the rows have to go into some database,
+  so the window has to be told which one. }
+procedure TMarathonIDE.ToolsImportFlatFile;
+var
+	ConnectName: String;
+	F: TfrmImportFlatFile;
+	SC: TfrmSelectConnection;
+
+begin
+	if not FCurrentProject.Open or (FCurrentProject.Cache.ConnectionCount = 0) then
+	begin
+		MessageDlg('Open a project with at least one connection first.', mtInformation, [mbOK], 0);
+		Exit;
+	end;
+
+	if FCurrentProject.Cache.ConnectionCount = 1 then
+		ConnectName := FCurrentProject.Cache.Connections[0].Caption
+	else
+	begin
+		ConnectName := '';
+		SC := TfrmSelectConnection.Create(Self);
+		try
+			SC.cmbConnections.ItemIndex := SC.cmbConnections.Items.IndexOf(FCurrentProject.Cache.ActiveConnection);
+			if SC.ShowModal = mrOK then
+			begin
+				if SC.cmbConnections.ItemIndex > 0 then
+					ConnectName := SC.cmbConnections.Text;
+			end;
+		finally
+			SC.Free;
+		end;
+		if ConnectName = '' then
+			Exit;
+	end;
+
+	if not CheckConnected(ConnectName) then
+		Exit;
+
+	F := TfrmImportFlatFile.Create(nil);
 	F.ConnectionName := ConnectName;
 	F.Show;
 end;

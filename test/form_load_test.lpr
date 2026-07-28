@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3660,6 +3660,122 @@ begin
   end;
 end;
 
+{ The flat-file import dialog.
+
+  What the import decides is checked without a window in keyword_test, and that
+  its DDL and INSERTs run is checked against a server in the smoke test. What
+  is left for here is the window's own part: reading the file the box names,
+  filling the preview with the columns and the types it guessed, and importing
+  what the preview is showing. The buttons are called rather than pressed - the
+  import reports through a MessageDlg, which under Xvfb is a hang. }
+procedure CheckImportFlatFile(Conn: TMarathonCacheConnection);
+var
+  F: TfrmImportFlatFile;
+  L: TStringList;
+  Probe: TIBQuery;
+  FileName, Err: String;
+  Rows: Integer;
+
+  procedure Discard(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      S.SQL.Text := SQLText;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+begin
+  WriteLn('Flat file import:');
+  Discard('drop table CSV_WINDOW');
+
+  FileName := GetTempDir + 'marathon_import_test.csv';
+  L := TStringList.Create;
+  try
+    L.Add('ID,LABEL,AMOUNT');
+    L.Add('1,"Alpha, first",10.5');
+    L.Add('2,Beta,20');
+    L.SaveToFile(FileName);
+  finally
+    L.Free;
+  end;
+
+  F := TfrmImportFlatFile.Create(nil);
+  Probe := TIBQuery.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    F.edFile.Text := FileName;
+    F.edTable.Text := 'CSV_WINDOW';
+
+    Check(F.BuildPlan(FileName), 'the dialog reads the file it was given');
+    if not Assigned(F.Plan) then
+      Exit;
+    Check(F.Plan.ColumnCount = 3, 'and finds its columns (' +
+      IntToStr(F.Plan.ColumnCount) + ')');
+    Check(F.Plan.RowCount = 2, 'and its rows (' + IntToStr(F.Plan.RowCount) + ')');
+
+    { The preview is the point of the window: two header rows - the name and
+      the type it guessed - and then the data. }
+    Check(F.grdPreview.RowCount = F.Plan.RowCount + 2,
+      'the preview shows the rows under two header lines');
+    Check(F.grdPreview.Cells[0, 0] = 'ID', 'naming the columns');
+    Check(F.grdPreview.Cells[2, 1] = 'double precision',
+      'and the type each will be given (' + F.grdPreview.Cells[2, 1] + ')');
+    Check(Pos('Alpha, first', F.grdPreview.Cells[1, 2]) > 0,
+      'with the quoted comma intact in the data');
+
+    { And the import itself, which is the whole file rather than the preview. }
+    Rows := F.RunImport(Err);
+    Check(Rows = 2, 'the import writes every row (' + IntToStr(Rows) + ' - ' + Err + ')');
+    if Rows < 0 then
+      Exit;
+
+    Probe.Database := Conn.Connection;
+    Probe.Transaction := Conn.Transaction;
+    Probe.AllowAutoActivateTransaction := True;
+    Probe.SQL.Text := 'select count(*) as N, sum(AMOUNT) as TOTAL from CSV_WINDOW';
+    Probe.Open;
+    Check(Probe.FieldByName('N').AsInteger = 2, 'and they are in the table');
+    Check(Abs(Probe.FieldByName('TOTAL').AsFloat - 30.5) < 0.001,
+      'with the numbers stored as numbers (' +
+      FloatToStr(Probe.FieldByName('TOTAL').AsFloat) + ')');
+    Probe.Close;
+
+    { A table it cannot create is a failure that writes nothing, rather than
+      half an import. }
+    F.edTable.Text := 'CSV_WINDOW';
+    Rows := F.RunImport(Err);
+    Check(Rows < 0, 'creating a table that is already there fails');
+    Check(Err <> '', 'and says why (' + Copy(Err, 1, 60) + ')');
+    Probe.SQL.Text := 'select count(*) from CSV_WINDOW';
+    Probe.Open;
+    Check(Probe.Fields[0].AsInteger = 2,
+      'leaving the rows that were already there alone (' +
+      IntToStr(Probe.Fields[0].AsInteger) + ')');
+    Probe.Close;
+  finally
+    Probe.Free;
+    F.Free;
+    if FileExists(FileName) then
+      DeleteFile(FileName);
+    Discard('drop table CSV_WINDOW');
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -3920,6 +4036,7 @@ begin
   CheckObjectExistence(Conn);
   CheckBlobViewer;
   CheckSystemPrivilegesWindow(Conn);
+  CheckImportFlatFile(Conn);
   CheckSQLTrace(Conn);
 end;
 

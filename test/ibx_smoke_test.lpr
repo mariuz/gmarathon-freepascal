@@ -23,7 +23,7 @@ uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils, Classes, DB, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  IBXServices, MaintenanceOps, IBPerformanceMonitor, ObjectCatalogue, ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
+  IBXServices, MaintenanceOps, IBPerformanceMonitor, ObjectCatalogue, CsvImport, ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
   TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
   SchemaDiagram, SchemaDiagramIO, RowEdits, StrUtils;
 
@@ -1843,6 +1843,163 @@ begin
   end;
 
   WriteLn('Object catalogue mapping OK (nine kinds, and a tree header has none)');
+end;
+
+{ The CSV import, run into the database.
+
+  What the import decides is checked without a server in keyword_test. What
+  this adds is the only thing that suite cannot: that the DDL and the INSERTs
+  it writes are ones Firebird accepts, and that what comes back out is what
+  went in - the comma inside a quoted field, the apostrophe, the empty cell as
+  a null rather than an empty string, and the numbers as numbers rather than
+  as text that happens to look like them. }
+procedure TestCsvImportLive;
+var
+  Lines: TStringList;
+  Plan: TCsvImportPlan;
+  Opts: TCsvOptions;
+  Probe: TIBQuery;
+  Idx: Integer;
+
+  procedure Run(const SQLText, What: String);
+  var
+    S: TIBSQL;
+  begin
+    EnsureTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := StripTrailingSemicolon(SQLText);
+      try
+        S.ExecQuery;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: ', What, ': ', E.Message);
+          WriteLn(SQLText);
+          Halt(1);
+        end;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+  procedure Discard(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    EnsureTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := SQLText;
+      try
+        S.ExecQuery;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        if Tr.Active then
+          Tr.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+begin
+  Discard('drop table CSV_IMPORTED');
+
+  Opts := DefaultCsvOptions;
+  Lines := TStringList.Create;
+  Probe := TIBQuery.Create(nil);
+  try
+    Lines.Add('ID,NAME,PRICE,WHEN_');
+    Lines.Add('1,"Smith, John",9.99,2026-07-28');
+    Lines.Add('2,O''Brien,12.50,2026-07-29');
+    { A gap in a numeric column: it must stay numeric, and arrive as null. }
+    Lines.Add('3,Plain,,2026-07-30');
+
+    Plan := PlanCsvImport(Lines, Opts);
+    try
+      Run(Plan.CreateTableSQL('CSV_IMPORTED'), 'the generated CREATE TABLE runs');
+      for Idx := 0 to Plan.RowCount - 1 do
+        Run(Plan.InsertSQL('CSV_IMPORTED', Idx),
+          'the generated INSERT for row ' + IntToStr(Idx) + ' runs');
+
+      EnsureTransaction;
+      Probe.Database := DB;
+      Probe.Transaction := Tr;
+      Probe.SQL.Text :=
+        'select count(*) as N, sum(PRICE) as TOTAL, ' +
+        '  count(PRICE) as PRICED, min(WHEN_) as FIRST_DAY ' +
+        'from CSV_IMPORTED';
+      Probe.Open;
+      if Probe.FieldByName('N').AsInteger <> 3 then
+      begin
+        WriteLn('FAIL: expected three imported rows, got ',
+                Probe.FieldByName('N').AsInteger);
+        Halt(1);
+      end;
+      { Summed on the server: proof the column is a number rather than text
+        that looks like one. }
+      if Abs(Probe.FieldByName('TOTAL').AsFloat - 22.49) > 0.001 then
+      begin
+        WriteLn('FAIL: the prices did not add up as numbers: ',
+                Probe.FieldByName('TOTAL').AsFloat:0:4);
+        Halt(1);
+      end;
+      { COUNT skips nulls: the empty cell has to be one. }
+      if Probe.FieldByName('PRICED').AsInteger <> 2 then
+      begin
+        WriteLn('FAIL: the empty cell should be null, counted ',
+                Probe.FieldByName('PRICED').AsInteger, ' prices');
+        Halt(1);
+      end;
+      if FormatDateTime('yyyy-mm-dd', Probe.FieldByName('FIRST_DAY').AsDateTime) <>
+         '2026-07-28' then
+      begin
+        WriteLn('FAIL: the dates did not arrive as dates: ',
+                Probe.FieldByName('FIRST_DAY').AsString);
+        Halt(1);
+      end;
+      Probe.Close;
+
+      { And the two values that would have broken a naive importer. }
+      Probe.SQL.Text := 'select NAME from CSV_IMPORTED order by ID';
+      Probe.Open;
+      if Trim(Probe.FieldByName('NAME').AsString) <> 'Smith, John' then
+      begin
+        WriteLn('FAIL: the quoted comma did not survive: "',
+                Probe.FieldByName('NAME').AsString, '"');
+        Halt(1);
+      end;
+      Probe.Next;
+      if Trim(Probe.FieldByName('NAME').AsString) <> 'O''Brien' then
+      begin
+        WriteLn('FAIL: the apostrophe did not survive: "',
+                Probe.FieldByName('NAME').AsString, '"');
+        Halt(1);
+      end;
+      Probe.Close;
+      if Tr.Active then
+        Tr.Commit;
+
+      WriteLn('CSV import OK (three rows, typed and quoted as written)');
+    finally
+      Plan.Free;
+    end;
+  finally
+    Probe.Free;
+    Lines.Free;
+    Discard('drop table CSV_IMPORTED');
+  end;
 end;
 
 procedure TestResultFilter;
@@ -4772,6 +4929,7 @@ begin
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestObjectCatalogue;
+    TestCsvImportLive;
     TestResultFilter;
     TestBackupAndRestore;
     TestPerformanceMonitor;

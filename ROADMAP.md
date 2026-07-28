@@ -959,10 +959,36 @@ desktop tool (Copilot integration, Azure and Fabric provisioning, DACPAC,
 notebooks, containers, Data API builder, Apache AGE graphs). What is left and
 worth having:
 
-- [ ] **Flat-file import** — both extensions have a guided CSV-to-table wizard,
-  and FlameRobin's CSV external tables point the same way. The parsing, the
-  type guessing and the generated DDL are all decidable without a window, which
-  makes it a good fit for the pattern the rest of this document follows.
+- [x] **Flat-file import** — done. Tools > Import Flat File reads a delimited
+  file, works out what each column holds, shows the columns, the types it
+  guessed and the first rows, and writes the `CREATE TABLE` and the `INSERT`s.
+  `src/Common/CsvImport.pas` decides all of that, so it is checked without a
+  window; the dialog picks the file and shows the preview and decides nothing.
+
+  Two places a naive importer quietly ruins the data, and what is done about
+  each. **Quoting**: a field may hold the delimiter, and a quote inside a
+  quoted field is written twice - a splitter that does not know that turns one
+  row into several, and an apostrophe that reaches the INSERT undoubled ends
+  the literal. **Types**: a column is only a number if *every* value in it is,
+  and an empty value says nothing either way, so a column of numbers with a gap
+  is still numbers - the gap becomes a null rather than turning the column into
+  text. Where the values genuinely disagree the column is text, which holds
+  everything.
+
+  Dates are ISO only. A file written `03/04/2026` is ambiguous in a way no
+  importer can settle, so it stays text rather than being read as one of the
+  two possible days. Column names a spreadsheet produced are made into ones
+  Firebird will take - anything that is not an identifier character becomes an
+  underscore, a name starting with a digit is prefixed, an empty one is named
+  outright.
+
+  The import is all or nothing: a half-imported file is worse than none, since
+  the rows that arrived are indistinguishable from data that was already there.
+  Verified at three levels - the splitting and typing without a database, the
+  generated statements run into the smoke database and read back (the quoted
+  comma, the apostrophe, the null, and the numbers summed *on the server* to
+  prove they are numbers rather than text that looks like it), and the window's
+  own preview and import against a live connection.
 - [ ] **Result grid column control** — freeze, hide and show columns, which
   vscode-mssql shipped as its new results grid. Small, and the grid is already
   ours to change.

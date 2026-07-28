@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -501,6 +501,152 @@ begin
 
   Formatted := FormatJSON('   ', Error_);
   Check((Formatted = '') and (Error_ <> ''), 'and empty text is not valid JSON either');
+end;
+
+{ Reading a flat file into a table.
+
+  Both VS Code database extensions ship a CSV-to-table wizard and it was the
+  one thing they had that this did not. What the import decides - how a line
+  splits, what type a column of text should be, and what DDL and DML that comes
+  to - needs no window and no database, so it is all checked here. }
+procedure TestCsvImport;
+var
+  Opts: TCsvOptions;
+  Fields: TStringList;
+  Lines: TStringList;
+  Plan: TCsvImportPlan;
+  DDL: String;
+begin
+  Opts := DefaultCsvOptions;
+
+  { Splitting, which is where a naive importer ruins the data. }
+  Fields := ParseCsvLine('a,b,c', Opts);
+  try
+    Check(Fields.Count = 3, 'three fields split into three');
+    Check(Fields[1] = 'b', 'in order');
+  finally
+    Fields.Free;
+  end;
+
+  Fields := ParseCsvLine('"Smith, John",42', Opts);
+  try
+    Check(Fields.Count = 2, 'a comma inside quotes does not split the row');
+    Check(Fields[0] = 'Smith, John', 'and the quotes come off: ' + Fields[0]);
+  finally
+    Fields.Free;
+  end;
+
+  { A quote inside a quoted field is written twice. A splitter that does not
+    know that turns one row into several. }
+  Fields := ParseCsvLine('"He said ""no""",1', Opts);
+  try
+    Check(Fields[0] = 'He said "no"', 'a doubled quote is one quote: ' + Fields[0]);
+    Check(Fields.Count = 2, 'and does not end the field early');
+  finally
+    Fields.Free;
+  end;
+
+  Fields := ParseCsvLine('a,,c', Opts);
+  try
+    Check((Fields.Count = 3) and (Fields[1] = ''), 'an empty field is still a field');
+  finally
+    Fields.Free;
+  end;
+
+  { Types. A column is only a number if every value in it is. }
+  Lines := TStringList.Create;
+  try
+    Lines.Add('ID,NAME,PRICE,WHEN_,NOTE');
+    Lines.Add('1,Widget,9.99,2026-07-28,ok');
+    Lines.Add('2,"Gadget, large",12.50,2026-07-29,');
+    Lines.Add('3,Thing,,2026-07-30,fine');
+    Plan := PlanCsvImport(Lines, Opts);
+    try
+      Check(Plan.ColumnCount = 5, 'five columns (' + IntToStr(Plan.ColumnCount) + ')');
+      Check(Plan.RowCount = 3, 'and three rows (' + IntToStr(Plan.RowCount) + ')');
+      Check(Plan.Columns[0].Name = 'ID', 'the header names the columns');
+      Check(Plan.Columns[0].Kind = ckInteger, 'a column of whole numbers is integer');
+      Check(Plan.Columns[2].Kind = ckDouble,
+        'one with a decimal point is double precision');
+      Check(Plan.Columns[3].Kind = ckDate, 'an ISO date is a date');
+      Check(Plan.Columns[1].Kind = ckText, 'and words are text');
+      { The gap in PRICE must not make it text. }
+      Check(ColumnTypeSQL(Plan.Columns[2]) = 'double precision',
+        'a missing value does not change the type');
+      Check(Plan.Columns[1].Width = Length('Gadget, large'),
+        'the width is the longest value (' + IntToStr(Plan.Columns[1].Width) + ')');
+
+      DDL := Plan.CreateTableSQL('IMPORTED');
+      Check(Pos('create table IMPORTED', DDL) > 0, 'the DDL names the table');
+      Check(Pos('ID integer', DDL) > 0, 'with the types it worked out');
+      Check(Pos('varchar(13)', DDL) > 0, 'and a width that fits the widest value');
+
+      { An empty cell is a missing value, not an empty string. }
+      Check(Pos('null', Plan.InsertSQL('IMPORTED', 2)) > 0,
+        'an empty cell inserts as null');
+      Check(Pos('''Gadget, large''', Plan.InsertSQL('IMPORTED', 1)) > 0,
+        'a quoted value keeps its comma');
+      Check(Pos('9.99', Plan.InsertSQL('IMPORTED', 0)) > 0,
+        'and a number is written unquoted');
+    finally
+      Plan.Free;
+    end;
+  finally
+    Lines.Free;
+  end;
+
+  { Without a header row the columns are named rather than taken from data. }
+  Lines := TStringList.Create;
+  try
+    Lines.Add('1,two');
+    Lines.Add('3,four');
+    Opts.FirstRowIsNames := False;
+    Plan := PlanCsvImport(Lines, Opts);
+    try
+      Check(Plan.RowCount = 2, 'the first line is data when it is not a header');
+      Check(Plan.Columns[0].Name = 'COLUMN1', 'and the columns are named for us');
+    finally
+      Plan.Free;
+    end;
+  finally
+    Lines.Free;
+  end;
+
+  { A header a spreadsheet wrote is not always a name Firebird takes. }
+  Lines := TStringList.Create;
+  try
+    Lines.Add('Order #,2026 Total,');
+    Lines.Add('1,2,3');
+    Opts.FirstRowIsNames := True;
+    Plan := PlanCsvImport(Lines, Opts);
+    try
+      Check(Plan.Columns[0].Name = 'ORDER__', 'a space and a hash become underscores: ' +
+        Plan.Columns[0].Name);
+      Check(Copy(Plan.Columns[1].Name, 1, 7) = 'COLUMN2',
+        'a name starting with a digit is prefixed: ' + Plan.Columns[1].Name);
+      Check(Plan.Columns[2].Name = 'COLUMN3', 'and an empty one is named outright');
+    finally
+      Plan.Free;
+    end;
+  finally
+    Lines.Free;
+  end;
+
+  { An apostrophe in a spreadsheet must not end the literal. }
+  Lines := TStringList.Create;
+  try
+    Lines.Add('NAME');
+    Lines.Add('O''Brien');
+    Plan := PlanCsvImport(Lines, Opts);
+    try
+      Check(Pos('''O''''Brien''', Plan.InsertSQL('T', 0)) > 0,
+        'a quote in the data is doubled: ' + Plan.InsertSQL('T', 0));
+    finally
+      Plan.Free;
+    end;
+  finally
+    Lines.Free;
+  end;
 end;
 
 procedure TestSystemPrivileges;
@@ -2367,6 +2513,9 @@ begin
 
   WriteLn('System privileges:');
   TestSystemPrivileges;
+
+  WriteLn('CSV import:');
+  TestCsvImport;
 
   if Failures > 0 then
   begin

@@ -38,6 +38,7 @@ uses
   EditorPackage in 'EditorPackage.pas' {frmPackageEditor},
   ProfilerWindow in 'ProfilerWindow.pas' {frmProfiler},
   SystemPrivilegesWindow in 'SystemPrivilegesWindow.pas' {frmSystemPrivileges},
+  ImportFlatFileDialog in 'ImportFlatFileDialog.pas' {frmImportFlatFile},
   MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
   SchemaCompareDialog in 'SchemaCompareDialog.pas' {frmSchemaCompare},
