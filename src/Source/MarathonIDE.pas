@@ -256,6 +256,16 @@ type
 var
 	MarathonIDEInstance: TMarathonIDE;
 
+{ The connection of that name, or nil when the project holds none - and nil
+  rather than a crash when there is no project yet, which is what a harness or
+  a form built during startup sees.
+
+  Every editor used to read the cache and dereference the answer on the spot,
+  so a name the project no longer holds - what removing or renaming a
+  connection with its editor open leaves behind - took the window down with an
+  access violation instead of leaving it disconnected. }
+function CacheConnectionNamed(const AName: String): TMarathonCacheConnection;
+
 implementation
 
 uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
@@ -265,6 +275,15 @@ type
 	TPluginExecute = procedure; stdcall;
 
 { TMarathonIDE }
+function CacheConnectionNamed(const AName: String): TMarathonCacheConnection;
+begin
+	Result := nil;
+	if (Trim(AName) = '') or not Assigned(MarathonIDEInstance) or
+	   not Assigned(MarathonIDEInstance.CurrentProject) then
+		Exit;
+	Result := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[AName];
+end;
+
 procedure TMarathonIDE.FileNewProject;
 begin
 	if FileCloseProject then

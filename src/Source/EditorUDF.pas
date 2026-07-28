@@ -144,7 +144,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam{$IFDEF FPC}, IBDatabase{$ENDIF};
+uses Globals, HelpMap, CompileDBObject, DropObject, UDFInputParam{$IFDEF FPC}, IBDatabase{$ENDIF}, MarathonProjectCache;
 
 {$R *.lfm}
 
@@ -318,9 +318,12 @@ begin
 end;
 
 procedure TfrmUDFEditor.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
   inherited;
-  if Value = '' then
+  Conn := CacheConnection(Value);
+  if not Assigned(Conn) then
 	begin
 		qryUtil.Database := nil;
     framDoco.qryDoco.Database := nil;
@@ -331,13 +334,13 @@ begin
   end
   else
   begin
-    qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    qryUtil.Database := Conn.Connection;
+    qryUtil.Transaction := Conn.Transaction;
 
-    framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    framDoco.qryDoco.Database := Conn.Connection;
+    framDoco.qryDoco.Transaction := Conn.Transaction;
 
-    IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+    IsInterbase6 := Conn.IsIB6;
     SQLDialect := TIBDatabase(qryUtil.Database).SQLDialect;
     stsEditor.Panels[3].Text := Value;
   end;

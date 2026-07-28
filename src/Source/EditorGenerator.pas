@@ -109,7 +109,7 @@ const
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, DropObject, CompileDBObject{$IFDEF FPC}, IBDatabase{$ENDIF};
+uses Globals, HelpMap, MarathonIDE, DropObject, CompileDBObject{$IFDEF FPC}, IBDatabase{$ENDIF}, MarathonProjectCache;
 
 {$R *.lfm}
 
@@ -282,9 +282,12 @@ begin
 end;
 
 procedure TfrmGenerators.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
   inherited;
-  if Value = '' then
+  Conn := CacheConnection(Value);
+  if not Assigned(Conn) then
   begin
     qryGenerator.Database := nil;
     IsInterbase6 := False;
@@ -293,10 +296,10 @@ begin
   end
   else
   begin
-    qryGenerator.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    qryGenerator.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    qryGenerator.Database := Conn.Connection;
+    qryGenerator.Transaction := Conn.Transaction;
 
-    IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+    IsInterbase6 := Conn.IsIB6;
     SQLDialect := TIBDatabase(qryGenerator.Database).SQLDialect;
     stsEditor.Panels[3].Text := Value;
   end;

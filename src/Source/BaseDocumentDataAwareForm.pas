@@ -86,6 +86,18 @@ type
 		  metadata in the load, so setting this afterwards is too late. }
 		property Schema : String read FSchema write FSchema;
 
+		{ The connection of that name, or nil when there is none.
+
+		  Every editor's SetDatabaseName read
+		  MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value] and
+		  dereferenced the result on the spot - up to eleven times in one setter -
+		  so a name that is not in the project, which is what a connection removed
+		  or renamed while its editor is open leaves behind, took the editor down
+		  with an access violation rather than leaving it disconnected. This
+		  answers nil for that, and for a form built before there is a project at
+		  all, which the harnesses do. }
+		function CacheConnection(const AName: String): TMarathonCacheConnection;
+
 		{ True when this connection's server has schemas at all. Firebird 5 and
 		  earlier have no RDB$SCHEMA_NAME and naming it is a hard error, so every
 		  schema predicate has to disappear rather than evaluate to true. }
@@ -158,6 +170,14 @@ end;
 function TfrmBaseDocumentDataAwareForm.GetObjectNewStatus: Boolean;
 begin
 	Result := FNewObject;
+end;
+
+function TfrmBaseDocumentDataAwareForm.CacheConnection(
+	const AName: String): TMarathonCacheConnection;
+begin
+	{ MarathonIDE owns the one implementation - the sub-dialogs that are plain
+	  forms need the same lookup and cannot reach a method here. }
+	Result := CacheConnectionNamed(AName);
 end;
 
 function TfrmBaseDocumentDataAwareForm.SupportsSchemas: Boolean;

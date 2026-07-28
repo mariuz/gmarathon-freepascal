@@ -572,6 +572,63 @@ begin
   end;
 end;
 
+{ An editor pointed at a connection the project does not hold.
+
+  This is what removing or renaming a connection with its editor open leaves
+  behind, and every editor used to read
+  MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value] and
+  dereference the answer on the spot - up to eleven times in one setter - so
+  the window went down with an access violation rather than showing itself as
+  disconnected. Found by writing the strip check above against a made-up
+  connection name, which is exactly the case this covers.
+
+  Every editor is checked rather than one of them, because the setters are
+  eight separate copies of the same code and fixing seven would look identical
+  from here. The domain editor is the one that matters most: alone among them
+  it had no disconnected branch at all, so even clearing the name crashed. }
+procedure CheckEditorsSurviveAMissingConnection;
+
+  procedure Try_(AClass: TFormClass; const What: String);
+  var
+    F: TForm;
+    Failure: String;
+  begin
+    Failure := '';
+    F := nil;
+    try
+      try
+        F := AClass.Create(nil);
+        { A name no project holds, then the empty name - the two ways an
+          editor can end up without a connection. }
+        TfrmBaseDocumentDataAwareForm(F).ConnectionName := 'NoSuchConnection';
+        TfrmBaseDocumentDataAwareForm(F).ConnectionName := '';
+      except
+        on E: Exception do
+          Failure := E.ClassName + ': ' + E.Message;
+      end;
+    finally
+      F.Free;
+    end;
+    if Failure <> '' then
+      Failure := ' (' + Failure + ')';
+    Check(Failure = '',
+      What + ' survives a connection that is not there' + Failure);
+  end;
+
+begin
+  WriteLn('Editors pointed at a connection that is gone:');
+  Try_(TfrmTables, 'the table editor');
+  Try_(TfrmViewEditor, 'the view editor');
+  Try_(TfrmStoredProcedure, 'the procedure editor');
+  Try_(TfrmTriggerEditor, 'the trigger editor');
+  Try_(TfrmDomains, 'the domain editor');
+  Try_(TfrmGenerators, 'the generator editor');
+  Try_(TfrmExceptions, 'the exception editor');
+  Try_(TfrmUDFEditor, 'the function editor');
+  Try_(TfrmPackageEditor, 'the package editor');
+  Try_(TfrmSQLForm, 'the SQL editor');
+end;
+
 procedure CheckConnectionSwitcher;
 var
   FileName: String;
@@ -627,6 +684,7 @@ begin
   finally
     F.Free;
   end;
+  CheckEditorsSurviveAMissingConnection;
   CheckEnvironmentBandOnEditors;
   CheckEnvironmentInTree;
   DeleteFile(FileName);

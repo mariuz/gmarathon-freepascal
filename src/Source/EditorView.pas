@@ -970,9 +970,12 @@ begin
 end;
 
 procedure TfrmViewEditor.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
 	inherited;
-	if Value = '' then
+	Conn := CacheConnection(Value);
+	if not Assigned(Conn) then
 	begin
 		tblTableData.Database := nil;
 		tranTableData.DefaultDatabase := nil;
@@ -987,22 +990,22 @@ begin
 	end
 	else
 	begin
-		tblTableData.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		tranTableData.DefaultDatabase := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		tblTableData.Database := Conn.Connection;
+		tranTableData.DefaultDatabase := Conn.Connection;
 
-		qryTable.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTable.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTable.Database := Conn.Connection;
+		qryTable.Transaction := Conn.Transaction;
 
-		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryUtil.Database := Conn.Connection;
+		qryUtil.Transaction := Conn.Transaction;
 
-		qryTriggers.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTriggers.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTriggers.Database := Conn.Connection;
+		qryTriggers.Transaction := Conn.Transaction;
 
-		framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		framDoco.qryDoco.Database := Conn.Connection;
+		framDoco.qryDoco.Transaction := Conn.Transaction;
 
-		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+		IsInterbase6 := Conn.IsIB6;
 		SQLDialect := qryTable.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;

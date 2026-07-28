@@ -227,7 +227,7 @@ type
 
 implementation
 
-uses Globals, MarathonIDE, SchemaNames, HelpMap, CompileDBObject, DropObject, PrintPreviewForm, ArrayDialog, EditorDomain, IBDatabase;
+uses Globals, MarathonIDE, SchemaNames, HelpMap, CompileDBObject, DropObject, PrintPreviewForm, ArrayDialog, EditorDomain, IBDatabase, MarathonProjectCache;
 
 const
 	TY_NONE              = -1;
@@ -957,11 +957,25 @@ begin
 end;
 
 procedure TfrmColumns.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
 	FDatabaseName := Value;
-	qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-	qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
-	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+	Conn := CacheConnectionNamed(Value);
+	{ These three are sub-dialogs of the table editor and cannot do
+	  anything without a connection - but a name the project no longer
+	  holds used to be dereferenced anyway. Left unbound rather than
+	  crashing. }
+	if not Assigned(Conn) then
+	begin
+		qryUtil.Database := nil;
+		FIsInterbase6 := False;
+		FSQLDialect := 0;
+		Exit;
+	end;
+	qryUtil.Database := Conn.Connection;
+	qryUtil.Transaction := Conn.Transaction;
+	FIsInterbase6 := Conn.IsIB6;
 	FSQLDialect := TIBDatabase(qryUtil.Database).SQLDialect;
 	stsEditor.Panels[3].Text := Value;
 end;

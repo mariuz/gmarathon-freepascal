@@ -124,7 +124,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, Tools, MarathonIDE, CompileDBObject;
+uses Globals, HelpMap, Tools, MarathonIDE, CompileDBObject, MarathonProjectCache;
 
 {$R *.lfm}
 
@@ -269,12 +269,26 @@ begin
 end;
 
 procedure TfrmEditorIndex.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
 	FDatabaseName := Value;
-	qryIndex.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-	qryIndex.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
-	FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-	FIsInterbase5 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB5;
+	Conn := CacheConnectionNamed(Value);
+	{ These three are sub-dialogs of the table editor and cannot do
+	  anything without a connection - but a name the project no longer
+	  holds used to be dereferenced anyway. Left unbound rather than
+	  crashing. }
+	if not Assigned(Conn) then
+	begin
+		qryIndex.Database := nil;
+		FIsInterbase6 := False;
+		FSQLDialect := 0;
+		Exit;
+	end;
+	qryIndex.Database := Conn.Connection;
+	qryIndex.Transaction := Conn.Transaction;
+	FIsInterbase6 := Conn.IsIB6;
+	FIsInterbase5 := Conn.IsIB5;
 	FSQLDialect := qryIndex.Database.SQLDialect;
 end;
 

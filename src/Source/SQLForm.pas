@@ -952,9 +952,12 @@ begin
 end;
 
 procedure TfrmSQLForm.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
 	inherited;
-	if Value = '' then
+	Conn := CacheConnection(Value);
+	if not Assigned(Conn) then
 	begin
 		cmbMode.Enabled := False;
 		transSQLStatement.DefaultDatabase := nil;
@@ -969,16 +972,16 @@ begin
 	else
 	begin
 		cmbMode.Enabled := True;
-		transSQLStatement.DefaultDatabase := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qrySQLStatement.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		perfSQL.IB_Connection := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		transSQLStatement.DefaultDatabase := Conn.Connection;
+		qrySQLStatement.Database := Conn.Connection;
+		qryUtil.Database := Conn.Connection;
+		perfSQL.IB_Connection := Conn.Connection;
 		perfSQL.Transaction := transSQLStatement;
 		qrySQLStatement.Transaction := transSQLStatement;
-		qryScript.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
+		qryScript.Database := Conn.Connection;
 		qryScript.Transaction := transSQLStatement;
 		qryUtil.Transaction := transSQLStatement;
-		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+		IsInterbase6 := Conn.IsIB6;
 		SQLDialect := TIBDatabase(qrySQLStatement.Database).SQLDialect;
 		stsSQLStatement.Panels[4].Text := Value;
 	end;

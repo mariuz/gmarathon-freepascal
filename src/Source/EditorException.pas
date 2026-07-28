@@ -117,7 +117,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject{$IFDEF FPC}, IBDatabase{$ENDIF};
+uses Globals, HelpMap, MarathonIDE, CompileDBObject, DropObject{$IFDEF FPC}, IBDatabase{$ENDIF}, MarathonProjectCache;
 
 {$R *.lfm}
 
@@ -306,9 +306,12 @@ begin
 end;
 
 procedure TfrmExceptions.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
   inherited;
-  if Value = '' then
+  Conn := CacheConnection(Value);
+  if not Assigned(Conn) then
   begin
     qryException.Database := nil;
     framDoco.qryDoco.Database := nil;
@@ -319,13 +322,13 @@ begin
   end
   else
   begin
-    qryException.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    qryException.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    qryException.Database := Conn.Connection;
+    qryException.Transaction := Conn.Transaction;
 
-    framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-    framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+    framDoco.qryDoco.Database := Conn.Connection;
+    framDoco.qryDoco.Transaction := Conn.Transaction;
 
-    IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+    IsInterbase6 := Conn.IsIB6;
 		SQLDialect := TIBDatabase(qryException.Database).SQLDialect;
     stsEditor.Panels[3].Text := Value;
   end;

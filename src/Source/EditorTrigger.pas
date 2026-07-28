@@ -1199,9 +1199,12 @@ begin
 end;
 
 procedure TfrmTriggerEditor.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
 	inherited;
-	if Value = '' then
+	Conn := CacheConnection(Value);
+	if not Assigned(Conn) then
 	begin
 		qryWarnings.Database := nil;
 		qryUtil.Database := nil;
@@ -1214,19 +1217,19 @@ begin
 	end
 	else
 	begin
-		qryWarnings.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryWarnings.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryWarnings.Database := Conn.Connection;
+		qryWarnings.Transaction := Conn.Transaction;
 
-		qryUtil.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryUtil.Database := Conn.Connection;
+		qryUtil.Transaction := Conn.Transaction;
 
-		qryTrigger.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		qryTrigger.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		qryTrigger.Database := Conn.Connection;
+		qryTrigger.Transaction := Conn.Transaction;
 
-		framDoco.qryDoco.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-		framDoco.qryDoco.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
+		framDoco.qryDoco.Database := Conn.Connection;
+		framDoco.qryDoco.Transaction := Conn.Transaction;
 
-		IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
+		IsInterbase6 := Conn.IsIB6;
 		SQLDialect := qryUtil.Database.SQLDialect;
 		stsEditor.Panels[3].Text := Value;
 	end;

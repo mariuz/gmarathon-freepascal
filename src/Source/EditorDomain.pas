@@ -192,7 +192,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, MarathonIDE, MarathonProjectCacheTypes, CompileDBObject, DropObject, ArrayDialog, IBDatabase;
+uses Globals, HelpMap, MarathonIDE, MarathonProjectCache, MarathonProjectCacheTypes, CompileDBObject, DropObject, ArrayDialog, IBDatabase;
 
 const
 	TY_NONE = -1;
@@ -1097,13 +1097,30 @@ begin
 end;
 
 procedure TfrmDomains.SetDatabaseName(const Value: String);
+var
+	Conn: TMarathonCacheConnection;
 begin
 	inherited;
-	qryDomain.Database := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Connection;
-	qryDomain.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].Transaction;
-	IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[Value].IsIB6;
-	SQLDialect := TIBDatabase(qryDomain.Database).SQLDialect;
-	stsEditor.Panels[3].Text := Value;
+	Conn := CacheConnection(Value);
+	{ Alone among the editors this had no disconnected branch at all, so
+	  clearing the connection - or naming one the project no longer holds - went
+	  straight through a nil into an access violation. It now says what the
+	  others say. }
+	if not Assigned(Conn) then
+	begin
+		qryDomain.Database := nil;
+		IsInterbase6 := False;
+		SQLDialect := 0;
+		stsEditor.Panels[3].Text := 'No Connection';
+	end
+	else
+	begin
+		qryDomain.Database := Conn.Connection;
+		qryDomain.Transaction := Conn.Transaction;
+		IsInterbase6 := Conn.IsIB6;
+		SQLDialect := TIBDatabase(qryDomain.Database).SQLDialect;
+		stsEditor.Panels[3].Text := Value;
+	end;
 end;
 
 function TfrmDomains.GetActiveStatusBar: TStatusBar;
