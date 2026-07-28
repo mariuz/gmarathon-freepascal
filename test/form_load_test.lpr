@@ -1682,13 +1682,14 @@ begin
       take every row that looks alike. }
     F.tblTableData.First;
     F.tblTableData.Delete;
-    { Deleting a row: the preview does not show it and UpdatesPending does not
-      report it, so what is checked is the part that matters - the row stays
-      until Apply and goes when it runs. The preview's blindness to deletions
-      is recorded in PendingDataChanges and is a known limit, not something
-      asserted as correct here. }
-    Check(Trim(F.PendingDataChanges) = '',
-      'a pending deletion does not reach the preview - a known limit');
+    { Deleting a row. A cached deletion is invisible to both a dataset walk and
+      UpdatesPending, so the editor records it as the user makes it - which is
+      what these check. }
+    Script := F.PendingDataChanges;
+    Check(F.HasPendingDataChanges, 'a deleted row counts as a pending change');
+    Check(Pos('delete from', AnsiLowerCase(Script)) > 0,
+      'and the preview shows the DELETE');
+    Check(Pos('where ID =', Script) > 0, 'with the row found by its key');
     Check(CountWhere('') = Before, 'and the row is there until it is applied');
     F.ApplyDataChanges;
     Check(CountWhere('') = Before - 1, 'applying the delete removes it');

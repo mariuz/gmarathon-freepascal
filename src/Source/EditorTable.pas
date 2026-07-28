@@ -139,6 +139,18 @@ type
 		{ The update statements the data grid writes through, built from the
 		  table's columns and key when the Data tab opens. }
 		FDataUpdates: TIBUpdateSQL;
+		{ Rows deleted in the grid and not yet written.
+
+		  Recorded as the user deletes them rather than read back afterwards,
+		  because a cached deletion cannot be walked to: it is excluded from
+		  every view of the dataset, and neither setting UpdateRecordTypes to
+		  include cusDeleted nor reading IBX's CachedUpdateStatus brings it
+		  back. UpdatesPending does know about it - that is how Apply knows to
+		  run - but knowing one exists is not knowing which row it was.
+
+		  Noting what was done is reliable where asking what was done is not. }
+		FPendingDeletes: TRowEditList;
+		procedure DataBeforeDelete(DataSet: TDataSet);
 		procedure WindowListClick(Sender: TObject);
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		procedure NewField;
@@ -312,6 +324,8 @@ end;
 
 procedure TfrmTables.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
+	FPendingDeletes.Free;
+	FPendingDeletes := nil;
 	inherited;
 	MarathonIDEInstance.CurrentProject.TEFieldsColumns.Items[0].Width := lvFieldList.Columns[0].Width;
 	MarathonIDEInstance.CurrentProject.TEFieldsColumns.Items[1].Width := lvFieldList.Columns[1].Width;
@@ -2861,6 +2875,7 @@ var
   F: TField;
   Bookmark: TBookmark;
   WasTypes: TIBUpdateRecordTypes;
+  WasIdx: Integer;
 
   function Unquoted(AField: TField): Boolean;
   begin
@@ -2938,6 +2953,18 @@ begin
         end;
         tblTableData.Next;
       end;
+      { The deletions recorded as they were made. They come last because that
+        is the order they are safest in: a row deleted and one inserted in the
+        same batch must not have the delete run first if the insert reuses its
+        key. }
+      if Assigned(FPendingDeletes) then
+        for Idx := 0 to FPendingDeletes.Count - 1 do
+        begin
+          E := AList.Add(reDelete, FObjectName, FSchema);
+          for WasIdx := 0 to FPendingDeletes[Idx].KeyCount - 1 do
+            with FPendingDeletes[Idx].Key(WasIdx) do
+              E.AddKey(Name, Value, IsNull, Unquoted);
+        end;
     finally
       tblTableData.UpdateRecordTypes := WasTypes;
       if Assigned(Bookmark) then
@@ -2959,8 +2986,15 @@ end;
 
 function TfrmTables.HasPendingDataChanges: Boolean;
 begin
+  { UpdatesPending does report a cached deletion, once the dataset can write at
+    all. It appeared not to before this grid had update statements: a Delete on
+    a read-only dataset changes nothing, so there was nothing pending to
+    report. The recorded deletions are still asked about, because a delete
+    followed by a cancel of the other changes should not leave this saying
+    there is nothing to do. }
   Result := tblTableData.Active and tblTableData.CachedUpdates and
-    tblTableData.UpdatesPending;
+    (tblTableData.UpdatesPending or
+     (Assigned(FPendingDeletes) and (FPendingDeletes.Count > 0)));
 end;
 
 function TfrmTables.PendingChangeCount: Integer;
@@ -2990,16 +3024,6 @@ begin
   try
     CollectDataChanges(L);
     Result := RowEditScript(L);
-    { A deleted row is not listed. Walking the dataset does not reach a cached
-      deletion - setting UpdateRecordTypes to include cusDeleted and reading
-      CachedUpdateStatus were both tried, and neither made it visible - and
-      UpdatesPending does not report one either, so this method is not even
-      reached when the only pending change is a delete.
-
-      That is a real limit and not a tidy one: the preview shows inserts and
-      updates faithfully and says nothing at all about deletions. Apply still
-      writes them. Until it can list them, a caller must not present this as
-      the complete set of pending changes. }
   finally
     L.Free;
   end;
@@ -3010,6 +3034,8 @@ begin
   if not HasPendingDataChanges then
     Exit;
   tblTableData.ApplyUpdates;
+  if Assigned(FPendingDeletes) then
+    FPendingDeletes.Clear;
   if Assigned(tblTableData.Transaction) then
     TIBTransaction(tblTableData.Transaction).CommitRetaining;
 end;
@@ -3019,6 +3045,8 @@ begin
   if not tblTableData.Active then
     Exit;
   tblTableData.CancelUpdates;
+  if Assigned(FPendingDeletes) then
+    FPendingDeletes.Clear;
 end;
 
 { Makes the data grid able to write.
@@ -3089,9 +3117,44 @@ begin
     FDataUpdates.DeleteSQL.Text := 'delete from ' + QualifiedObjectName +
       ' where ' + KeyList;
     tblTableData.UpdateObject := FDataUpdates;
+    { Deletions are noted as they are made; see FPendingDeletes. }
+    tblTableData.BeforeDelete := DataBeforeDelete;
   finally
     Keys.Free;
     Cols.Free;
+  end;
+end;
+
+{ Records the row about to go, while it can still be read.
+
+  Called before the delete, which is the only moment its key values are still
+  reachable - afterwards the row is gone from every view of the dataset. }
+procedure TfrmTables.DataBeforeDelete(DataSet: TDataSet);
+var
+  Keys: TStringList;
+  Idx: Integer;
+  F: TField;
+  E: TRowEdit;
+begin
+  if not Assigned(FPendingDeletes) then
+    FPendingDeletes := TRowEditList.Create;
+  Keys := TStringList.Create;
+  try
+    CollectKeyColumns(Keys);
+    { No key means no safe DELETE, and RowEdits will say so in the preview
+      rather than write one. The row is still recorded so the user is told
+      about it. }
+    E := FPendingDeletes.Add(reDelete, FObjectName, FSchema);
+    for Idx := 0 to Keys.Count - 1 do
+    begin
+      F := tblTableData.FindField(Keys[Idx]);
+      if Assigned(F) then
+        E.AddKey(F.FieldName, F.AsString, F.IsNull,
+          F.DataType in [ftSmallint, ftInteger, ftWord, ftFloat, ftCurrency,
+            ftBCD, ftLargeint, ftFMTBcd]);
+    end;
+  finally
+    Keys.Free;
   end;
 end;
 
