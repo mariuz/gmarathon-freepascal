@@ -78,7 +78,7 @@ unit SQLForm;
 
 interface
 
-uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SQLStatementText, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls, SQLCompletionHost;
+uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls, DB, Menus, Grids, DBGrids, Buttons, Registry, ClipBrd, ToolWin, Printers, DBCtrls, TASeries, TAGraph, ActnList, ImgList, BufDataset, IBDatabase, IBQuery, IB, SingletonQuery, SQLStatementText, SynEdit, SynEditTypes, SyntaxMemoWithStuff2, adbpedit, BaseDocumentForm, BaseDocumentDataAwareForm, MarathonInternalInterfaces, GimbalToolsAPI, PlanUnit, IBPerformanceMonitor, DiagramTree, rmCompatControls, SQLCompletionHost, GridLayout;
 
 type
 	TExecuteMode = (exStatement, exScript);
@@ -207,6 +207,10 @@ type
 		{ Set while the filter is being switched on or off, because doing that
 		  re-opens the dataset and AfterOpen would otherwise undo it. }
 		FApplyingFilter: Boolean;
+		{ Which of the result's columns are shown, and how many stay put while
+		  the rest scrolls. Owned here rather than by the dialog, so a choice
+		  survives the dialog closing and the next look at the same result. }
+		FGridLayout: TGridLayout;
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
@@ -217,6 +221,7 @@ type
 		function BindStatementParameters: Boolean;
 		function ExecuteSingletonOutput(const SQLText: String): Boolean;
 		procedure ResetResultSet;
+		procedure ApplyGridLayout;
 		function ActiveResultSet: TDataSet;
 		procedure AddError(Info: String);
 		procedure UpdateEncoding;
@@ -226,6 +231,10 @@ type
 	public
 		{ Public declarations }
 		Modified: Boolean;
+		{ Reached from the results popup: pick the columns to show and how many
+		  to keep in view. }
+		procedure ChooseResultColumns;
+		property GridLayout: TGridLayout read FGridLayout;
 		procedure NewFile;
 		function InternalCloseQuery: Boolean; override;
 		procedure OpenFile(FileName: String);
@@ -363,7 +372,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm, GridColumnsDialog;
 
 {$R *.lfm}
 
@@ -471,6 +480,7 @@ end;
 procedure TfrmSQLForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
 	It.Free;
+	FreeAndNil(FGridLayout);
 
 	with TRegistry.Create do
 		try
@@ -766,9 +776,42 @@ begin
 		dsSQLStatement.DataSet := FSingletonResult;
 end;
 
+procedure TfrmSQLForm.ApplyGridLayout;
+begin
+	if not Assigned(FGridLayout) then
+		FGridLayout := TGridLayout.Create;
+	{ A grid with no explicit columns makes one per field and offers no way to
+	  hide any of them, so this is what makes the choice possible at all. }
+	LayoutFromDataSet(FGridLayout, ActiveResultSet);
+	ApplyLayout(grdSQLStatement, FGridLayout);
+end;
+
+procedure TfrmSQLForm.ChooseResultColumns;
+var
+	Dlg: TfrmGridColumns;
+begin
+	if not Assigned(ActiveResultSet) or not ActiveResultSet.Active then
+	begin
+		MessageDlg('Run something first - there are no columns to choose from.',
+			mtInformation, [mbOK], 0);
+		Exit;
+	end;
+	ApplyGridLayout;
+	Dlg := TfrmGridColumns.Create(nil);
+	try
+		Dlg.Edit(FGridLayout);
+		if Dlg.ShowModal = mrOK then
+			ApplyLayout(grdSQLStatement, FGridLayout);
+	finally
+		Dlg.Free;
+	end;
+end;
+
 procedure TfrmSQLForm.qrySQLStatementAfterOpen(DataSet: TDataSet);
 begin
 	GlobalFormatFields(DataSet);
+	{ A new result set is a new set of columns. }
+	ApplyGridLayout;
 	{ A new result starts unfiltered - but only a new *result*. Switching the
 	  filter on re-opens the dataset, so clearing the box here used to run in the
 	  middle of applying a filter and turn it straight back off: the box emptied

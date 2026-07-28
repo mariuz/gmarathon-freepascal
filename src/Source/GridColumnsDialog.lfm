@@ -1,0 +1,79 @@
+object frmGridColumns: TfrmGridColumns
+  Left = 400
+  Height = 400
+  Top = 200
+  Width = 320
+  BorderStyle = bsDialog
+  Caption = 'Result Columns'
+  ClientHeight = 400
+  ClientWidth = 320
+  Position = poScreenCenter
+  LCLVersion = '2.2.6.0'
+  object lblColumns: TLabel
+    Left = 12
+    Height = 15
+    Top = 10
+    Width = 180
+    Caption = 'Columns to show:'
+    ParentColor = False
+  end
+  object lstColumns: TCheckListBox
+    Left = 12
+    Height = 280
+    Top = 30
+    Width = 296
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    ItemHeight = 0
+    TabOrder = 0
+  end
+  object lblFrozen: TLabel
+    Left = 12
+    Height = 15
+    Top = 322
+    Width = 150
+    Anchors = [akLeft, akBottom]
+    Caption = 'Keep this many in view:'
+    ParentColor = False
+  end
+  object edFrozen: TSpinEdit
+    Left = 176
+    Height = 23
+    Top = 318
+    Width = 60
+    Anchors = [akLeft, akBottom]
+    MaxValue = 100
+    TabOrder = 1
+  end
+  object btnAll: TButton
+    Left = 248
+    Height = 25
+    Top = 317
+    Width = 60
+    Anchors = [akRight, akBottom]
+    Caption = 'All'
+    OnClick = btnAllClick
+    TabOrder = 2
+  end
+  object btnOK: TButton
+    Left = 144
+    Height = 25
+    Top = 360
+    Width = 80
+    Anchors = [akRight, akBottom]
+    Caption = 'OK'
+    Default = True
+    OnClick = btnOKClick
+    TabOrder = 3
+  end
+  object btnCancel: TButton
+    Left = 232
+    Height = 25
+    Top = 360
+    Width = 80
+    Anchors = [akRight, akBottom]
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 4
+  end
+end

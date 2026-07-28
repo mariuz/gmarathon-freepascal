@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, ServerMetrics, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, ServerMetrics, GridLayout, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -725,6 +725,88 @@ begin
     Check(H.Count = 3, 'however long it is left running');
   finally
     H.Free;
+  end;
+end;
+
+{ Which columns a result grid shows, and how many stay put.
+
+  A select over a wide table returns thirty columns and the one being compared
+  is off the right-hand edge. Each of these rules has a way of going wrong that
+  leaves a grid nobody can use, which is why they are decided here rather than
+  in the dialog. }
+procedure TestGridLayout;
+var
+  L: TGridLayout;
+  Cols: TStringList;
+  Vis: TStringList;
+begin
+  L := TGridLayout.Create;
+  Cols := TStringList.Create;
+  try
+    Cols.Add('ID');
+    Cols.Add('NAME');
+    Cols.Add('PRICE');
+    Cols.Add('NOTE');
+    L.SetColumns(Cols);
+    Check(L.Count = 4, 'the layout takes the columns it is given');
+    Check(L.VisibleCount = 4, 'and shows them all to begin with');
+
+    Check(L.Hide('NOTE'), 'a column hides');
+    Check(not L.IsVisible('NOTE'), 'and stops being visible');
+    Check(L.VisibleCount = 3, 'leaving the rest (' + IntToStr(L.VisibleCount) + ')');
+    Vis := L.VisibleNames;
+    try
+      Check(Vis.Count = 3, 'the visible list is the visible ones');
+      Check(Vis.IndexOf('NOTE') < 0, 'without the hidden one');
+      Check(Vis[0] = 'ID', 'in the order the columns came');
+    finally
+      Vis.Free;
+    end;
+
+    L.Show('NOTE');
+    Check(L.IsVisible('NOTE'), 'and shows again');
+
+    { A name that is not there is not a column. }
+    Check(not L.Hide('NOT_A_COLUMN'), 'an unknown column cannot be hidden');
+    Check(not L.IsVisible('NOT_A_COLUMN'), 'and is not visible either');
+
+    { Freezing: at least one column has to be left to scroll. }
+    L.FrozenCount := 2;
+    Check(L.FrozenCount = 2, 'two columns can be frozen');
+    L.FrozenCount := 99;
+    Check(L.FrozenCount = 3,
+      'freezing more than there are leaves one to scroll (' +
+      IntToStr(L.FrozenCount) + ' of 4)');
+    L.FrozenCount := -5;
+    Check(L.FrozenCount = 0, 'and a negative freeze is none');
+
+    { Hiding a frozen column must take its place in the freeze with it, or the
+      grid keeps a column fixed that is no longer there. }
+    L.FrozenCount := 3;
+    L.Hide('NOTE');
+    Check(L.FrozenCount = 2,
+      'hiding a column reduces the freeze to fit (' + IntToStr(L.FrozenCount) + ')');
+
+    { The last column stays: a grid with nothing in it looks broken rather
+      than empty. }
+    L.ShowAll;
+    Check(L.Hide('ID') and L.Hide('NAME') and L.Hide('PRICE'),
+      'three of four hide');
+    Check(L.VisibleCount = 1, 'leaving one');
+    Check(not L.Hide('NOTE'), 'and the last one refuses to hide');
+    Check(L.VisibleCount = 1, 'so something is always shown');
+
+    { A new result set is a new set of columns - a hidden name must not carry
+      over and hide a column of the same name in an unrelated query. }
+    Cols.Clear;
+    Cols.Add('NOTE');
+    Cols.Add('OTHER');
+    L.SetColumns(Cols);
+    Check(L.IsVisible('NOTE'), 'a new result set starts with everything shown');
+    Check(L.FrozenCount = 0, 'and nothing frozen');
+  finally
+    Cols.Free;
+    L.Free;
   end;
 end;
 
@@ -2598,6 +2680,9 @@ begin
 
   WriteLn('Server metrics:');
   TestServerMetrics;
+
+  WriteLn('Result grid columns:');
+  TestGridLayout;
 
   if Failures > 0 then
   begin

@@ -1869,6 +1869,12 @@ object frmMarathonMain: TfrmMarathonMain
       Hint = 'Which roles may do what to the server'
       OnExecute = ToolsSystemPrivilegesExecute
     end
+    object ViewResultColumns: TAction
+      Category = 'View'
+      Caption = 'Result &Columns...'
+      Hint = 'Choose which result columns to show, and how many stay in view'
+      OnExecute = ViewResultColumnsExecute
+    end
     object ToolsServerDashboard: TAction
       Category = 'Tools'
       Caption = 'Server &Dashboard...'

@@ -203,6 +203,9 @@ object dmMenus: TdmMenus
     object Refresh1: TMenuItem
       Action = frmMarathonMain.ViewRefresh
     end
+    object ResultColumns1: TMenuItem
+      Action = frmMarathonMain.ViewResultColumns
+    end
     object N21: TMenuItem
       Caption = '-'
     end

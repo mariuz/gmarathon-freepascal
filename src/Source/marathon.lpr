@@ -40,6 +40,7 @@ uses
   SystemPrivilegesWindow in 'SystemPrivilegesWindow.pas' {frmSystemPrivileges},
   ImportFlatFileDialog in 'ImportFlatFileDialog.pas' {frmImportFlatFile},
   ServerDashboard in 'ServerDashboard.pas' {frmServerDashboard},
+  GridColumnsDialog in 'GridColumnsDialog.pas' {frmGridColumns},
   MaintenanceDialog in 'MaintenanceDialog.pas' {frmMaintenance},
   MetaExtractWizard in 'MetaExtractWizard.pas' {frmMetaExtractWizard},
   SchemaCompareDialog in 'SchemaCompareDialog.pas' {frmSchemaCompare},

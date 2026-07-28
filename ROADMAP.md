@@ -1028,9 +1028,29 @@ worth having:
   comma, the apostrophe, the null, and the numbers summed *on the server* to
   prove they are numbers rather than text that looks like it), and the window's
   own preview and import against a live connection.
-- [ ] **Result grid column control** — freeze, hide and show columns, which
-  vscode-mssql shipped as its new results grid. Small, and the grid is already
-  ours to change.
+- [x] **Result grid column control** — done. *View > Result Columns…* on the
+  results popup picks which columns the grid shows and how many stay in view
+  while the rest scrolls. A select over a wide table returns thirty columns
+  with the one being compared off the right-hand edge; this is what makes that
+  readable.
+
+  `src/Common/GridLayout.pas` holds the rules, each of which has a way of going
+  wrong that leaves an unusable grid: freezing *every* column leaves nothing to
+  scroll, so the freeze is clamped to one short of what is visible; hiding a
+  frozen column takes its place in the freeze with it, or the grid keeps a
+  column fixed that is no longer there; and the last visible column refuses to
+  hide, since a grid with nothing in it reads as broken rather than as empty. A
+  new result set is a new set of columns, so a hidden name does not carry over
+  and hide a same-named column in an unrelated query.
+
+  The half only a grid can answer is why this is not cosmetic: a `TDBGrid` with
+  an empty `Columns` collection builds one per field and offers no way to hide
+  any of them, so the columns have to be built before the choosing means
+  anything. Building them turned up a defect the harness caught rather than a
+  user: clearing the columns while `FixedCols` still holds the last freeze
+  raises *"FixedCols can't be > ColCount"* on the way through - a rebuild that
+  worked the first time and threw the second. The freeze is taken down before
+  the clear now.
 - [x] **A server dashboard** — done. Tools > Server Dashboard samples the
   database's own `MON$IO_STATS` and `MON$RECORD_STATS` counters on a timer and
   plots them. Everything else here that reads `MON$` shows a snapshot; this is

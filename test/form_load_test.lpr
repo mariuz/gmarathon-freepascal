@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3898,6 +3898,87 @@ begin
   end;
 end;
 
+{ Choosing which result columns to show.
+
+  What may be hidden and what the freeze clamps to is decided by GridLayout and
+  checked without a window. What this adds is the half that only a grid can
+  answer: a TDBGrid with no explicit Columns builds one per field and offers no
+  way to hide any of them, so the columns have to be made before any of the
+  choosing means anything. }
+procedure CheckResultColumns(Conn: TMarathonCacheConnection);
+var
+  F: TfrmSQLForm;
+begin
+  WriteLn('Result grid columns:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    F.qrySQLStatement.Close;
+    F.qrySQLStatement.SQL.Text :=
+      'select 1 as ONE, 2 as TWO, 3 as THREE, 4 as FOUR from rdb$database';
+    try
+      if not F.transSQLStatement.Active then
+        F.transSQLStatement.StartTransaction;
+      F.qrySQLStatement.Open;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped: the probe row would not run (', E.Message, ')');
+        Exit;
+      end;
+    end;
+
+    { Opening a result builds the columns, which is what makes hiding
+      possible - before this the grid had none of its own. }
+    Check(F.grdSQLStatement.Columns.Count = 4,
+      'the grid has a column per field (' +
+      IntToStr(F.grdSQLStatement.Columns.Count) + ')');
+    Check(Assigned(F.GridLayout) and (F.GridLayout.Count = 4),
+      'and the layout knows them all');
+
+    F.GridLayout.Hide('TWO');
+    ApplyLayout(F.grdSQLStatement, F.GridLayout);
+    Check(F.grdSQLStatement.Columns.Count = 3,
+      'hiding one leaves three in the grid (' +
+      IntToStr(F.grdSQLStatement.Columns.Count) + ')');
+    Check(F.grdSQLStatement.Columns[1].FieldName = 'THREE',
+      'and the rest keep their order (' +
+      F.grdSQLStatement.Columns[1].FieldName + ')');
+
+    { Freezing: LCL counts the row indicator as a fixed column, so two frozen
+      columns is three fixed. }
+    F.GridLayout.FrozenCount := 2;
+    ApplyLayout(F.grdSQLStatement, F.GridLayout);
+    Check(F.grdSQLStatement.FixedCols = 3,
+      'two frozen columns leave three fixed, counting the indicator (' +
+      IntToStr(F.grdSQLStatement.FixedCols) + ')');
+
+    { Something is always shown, and always something to scroll. }
+    F.GridLayout.FrozenCount := 99;
+    ApplyLayout(F.grdSQLStatement, F.GridLayout);
+    Check(F.grdSQLStatement.FixedCols < F.grdSQLStatement.Columns.Count + 1,
+      'freezing everything still leaves a column to scroll');
+
+    { A new result set is a new set of columns: the hidden one comes back
+      rather than hiding a same-named column in an unrelated query. }
+    F.qrySQLStatement.Close;
+    F.qrySQLStatement.SQL.Text :=
+      'select 1 as TWO, 2 as OTHER from rdb$database';
+    F.qrySQLStatement.Open;
+    Check(F.grdSQLStatement.Columns.Count = 2,
+      'a new result rebuilds the columns (' +
+      IntToStr(F.grdSQLStatement.Columns.Count) + ')');
+    Check(F.GridLayout.IsVisible('TWO'),
+      'and a name hidden in the last one is shown in this');
+
+    F.qrySQLStatement.Close;
+    if F.transSQLStatement.Active then
+      F.transSQLStatement.Commit;
+  finally
+    F.Free;
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -4152,6 +4233,7 @@ begin
     slow thing to recognise. }
   CheckResultExport(Conn);
   CheckResultFilter(Conn);
+  CheckResultColumns(Conn);
   CheckSessionMonitorLive(Conn);
   CheckMetadataSearch(Conn);
   CheckDropStatements(Conn);

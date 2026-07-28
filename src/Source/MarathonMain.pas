@@ -578,6 +578,7 @@ type
     procedure ToolsSystemPrivilegesExecute(Sender: TObject);
     procedure ToolsImportFlatFileExecute(Sender: TObject);
     procedure ToolsServerDashboardExecute(Sender: TObject);
+    procedure ViewResultColumnsExecute(Sender: TObject);
     procedure ToolsMaintenanceExecute(Sender: TObject);
 		procedure ProjectCreateFolderExecute(Sender: TObject);
     procedure ProjectCreateFolderUpdate(Sender: TObject);
@@ -784,7 +785,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor, MarathonOptions;
+uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor, MarathonOptions, SQLForm;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -1362,6 +1363,18 @@ end;
 procedure TfrmMarathonMain.ToolsServerDashboardExecute(Sender: TObject);
 begin
 	MarathonIDEInstance.ToolsServerDashboard;
+end;
+
+{ The result grid belongs to the SQL editor, so this asks whichever window is
+  in front and does nothing anywhere else - the item sits on the shared data
+  popup, which every grid uses. }
+procedure TfrmMarathonMain.ViewResultColumnsExecute(Sender: TObject);
+var
+	F: TForm;
+begin
+	F := Screen.ActiveForm;
+	if F is TfrmSQLForm then
+		TfrmSQLForm(F).ChooseResultColumns;
 end;
 
 procedure TfrmMarathonMain.ToolsSessionMonitorExecute(Sender: TObject);
