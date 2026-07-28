@@ -891,6 +891,44 @@ inside it.
   semicolons and the procedure then *runs*, so the body was not cut in half;
   and a statement naming a table that does not exist is reported by name.
 
+- [x] **The PSQL debugger, measured against Firebird's grammar** — two thousand
+  lines interpreting somebody else's language, with nothing ever compiled
+  through it. The interesting question for a parser is not "does it work" but
+  "how much of the language does it know", so it is asked that, twice over.
+
+  **By keyword**: the grammar in `sqlyacc.y` carries 281 tokens; Firebird 6
+  publishes 234 reserved words in `RDB$KEYWORDS`, and **88 of them have no
+  token at all** - among them `CASE`, `TRUE`, `FALSE`, `BOOLEAN`, `INSERTING`,
+  `UPDATING`, `DELETING`, `ROW_COUNT`, `SQLSTATE`, `OVER`, `WINDOW`,
+  `RETURNING`, `DECFLOAT`, `INT128` and `LATERAL`.
+
+  **By behaviour**, which is what the test does: each body is put to the
+  *server* first - a body Firebird rejects proves nothing - and then to the
+  debugger. **Seven of the sixteen** constructs Firebird accepts are
+  understood. What parses: variables and assignment, `IF`/`ELSE`, `WHILE`,
+  `FOR SELECT … INTO`, `WHEN ANY`, `ROW_COUNT`, `RDB$GET_CONTEXT`. What does
+  not: `EXECUTE PROCEDURE`, `CASE`, `EXECUTE STATEMENT`, `LEAVE`, `BOOLEAN`
+  and `TRUE`, window functions, `MERGE`, `INSERT … RETURNING INTO`, and
+  `DECFLOAT` variables. The grammar is the InterBase one this was ported from;
+  it has not met Firebird 1.5 yet, let alone 6.
+
+  The count is asserted as a **floor**, not an exact number: closing a gap
+  should make the test pass rather than fail, so "there are still gaps" is
+  deliberately not asserted anywhere.
+
+  Two things had to change before any of this could run. The compile step
+  raised its **own `MessageDlg`** on failure - a dialog under Xvfb is a hang
+  rather than a failure, which is a large part of why this was never tested -
+  so it reports through `LastCompileError` and the window that asked does the
+  telling. And `TIBDebuggerVM.Compile` dereferenced
+  `ConnectionByName[…]` unguarded, the same crash the editors and tool windows
+  had.
+
+  Not covered, and worth saying plainly: **execution**. Stepping, breakpoints
+  and the call stack are wired to the stored-procedure editor window and its
+  breakpoint UI, so driving them needs more than a connection. The parser is
+  what this pins.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

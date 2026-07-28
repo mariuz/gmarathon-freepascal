@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -4167,6 +4167,188 @@ begin
   end;
 end;
 
+{ The PSQL debugger's parser, against what Firebird itself accepts.
+
+  IBDebuggerVM interprets PSQL: it parses a procedure with the yacc grammar in
+  sqlyacc.y and walks it statement by statement. Two thousand lines, and
+  nothing had ever compiled a procedure through it.
+
+  The interesting question for a parser of somebody else's language is not
+  "does it work" but "how much of the language does it know", so each body
+  below is put to the *server* first - if Firebird will not create the
+  procedure, the body is wrong and proves nothing - and then to the debugger.
+  Where the server accepts a body and the debugger cannot parse it, that is a
+  gap, and it is recorded as one rather than dressed up as a pass. }
+procedure CheckDebuggerGrammar(Conn: TMarathonCacheConnection);
+var
+  VM: TIBDebuggerVM;
+  Supported, Unsupported: Integer;
+
+  { True when the server accepts this as a procedure body. }
+  function ServerAccepts(const ABody: String): Boolean;
+  var
+    S: TIBSQL;
+  begin
+    Result := False;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.SQL.Text := 'create or alter procedure DBG_PROBE ' + ABody;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+        Result := True;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+  { Reports what the debugger makes of a body the server has accepted. The
+    result is recorded rather than asserted: this is a map of what the parser
+    knows, and a check that failed for every gap would be a wall of noise. }
+  procedure Probe(const AWhat, ABody: String);
+  var
+    Parsed, ServerOK: Boolean;
+  begin
+    ServerOK := ServerAccepts(ABody);
+    if not ServerOK then
+    begin
+      WriteLn('       .... ', AWhat, ': Firebird itself rejects this body');
+      Exit;
+    end;
+    Parsed := VM.Compile('DBG_PROBE', 'create procedure DBG_PROBE ' + ABody);
+    if Parsed then
+    begin
+      Inc(Supported);
+      WriteLn('       [parses]  ', AWhat);
+    end
+    else
+    begin
+      Inc(Unsupported);
+      WriteLn('       [gap]     ', AWhat);
+    end;
+  end;
+
+begin
+  WriteLn('PSQL debugger grammar:');
+  Supported := 0;
+  Unsupported := 0;
+  VM := TIBDebuggerVM.Create;
+  try
+    VM.DatabaseName := 'EditorHarness';
+
+    { The shape the debugger was written for. If this does not parse, nothing
+      below is worth reading - so this one is asserted rather than counted. }
+    Check(VM.Compile('DBG_PROBE',
+      'create procedure DBG_PROBE returns (N integer) as ' +
+      'begin N = 1; suspend; end'),
+      'a plain procedure compiles');
+    if not VM.Compile('DBG_PROBE',
+      'create procedure DBG_PROBE returns (N integer) as ' +
+      'begin N = 1; suspend; end') then
+    begin
+      WriteLn('       the parser said: ', VM.LastCompileError);
+      Exit;
+    end;
+
+    { InterBase-era PSQL, which this grammar was built for. }
+    Probe('variables and assignment',
+      'returns (N integer) as declare variable V integer; ' +
+      'begin V = 2; N = V * 2; suspend; end');
+    Probe('IF / ELSE',
+      'returns (N integer) as begin if (1 = 1) then N = 1; else N = 2; suspend; end');
+    Probe('WHILE',
+      'returns (N integer) as begin N = 0; while (N < 3) do N = N + 1; suspend; end');
+    Probe('FOR SELECT ... INTO',
+      'returns (N integer) as begin ' +
+      'for select 1 from rdb$database into :N do suspend; end');
+    Probe('EXCEPTION handling (WHEN ANY)',
+      'returns (N integer) as begin ' +
+      'begin N = 1; when any do N = 2; end suspend; end');
+    Probe('EXECUTE PROCEDURE',
+      'as declare variable V integer; begin ' +
+      'execute procedure DBG_HELPER returning_values :V; end');
+
+    { Firebird 1.5 and later - all of it long since standard PSQL. }
+    Probe('CASE expression',
+      'returns (N integer) as begin ' +
+      'N = case when 1 = 1 then 10 else 20 end; suspend; end');
+    Probe('EXECUTE STATEMENT',
+      'returns (N integer) as begin ' +
+      'execute statement ''select 1 from rdb$database'' into :N; suspend; end');
+    Probe('LEAVE out of a labelled loop',
+      'returns (N integer) as begin N = 0; ' +
+      'L1: while (N < 9) do begin N = N + 1; if (N = 2) then leave L1; end ' +
+      'suspend; end');
+
+    { Firebird 2 and later. }
+    Probe('ROW_COUNT after a DML statement',
+      'returns (N integer) as begin ' +
+      'update rdb$database set rdb$description = rdb$description; ' +
+      'N = row_count; suspend; end');
+    Probe('RDB$GET_CONTEXT',
+      'returns (N varchar(32)) as begin ' +
+      'N = rdb$get_context(''SYSTEM'', ''ENGINE_VERSION''); suspend; end');
+
+    { Firebird 3 and later. }
+    Probe('BOOLEAN variables and TRUE/FALSE',
+      'returns (N integer) as declare variable B boolean; begin ' +
+      'B = true; if (B) then N = 1; else N = 0; suspend; end');
+    Probe('a window function in a query',
+      'returns (N integer) as begin ' +
+      'select count(*) over () from rdb$database into :N; suspend; end');
+    Probe('MERGE',
+      'as begin merge into RDB$DATABASE d using (select 1 x from rdb$database) s ' +
+      'on 1 = 0 when not matched then insert (RDB$DESCRIPTION) values (null); end');
+    Probe('INSERT ... RETURNING into a variable',
+      'returns (N integer) as begin ' +
+      'insert into DBG_T (ID) values (1) returning ID into :N; suspend; end');
+
+    { Firebird 4 and later. }
+    Probe('a DECFLOAT variable',
+      'returns (N decfloat) as begin N = 1.5; suspend; end');
+
+    WriteLn('       ', Supported, ' of ', Supported + Unsupported,
+      ' constructs Firebird accepts are understood by the debugger');
+    { A floor rather than an exact count: this guards the ones that work
+      today against a regression, and says nothing about the gaps - a gap
+      closed should make this test pass, not fail, so "there are still gaps"
+      is deliberately not asserted. }
+    Check(Supported >= 7,
+      'the debugger still understands the constructs it understood before (' +
+      IntToStr(Supported) + ')');
+
+    { A body it cannot parse must come back as an answer, not as a dialog.
+      This is the change that made any of this testable: the compile step
+      raised its own MessageDlg, which under Xvfb is a hang rather than a
+      failure, which is why two thousand lines had never been driven. }
+    Check(not VM.Compile('DBG_PROBE', 'create procedure DBG_PROBE as begin @@@ end'),
+      'a body that will not parse fails rather than hanging on a dialog');
+    Check(VM.LastCompileError <> '', 'and says what it objected to');
+
+    { And the same guard the editors and tool windows needed. }
+    VM.DatabaseName := 'NoSuchConnection';
+    try
+      VM.Compile('DBG_PROBE',
+        'create procedure DBG_PROBE returns (N integer) as begin N = 1; suspend; end');
+      Check(True, 'a connection that is not there does not take the debugger down');
+    except
+      on E: Exception do
+        Check(False, 'a connection that is not there does not take the debugger down (' +
+          E.ClassName + ')');
+    end;
+  finally
+    VM.Free;
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -4423,6 +4605,7 @@ begin
   CheckResultFilter(Conn);
   CheckResultColumns(Conn);
   CheckScriptExecutive(Conn);
+  CheckDebuggerGrammar(Conn);
   CheckSessionMonitorLive(Conn);
   CheckMetadataSearch(Conn);
   CheckDropStatements(Conn);

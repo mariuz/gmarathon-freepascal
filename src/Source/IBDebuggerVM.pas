@@ -68,6 +68,9 @@ type
     FJunkList : TList;
     FHaveOutput: Boolean;
     FErrorMessage: String;
+    { What the last Compile objected to. }
+    FLastError: String;
+    function GetLastError: String;
     function ProcessBreakpoint(Line : Integer) : Boolean;
     function GetNextStatement(S : TStatement; var BPSet : Boolean) : Boolean;
   public
@@ -77,6 +80,9 @@ type
     procedure Clear;
     procedure BreakExecution;
     function Compile(ProcName : String; ProcSource : String) : Boolean;
+    { Why the last Compile returned False: the parser's complaint, or the
+      exception the compile step raised. Empty after a compile that worked. }
+    property LastError : String read GetLastError;
     function Dump : String;
     function Errors : String;
     function Output : String;
@@ -167,6 +173,8 @@ type
     procedure UpdateLocals;
     procedure UpdateWatches;
     function Compile(ProcName : String; ProcSource : String) : Boolean;
+    { Why the last Compile returned False. Empty when it worked. }
+    function LastCompileError: String;
 		function CompileSubProc(ProcName : String) : Boolean;
     function Dump : String;
     function Errors : String;
@@ -249,6 +257,15 @@ begin
   if Assigned(ExecutionResults) then
     ExecutionResults.Free;
   inherited Destroy;
+end;
+
+{ The parser writes its complaints to its own error list and the compile step
+  raises; both are the same question to a caller, so both come out here. }
+function TProcModule.GetLastError: String;
+begin
+  Result := Trim(FLastError);
+  if Result = '' then
+    Result := Trim(TSQLParser(FSQLParser).Lexer.yyerrorfile.Text);
 end;
 
 function TProcModule.Errors : String;
@@ -1324,6 +1341,8 @@ var
 
 begin
   //do the parse and compile the proc...
+  FLastError := '';
+  TSQLParser(FSQLParser).Lexer.yyerrorfile.Clear;
   TSQLParser(FSQLParser).lexer.yyinput.Text := ProcSource;
   PResult := FSQLParser.yyparse;
   if PResult = 0 then
@@ -1336,7 +1355,11 @@ begin
 		except
 			on E : Exception do
 			begin
-				MessageDlg(E.Message, mtError, [mbOK], 0);
+				{ Reported rather than shown. A compile that raises its own dialog
+				  cannot be driven by anything but a person - which is why nothing
+				  had ever tested this - and the window that asked for the compile
+				  is the one that knows how to tell whoever asked. }
+				FLastError := E.Message;
 				Result := False;
 			end;
     end;
@@ -1597,15 +1620,35 @@ end;
 function TIBDebuggerVM.Compile(ProcName : String; ProcSource: String) : Boolean;
 var
   M : TProcModule;
+  Conn : TMarathonCacheConnection;
 
 begin
   Clear;
   M := TProcModule.Create;
   M.DebuggerVM := Self;
-  M.IsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].IsIB6;
-	M.SQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].SQLDialect;
+  { The same guard the editors needed: a name the project no longer holds -
+    what renaming a connection with a debugger window open leaves behind - used
+    to be dereferenced here and take the window down. }
+  Conn := CacheConnectionNamed(FDatabaseName);
+  if Assigned(Conn) then
+  begin
+    M.IsInterbase6 := Conn.IsIB6;
+    M.SQLDialect := Conn.SQLDialect;
+  end
+  else
+  begin
+    M.IsInterbase6 := True;
+    M.SQLDialect := 3;
+  end;
   FModules.Add(M);
   Result := M.Compile(ProcName, ProcSource);
+end;
+
+function TIBDebuggerVM.LastCompileError: String;
+begin
+  Result := '';
+  if FModules.Count > 0 then
+    Result := TProcModule(FModules[FModules.Count - 1]).LastError;
 end;
 
 function TIBDebuggerVM.FieldSourceJoin(const ARelAlias, AFieldAlias: String): String;
