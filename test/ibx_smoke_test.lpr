@@ -25,7 +25,7 @@ uses
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
   ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
   TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
-  SchemaDiagram, SchemaDiagramIO;
+  SchemaDiagram, SchemaDiagramIO, RowEdits;
 
 type
   { The trace's event is "of object", so it needs a method to hand it to - a
@@ -386,6 +386,292 @@ begin
   end;
   if Tr.InTransaction then
     Tr.Commit;
+end;
+
+{ One table's whole life, through the pieces that make it.
+
+  Every other check here exercises one unit against the server. This walks a
+  table from nothing to nothing through all of them in the order a user would:
+  design it, read it back, put rows in, extract its DDL, query it, see it in
+  the schema diagram, alter it, and drop it.
+
+  It is worth having separately because the units agree with each other only if
+  each hands the next something it can use, and nothing that tests them one at
+  a time can show that. Each step below uses what the previous step produced
+  rather than a value written here. }
+procedure TestEndToEndTableLifecycle;
+var
+  Design, Reread, Target: TTableDesign;
+  Col: TColumnDesign;
+  Statements: TStringList;
+  Extractor: TDDLExtractor;
+  DDL: String;
+  Model: TQueryModel;
+  Diagram: TSchemaDiagram;
+  Edits: TRowEditList;
+  E: TRowEdit;
+  Idx, Rows: Integer;
+  Found: Boolean;
+
+  { Its own, rather than the Col above: that one is declared further down the
+    file, and a walk that depends on where a helper sits is a walk that breaks
+    when the file is reordered. }
+  function NewCol(const AName, AType: String;
+    ANotNull: Boolean = False): TColumnDesign;
+  begin
+    Result.OriginalName := '';
+    Result.Name := AName;
+    Result.DataType := AType;
+    Result.NotNull := ANotNull;
+    Result.DefaultValue := '';
+    Result.ComputedAs := '';
+    Result.Collation := '';
+  end;
+
+  procedure Run(const SQLText, What: String);
+  var
+    S: TIBSQL;
+  begin
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := StripTrailingSemicolon(SQLText);
+      try
+        S.ExecQuery;
+      except
+        on Ex: Exception do
+        begin
+          WriteLn('FAIL: end-to-end, ', What, ': ', Ex.Message);
+          WriteLn(SQLText);
+          if Tr.InTransaction then
+            Tr.Rollback;
+          Halt(1);
+        end;
+      end;
+    finally
+      S.Free;
+    end;
+    if Tr.InTransaction then
+      Tr.Commit;
+  end;
+
+begin
+  WriteLn('End to end - a table''s whole life:');
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Q.SQL.Text := 'execute block as begin ' +
+    'if (exists(select 1 from rdb$relations where rdb$relation_name = ''E2E_ITEM'')) then ' +
+    '  execute statement ''drop table E2E_ITEM''; end';
+  Q.ExecSQL;
+  Tr.Commit;
+
+  { 1. Designed, not written by hand - the designer's own model builds it. }
+  Design := TTableDesign.Create('E2E_ITEM');
+  try
+    Design.AddColumn(NewCol('ID', 'integer', True));
+    Design.AddColumn(NewCol('NAME', 'varchar(30)'));
+    Design.PrimaryKey.Add('ID');
+    Run(CreateTableScript(Design), 'creating the designed table');
+    WriteLn('  ok   the designer''s script creates the table');
+  finally
+    Design.Free;
+  end;
+
+  { 2. Read back through the designer's reader. What it returns is what every
+    later step works from - not a copy of what was written above. }
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Design := ReadTableDesign(DB, Tr, 'E2E_ITEM');
+  if not Assigned(Design) then
+  begin
+    WriteLn('FAIL: end-to-end, the table did not read back');
+    Halt(1);
+  end;
+  if (Design.ColumnCount <> 2) or (Design.PrimaryKey.Count <> 1) then
+  begin
+    WriteLn('FAIL: end-to-end, read back ', Design.ColumnCount,
+      ' column(s) and ', Design.PrimaryKey.Count, ' key column(s)');
+    Halt(1);
+  end;
+  WriteLn('  ok   and the reader sees what the designer made');
+
+  { 3. Rows, through the statements the data grid would produce. }
+  Edits := TRowEditList.Create;
+  try
+    for Idx := 1 to 3 do
+    begin
+      E := Edits.Add(reInsert, 'E2E_ITEM');
+      E.AddValue('ID', IntToStr(Idx), False, True);
+      E.AddValue('NAME', 'row ' + IntToStr(Idx));
+    end;
+    if Edits.UnsafeCount > 0 then
+    begin
+      WriteLn('FAIL: end-to-end, the grid''s inserts were reported unsafe');
+      Halt(1);
+    end;
+    for Idx := 0 to Edits.Count - 1 do
+      Run(RowEditStatement(Edits[Idx]), 'running the grid''s insert');
+  finally
+    Edits.Free;
+  end;
+  WriteLn('  ok   the data grid''s statements put rows in it');
+
+  { 4. Its DDL, from the extractor, naming the columns the reader found. }
+  Extractor := TDDLExtractor.Create(nil);
+  try
+    Extractor.Database := DB;
+    Extractor.Transaction := Tr;
+    Extractor.SQLDialect := 3;
+    Extractor.IsInterbase6 := True;
+    EnsureTransaction;
+    DDL := Extractor.Extract(ddlTable, ddlstNone, 'E2E_ITEM');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Extractor.Free;
+  end;
+  for Idx := 0 to Design.ColumnCount - 1 do
+    if Pos(AnsiUpperCase(Trim(Design.Column(Idx).Name)), AnsiUpperCase(DDL)) = 0 then
+    begin
+      WriteLn('FAIL: end-to-end, the extracted DDL is missing ',
+        Design.Column(Idx).Name);
+      Halt(1);
+    end;
+  WriteLn('  ok   the extractor names every column the reader found');
+
+  { 5. A query built over it by the query builder, run as it generates it. }
+  Model := TQueryModel.Create;
+  try
+    Model.AddTable('', 'E2E_ITEM');
+    for Idx := 0 to Design.ColumnCount - 1 do
+      Model.AddColumn(Model.Tables[0].Alias, Design.Column(Idx).Name);
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.Close;
+    Q.SQL.Text := StripTrailingSemicolon(BuildSelectSQL(Model));
+    try
+      Q.Open;
+      Rows := 0;
+      while not Q.EOF do
+      begin
+        Inc(Rows);
+        Q.Next;
+      end;
+      Q.Close;
+    except
+      on Ex: Exception do
+      begin
+        WriteLn('FAIL: end-to-end, the built query was rejected: ', Ex.Message);
+        Halt(1);
+      end;
+    end;
+    if Rows <> 3 then
+    begin
+      WriteLn('FAIL: end-to-end, the built query returned ', Rows,
+        ' row(s), expected the 3 that were inserted');
+      Halt(1);
+    end;
+    if Tr.InTransaction then
+      Tr.Commit;
+  finally
+    Model.Free;
+  end;
+  WriteLn('  ok   a query built over it returns the rows that were put in');
+
+  { 6. And it appears in the diagram, with the columns it was designed with. }
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Diagram := ReadSchemaDiagram(DB, Tr);
+  try
+    if not Assigned(Diagram.FindTable('E2E_ITEM')) then
+    begin
+      WriteLn('FAIL: end-to-end, the table is not in the schema diagram');
+      Halt(1);
+    end;
+    if Diagram.FindTable('E2E_ITEM').Columns.Count <> Design.ColumnCount then
+    begin
+      WriteLn('FAIL: end-to-end, the diagram shows ',
+        Diagram.FindTable('E2E_ITEM').Columns.Count,
+        ' column(s), the designer made ', Design.ColumnCount);
+      Halt(1);
+    end;
+  finally
+    Diagram.Free;
+  end;
+  WriteLn('  ok   and it appears in the schema diagram with those columns');
+
+  { 7. Altered through the designer's diff, on rows that already exist. }
+  Target := Design.Clone;
+  try
+    Col := Target.Column(1);
+    Col.DataType := 'varchar(60)';
+    Target.SetColumn(1, Col);
+    Target.AddColumn(NewCol('QTY', 'integer'));
+    Statements := TableDesignStatements(Design, Target);
+    try
+      if Statements.Count = 0 then
+      begin
+        WriteLn('FAIL: end-to-end, altering the design generated nothing');
+        Halt(1);
+      end;
+      if not Tr.InTransaction then
+        Tr.StartTransaction;
+      try
+        ApplyTableDesign(DB, Tr, Statements.ToStringArray);
+        Tr.Commit;
+      except
+        on Ex: Exception do
+        begin
+          WriteLn('FAIL: end-to-end, the alter script was rejected: ', Ex.Message);
+          Halt(1);
+        end;
+      end;
+    finally
+      Statements.Free;
+    end;
+  finally
+    Target.Free;
+  end;
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Reread := ReadTableDesign(DB, Tr, 'E2E_ITEM');
+  try
+    Found := False;
+    for Idx := 0 to Reread.ColumnCount - 1 do
+      if SameText(Reread.Column(Idx).Name, 'QTY') then
+        Found := True;
+    if not Found or (Reread.ColumnCount <> 3) then
+    begin
+      WriteLn('FAIL: end-to-end, the alter did not land - ',
+        Reread.ColumnCount, ' column(s), QTY found: ', Found);
+      Halt(1);
+    end;
+  finally
+    Reread.Free;
+  end;
+  { The rows put in at step 3 have to have survived being altered around. }
+  Q.Close;
+  Q.SQL.Text := 'select count(*) from E2E_ITEM';
+  Q.Open;
+  Rows := Q.Fields[0].AsInteger;
+  Q.Close;
+  if Tr.InTransaction then
+    Tr.Commit;
+  if Rows <> 3 then
+  begin
+    WriteLn('FAIL: end-to-end, ', Rows, ' row(s) survived the alter, expected 3');
+    Halt(1);
+  end;
+  WriteLn('  ok   the designer alters it without losing the rows in it');
+
+  Design.Free;
+  Run('drop table E2E_ITEM', 'dropping the table');
+  WriteLn('  ok   and it drops cleanly at the end');
 end;
 
 { The schema diagram's reader, against a real server.
@@ -3723,6 +4009,7 @@ begin
     TestTableDesignRoundTrip;
     TestQueryBuilderSQL;
     TestSchemaDiagramReader;
+    TestEndToEndTableLifecycle;
     TestServerKeywordList;
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));

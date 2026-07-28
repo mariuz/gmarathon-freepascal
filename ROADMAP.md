@@ -619,6 +619,19 @@ its headline features have no Firebird counterpart at all.
   tables want placing near what they reference.
 
 
+### What else the Firebird probe found
+
+Checked against the 6.0.0 test server and then against this codebase, which is
+the order that matters — twice now an item has been recorded as missing when it
+was already there.
+
+- `MON$COMPILED_STATEMENTS` — **already done.** The session monitor has a tab
+  for it, gated on ODS 13.1 and hidden on older servers.
+- `MON$ATTACHMENTS.MON$SESSION_TIMEZONE` — **done here.** A column in the
+  attachments list, selected only when the server has it: naming a column that
+  is not there is a hard error rather than a null.
+- `SKIP LOCKED`, `RDB$PUBLICATIONS`, `RDB$SCHEMAS` — already supported.
+
 ## Explicitly out of scope
 
 Adapted-but-rejected FlameRobin roadmap items, and why:

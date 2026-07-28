@@ -20,7 +20,7 @@ interface
 
 uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF}
 	SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls, ExtCtrls,
-	DB, DBGrids, IBDatabase, IBQuery;
+	DB, DBGrids, IBDatabase, IBQuery, StrUtils;
 
 type
 	TfrmSessionMonitor = class(TForm)
@@ -62,6 +62,7 @@ type
 	private
 		FConnectionName: String;
 		FCompiledSupported: Boolean;
+		FTimeZoneSupported: Boolean;
 		procedure SetConnectionName(const Value: String);
 		function GetCurrentAttachmentId: Integer;
 		procedure ExecuteAdminStatement(const SQL: String);
@@ -112,6 +113,7 @@ begin
 	  does not exist is a hard error, so hide the tab rather than let a refresh
 	  fail on older servers. }
 	FCompiledSupported := Conn.IsODSAtLeast(ODS_FB4_MAJOR, ODS_FB5_MINOR);
+	FTimeZoneSupported := Conn.IsODSAtLeast(ODS_FB4_MAJOR, 0);
 	tsCompiled.TabVisible := FCompiledSupported;
 
 	RefreshData;
@@ -291,9 +293,15 @@ begin
 	  falls back to its number instead of being mislabelled. Aliases are
 	  unquoted and upper case because IBX normalises a field name to that
 	  anyway, so a prettier quoted alias would not survive to the grid. }
+	{ MON$SESSION_TIMEZONE is Firebird 4 and later. Naming a column that is not
+	  there is a hard error rather than a null, so it is selected only when the
+	  server has it - the same rule as every other version-gated column here. }
 	qryAttachments.SQL.Text :=
 		'select a.mon$attachment_id, a.mon$user, a.mon$remote_address, a.mon$remote_process, ' +
 		'cast(a.mon$timestamp as varchar(64)) as MON$TIMESTAMP, ' +
+		IfThen(FTimeZoneSupported,
+			'trim(a.mon$session_timezone) as SESSION_TIMEZONE, ',
+			'cast(null as varchar(64)) as SESSION_TIMEZONE, ') +
 		'coalesce(replace(trim(st.rdb$type_name), ''_'', '' ''), cast(a.mon$state as varchar(11))) as STATE ' +
 		'from mon$attachments a ' +
 		'left join rdb$types st on st.rdb$field_name = ''MON$STATE'' and st.rdb$type = a.mon$state ' +
