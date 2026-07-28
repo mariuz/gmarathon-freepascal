@@ -795,6 +795,36 @@ inside it.
   object generated an unqualified `DROP`. It takes one now, and all eight
   editors pass theirs.
 
+- [x] **"Does this object exist" was nine copies of the same twenty lines** —
+  `Globals.DoesObjectExist` carried a block per object kind differing only in
+  the catalogue table and column, each with its own fallback, its own
+  transaction guard and its own error dialog, so a fix to any of it reached one
+  kind. The mapping is a mapping now: `src/Common/ObjectCatalogue.pas` says
+  which catalogue holds which kind and builds the query, and the function is
+  63 lines instead of 279.
+
+  Split in two while it was open, because it could not be tested at all: the
+  old function raised a dialog when the answer was no, and a modal dialog under
+  Xvfb is a hang rather than a failure - so the "not there" path, which is the
+  interesting one, was unreachable from the harness. `ObjectExists` answers and
+  says nothing; `DoesObjectExist` is that plus the message. Both answers are
+  now checked against a live database, for every kind, and the mapping is
+  checked without one.
+
+  One deliberate change of behaviour: the package branch swallowed a failing
+  query, because `RDB$PACKAGES` does not exist before Firebird 3 and asking is
+  a hard error rather than an empty answer. Every kind does now - "the
+  catalogue cannot answer" and "there is no such object" mean the same thing to
+  every caller of this.
+
+- [ ] **The compile path keeps a fourth copy** — `CompileDBObject.pas` asks
+  whether a procedure or function exists with its own inline queries, to decide
+  whether to rewrite `CREATE` as `ALTER`, and it does not qualify by schema. It
+  should ask `ObjectExists` like everything else. Left for its own change
+  rather than folded into this one: it is 900 lines of parser-driven text
+  rewriting with no coverage, and changing it blind is worth less than the
+  duplication costs.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

@@ -23,7 +23,7 @@ uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils, Classes, DB, BufDataset, IB, IBDatabase, IBQuery, IBSQL, DDLExtractor,
   MarathonProjectCacheTypes, ScriptAs, SingletonQuery, SQLStatementText, XlsxWriter,
-  IBXServices, MaintenanceOps, IBPerformanceMonitor, ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
+  IBXServices, MaintenanceOps, IBPerformanceMonitor, ObjectCatalogue, ProfilerQueries, SafeDisconnect, SchemaCompare, CreateDatabase, SchemaObjects, ibxscript,
   TableDesign, TableDesignIO, QueryModel, MarathonSQLMonitor, SQLTraceFormat,
   SchemaDiagram, SchemaDiagramIO, RowEdits, StrUtils;
 
@@ -1771,6 +1771,78 @@ begin
     Perf.Free;
     PerfTr.Free;
   end;
+end;
+
+{ Which catalogue holds which kind of object.
+
+  Nine copies of the same twenty lines in Globals.DoesObjectExist became one
+  mapping and one query, so the mapping is what there is to get wrong: a table
+  looked up in the wrong catalogue answers "no such object" for something that
+  is plainly there. Pure, so it needs no server. }
+procedure TestObjectCatalogue;
+var
+  Table_, Column_: String;
+
+  procedure Expect(AKind: TGSSCacheType; const ATable, AColumn, What: String);
+  begin
+    if not CatalogueTableFor(AKind, Table_, Column_) then
+    begin
+      WriteLn('FAIL: no catalogue for ', What);
+      Halt(1);
+    end;
+    if (Table_ <> ATable) or (Column_ <> AColumn) then
+    begin
+      WriteLn('FAIL: ', What, ' looked up in ', Table_, '.', Column_,
+              ', expected ', ATable, '.', AColumn);
+      Halt(1);
+    end;
+  end;
+
+begin
+  Expect(ctTable, 'rdb$relations', 'rdb$relation_name', 'a table');
+  { A view is a relation with a view source, so it is found the same way. }
+  Expect(ctView, 'rdb$relations', 'rdb$relation_name', 'a view');
+  Expect(ctTrigger, 'rdb$triggers', 'rdb$trigger_name', 'a trigger');
+  Expect(ctSP, 'rdb$procedures', 'rdb$procedure_name', 'a procedure');
+  Expect(ctGenerator, 'rdb$generators', 'rdb$generator_name', 'a generator');
+  Expect(ctException, 'rdb$exceptions', 'rdb$exception_name', 'an exception');
+  Expect(ctPackage, 'rdb$packages', 'rdb$package_name', 'a package');
+  Expect(ctUDF, 'rdb$functions', 'rdb$function_name', 'a function');
+  Expect(ctDomain, 'rdb$fields', 'rdb$field_name', 'a domain');
+
+  { A header node names a branch of the tree, not an object, and is not
+    looked up this way. Answering with some other catalogue would be worse
+    than answering not at all. }
+  if CatalogueTableFor(ctTableHeader, Table_, Column_) then
+  begin
+    WriteLn('FAIL: a tree header should have no catalogue of its own');
+    Halt(1);
+  end;
+
+  { The query, including the schema clause the caller hands it. }
+  if ObjectExistsSQL('rdb$relations', 'rdb$relation_name', 'CUSTOMERS', '') <>
+     'select rdb$relation_name from rdb$relations ' +
+     'where rdb$relation_name = ''CUSTOMERS''' then
+  begin
+    WriteLn('FAIL: the existence query is not what was expected: ',
+      ObjectExistsSQL('rdb$relations', 'rdb$relation_name', 'CUSTOMERS', ''));
+    Halt(1);
+  end;
+  if Pos('and X', ObjectExistsSQL('t', 'c', 'N', ' and X')) = 0 then
+  begin
+    WriteLn('FAIL: the schema clause is not appended');
+    Halt(1);
+  end;
+  { A name with a quote in it must not end the literal - the same rule as
+    everywhere else, and here it guards a query rather than a script. }
+  if Pos('''O''''BRIEN''', ObjectExistsSQL('t', 'c', 'O''BRIEN', '')) = 0 then
+  begin
+    WriteLn('FAIL: a quote in the name is not escaped: ',
+      ObjectExistsSQL('t', 'c', 'O''BRIEN', ''));
+    Halt(1);
+  end;
+
+  WriteLn('Object catalogue mapping OK (nine kinds, and a tree header has none)');
 end;
 
 procedure TestResultFilter;
@@ -4699,6 +4771,7 @@ begin
     TestServerKeywordList;
     TestSQLTraceLive;
     TestCreateDatabase(HostPrefixOf(DatabaseName));
+    TestObjectCatalogue;
     TestResultFilter;
     TestBackupAndRestore;
     TestPerformanceMonitor;

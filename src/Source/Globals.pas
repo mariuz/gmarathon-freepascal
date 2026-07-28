@@ -266,6 +266,8 @@ function StripQuotesFromQuotedIdentifier(S: String): String;
 function IsIdentifierQuoted(S: String): Boolean;
 function ShouldBeQuoted(S: String): Boolean;
 function CheckNameLength(S: String): Boolean;
+function ObjectExists(S: String; ObjType : TGSSCacheType; DatabaseName: String;
+	Schema: String): Boolean;
 function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String;
 	Schema: String = ''): Boolean;
 
@@ -367,7 +369,7 @@ var
 
 implementation
 
-uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, RowEdits, SchemaNames, IconScaling, SchemaObjects, FirebirdKeywords;
+uses BlobViewer, SQLAssistantDragAndDrop, MarathonProjectCache, EditorSnippet, MarathonIDE, XlsxWriter, RowEdits, ObjectCatalogue, SchemaNames, IconScaling, SchemaObjects, FirebirdKeywords;
 
 const
   // Firebird BLR type constants (from ibase.h), as stored in
@@ -859,230 +861,75 @@ begin
 	end;
 end;
 
-function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String;
+{ Whether an object of that name is in the database, without saying anything
+  about it. Split from DoesObjectExist so both answers can be checked: that one
+  raises a dialog when the answer is no, and a modal dialog cannot be driven by
+  the harness at all - so the "not there" path was untestable while it was the
+  only entry point. }
+function ObjectExists(S: String; ObjType : TGSSCacheType; DatabaseName: String;
 	Schema: String): Boolean;
 var
 	DB : TMarathonCacheConnection;
 	Q : TIBQuery;
+	Table_, Column_ : String;
 
 begin
 	Result := False;
 	DB := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[DatabaseName];
-	if Assigned(DB) then
-	begin
-		Q := TIBQuery.Create(nil);
-		try
-			Q.Database := DB.Connection;
-			Q.Transaction := DB.Transaction;
-			{ Assigning a transaction does not start one, and the tree's own
-			  queries commit when they finish - so by the time a user opens an
-			  object there is often none open, and IBX answers that with
-			  "Transaction is not active" rather than starting one itself. Every
-			  branch below opens a query, so the guard belongs here rather than
-			  in each. Same rule as ScriptAs.EnsureActive. }
-			if Assigned(Q.Transaction) and not TIBTransaction(Q.Transaction).Active then
-				TIBTransaction(Q.Transaction).StartTransaction;
+	if not Assigned(DB) then
+		Exit;
+	if not CatalogueTableFor(ObjType, Table_, Column_) then
+		raise Exception.Create('Invalid Object Type.');
 
-			case ObjType of
-				ctTable :
-					begin
-            Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-              Q.Close;
-              Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-              if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-                Result := False;
-							end;
-            end
-            else
-              Result := True;
-            Q.Close;
-					end;
-        ctTrigger :
-          begin
-						Q.SQL.Text := 'select rdb$trigger_name from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-              Q.Close;
-              Q.SQL.Text := 'select rdb$trigger_name from rdb$triggers where rdb$trigger_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-							if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-                Result := False;
-              end;
-            end
-            else
-              Result := True;
-            Q.Close;
-          end;
-        ctSP :
-          begin
-            Q.SQL.Text := 'select rdb$procedure_name from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-              Q.Close;
-              Q.SQL.Text := 'select rdb$procedure_name from rdb$procedures where rdb$procedure_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-              if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-							begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-                Result := False;
-              end;
-            end
-						else
-              Result := True;
-            Q.Close;
-					end;
-        ctView :
-          begin
-            Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-							Q.Close;
-              Q.SQL.Text := 'select rdb$relation_name from rdb$relations where rdb$relation_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-              if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-                Result := False;
-              end;
-            end
-            else
-              Result := True;
-            Q.Close;
-          end;
-        ctGenerator :
-          begin
-            Q.SQL.Text := 'select rdb$generator_name from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-              Q.Close;
-              Q.SQL.Text := 'select rdb$generator_name from rdb$generators where rdb$generator_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-							if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-								Result := False;
-              end;
-            end
-						else
-              Result := True;
-            Q.Close;
-          end;
-        ctException :
-          begin
-            Q.SQL.Text := 'select rdb$exception_name from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-						Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-              Q.Close;
-              Q.SQL.Text := 'select rdb$exception_name from rdb$exceptions where rdb$exception_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-              if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-                Result := False;
-              end;
-            end
-            else
-              Result := True;
-            Q.Close;
-          end;
-        ctPackage :
-          begin
-            { Packages are Firebird 3 (ODS 12); on an older server RDB$PACKAGES
-              does not exist and the query is a hard error, so treat that as
-              "no such object" rather than letting it escape. }
-            try
-              Q.SQL.Text := 'select rdb$package_name from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-              Q.Open;
-              Result := not (Q.BOF and Q.EOF);
-              Q.Close;
-              if not Result then
-              begin
-                Q.SQL.Text := 'select rdb$package_name from rdb$packages where rdb$package_name = ' + AnsiQuotedStr(S, '''');
-                Q.Open;
-                Result := not (Q.BOF and Q.EOF);
-                Q.Close;
-              end;
-            except
-              on E: Exception do
-                Result := False;
-            end;
-            if not Result then
-              MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-          end;
-        ctUDF :
-          begin
-            Q.SQL.Text := 'select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-							Q.Close;
-              Q.SQL.Text := 'select rdb$function_name from rdb$functions where rdb$function_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-              if not (Q.BOF and Q.EOF) then
-                Result := True
-							else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-								Result := False;
-              end;
-            end
-            else
-              Result := True;
-            Q.Close;
-          end;
-				ctDomain :
-          begin
-            Q.SQL.Text := 'select rdb$field_name from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(AnsiUpperCase(S), '''') + SchemaClauseFor(DatabaseName, Schema);
-            Q.Open;
-            if (Q.BOF and Q.EOF) then
-            begin
-              Q.Close;
-              Q.SQL.Text := 'select rdb$field_name from rdb$fields where rdb$field_name = ' + AnsiQuotedStr(S, '''');
-              Q.Open;
-              if not (Q.BOF and Q.EOF) then
-                Result := True
-              else
-              begin
-                MessageDlg('The object "' + S + '" does not exist in the database', mtError, [mbOK], 0);
-                Result := False;
-              end;
-            end
-            else
-              Result := True;
-            Q.Close;
-          end;
-      else
-        raise Exception.Create('Invalid Object Type.');
-      end;
-		finally
-      Q.Free;
-    end;
-  end;
+	Q := TIBQuery.Create(nil);
+	try
+		Q.Database := DB.Connection;
+		Q.Transaction := DB.Transaction;
+		{ Assigning a transaction does not start one, and the tree's own queries
+		  commit when they finish - so by the time a user opens an object there is
+		  often none open, and IBX answers that with "Transaction is not active"
+		  rather than starting one itself. Same rule as ScriptAs.EnsureActive. }
+		if Assigned(Q.Transaction) and not TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).StartTransaction;
+		try
+			{ Upper-cased and schema-qualified first, which is how an ordinary
+			  unquoted name is stored and found. }
+			Q.SQL.Text := ObjectExistsSQL(Table_, Column_, AnsiUpperCase(S),
+				SchemaClauseFor(DatabaseName, Schema));
+			Q.Open;
+			Result := not (Q.BOF and Q.EOF);
+			Q.Close;
+			if not Result then
+			begin
+				{ Then as it was typed, unqualified: a quoted identifier is stored
+				  with the case it was created with, and may be in another schema
+				  than the one being asked about. }
+				Q.SQL.Text := ObjectExistsSQL(Table_, Column_, S, '');
+				Q.Open;
+				Result := not (Q.BOF and Q.EOF);
+				Q.Close;
+			end;
+		except
+			{ RDB$PACKAGES is Firebird 3 and later, and querying a table that is
+			  not there is a hard error rather than an empty answer. The package
+			  branch swallowed that; every kind does now, since "the catalogue
+			  cannot answer" and "there is no such object" mean the same thing to
+			  every caller of this. }
+			on E: Exception do
+				Result := False;
+		end;
+	finally
+		Q.Free;
+	end;
+end;
+
+function DoesObjectExist(S: String; ObjType : TGSSCacheType; DatabaseName: String;
+	Schema: String): Boolean;
+begin
+	Result := ObjectExists(S, ObjType, DatabaseName, Schema);
+	if not Result then
+		MessageDlg('The object "' + S + '" does not exist in the database',
+			mtError, [mbOK], 0);
 end;
 
 procedure ApplyConnectionKeywords(ADatabase: TIBDatabase;

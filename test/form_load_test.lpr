@@ -3368,6 +3368,39 @@ begin
     'no connection means no statement rather than a wrong one');
 end;
 
+{ Asking whether an object is there, against the live database.
+
+  Both answers, which is the point of the split: DoesObjectExist raises a
+  dialog when the answer is no, so while that was the only entry point the
+  "not there" path could not be driven here at all - a modal dialog under Xvfb
+  is a hang rather than a failure. ObjectExists answers and says nothing. }
+procedure CheckObjectExistence(Conn: TMarathonCacheConnection);
+begin
+  WriteLn('Object existence:');
+  Check(ObjectExists('EDIT_DUP', ctTable, 'EditorHarness', ''),
+    'a table that is there is found');
+  Check(not ObjectExists('NO_SUCH_TABLE_HERE', ctTable, 'EditorHarness', ''),
+    'and one that is not, is not');
+
+  { Every kind through its own catalogue: a wrong mapping answers "no such
+    object" for something plainly present, which is what the nine copies this
+    replaced could each get wrong on their own. }
+  Check(ObjectExists('EDIT_VW', ctView, 'EditorHarness', ''), 'a view is found');
+  Check(ObjectExists('EDIT_SP', ctSP, 'EditorHarness', ''), 'a procedure is found');
+  Check(ObjectExists('EDIT_GEN', ctGenerator, 'EditorHarness', ''),
+    'a generator is found');
+  Check(ObjectExists('EDIT_EXC', ctException, 'EditorHarness', ''),
+    'an exception is found');
+  Check(ObjectExists('EDIT_DOM', ctDomain, 'EditorHarness', ''),
+    'a domain is found');
+  Check(ObjectExists('IBX_SMOKE_FN', ctUDF, 'EditorHarness', ''),
+    'a function is found');
+
+  { A name the project does not know is not a reason to raise anything. }
+  Check(not ObjectExists('EDIT_DUP', ctTable, 'NoSuchConnection', ''),
+    'and a connection that is not there answers no rather than crashing');
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -3625,6 +3658,7 @@ begin
   CheckSessionMonitorLive(Conn);
   CheckMetadataSearch(Conn);
   CheckDropStatements(Conn);
+  CheckObjectExistence(Conn);
   CheckSQLTrace(Conn);
 end;
 
