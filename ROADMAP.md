@@ -975,6 +975,62 @@ inside it.
   will do - opens a Pascal string that swallows the rest of the rule. Use
   `(* *)` inside actions, `/* */` between them, and no apostrophes in either.
 
+- [x] **The rest of the gap list, and then a wider one** — the eight remaining
+  gaps are closed, and closing them emptied the list, which is a bad place for
+  a measurement to end: an empty list of known gaps is not the same as no gaps.
+  So the list was widened twice more, against Firebird 6's PSQL, and what it
+  found was closed too. The parser now understands **85 constructs headlessly**
+  and **56 of 56 that a live Firebird 6.0 accepts** - it was 17 and 7.
+
+  Closed in the first round: `LEAVE` (bare and labelled, with labels on both
+  loops), `INSERT … RETURNING … INTO`, `MERGE`, window functions, `DECFLOAT`,
+  `INT128`, sub-procedures and sub-functions with `RETURN`.
+
+  Then the wider sweep: cursors (`DECLARE`/`OPEN`/`FETCH`/`CLOSE`), `IN
+  AUTONOMOUS TRANSACTION`, `UPDATE OR INSERT … MATCHING`, `FOR EXECUTE
+  STATEMENT`, the `EXECUTE STATEMENT` options (`WITH AUTONOMOUS TRANSACTION`,
+  `ON EXTERNAL`, `AS USER`), `WHEN SQLSTATE`, `EXCEPTION` with a message and
+  with `USING`, `COALESCE`/`NULLIF`/`IIF`, the simple form of `CASE`,
+  `SUBSTRING`/`TRIM`/`POSITION`, common table expressions including recursive
+  ones, variable defaults, `NEXT VALUE FOR`, `IS TRUE`/`IS NOT FALSE`,
+  `SIMILAR TO`, `ROWS`, `OFFSET`/`FETCH FIRST`, `ORDER BY … NULLS LAST`, named
+  windows and window frames, `RETURNING` on `UPDATE`/`DELETE`/`MERGE`,
+  `SELECT … WITH LOCK`, `MERGE … WHEN NOT MATCHED BY SOURCE`, derived tables
+  and `LATERAL`, `GROUP BY` an ordinal, `TYPE OF COLUMN`/`TYPE OF` a domain, a
+  domain used as a type, `WITH TIME ZONE`, and a condition assigned to a
+  boolean.
+
+  Three findings are worth separating from the list, because each was a hole
+  rather than a missing feature:
+
+  - **`_REAL`, the token for a decimal literal, was declared and used by no
+    rule at all.** `N = 1.5` was a syntax error - in an assignment, in a
+    comparison, in an `INSERT`, anywhere. So were `CURRENT_DATE`,
+    `CURRENT_TIME` and `CURRENT_TIMESTAMP`, keywords that no rule ever
+    referred to.
+  - **`EXECUTE PROCEDURE` was never a grammar gap.** The grammar had it; what
+    failed was `CompileSubProc`, which dereferenced `ConnectionByName[…]`
+    unguarded and took the compile down with an access violation. Compiling a
+    body reads the called routine out of the catalogue, so it needs a
+    database, and running that question together with "does it parse" made the
+    first unanswerable. `TIBDebuggerVM.Parses` separates them, and the test now
+    reports **what parses** and **what parses but needs a database to compile**
+    as two different lists.
+  - **A mid-rule action before a keyword forbids any other rule starting with
+    that keyword.** `FOR EXECUTE STATEMENT` and `UPDATE OR INSERT` each
+    collided with the empty action that clears the statement accumulator at the
+    head of `for_select` and `update_searched` - 18 shift/reduce conflicts,
+    resolved as shifts, which would have broken plain `FOR SELECT` and
+    `UPDATE`. Moving each action to just *behind* its keyword removed all 18.
+    The conflict count is back to what the grammar had before any of this work:
+    one shift/reduce and three reduce/reduce, all pre-existing.
+
+  Not covered, still: **execution**. `LEAVE` and `RETURN` parse and are carried
+  with their label and their expression, but the stepper drives loops itself
+  from a stack of the blocks it stepped into, so leaving one early is a change
+  to the stepper rather than to a statement class. Both say so when executed
+  rather than falling through and quietly giving a wrong answer.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

@@ -40,8 +40,13 @@ uses SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection, Forms, IBDebu
 %type <TStatement> for_select
 %type <TStatement> exec_procedure
 %type <TStatement> exec_statement
+%type <TStatement> for_exec_statement
 %type <TStatement> case_when_list
+%type <TStatement> case_value_when_list
+%type <TStatement> datetime_value
 %type <TStatement> boolean_predicate
+%type <TStatement> window_function
+%type <TStatement> merge
 %type <TStatement> insert
 %type <TStatement> update
 %type <TStatement> delete
@@ -376,6 +381,46 @@ uses SysUtils, Classes, LexLib, YaccLib, Dialogs, ParseCollection, Forms, IBDebu
 %token <TStatement> _TRUE_
 %token <TStatement> _FALSE_
 %token <TStatement> _BOOLEAN_
+%token <TStatement> _DECFLOAT_
+%token <TStatement> _INT128_
+%token <TStatement> _LEAVE_
+%token <TStatement> _RETURNING_
+%token <TStatement> _MATCHED_
+%token <TStatement> _OVER_
+%token <TStatement> _PARTITION_
+%token <TStatement> _AUTONOMOUS_
+%token <TStatement> _MATCHING_
+%token <TStatement> _SQLSTATE_
+%token <TStatement> _COALESCE_
+%token <TStatement> _IIF_
+%token <TStatement> _SUBSTRING_
+%token <TStatement> _SIMILAR_
+%token <TStatement> _NEXT_
+%token <TStatement> _ZONE_
+%token <TStatement> _OFFSET_
+%token <TStatement> _FIRST_
+%token <TStatement> _SKIP_
+%token <TStatement> _NULLS_
+%token <TStatement> _WINDOW_
+%token <TStatement> _ROWS_
+%token <TStatement> _UNKNOWN_
+%token <TStatement> _LEADING_
+%token <TStatement> _TRAILING_
+%token <TStatement> _BOTH_
+%token <TStatement> _RECURSIVE_
+%token <TStatement> _WITHOUT_
+%token <TStatement> _LAST_
+%token <TStatement> _ROW_
+%token <TStatement> _LOCALTIME_
+%token <TStatement> _LOCALTIMESTAMP_
+%token <TStatement> _LATERAL_
+%token <TStatement> _PRECEDING_
+%token <TStatement> _FOLLOWING_
+%token <TStatement> _UNBOUNDED_
+%token <TStatement> _RANGE_
+%token <TStatement> _LOCK_
+%token <TStatement> _SOURCE_
+%token <TStatement> _TARGET_
 %token <TStatement> _WHEN_
 %token <TStatement> _WHENEVER_
 %token <TStatement> _WHERE_
@@ -961,8 +1006,35 @@ var_declarations
                     : var_declaration
                     | var_declarations var_declaration
                     ;
+/* Firebird 3. A procedure or function declared inside another one, with a
+   body of its own. Its parameters are deliberately not the ones above: those
+   add to the enclosing symbol table and to its output columns, which is
+   exactly what a sub-routine must not do. */
+/* Firebird 2. Either spelling: DECLARE VARIABLE N integer = 7, or DEFAULT 7. */
+var_default
+                    : EQUAL value
+                    | _DEFAULT_ value
+                    ;
+
+sub_routine_params
+                    : LPAREN sub_routine_param_list RPAREN
+                    | /* empty */
+                    ;
+sub_routine_param_list
+                    : sub_routine_param
+                    | sub_routine_param_list COMMA sub_routine_param
+                    ;
+sub_routine_param
+                    : simple_column_def_name non_array_type
+                    ;
+sub_routine_returns
+                    : _RETURNS_ LPAREN sub_routine_param_list RPAREN
+                    | /* empty */
+                    ;
+
 var_declaration
-                    : _DECLARE_ _VARIABLE_ column_def_name non_array_type TERM
+                    : _DECLARE_ ID _CURSOR_ _FOR_ LPAREN select RPAREN TERM
+                    | _DECLARE_ _VARIABLE_ column_def_name non_array_type TERM
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -991,6 +1063,10 @@ var_declaration
                           end;
                         end;
                       }
+                    | _DECLARE_ _PROCEDURE_ ID sub_routine_params sub_routine_returns _AS_ var_declaration_list full_proc_block
+                    | _DECLARE_ _FUNCTION_ ID sub_routine_params _RETURNS_ non_array_type _AS_ var_declaration_list full_proc_block
+                    | _DECLARE_ _VARIABLE_ column_def_name non_array_type var_default TERM
+                    | _DECLARE_ column_def_name non_array_type var_default TERM
                     ;
 
 proc_block
@@ -1073,6 +1149,7 @@ proc_statements
 
 proc_statement
                     : exec_statement
+                    | for_exec_statement
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1099,7 +1176,7 @@ proc_statement
                           end;
                         end;
                       }
-                    | _EXCEPTION_ ID TERM
+                    | _EXCEPTION_ ID exception_message TERM
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1189,6 +1266,17 @@ proc_statement
                         end;
                       }
                     | update TERM
+                    | update_or_insert TERM
+                    | merge TERM
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'merge';
+                          end;
+                        end;
+                      }
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1236,12 +1324,120 @@ proc_statement
                           end;
                         end;
                       }
+                    /* Firebird 1.5. LEAVE on its own leaves the innermost
+                       loop; with a label it leaves the loop that carries it. */
+                    /* Firebird 3, in a sub-function: the value the
+                       function gives back. */
+                    | _RETURN_ value TERM
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            Module.RootStatement := TReturnStatement.Create;
+                            Module.RootStatement.Module := Module;
+                            Module.RootStatement.Line := $1.Line;
+                            TReturnStatement(Module.RootStatement).Expression := $2;
+                            FItemList.Add(Module.RootStatement);
+                            $$ := Module.RootStatement;
+                            $$.Name := 'return';
+                          end;
+                        end;
+                      }
+                    /* Firebird 2.5: a block that commits whatever the
+                       enclosing transaction goes on to do. */
+                    | _IN_ _AUTONOMOUS_ _TRANSACTION_ _DO_ proc_block
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                            $$ := $5;
+                        end;
+                      }
+                    /* Firebird 2.5 cursors. */
+                    | _OPEN_ ID TERM
+                    | _CLOSE_ ID TERM
+                    | _FETCH_ ID _INTO_ variable_list TERM
+                    | _LEAVE_ TERM
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            Module.RootStatement := TLeaveStatement.Create;
+                            Module.RootStatement.Module := Module;
+                            Module.RootStatement.Line := $1.Line;
+                            FItemList.Add(Module.RootStatement);
+                            $$ := Module.RootStatement;
+                            $$.Name := 'leave';
+                          end;
+                        end;
+                      }
+                    | _LEAVE_ ID TERM
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            Module.RootStatement := TLeaveStatement.Create;
+                            Module.RootStatement.Module := Module;
+                            Module.RootStatement.Line := $1.Line;
+                            TLeaveStatement(Module.RootStatement).LabelName := $2.Value;
+                            FItemList.Add(Module.RootStatement);
+                            $$ := Module.RootStatement;
+                            $$.Name := 'leave';
+                          end;
+                        end;
+                      }
+                    | ID COLON while
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $3;
+                            if $$ is TWhileStatement then
+                              TWhileStatement($$).LabelName := $1.Value;
+                          end;
+                        end;
+                      }
+                    | ID COLON for_select
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $3;
+                            if $$ is TForSelectStatement then
+                              TForSelectStatement($$).LabelName := $1.Value;
+                          end;
+                        end;
+                      }
                     ;
 
 /* Firebird 1.5. The statement is a value rather than something this grammar
    parses: it is built at run time, so there is nothing to parse until then. */
+/* Firebird 2.5. Where the statement runs and as whom. */
+exec_stmt_options
+                    : /* empty */
+                    | exec_stmt_options exec_stmt_option
+                    ;
+exec_stmt_option
+                    : _WITH_ _AUTONOMOUS_ _TRANSACTION_
+                    | _WITH_ _COMMON_ _TRANSACTION_
+                    | _ON_ _EXTERNAL_ value
+                    | _ON_ _EXTERNAL_ _DATA_ _SOURCE_ value
+                    | _AS_ _USER_ value
+                    | _PASSWORD_ value
+                    | _ROLE_ value
+                    ;
+
+for_exec_statement
+                    : _FOR_ _EXECUTE_ _STATEMENT_ value _INTO_ variable_list _DO_ proc_block
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                            $$ := $8;
+                        end;
+                      }
+                    ;
+
 exec_statement
-                    : _EXECUTE_ _STATEMENT_ value TERM
+                    : _EXECUTE_ _STATEMENT_ value exec_stmt_options TERM
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1251,7 +1447,7 @@ exec_statement
                           end;
                         end;
                       }
-                    | _EXECUTE_ _STATEMENT_ value _INTO_ variable_list TERM
+                    | _EXECUTE_ _STATEMENT_ value exec_stmt_options _INTO_ variable_list TERM
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1286,7 +1482,7 @@ exec_procedure
                     ;
 
 for_select
-                    :
+                    : _FOR_
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -1295,14 +1491,14 @@ for_select
                           end;
                         end;
                       }
-                      _FOR_ select _INTO_ variable_list cursor_def _DO_ proc_block
+                      select _INTO_ variable_list cursor_def _DO_ proc_block
                       {
                         begin
                           if FParserType = ptDebugger then
                           begin
                             Module.RootStatement := TForSelectStatement.Create;
                             Module.RootStatement.Module := Module;
-                            Module.RootStatement.Line := $2.Line;
+                            Module.RootStatement.Line := $1.Line;
                             TForSelectStatement(Module.RootStatement).SQLStatement := $3;
                             TForSelectStatement(Module.RootStatement).VariableList := $5;
                             TForSelectStatement(Module.RootStatement).ConditionTrue := $8;
@@ -1717,12 +1913,21 @@ excp_statement
                         end;
                       }
                     ;
+/* A message of its own in place of the one the exception was declared with,
+   and Firebird 3 parameters for it. */
+exception_message
+                    : /* empty */
+                    | value
+                    | value _USING_ LPAREN value_list RPAREN
+                    ;
 errors
                     : err
                     | errors COMMA err
                     ;
 err
                     : _SQLCODE_ signed_short_integer
+                    /* Firebird 2.5 */
+                    | _SQLSTATE_ sql_string
                     | _GDSCODE_ ID
                     | _EXCEPTION_ ID
                     | _ANY_
@@ -1770,6 +1975,18 @@ data_type
 non_array_type
                     : simple_type
                     | blob_type
+                    /* A domain used as a type - DECLARE VARIABLE V MY_DOMAIN.
+                       What it resolves to is the catalogue's business. */
+                    | ID
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptCheckInputParms] then
+                          begin
+                            $$.SymType := ty_blr_long;
+                            $$.SymSize := 0;
+                          end;
+                        end;
+                      }
                     ;
 
 array_type
@@ -1814,6 +2031,55 @@ non_charset_simple_type
                           end;
                         end;
                       }
+                    /* Firebird 4. Neither has a blr type in the enum this
+                       debugger was built on, so each takes the widest one it
+                       fits in: DECFLOAT is read as a double, INT128 as an
+                       int64. The precision is carried where there is one. */
+                    | _DECFLOAT_ precision_opt
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptCheckInputParms] then
+                          begin
+                            $$.SymType := ty_blr_double;
+                            $$.SymSize := 0;
+                            $$.SymPrecision := $2.SymPrecision;
+                          end;
+                        end;
+                      }
+                    /* Firebird 2.5: the type of a column or of a domain,
+                       rather than a type named here. What it turns out to be
+                       is the catalogue's business, so the debugger reads it as
+                       an integer until it can ask. */
+                    | _TYPE_ _OF_ _COLUMN_ column_name
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptCheckInputParms] then
+                          begin
+                            $$.SymType := ty_blr_long;
+                            $$.SymSize := 0;
+                          end;
+                        end;
+                      }
+                    | _TYPE_ _OF_ ID
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptCheckInputParms] then
+                          begin
+                            $$.SymType := ty_blr_long;
+                            $$.SymSize := 0;
+                          end;
+                        end;
+                      }
+                    | _INT128_
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptCheckInputParms] then
+                          begin
+                            $$.SymType := ty_blr_int64;
+                            $$.SymSize := 0;
+                          end;
+                        end;
+                      }
                     | national_character_type
                     | numeric_type
                     | float_type
@@ -1847,7 +2113,7 @@ non_charset_simple_type
                           end;
                         end;
                       }
-                    | _TIMESTAMP_
+                    | _TIMESTAMP_ time_zone_opt
                       {
                         begin
                           if FParserType in [ptDebugger, ptCheckInputParms] then
@@ -1857,7 +2123,7 @@ non_charset_simple_type
                           end;
                         end;
                       }
-                    | _TIME_
+                    | _TIME_ time_zone_opt
                       {
                         begin
                           if FParserType in [ptDebugger, ptCheckInputParms] then
@@ -2171,7 +2437,7 @@ select
                         end;
                       }
 
-                      union_expr order_clause for_update_clause
+                      with_clause union_expr order_clause rows_clause window_clause for_update_clause lock_clause
 
                       {
                         if FParserType = ptDRUI then
@@ -2180,7 +2446,7 @@ select
                           begin
                             OpType := optySelect;
                             TableList.Text := TmpSelectTableList.Text;
-                            Line := $2.Line;
+                            Line := $3.Line;
                           end;
                           TmpTableList.Clear;
                           TmpSelectTableList.Clear;
@@ -2223,7 +2489,7 @@ select
                           end;
 
                           if Assigned(FOnStatementFound) then
-                            FOnStatementFound(Self, $2.Line, $2.Col, Lexer.Statement);
+                            FOnStatementFound(Self, $3.Line, $3.Col, Lexer.Statement);
 
                         end;
                       }
@@ -2232,6 +2498,63 @@ union_expr
                     : select_expr
                     | union_expr _UNION_ select_expr
                     | union_expr _UNION_ _ALL_ select_expr
+                    ;
+
+/* Firebird 2.1 common table expressions. */
+lock_clause
+                    : _WITH_ _LOCK_
+                    | /* empty */
+                    ;
+
+with_clause
+                    : _WITH_ cte_list
+                    | _WITH_ _RECURSIVE_ cte_list
+                    | /* empty */
+                    ;
+cte_list
+                    : cte
+                    | cte_list COMMA cte
+                    ;
+cte
+                    : ID column_parens_opt _AS_ LPAREN select_expr RPAREN
+                    ;
+
+/* How many rows: Firebird's own ROWS, and the standard OFFSET/FETCH it grew
+   later. */
+rows_clause
+                    : _ROWS_ value
+                    | _ROWS_ value _TO_ value
+                    | offset_clause fetch_clause
+                    | /* empty */
+                    ;
+offset_clause
+                    : _OFFSET_ value row_or_rows
+                    | /* empty */
+                    ;
+fetch_clause
+                    : _FETCH_ first_or_next value row_or_rows _ONLY_
+                    | _FETCH_ first_or_next row_or_rows _ONLY_
+                    ;
+first_or_next
+                    : _FIRST_
+                    | _NEXT_
+                    ;
+row_or_rows
+                    : _ROWS_
+                    | _ROW_
+                    ;
+
+/* Firebird 4 named windows: WINDOW W AS (...), referred to by OVER W. */
+window_clause
+                    : _WINDOW_ named_window_list
+                    | /* empty */
+                    ;
+named_window_list
+                    : named_window
+                    | named_window_list COMMA named_window
+                    ;
+named_window
+                    : ID _AS_ LPAREN window_spec RPAREN
                     ;
 
 order_clause
@@ -2243,8 +2566,13 @@ order_list
                     | order_list COMMA order_item
                     ;
 order_item
-                    : column_name collate_clause order_direction
-                    | ordinal collate_clause order_direction
+                    : column_name collate_clause order_direction nulls_placement
+                    | ordinal collate_clause order_direction nulls_placement
+                    ;
+nulls_placement
+                    : _NULLS_ _FIRST_
+                    | _NULLS_ _LAST_
+                    | /* empty */
                     ;
 order_direction
                     : _ASC_
@@ -2298,7 +2626,9 @@ joined_table
                     | LPAREN joined_table RPAREN
                     ;
 table_proc
-                    : ID proc_table_inputs ID
+                    : LPAREN select_expr RPAREN ID
+                    | _LATERAL_ LPAREN select_expr RPAREN ID
+                    | ID proc_table_inputs ID
                       {
                         if FParserType = ptDRUI then
                           TmpSelectTableList.Add($1.Value);
@@ -2357,6 +2687,7 @@ grp_column_list
 grp_column_elem
                     : column_name
                     | column_name _COLLATE_ collation_name
+                    | ordinal
                     ;
 having_clause
                     : _HAVING_ search_condition
@@ -2557,9 +2888,27 @@ index_list
                         end;
                       }
                     ;
+/* Firebird 2.1. An insert that updates instead when the MATCHING columns are
+   already there. */
+update_or_insert
+                    : _UPDATE_ _OR_ _INSERT_ _INTO_ simple_table_name column_parens_opt _VALUES_ LPAREN insert_value_list RPAREN matching_opt returning_opt
+                    ;
+matching_opt
+                    : _MATCHING_ LPAREN column_list RPAREN
+                    | /* empty */
+                    ;
+
+/* Firebird 2. RETURNING gives back the row as inserted - the generated key,
+   most often - and in PSQL it goes straight into variables. */
+returning_opt
+                    : /* empty */
+                    | _RETURNING_ value_list
+                    | _RETURNING_ value_list _INTO_ variable_list
+                    ;
+
 insert
                     :
-                      _INSERT_ _INTO_ simple_table_name column_parens_opt _VALUES_ LPAREN insert_value_list RPAREN
+                      _INSERT_ _INTO_ simple_table_name column_parens_opt _VALUES_ LPAREN insert_value_list RPAREN returning_opt
                       {
                         if FParserType = ptDRUI then
                         begin
@@ -2600,7 +2949,7 @@ insert
 
                       }
                     |
-                      _INSERT_ _INTO_ simple_table_name column_parens_opt select_expr
+                      _INSERT_ _INTO_ simple_table_name column_parens_opt select_expr returning_opt
                       {
                         if FParserType = ptDRUI then
                         begin
@@ -2656,7 +3005,7 @@ delete_searched
                           end;
                         end;
                       }
-                      _DELETE_ _FROM_ table_name where_clause
+                      _DELETE_ _FROM_ table_name where_clause returning_opt
                       {
                         if FParserType = ptDRUI then
                         begin
@@ -2700,7 +3049,7 @@ update
                     : update_searched
                     ;
 update_searched
-                    :
+                    : _UPDATE_
                       {
                         begin
                           if FParserType in [ptDebugger, ptWarnings] then
@@ -2709,7 +3058,7 @@ update_searched
                           end;
                         end;
                       }
-                      _UPDATE_ table_name _SET_ assignments where_clause
+                      table_name _SET_ assignments where_clause returning_opt
                       {
                         if FParserType = ptDRUI then
                         begin
@@ -2717,7 +3066,7 @@ update_searched
                           begin
                             OpType := optyUpdate;
                             TableList.Text := TmpTableList.Text;
-                            Line := $2.Line;
+                            Line := $1.Line;
                           end;
                           TmpTableList.Clear;
                           TmpSelectTableList.Clear;
@@ -2727,6 +3076,47 @@ update_searched
                         begin
                           Lexer.Statement := Trim(Lexer.Statement);
                           Lexer.Statement := 'update ' + Lexer.Statement;
+
+                          Module.RootStatement := TDMLStatement.Create;
+                          Module.RootStatement.Module := Module;
+                          Module.RootStatement.Line := $1.Line;
+                          TDMLStatement(Module.RootStatement).SQLStatement := Lexer.Statement;
+                          FItemList.Add(Module.RootStatement);
+                          $$ := Module.RootStatement;
+                          $$.Name := 'DML Statement';
+                        end;
+
+                        if FParserType = ptWarnings then
+                        begin
+                          Lexer.Statement := Trim(Lexer.Statement);
+                          Lexer.Statement := 'update ' + Lexer.Statement;
+
+                          if Assigned(FOnStatementFound) then
+                            FOnStatementFound(Self, $1.Line, $1.Col, Lexer.Statement);
+
+                        end;
+                      }
+                    ;
+
+/* Firebird 2. One statement that both inserts and updates, so the debugger
+   sends it as it stands - like the other DML here, what it needs from the
+   grammar is where the statement ends. */
+merge
+                    :
+                      {
+                        begin
+                          if FParserType in [ptDebugger, ptWarnings] then
+                          begin
+                            Lexer.Statement := '';
+                          end;
+                        end;
+                      }
+                      _MERGE_ _INTO_ table_name _USING_ merge_source _ON_ search_condition merge_when_list returning_opt
+                      {
+                        if FParserType = ptDebugger then
+                        begin
+                          Lexer.Statement := Trim(Lexer.Statement);
+                          Lexer.Statement := 'merge ' + Lexer.Statement;
 
                           Module.RootStatement := TDMLStatement.Create;
                           Module.RootStatement.Module := Module;
@@ -2740,13 +3130,35 @@ update_searched
                         if FParserType = ptWarnings then
                         begin
                           Lexer.Statement := Trim(Lexer.Statement);
-                          Lexer.Statement := 'update ' + Lexer.Statement;
+                          Lexer.Statement := 'merge ' + Lexer.Statement;
 
                           if Assigned(FOnStatementFound) then
                             FOnStatementFound(Self, $2.Line, $2.Col, Lexer.Statement);
-
                         end;
                       }
+                    ;
+merge_source
+                    : table_name
+                    | LPAREN select_expr RPAREN ID
+                    ;
+merge_when_list
+                    : merge_when
+                    | merge_when_list merge_when
+                    ;
+merge_when
+                    : _WHEN_ _MATCHED_ merge_when_cond _THEN_ _UPDATE_ _SET_ assignments
+                    | _WHEN_ _MATCHED_ merge_when_cond _THEN_ _DELETE_
+                    | _WHEN_ _NOT_ _MATCHED_ merge_by_opt merge_when_cond _THEN_ _INSERT_ column_parens_opt _VALUES_ LPAREN insert_value_list RPAREN
+                    | _WHEN_ _NOT_ _MATCHED_ _BY_ _SOURCE_ merge_when_cond _THEN_ _DELETE_
+                    | _WHEN_ _NOT_ _MATCHED_ _BY_ _SOURCE_ merge_when_cond _THEN_ _UPDATE_ _SET_ assignments
+                    ;
+merge_by_opt
+                    : _BY_ _TARGET_
+                    | /* empty */
+                    ;
+merge_when_cond
+                    : _AND_ search_condition
+                    | /* empty */
                     ;
 
 assignments
@@ -2800,6 +3212,18 @@ rhs
                           begin
                             $$ := $1;
                             $$.Name := 'identifier';
+                          end;
+                        end;
+                      }
+                    /* Firebird 3: a condition is a value, so B = (1 = 1) is an
+                       ordinary assignment. */
+                    | LPAREN search_condition RPAREN
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $2;
+                            $$.Name := 'expression';
                           end;
                         end;
                       }
@@ -2942,6 +3366,7 @@ predicate
                     /* Firebird 3. A BOOLEAN is a value, so a bare one is a
                        condition on its own: IF (B), WHERE B, IF (TRUE). */
                     | boolean_predicate
+                    | boolean_test
                     | LPAREN search_condition RPAREN
                       {
                         begin
@@ -3156,6 +3581,10 @@ between_predicate
                     ;
 like_predicate
                     : value _LIKE_ value
+                    /* Firebird 2.5: a regular expression rather than a
+                       LIKE pattern, but the same shape. */
+                    | value _SIMILAR_ _TO_ value
+                    | value _NOT_ _SIMILAR_ _TO_ value
                     | value _NOT_ _LIKE_ value
                     | value _LIKE_ value _ESCAPE_ value
                     | value _NOT_ _LIKE_ value _ESCAPE_ value
@@ -3179,6 +3608,17 @@ exists_predicate
                     ;
 unique_predicate
                     : _SINGULAR_ LPAREN select_expr RPAREN
+                    ;
+
+/* Firebird 3, and only meaningful since a boolean became a value. */
+boolean_test
+                    : value _IS_ boolean_test_value
+                    | value _IS_ _NOT_ boolean_test_value
+                    ;
+boolean_test_value
+                    : _TRUE_
+                    | _FALSE_
+                    | _UNKNOWN_
                     ;
 
 null_predicate
@@ -3247,6 +3687,16 @@ value
                         end;
                       }
                     | function
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'identifier';
+                          end;
+                        end;
+                      }
+                    | window_function
                       {
                         begin
                           if FParserType = ptDebugger then
@@ -3436,6 +3886,20 @@ value
                           end;
                         end;
                       }
+                    /* CURRENT_DATE, CURRENT_TIME and CURRENT_TIMESTAMP
+                       were keywords that no rule ever used, so N = current_timestamp
+                       was a syntax error. LOCALTIME and LOCALTIMESTAMP are the
+                       Firebird 4 pair that do not carry a zone. */
+                    | datetime_value
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'constant';
+                          end;
+                        end;
+                      }
                     | _USER_
                       {
                         begin
@@ -3483,6 +3947,26 @@ value
                        is not here yet - it needs the value to be carried into
                        each comparison, which this grammar has nowhere to put
                        without a wider change. */
+                    | _CASE_ value case_value_when_list _END_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $2;
+                            $$.Name := 'case';
+                          end;
+                        end;
+                      }
+                    | _CASE_ value case_value_when_list _ELSE_ value _END_
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $2;
+                            $$.Name := 'case';
+                          end;
+                        end;
+                      }
                     | _CASE_ case_when_list _END_
                       {
                         begin
@@ -3538,6 +4022,31 @@ case_when_list
                       }
                     ;
 
+/* The simple form, CASE <value> WHEN <value> THEN ... - what follows WHEN
+   there is a value to compare, not a condition. */
+case_value_when_list
+                    : _WHEN_ value _THEN_ value
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $4;
+                            $$.Name := 'casewhen';
+                          end;
+                        end;
+                      }
+                    | case_value_when_list _WHEN_ value _THEN_ value
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'casewhen';
+                          end;
+                        end;
+                      }
+                    ;
+
 array_element
                     : column_name LSQB value_list RSQB
                     ;
@@ -3553,6 +4062,11 @@ u_numeric_constant
                     : _NUMERIC_
                     | _INTEGER
                     | _FLOAT_
+                    /* The token the lexer returns for a decimal literal. It
+                       was declared and then used by no rule at all, so 1.5 was
+                       a syntax error wherever it appeared - in an assignment,
+                       in a comparison, in an INSERT. */
+                    | _REAL
                     ;
 u_constant
                     : u_numeric_constant
@@ -3617,6 +4131,21 @@ function
                     | minimum LPAREN _DISTINCT_ value RPAREN
                     | _CAST_ LPAREN rhs _AS_ data_type_descriptor RPAREN
                     | _UPPER_ LPAREN value RPAREN
+                    /* The built-ins a body actually uses. COALESCE, NULLIF
+                       and IIF are Firebird 2; SUBSTRING and TRIM take their
+                       arguments with keywords rather than commas, which is why
+                       each needs a rule of its own. */
+                    | _COALESCE_ LPAREN null_or_value_list RPAREN
+                    | _IIF_ LPAREN search_condition COMMA null_or_value COMMA null_or_value RPAREN
+                    | _SUBSTRING_ LPAREN value _FROM_ value RPAREN
+                    | _SUBSTRING_ LPAREN value _FROM_ value _FOR_ value RPAREN
+                    | _TRIM_ LPAREN value RPAREN
+                    | _TRIM_ LPAREN trim_where value _FROM_ value RPAREN
+                    | _TRIM_ LPAREN trim_where _FROM_ value RPAREN
+                    | _NEXT_ _VALUE_ _FOR_ ID
+                    | _POSITION_ LPAREN value _IN_ value RPAREN
+                    | _POSITION_ LPAREN value COMMA value RPAREN
+                    | _POSITION_ LPAREN value COMMA value COMMA value RPAREN
                     | _GEN_ID_ LPAREN ID COMMA value RPAREN
                       {
                         begin
@@ -3634,6 +4163,27 @@ function
                           end;
                         end;
                       }
+                    ;
+/* Firebird 4. The debugger reads either as the local type it already knows -
+   there is no zone-aware one in the enum it was built on. */
+time_zone_opt
+                    : _WITH_ _TIME_ _ZONE_
+                    | _WITHOUT_ _TIME_ _ZONE_
+                    | /* empty */
+                    ;
+
+datetime_value
+                    : _CURRENT_DATE_
+                    | _CURRENT_TIME_
+                    | _CURRENT_TIMESTAMP_
+                    | _LOCALTIME_
+                    | _LOCALTIMESTAMP_
+                    ;
+
+trim_where
+                    : _LEADING_
+                    | _TRAILING_
+                    | _BOTH_
                     ;
 maximum
                     : _MAXIMUM_
@@ -3663,6 +4213,69 @@ udf
                       }
                     | ID LPAREN RPAREN
                     ;
+/* Firebird 3. OVER turns an aggregate, or a function of its own such as
+   ROW_NUMBER, into a window function. The frame clause (ROWS/RANGE BETWEEN)
+   is not here: the window itself is what a body being stepped through needs
+   to parse. */
+window_function
+                    : function _OVER_ ID
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'expression';
+                          end;
+                        end;
+                      }
+                    | function _OVER_ LPAREN window_spec RPAREN
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'expression';
+                          end;
+                        end;
+                      }
+                    | udf _OVER_ LPAREN window_spec RPAREN
+                      {
+                        begin
+                          if FParserType = ptDebugger then
+                          begin
+                            $$ := $1;
+                            $$.Name := 'expression';
+                          end;
+                        end;
+                      }
+                    ;
+window_spec
+                    : partition_clause order_clause frame_clause
+                    ;
+frame_clause
+                    : frame_unit frame_extent
+                    | /* empty */
+                    ;
+frame_unit
+                    : _ROWS_
+                    | _RANGE_
+                    ;
+frame_extent
+                    : frame_bound
+                    | _BETWEEN_ frame_bound _AND_ frame_bound
+                    ;
+frame_bound
+                    : _UNBOUNDED_ _PRECEDING_
+                    | _UNBOUNDED_ _FOLLOWING_
+                    | _CURRENT_ _ROW_
+                    | value _PRECEDING_
+                    | value _FOLLOWING_
+                    ;
+partition_clause
+                    : _PARTITION_ _BY_ value_list
+                    | /* empty */
+                    ;
+
 all_noise
                     : _ALL_
                     | /* empty */
@@ -4139,7 +4752,7 @@ type
 
 const
   (* table of Delphi Pascal keywords: *)
-    no_of_keywords = 283;
+    no_of_keywords = 323;
     keyword : array [1..no_of_keywords] of Ident = (
       'ACTION',
       'ACTIVE',
@@ -4423,7 +5036,47 @@ const
       'WORK',
       'WRITE',
       'YEAR',
-      'YEARDAY'
+      'YEARDAY',
+      'DECFLOAT',
+      'INT128',
+      'LEAVE',
+      'RETURNING',
+      'MATCHED',
+      'OVER',
+      'PARTITION',
+      'AUTONOMOUS',
+      'MATCHING',
+      'SQLSTATE',
+      'COALESCE',
+      'IIF',
+      'SUBSTRING',
+      'SIMILAR',
+      'NEXT',
+      'ZONE',
+      'OFFSET',
+      'FIRST',
+      'SKIP',
+      'NULLS',
+      'WINDOW',
+      'ROWS',
+      'UNKNOWN',
+      'LEADING',
+      'TRAILING',
+      'BOTH',
+      'RECURSIVE',
+      'WITHOUT',
+      'LAST',
+      'ROW',
+      'LOCALTIME',
+      'LOCALTIMESTAMP',
+      'LATERAL',
+      'PRECEDING',
+      'FOLLOWING',
+      'UNBOUNDED',
+      'RANGE',
+      'LOCK',
+      'SOURCE',
+      'TARGET'
       );
     keyword_token : array [1..no_of_keywords] of integer = (
       _ACTION_,
@@ -4708,7 +5361,47 @@ const
       _WORK_,
       _WRITE_,
       _YEAR_,
-      _YEARDAY_
+      _YEARDAY_,
+      _DECFLOAT_,
+      _INT128_,
+      _LEAVE_,
+      _RETURNING_,
+      _MATCHED_,
+      _OVER_,
+      _PARTITION_,
+      _AUTONOMOUS_,
+      _MATCHING_,
+      _SQLSTATE_,
+      _COALESCE_,
+      _IIF_,
+      _SUBSTRING_,
+      _SIMILAR_,
+      _NEXT_,
+      _ZONE_,
+      _OFFSET_,
+      _FIRST_,
+      _SKIP_,
+      _NULLS_,
+      _WINDOW_,
+      _ROWS_,
+      _UNKNOWN_,
+      _LEADING_,
+      _TRAILING_,
+      _BOTH_,
+      _RECURSIVE_,
+      _WITHOUT_,
+      _LAST_,
+      _ROW_,
+      _LOCALTIME_,
+      _LOCALTIMESTAMP_,
+      _LATERAL_,
+      _PRECEDING_,
+      _FOLLOWING_,
+      _UNBOUNDED_,
+      _RANGE_,
+      _LOCK_,
+      _SOURCE_,
+      _TARGET_
       );
 
 procedure TSQLLexer.CommentEOF;

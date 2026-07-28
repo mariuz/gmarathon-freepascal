@@ -4229,10 +4229,43 @@ var
       Inc(Supported);
       WriteLn('       [parses]  ', AWhat);
     end
+    else if VM.Parses('create procedure DBG_PROBE ' + ABody) then
+    begin
+      { The grammar has it; what failed is the step that reads the called
+        routine out of the catalogue. Counted as understood, because the
+        question here is what the parser knows. }
+      Inc(Supported);
+      WriteLn('       [parses]  ', AWhat, ' (compiling it reads the catalogue)');
+    end
     else
     begin
       Inc(Unsupported);
       WriteLn('       [gap]     ', AWhat);
+    end;
+  end;
+
+  { The objects the bodies below name. Created here rather than assumed: a
+    probe that fails because the table is missing measures the harness. }
+  procedure DdlIgnoringErrors(const ASQL: String);
+  var
+    S: TIBSQL;
+  begin
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.SQL.Text := ASQL;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
     end;
   end;
 
@@ -4243,6 +4276,13 @@ begin
   VM := TIBDebuggerVM.Create;
   try
     VM.DatabaseName := 'EditorHarness';
+
+    DdlIgnoringErrors('recreate table DBG_T (ID integer not null primary key)');
+    DdlIgnoringErrors('create exception DBG_E ''boom''');
+    DdlIgnoringErrors('create sequence DBG_G');
+    DdlIgnoringErrors('create domain DBG_D as integer');
+    DdlIgnoringErrors('create or alter procedure DBG_HELPER returns (V integer) ' +
+      'as begin V = 1; suspend; end');
 
     { The shape the debugger was written for. If this does not parse, nothing
       below is worth reading - so this one is asserted rather than counted. }
@@ -4311,9 +4351,119 @@ begin
       'returns (N integer) as begin ' +
       'insert into DBG_T (ID) values (1) returning ID into :N; suspend; end');
 
+    Probe('a sub-procedure',
+      'returns (N integer) as ' +
+      'declare procedure SUB returns (X integer) as begin X = 1; end ' +
+      'begin execute procedure SUB returning_values :N; suspend; end');
+    Probe('IS TRUE',
+      'returns (N integer) as declare variable B boolean; begin ' +
+      'B = true; if (B is true) then N = 1; suspend; end');
+    Probe('a named window',
+      'returns (N integer) as begin select count(*) over W ' +
+      'from rdb$database window W as () into :N; suspend; end');
+
+    { Firebird 2 and 2.5, the rest of it. }
+    Probe('a cursor',
+      'returns (N integer) as declare C cursor for ' +
+      '(select 1 as X from rdb$database); begin ' +
+      'open C; fetch C into :N; close C; suspend; end');
+    Probe('IN AUTONOMOUS TRANSACTION',
+      'as begin in autonomous transaction do begin post_event ''x''; end end');
+    Probe('UPDATE OR INSERT',
+      'as begin update or insert into DBG_T (ID) values (1) matching (ID); end');
+    Probe('FOR EXECUTE STATEMENT',
+      'returns (N integer) as begin ' +
+      'for execute statement ''select 1 from rdb$database'' into :N do suspend; end');
+    Probe('WHEN SQLSTATE',
+      'as begin post_event ''x''; when sqlstate ''22001'' do begin post_event ''y''; end end');
+    Probe('EXCEPTION with a message',
+      'as begin exception DBG_E ''boom''; end');
+    Probe('COALESCE, NULLIF and IIF',
+      'returns (N integer) as begin ' +
+      'N = coalesce(null, nullif(1, 2), iif(1 = 1, 3, 4)); suspend; end');
+    Probe('the simple form of CASE',
+      'returns (N integer) as begin N = case 1 when 1 then 10 else 20 end; suspend; end');
+    Probe('SUBSTRING and TRIM',
+      'returns (N varchar(8)) as begin ' +
+      'N = trim(substring(''  abcdef'' from 1 for 6)); suspend; end');
+    Probe('a common table expression',
+      'returns (N integer) as begin ' +
+      'with C as (select 1 x from rdb$database) select x from C into :N; suspend; end');
+    Probe('a variable with a default',
+      'returns (N integer) as declare variable B integer = 7; begin N = B; suspend; end');
+    Probe('NEXT VALUE FOR',
+      'returns (N integer) as begin N = next value for DBG_G; suspend; end');
+    Probe('SIMILAR TO',
+      'returns (N integer) as begin if (''ab'' similar to ''a%'') then N = 1; suspend; end');
+    Probe('ROWS',
+      'returns (N integer) as begin select 1 from rdb$database rows 1 into :N; suspend; end');
+    Probe('FETCH FIRST ... ROWS ONLY',
+      'returns (N integer) as begin ' +
+      'select 1 from rdb$database fetch first 1 rows only into :N; suspend; end');
+    Probe('ORDER BY ... NULLS LAST',
+      'returns (N integer) as begin ' +
+      'select 1 from rdb$database order by 1 nulls last into :N; suspend; end');
+    Probe('EXECUTE STATEMENT WITH AUTONOMOUS TRANSACTION',
+      'as begin execute statement ''select 1 from rdb$database'' ' +
+      'with autonomous transaction; end');
+    Probe('MERGE ... RETURNING',
+      'returns (N integer) as begin merge into DBG_T d ' +
+      'using (select 1 x from rdb$database) s ' +
+      'on d.ID = s.x when not matched then insert (ID) values (s.x) ' +
+      'returning d.ID into :N; suspend; end');
+
+    Probe('TYPE OF COLUMN',
+      'returns (N integer) as declare variable V type of column DBG_T.ID; ' +
+      'begin N = 1; suspend; end');
+    Probe('TYPE OF a domain',
+      'returns (N integer) as declare variable V type of DBG_D; begin N = 1; suspend; end');
+    Probe('a domain used as a type',
+      'returns (N integer) as declare variable V DBG_D; begin N = 1; suspend; end');
+    Probe('POSITION(x IN y)',
+      'returns (N integer) as begin N = position(''a'' in ''abc''); suspend; end');
+    Probe('UPDATE ... RETURNING ... INTO',
+      'returns (N integer) as begin update DBG_T set ID = 1 returning ID into :N; suspend; end');
+    Probe('DELETE ... RETURNING ... INTO',
+      'returns (N integer) as begin delete from DBG_T returning ID into :N; suspend; end');
+    Probe('SELECT ... WITH LOCK',
+      'returns (N integer) as begin select ID from DBG_T with lock into :N; suspend; end');
+    Probe('MERGE ... WHEN NOT MATCHED BY SOURCE',
+      'as begin merge into DBG_T d using (select 1 x from rdb$database) s ' +
+      'on d.ID = s.x when not matched by source then delete; end');
+    Probe('a derived table in FROM',
+      'returns (N integer) as begin ' +
+      'select a.x from (select 1 x from rdb$database) a into :N; suspend; end');
+    Probe('LATERAL',
+      'returns (N integer) as begin select b.y from ' +
+      '(select 1 x from rdb$database) a, lateral (select a.x y from rdb$database) b ' +
+      'into :N; suspend; end');
+    Probe('GROUP BY an ordinal, and HAVING',
+      'returns (N integer) as begin select RDB$RELATION_ID from RDB$RELATIONS ' +
+      'group by 1 having count(*) > 0 into :N; suspend; end');
+    Probe('a condition assigned to a boolean',
+      'returns (N integer) as declare variable B boolean; begin ' +
+      'B = (1 = 1); if (B) then N = 1; suspend; end');
+    Probe('a scalar subquery as a value',
+      'returns (N integer) as begin N = (select 1 from rdb$database); suspend; end');
+    Probe('a nested CASE',
+      'returns (N integer) as begin N = case when 1 = 1 then ' +
+      'case when 2 = 2 then 1 else 2 end else 3 end; suspend; end');
+
     { Firebird 4 and later. }
+    Probe('a window frame',
+      'returns (N integer) as begin select count(*) over ' +
+      '(order by 1 rows between unbounded preceding and current row) ' +
+      'from rdb$database into :N; suspend; end');
     Probe('a DECFLOAT variable',
       'returns (N decfloat) as begin N = 1.5; suspend; end');
+    Probe('an INT128 variable',
+      'returns (N int128) as begin N = 1; suspend; end');
+    Probe('a decimal literal',
+      'returns (N double precision) as begin N = 1.5 + 0.25; suspend; end');
+    Probe('CURRENT_TIMESTAMP as a value',
+      'returns (N timestamp) as begin N = current_timestamp; suspend; end');
+    Probe('WITH TIME ZONE',
+      'returns (N timestamp with time zone) as begin N = current_timestamp; suspend; end');
 
     WriteLn('       ', Supported, ' of ', Supported + Unsupported,
       ' constructs Firebird accepts are understood by the debugger');
@@ -4321,7 +4471,7 @@ begin
       today against a regression, and says nothing about the gaps - a gap
       closed should make this test pass, not fail, so "there are still gaps"
       is deliberately not asserted. }
-    Check(Supported >= 7,
+    Check(Supported >= 56,
       'the debugger still understands the constructs it understood before (' +
       IntToStr(Supported) + ')');
 

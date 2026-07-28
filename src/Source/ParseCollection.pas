@@ -218,6 +218,7 @@ type
     Q : TIBQuery;
     S : TStringList;
   public
+    LabelName : String;
     SQLStatement : TStatement;
     VariableList : TStatement;
     ConditionTrue : TStatement;
@@ -243,6 +244,7 @@ type
   public
     Condition : TStatement;
     ConditionTrue : TStatement;
+    LabelName : String;
     function Dump(Indent : Integer) : String; override;
     procedure Reset; override;
     function Execute : Variant; override;
@@ -259,6 +261,32 @@ type
 
   TExitStatement = class(TStatement)
   public
+    function Dump(Indent : Integer) : String; override;
+    procedure Reset; override;
+    function Execute : Variant; override;
+    procedure Compile; override;
+  end;
+
+  { Firebird 1.5. Parsed, and carried with the label it names, but not yet
+    executed: the stepper drives loops itself, from a stack of the blocks it
+    stepped into, so leaving one early is a change to the stepper rather than
+    to this class. Executing it says so rather than falling through the loop
+    and quietly giving a wrong answer. }
+  TLeaveStatement = class(TStatement)
+  public
+    LabelName : String;
+    function Dump(Indent : Integer) : String; override;
+    procedure Reset; override;
+    function Execute : Variant; override;
+    procedure Compile; override;
+  end;
+
+  { Firebird 3, in a sub-function. Carried with the expression it returns, and
+    not executed for the same reason as [TLeaveStatement]: the debugger cannot
+    step into a sub-routine, so there is nowhere for the value to go yet. }
+  TReturnStatement = class(TStatement)
+  public
+    Expression : TStatement;
     function Dump(Indent : Integer) : String; override;
     procedure Reset; override;
     function Execute : Variant; override;
@@ -1614,6 +1642,53 @@ end;
 
 procedure TSuspendStatement.Compile;
 begin
+end;
+
+function TReturnStatement.Dump(Indent : Integer) : String;
+begin
+  Result := '   Return Statement' + '[' + IntToStr(Line) + ']' + #13#10;
+end;
+
+procedure TReturnStatement.Reset;
+begin
+  //nothing
+end;
+
+function TReturnStatement.Execute : Variant;
+begin
+  raise Exception.Create('RETURN is not executed by the debugger yet');
+end;
+
+procedure TReturnStatement.Compile;
+begin
+  //nothing
+end;
+
+function TLeaveStatement.Dump(Indent : Integer) : String;
+begin
+  Result := '   Leave Statement' + '[' + IntToStr(Line) + ']';
+  if LabelName <> '' then
+    Result := Result + ' ' + LabelName;
+  Result := Result + #13#10;
+end;
+
+procedure TLeaveStatement.Reset;
+begin
+  //nothing
+end;
+
+function TLeaveStatement.Execute : Variant;
+begin
+  if LabelName = '' then
+    raise Exception.Create('LEAVE is not executed by the debugger yet')
+  else
+    raise Exception.Create('LEAVE ' + LabelName +
+      ' is not executed by the debugger yet');
+end;
+
+procedure TLeaveStatement.Compile;
+begin
+  //nothing
 end;
 
 function TExitStatement.Dump(Indent : Integer) : String;

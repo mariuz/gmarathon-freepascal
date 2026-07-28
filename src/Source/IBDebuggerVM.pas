@@ -80,6 +80,11 @@ type
     procedure Clear;
     procedure BreakExecution;
     function Compile(ProcName : String; ProcSource : String) : Boolean;
+    { The parse on its own. Compiling a body needs the database - a called
+      procedure is read from it - so what the grammar accepts and what can be
+      compiled without a server are two different questions, and running them
+      together made the first unanswerable. }
+    function Parses(ProcSource : String) : Boolean;
     { Why the last Compile returned False: the parser's complaint, or the
       exception the compile step raised. Empty after a compile that worked. }
     property LastError : String read GetLastError;
@@ -173,6 +178,8 @@ type
     procedure UpdateLocals;
     procedure UpdateWatches;
     function Compile(ProcName : String; ProcSource : String) : Boolean;
+    { The parse on its own - see TProcModule.Parses. }
+    function Parses(ProcSource : String) : Boolean;
     { Why the last Compile returned False. Empty when it worked. }
     function LastCompileError: String;
 		function CompileSubProc(ProcName : String) : Boolean;
@@ -1335,6 +1342,14 @@ begin
   FStatementPointer := nil;
 end;
 
+function TProcModule.Parses(ProcSource : String) : Boolean;
+begin
+  FLastError := '';
+  TSQLParser(FSQLParser).Lexer.yyerrorfile.Clear;
+  TSQLParser(FSQLParser).Lexer.yyinput.Text := ProcSource;
+  Result := FSQLParser.yyparse = 0;
+end;
+
 function TProcModule.Compile(ProcName : String; ProcSource : String) : Boolean;
 var
   PResult : Integer;
@@ -1644,6 +1659,20 @@ begin
   Result := M.Compile(ProcName, ProcSource);
 end;
 
+function TIBDebuggerVM.Parses(ProcSource : String) : Boolean;
+var
+  M : TProcModule;
+
+begin
+  Clear;
+  M := TProcModule.Create;
+  M.DebuggerVM := Self;
+  M.IsInterbase6 := True;
+  M.SQLDialect := 3;
+  FModules.Add(M);
+  Result := M.Parses(ProcSource);
+end;
+
 function TIBDebuggerVM.LastCompileError: String;
 begin
   Result := '';
@@ -1655,7 +1684,7 @@ function TIBDebuggerVM.FieldSourceJoin(const ARelAlias, AFieldAlias: String): St
 var
   Conn: TMarathonCacheConnection;
 begin
-  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName];
+  Conn := CacheConnectionNamed(FDatabaseName);
   Result := SchemaNames.FieldSourceJoin(ARelAlias, AFieldAlias,
     Assigned(Conn) and Conn.Connected and Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
 end;
@@ -1672,9 +1701,21 @@ var
   FSQLDialect : Integer;
 
 
+var
+  Conn : TMarathonCacheConnection;
+
 begin
-  FIsInterbase6 := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].IsIB6;
-  FSQLDialect := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].SQLDialect;
+  { The called procedure is read from the database - there is nowhere else its
+    source could come from - so say that when there is no database rather than
+    dereferencing a connection that is not there. EXECUTE PROCEDURE parses
+    perfectly well; it was this that took the compile down, and it read as a
+    grammar gap for as long as nothing separated the two. }
+  Conn := CacheConnectionNamed(FDatabaseName);
+  if not Assigned(Conn) or not Assigned(FDatabase) then
+    raise Exception.Create('Cannot compile ' + ProcName +
+      ': the debugger has no connection to read it from');
+  FIsInterbase6 := Conn.IsIB6;
+  FSQLDialect := Conn.SQLDialect;
   Q := TIBQuery.Create(nil);
   try
     Q.Database := FDatabase;
@@ -1722,7 +1763,7 @@ begin
                                                                                            False,
                                                                                            Database.SQLDialect);
       end;
-      CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
+      CharSet := Conn.GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
       if CharSet <> '' then
       begin
         Tmp := Tmp + ' character set ' + CharSet;
@@ -1751,7 +1792,7 @@ begin
                                                                                              False,
                                                                                              Database.SQLDialect);
         end;
-        CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
+        CharSet := Conn.GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
         if CharSet <> '' then
         begin
           Tmp := Tmp + ' character set ' + CharSet;
@@ -1804,7 +1845,7 @@ begin
                                                                                            Database.SQLDialect);
       end;
 
-      CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
+      CharSet := Conn.GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
       if CharSet <> '' then
       begin
         Tmp := Tmp + ' character set ' + CharSet;
@@ -1833,7 +1874,7 @@ begin
                                                                                              False,
                                                                                              Database.SQLDialect);
         end;
-        CharSet := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName].GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
+        CharSet := Conn.GetDBCharSetName(Q.FieldByName('rdb$character_set_id').AsInteger);
         if CharSet <> '' then
         begin
           Tmp := Tmp + ' character set ' + CharSet;

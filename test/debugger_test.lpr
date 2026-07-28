@@ -66,6 +66,17 @@ begin
       WriteLn('       the parser said: ', VM.LastCompileError);
 end;
 
+{ A construct that parses but cannot be *compiled* without a database, because
+  compiling it reads something out of the catalogue: EXECUTE PROCEDURE and a
+  sub-routine call both need the called routine's source. Running the two
+  questions together is what made EXECUTE PROCEDURE look like a grammar gap for
+  as long as it did - the grammar had it, and the compile step crashed. }
+procedure Parses(const AWhat, ABody: String);
+begin
+  Inc(Known);
+  Check(VM.Parses('create procedure DBG_PROBE ' + ABody), AWhat);
+end;
+
 { A construct Firebird accepts and this parser does not. Printed and counted
   rather than asserted: closing the gap must not fail the test. }
 procedure Gap(const AWhat, ABody: String);
@@ -153,30 +164,180 @@ begin
     Supported('INSERTING / UPDATING / DELETING (trigger context)',
       'returns (N integer) as begin if (inserting) then N = 1; suspend; end');
 
-    WriteLn;
-    WriteLn('What Firebird accepts and this parser does not:');
-    Gap('LEAVE from a labelled loop (FB1.5)',
+    Supported('LEAVE out of a loop (FB1.5)',
+      'returns (N integer) as begin N = 0; ' +
+      'while (N < 9) do begin N = N + 1; if (N = 2) then leave; end suspend; end');
+    Supported('LEAVE from a labelled loop (FB1.5)',
       'returns (N integer) as begin N = 0; ' +
       'L1: while (N < 9) do begin N = N + 1; if (N = 2) then leave L1; end suspend; end');
-    Gap('EXECUTE PROCEDURE with RETURNING_VALUES',
-      'as declare variable V integer; begin execute procedure DBG_HELPER returning_values :V; end');
-    Gap('INSERT ... RETURNING ... INTO (FB2)',
+    Supported('a labelled FOR SELECT',
+      'returns (N integer) as begin ' +
+      'L1: for select 1 from rdb$database into :N do begin leave L1; end suspend; end');
+    Supported('INSERT ... RETURNING ... INTO (FB2)',
       'returns (N integer) as begin ' +
       'insert into DBG_T (ID) values (1) returning ID into :N; suspend; end');
-    Gap('MERGE (FB2)',
+    Supported('MERGE (FB2)',
       'as begin merge into DBG_T d using (select 1 x from rdb$database) s ' +
       'on d.ID = s.x when not matched then insert (ID) values (s.x); end');
-    Gap('a window function (FB3)',
+    Supported('MERGE with a matched branch',
+      'as begin merge into DBG_T d using (select 1 x from rdb$database) s ' +
+      'on d.ID = s.x when matched then update set d.ID = s.x ' +
+      'when not matched then insert (ID) values (s.x); end');
+    Supported('a window function (FB3)',
       'returns (N integer) as begin ' +
       'select count(*) over () from rdb$database into :N; suspend; end');
-    Gap('DECFLOAT (FB4)',
+    Supported('a window function with PARTITION BY and ORDER BY',
+      'returns (N integer) as begin select count(*) over ' +
+      '(partition by RDB$RELATION_ID order by RDB$RELATION_ID) ' +
+      'from RDB$RELATIONS into :N; suspend; end');
+    Supported('DECFLOAT (FB4)',
       'returns (N decfloat) as begin N = 1.5; suspend; end');
-    Gap('INT128 (FB4)',
+    Supported('DECFLOAT with a precision',
+      'returns (N decfloat(34)) as begin N = 1.5; suspend; end');
+    Supported('INT128 (FB4)',
       'returns (N int128) as begin N = 1; suspend; end');
-    Gap('a sub-procedure (FB3)',
+    { The token for a decimal literal was declared and then used by no rule at
+      all, so this was a syntax error wherever it appeared. }
+    Supported('a decimal literal',
+      'returns (N double precision) as begin N = 1.5 + 0.25; suspend; end');
+    Supported('a cursor: DECLARE / OPEN / FETCH / CLOSE (FB2.5)',
+      'returns (N integer) as declare C cursor for ' +
+      '(select 1 as X from rdb$database); begin ' +
+      'open C; fetch C into :N; close C; suspend; end');
+    Supported('IN AUTONOMOUS TRANSACTION (FB2.5)',
+      'as begin in autonomous transaction do begin post_event ''x''; end end');
+    Supported('UPDATE OR INSERT ... MATCHING (FB2.1)',
+      'as begin update or insert into DBG_T (ID) values (1) matching (ID); end');
+    Supported('FOR EXECUTE STATEMENT ... INTO ... DO (FB2.5)',
+      'returns (N integer) as begin ' +
+      'for execute statement ''select 1 from rdb$database'' into :N do suspend; end');
+    Supported('EXECUTE STATEMENT WITH AUTONOMOUS TRANSACTION (FB2.5)',
+      'as begin execute statement ''select 1 from rdb$database'' ' +
+      'with autonomous transaction; end');
+    Supported('EXECUTE STATEMENT ON EXTERNAL (FB2.5)',
+      'as begin execute statement ''select 1 from rdb$database'' ' +
+      'on external ''other.fdb'' as user ''SYSDBA'' password ''x''; end');
+    Supported('WHEN SQLSTATE (FB2.5)',
+      'as begin post_event ''x''; when sqlstate ''22001'' do begin post_event ''y''; end end');
+    Supported('EXCEPTION with a message of its own',
+      'as begin exception DBG_E ''boom''; end');
+    Supported('EXCEPTION ... USING (FB3)',
+      'as begin exception DBG_E ''boom @1'' using (1); end');
+    Supported('COALESCE, NULLIF and IIF (FB2)',
+      'returns (N integer) as begin ' +
+      'N = coalesce(null, nullif(1, 2), iif(1 = 1, 3, 4)); suspend; end');
+    Supported('the simple form of CASE',
+      'returns (N integer) as begin N = case 1 when 1 then 10 else 20 end; suspend; end');
+    Supported('SUBSTRING ... FROM ... FOR',
+      'returns (N varchar(8)) as begin N = substring(''abcdef'' from 1 for 4); suspend; end');
+    Supported('TRIM, plain and with LEADING/TRAILING',
+      'returns (N varchar(8)) as begin ' +
+      'N = trim(trailing '' '' from trim(''  ab  '')); suspend; end');
+    Supported('a common table expression (FB2.1)',
+      'returns (N integer) as begin ' +
+      'with C as (select 1 x from rdb$database) select x from C into :N; suspend; end');
+    Supported('a recursive CTE',
+      'returns (N integer) as begin with recursive C as ' +
+      '(select 1 x from rdb$database) select x from C into :N; suspend; end');
+    Supported('a variable with a default (FB2)',
+      'returns (N integer) as declare variable B integer = 7; begin N = B; suspend; end');
+    Supported('a variable with DEFAULT spelled out',
+      'returns (N integer) as declare variable B integer default 7; begin N = B; suspend; end');
+    Supported('NEXT VALUE FOR (FB2)',
+      'returns (N integer) as begin N = next value for DBG_G; suspend; end');
+    Supported('IS TRUE / IS NOT FALSE (FB3)',
+      'returns (N integer) as declare variable B boolean; begin ' +
+      'B = true; if (B is true and B is not false) then N = 1; suspend; end');
+    Supported('SIMILAR TO (FB2.5)',
+      'returns (N integer) as begin if (''ab'' similar to ''a%'') then N = 1; suspend; end');
+    Supported('ROWS (FB1.5)',
+      'returns (N integer) as begin select 1 from rdb$database rows 1 into :N; suspend; end');
+    Supported('OFFSET / FETCH FIRST ... ROWS ONLY',
+      'returns (N integer) as begin ' +
+      'select 1 from rdb$database offset 0 rows fetch first 1 rows only into :N; suspend; end');
+    Supported('ORDER BY ... NULLS LAST',
+      'returns (N integer) as begin ' +
+      'select 1 from rdb$database order by 1 nulls last into :N; suspend; end');
+    Supported('a named window (FB4)',
+      'returns (N integer) as begin select count(*) over W ' +
+      'from rdb$database window W as () into :N; suspend; end');
+    Supported('MERGE ... RETURNING ... INTO',
+      'returns (N integer) as begin merge into DBG_T d ' +
+      'using (select 1 x from rdb$database) s ' +
+      'on d.ID = s.x when not matched then insert (ID) values (s.x) ' +
+      'returning d.ID into :N; suspend; end');
+    Supported('CURRENT_TIMESTAMP as a value',
+      'returns (N timestamp) as begin N = current_timestamp; suspend; end');
+    Supported('LOCALTIMESTAMP (FB4)',
+      'returns (N timestamp) as begin N = localtimestamp; suspend; end');
+    Supported('WITH TIME ZONE (FB4)',
+      'returns (N timestamp with time zone) as begin N = current_timestamp; suspend; end');
+    Supported('RETURN out of a sub-function (FB3)',
+      'returns (N integer) as ' +
+      'declare function F (A integer) returns integer as begin return A; end ' +
+      'begin N = 1; suspend; end');
+    Supported('TYPE OF COLUMN (FB2.5)',
+      'returns (N integer) as declare variable V type of column DBG_T.ID; ' +
+      'begin N = 1; suspend; end');
+    Supported('TYPE OF a domain (FB2.5)',
+      'returns (N integer) as declare variable V type of DBG_D; begin N = 1; suspend; end');
+    Supported('a domain used as a type',
+      'returns (N integer) as declare variable V DBG_D; begin N = 1; suspend; end');
+    Supported('a window frame (FB4)',
+      'returns (N integer) as begin select count(*) over ' +
+      '(order by 1 rows between unbounded preceding and current row) ' +
+      'from rdb$database into :N; suspend; end');
+    Supported('POSITION(x IN y)',
+      'returns (N integer) as begin N = position(''a'' in ''abc''); suspend; end');
+    Supported('UPDATE ... RETURNING ... INTO',
+      'returns (N integer) as begin update DBG_T set ID = 1 returning ID into :N; suspend; end');
+    Supported('DELETE ... RETURNING ... INTO',
+      'returns (N integer) as begin delete from DBG_T returning ID into :N; suspend; end');
+    Supported('SELECT ... WITH LOCK (FB1.5)',
+      'returns (N integer) as begin select ID from DBG_T with lock into :N; suspend; end');
+    Supported('MERGE ... WHEN NOT MATCHED BY SOURCE',
+      'as begin merge into DBG_T d using (select 1 x from rdb$database) s ' +
+      'on d.ID = s.x when not matched by source then delete; end');
+    Supported('a derived table in FROM',
+      'returns (N integer) as begin ' +
+      'select a.x from (select 1 x from rdb$database) a into :N; suspend; end');
+    Supported('LATERAL (FB5)',
+      'returns (N integer) as begin select b.y from ' +
+      '(select 1 x from rdb$database) a, lateral (select a.x y from rdb$database) b ' +
+      'into :N; suspend; end');
+    Supported('GROUP BY an ordinal, and HAVING',
+      'returns (N integer) as begin select RDB$RELATION_ID from RDB$RELATIONS ' +
+      'group by 1 having count(*) > 0 into :N; suspend; end');
+    Supported('a condition assigned to a boolean (FB3)',
+      'returns (N integer) as declare variable B boolean; begin ' +
+      'B = (1 = 1); if (B) then N = 1; suspend; end');
+    Supported('a scalar subquery as a value',
+      'returns (N integer) as begin N = (select 1 from rdb$database); suspend; end');
+    Supported('EXISTS and IN with a subquery',
+      'returns (N integer) as begin if (exists(select 1 from rdb$database) ' +
+      'and 1 in (select 1 from rdb$database)) then N = 1; suspend; end');
+    Supported('a nested CASE',
+      'returns (N integer) as begin N = case when 1 = 1 then ' +
+      'case when 2 = 2 then 1 else 2 end else 3 end; suspend; end');
+
+    WriteLn;
+    WriteLn('What parses but needs a database to compile:');
+    Parses('EXECUTE PROCEDURE with RETURNING_VALUES',
+      'as declare variable V integer; begin execute procedure DBG_HELPER returning_values :V; end');
+    Parses('EXECUTE PROCEDURE with inputs',
+      'returns (N integer) as declare variable V integer; begin V = 1; ' +
+      'execute procedure DBG_HELPER :V returning_values :N; suspend; end');
+    Parses('a sub-procedure (FB3)',
       'returns (N integer) as ' +
       'declare procedure SUB returns (X integer) as begin X = 1; end ' +
       'begin execute procedure SUB returning_values :N; suspend; end');
+    Parses('a sub-function (FB3)',
+      'returns (N integer) as ' +
+      'declare function F (A integer) returns integer as begin return A; end ' +
+      'begin N = 1; suspend; end');
+
+    WriteLn;
+    WriteLn('What Firebird accepts and this parser does not:');
 
     WriteLn;
     { A body that is not PSQL at all must be an answer rather than a dialog:
@@ -187,7 +348,11 @@ begin
     Check(VM.LastCompileError <> '', 'and says what it objected to');
 
     WriteLn;
-    WriteLn(Known, ' construct(s) understood, ', Gaps, ' gap(s) against Firebird 6.');
+    WriteLn(Known, ' construct(s) understood, ', Gaps,
+      ' gap(s) of the ones tracked here.');
+    { The gap list being empty says the constructs collected here all parse,
+      not that the grammar is Firebird 6 - it is a PSQL grammar, and the DDL
+      and DSQL either side of it are another matter. New gaps belong above. }
   finally
     VM.Free;
   end;
