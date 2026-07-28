@@ -1629,7 +1629,7 @@ var
 begin
 	if MessageDlg('Are you sure that you wish to drop the Table "' + FObjectName + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctTable, FObjectName);
+		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctTable, FObjectName, FSchema);
 		DoClose := frmDropObject.ModalResult = mrOK;
 		frmDropObject.Free;
 		if DoClose then

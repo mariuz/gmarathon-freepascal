@@ -372,7 +372,7 @@ var
 begin
   If MessageDlg('Are you sure that you wish to drop the generator "' + FObjectName + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
-    frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctGenerator, FObjectName);
+    frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctGenerator, FObjectName, FSchema);
     DoClose := frmDropObject.ModalResult = mrOK;
     frmDropObject.Free;
     if DoClose then

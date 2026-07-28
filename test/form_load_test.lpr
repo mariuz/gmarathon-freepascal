@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3322,6 +3322,52 @@ begin
   end;
 end;
 
+{ The drop dialog's statements, which are the ones that destroy things.
+
+  It kept its own copy of how to drop each kind of object - a case statement
+  that had already drifted from the one in ScriptAs, which is tested against a
+  live server. The copy said "drop external function" for every function, so a
+  Firebird 3 PSQL function could not be dropped from the tree at all: the
+  engine refuses that verb for one (verified against 6.0.0). It asks ScriptAs
+  now, and this is what says so.
+
+  The dialog itself is not shown - it confirms first, and a modal dialog under
+  Xvfb hangs - so what is checked is the statement it would run. }
+procedure CheckDropStatements(Conn: TMarathonCacheConnection);
+var
+  Node: TMarathonCacheTable;
+  Ctx: TScriptAsContext;
+  Stmt: String;
+begin
+  WriteLn('Drop statements:');
+
+  Node := TMarathonCacheTable.Create;
+  try
+    Node.Caption := 'EDIT_DUP';
+    Node.ConnectionName := 'EditorHarness';
+    Stmt := DropStatementForItem(Node);
+    Check(Pos('drop table', LowerCase(Stmt)) > 0,
+      'a table node drops as a table (' + Stmt + ')');
+    Check(Pos('EDIT_DUP', Stmt) > 0, 'naming the object selected');
+  finally
+    Node.Free;
+  end;
+
+  { The one that was wrong. A PSQL function drops with DROP FUNCTION; only a
+    legacy external UDF takes DROP EXTERNAL FUNCTION, and the dialog said the
+    latter for both. }
+  Ctx := ConnScriptContext(Conn);
+  Stmt := DropStatementForNamed('EditorHarness', 'IBX_SMOKE_FN', '', ctUDF);
+  Check(Stmt = ScriptAsDrop(Ctx, 'IBX_SMOKE_FN', ctUDF),
+    'the dialog and Script As agree on how to drop a function');
+  Check(Pos('drop external function', LowerCase(Stmt)) = 0,
+    'and a PSQL function does not drop as an external one (' + Stmt + ')');
+
+  { A connection that is not there is not a reason to run something. }
+  Check(DropStatementForNamed('NoSuchConnection', 'X', '', ctTable) = '',
+    'no connection means no statement rather than a wrong one');
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -3578,6 +3624,7 @@ begin
   CheckResultFilter(Conn);
   CheckSessionMonitorLive(Conn);
   CheckMetadataSearch(Conn);
+  CheckDropStatements(Conn);
   CheckSQLTrace(Conn);
 end;
 

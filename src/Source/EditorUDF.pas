@@ -471,7 +471,7 @@ var
 begin
 	if MessageDlg('Are you sure that you wish to drop the UDF "' + FObjectName + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctUDF, FObjectName);
+		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctUDF, FObjectName, FSchema);
 		DoClose := frmDropObject.ModalResult = mrOK;
 		frmDropObject.Free;
 		if DoClose then

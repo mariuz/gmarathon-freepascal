@@ -1393,7 +1393,7 @@ var
 begin
 	if MessageDlg('Are you sure that you wish to drop the trigger "' + FObjectName + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctTrigger, FObjectName);
+		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctTrigger, FObjectName, FSchema);
 		DoClose := frmDropObject.ModalResult = mrOK;
 		frmDropObject.Free;
 		if DoClose then

@@ -1572,7 +1572,7 @@ var
 begin
 	if MessageDlg('Are you sure that you wish to drop the domain "' + FObjectName + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctDomain, FObjectName);
+		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctDomain, FObjectName, FSchema);
 		DoClose := frmDropObject.ModalResult = mrOK;
 		frmDropObject.Free;
 		if DoClose then

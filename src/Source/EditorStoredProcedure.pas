@@ -2786,7 +2786,7 @@ var
 begin
 	if MessageDlg('Are you sure that you wish to drop the stored procedure "' + FObjectName + '"?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
 	begin
-		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctSP, FObjectName);
+		frmDropObject := TfrmDropObject.CreateDropObject(Self, FDatabaseName, ctSP, FObjectName, FSchema);
 		DoClose := frmDropObject.ModalResult = mrOK;
 		frmDropObject.Free;
 		if DoClose then

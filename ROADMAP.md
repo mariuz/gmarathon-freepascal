@@ -781,6 +781,20 @@ inside it.
   pins the connection-string fix above: for a remote server the string it
   builds must be the one the connection itself opened.
 
+- [x] **The drop dialog kept its own copy of how to drop an object** — a case
+  statement per kind, in two blocks, alongside the one in `ScriptAs` that is
+  checked against a live server. The copies had already drifted: this one said
+  `drop external function` for *every* function, so a Firebird 3 PSQL function
+  could not be dropped from the tree at all. Verified against 6.0.0 before
+  fixing: the engine refuses that verb for a PSQL function, and `drop function`
+  is what it takes. `ScriptAsDrop` branches on the legacy flag, qualifies by
+  schema and drops a package in one statement, so the dialog asks it now.
+
+  The named path — what an editor takes when it drops the object it is editing
+  — did not carry a schema at all, so an editor opened on a second schema's
+  object generated an unqualified `DROP`. It takes one now, and all eight
+  editors pass theirs.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

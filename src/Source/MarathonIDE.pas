@@ -266,6 +266,14 @@ var
   access violation instead of leaving it disconnected. }
 function CacheConnectionNamed(const AName: String): TMarathonCacheConnection;
 
+{ The context the Script As generators take, from a connection - and from a
+  tree node, which adds the schema the node came from. Both were private to
+  this unit until the drop dialog stopped keeping its own copy of how to drop
+  an object and started asking ScriptAs. }
+function ConnScriptContext(Conn: TMarathonCacheConnection): TScriptAsContext;
+function ItemScriptContext(Conn: TMarathonCacheConnection;
+	Item: TMarathonCacheBaseNode): TScriptAsContext;
+
 implementation
 
 uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};

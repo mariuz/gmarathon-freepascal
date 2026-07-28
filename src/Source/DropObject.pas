@@ -19,7 +19,7 @@ unit DropObject;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, Db, ImgList, IBDatabase, IBQuery, IB, Globals, MarathonProjectCacheTypes, MarathonProjectCache, MarathonIDE, rmCompatControls;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, Messages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ComCtrls, Db, ImgList, IBDatabase, IBQuery, IB, Globals, MarathonProjectCacheTypes, MarathonProjectCache, MarathonIDE, ScriptAs, rmCompatControls;
 
 type
 	TfrmDropObject = class(TForm)
@@ -38,6 +38,10 @@ type
 		FDropItem : String;
 		FDropCacheType : TGSSCacheType;
 		FDropConnection : String;
+		{ The schema the object lives in, so the generated DROP names the object
+		  the editor was opened on rather than whatever an unqualified name
+		  reaches. Empty on every server before Firebird 6. }
+		FDropSchema : String;
 		procedure WMBuggerOff(var Message : TMessage); message LM_USER + 101;
 		procedure AddStatusItem(Status, StatResult: String; Severity: Integer);
 		procedure DoDropObjects;
@@ -45,8 +49,15 @@ type
 	public
 		{ Public declarations }
 		constructor CreateDrop(AOwner: TComponent; DropObjects : TStringList);
-		constructor CreateDropObject(AOwner : TComponent; Connection : String; ObjectType : TGSSCacheType; ObjectName : String);
+		constructor CreateDropObject(AOwner : TComponent; Connection : String; ObjectType : TGSSCacheType; ObjectName : String; ObjectSchema : String = '');
 	end;
+
+{ The statement that drops this object - see the implementation for what it
+  used to be and why it is not that any more. Empty when the connection has
+  gone, which the caller reports rather than running. }
+function DropStatementForItem(Item: TMarathonCacheBaseNode): String;
+function DropStatementForNamed(const AConnection, AName, ASchema: String;
+  ACacheType: TGSSCacheType): String;
 
 implementation
 
@@ -54,6 +65,48 @@ implementation
   schema: an unqualified DROP outside the search path removes a different
   object, or nothing at all - and this dialog is the one place where getting
   that wrong destroys something. }
+{ The statement that drops this object.
+
+  It used to be built here, verb by verb, in a case statement that was a second
+  copy of the one in ScriptAs - and the copies had already diverged: this one
+  said "drop external function" for every function, so a Firebird 3 PSQL
+  function could not be dropped from the tree at all (the engine refuses it,
+  verified). ScriptAsDrop branches on the legacy flag, qualifies by schema and
+  is checked against a live server, so this asks it rather than knowing.
+
+  Empty when the connection has gone, which the caller reports rather than
+  running. }
+function DropStatementForItem(Item: TMarathonCacheBaseNode): String;
+var
+  Conn: TMarathonCacheConnection;
+begin
+  Result := '';
+  if not (Item is TMarathonCacheObject) then
+    Exit;
+  Conn := CacheConnectionNamed(TMarathonCacheObject(Item).ConnectionName);
+  if not Assigned(Conn) then
+    Exit;
+  Result := ScriptAsDrop(ItemScriptContext(Conn, Item), Item.Caption,
+    Item.CacheType);
+end;
+
+{ The same for an object named rather than selected - the path the editors take
+  when they drop what they are editing. }
+function DropStatementForNamed(const AConnection, AName, ASchema: String;
+  ACacheType: TGSSCacheType): String;
+var
+  Conn: TMarathonCacheConnection;
+  Ctx: TScriptAsContext;
+begin
+  Result := '';
+  Conn := CacheConnectionNamed(AConnection);
+  if not Assigned(Conn) then
+    Exit;
+  Ctx := ConnScriptContext(Conn);
+  Ctx.Schema := ASchema;
+  Result := ScriptAsDrop(Ctx, AName, ACacheType);
+end;
+
 function DropIdent(Item: TMarathonCacheBaseNode): String;
 var
   Conn: TMarathonCacheConnection;
@@ -78,12 +131,13 @@ begin
   ShowModal;
 end;
 
-constructor TfrmDropObject.CreateDropObject(AOwner: TComponent; Connection: String; ObjectType: TGSSCacheType; ObjectName: String);
+constructor TfrmDropObject.CreateDropObject(AOwner: TComponent; Connection: String; ObjectType: TGSSCacheType; ObjectName: String; ObjectSchema: String);
 begin
 	inherited Create(AOwner);
 	FDropItem := ObjectName;
 	FDropCacheType := ObjectType;
 	FDropConnection := Connection;
+	FDropSchema := ObjectSchema;
 
 	FDropList := nil;
 	btnOK.Enabled := False;
@@ -175,32 +229,32 @@ begin
             end;
             if DoIt then
             begin
-              SQL := 'drop domain ' + DropIdent(Item) + ';';
+              SQL := DropStatementForItem(Item);
               DoDrop(Item, SQL);
             end;
           end;
 
         ctTable:
           begin
-            SQL := 'drop table ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
         ctView:
           begin
-            SQL := 'drop view ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
         ctSP:
           begin
-            SQL := 'drop procedure ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
         ctTrigger:
           begin
-            SQL := 'drop trigger ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
 					end;
 
@@ -212,13 +266,13 @@ begin
               supported way to drop a generator in any case. The older verb is
               used rather than DROP SEQUENCE because it works on every server
               this codebase still connects to, and matches ScriptAsDrop. }
-            SQL := 'drop generator ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
         ctException:
           begin
-            SQL := 'drop exception ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
@@ -226,7 +280,7 @@ begin
           begin
             { DROP PACKAGE removes the body as well, so one statement covers a
               package with or without one. }
-            SQL := 'drop package ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
@@ -236,13 +290,13 @@ begin
               reports so itself - which is what should happen. Dropping the
               contents first is a decision for the user, not a side effect of
               confirming this dialog. }
-            SQL := 'drop schema ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
         ctUDF:
           begin
-            SQL := 'drop external function ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
             DoDrop(Item, SQL);
           end;
 
@@ -331,8 +385,7 @@ begin
               SubItems.Add('Stored Procedure');
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
-            SQL := 'drop procedure ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+            SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
           end;
 
         ctTrigger:
@@ -343,8 +396,7 @@ begin
               SubItems.Add('Trigger');
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
-						SQL := 'drop trigger ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+						SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
           end;
 
         ctTable:
@@ -355,8 +407,7 @@ begin
               SubItems.Add('Table');
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
-						SQL := 'drop table ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+						SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
           end;
 
         ctException:
@@ -367,8 +418,7 @@ begin
               SubItems.Add('Exception');
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
-            SQL := 'drop exception ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+            SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
           end;
 
         ctUDF:
@@ -379,8 +429,7 @@ begin
               SubItems.Add('UDF');
               ImageIndex := GetImageIndexForCacheType(FDropCacheType);
             end;
-            SQL := 'drop external function ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                       MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+            SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
           end;
 
 				ctView:
@@ -391,8 +440,7 @@ begin
 							SubItems.Add('View');
 							ImageIndex := GetImageIndexForCacheType(FDropCacheType);
 						end;
-						SQL := 'drop view ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-																			 MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+						SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
 					end;
 
         ctGenerator:
@@ -482,8 +530,7 @@ begin
             finally
               Q.Free;
             end;
-            SQL := 'drop domain ' + MakeQuotedIdent(FDropItem, MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].IsIB6,
-                                      MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDropConnection].SQLDialect) + ';';
+            SQL := DropStatementForNamed(FDropConnection, FDropItem, FDropSchema, FDropCacheType);
           end;
       else
         begin
@@ -557,7 +604,7 @@ begin
                   SubItems.Add('Stored Procedure');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop procedure ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
             ctTrigger:
@@ -568,7 +615,7 @@ begin
                   SubItems.Add('Trigger');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop trigger ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
             ctTable:
@@ -579,7 +626,7 @@ begin
                   SubItems.Add('Table');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop table ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
             ctException:
@@ -590,7 +637,7 @@ begin
                   SubItems.Add('Exception');
 									ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop exception ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
             ctUDF:
@@ -601,7 +648,7 @@ begin
                   SubItems.Add('UDF');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop external function ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
 
@@ -613,7 +660,7 @@ begin
                   SubItems.Add('View');
                   ImageIndex := Item.ImageIndex;
                 end;
-                SQL := 'drop view ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
 
@@ -636,7 +683,7 @@ begin
               supported way to drop a generator in any case. The older verb is
               used rather than DROP SEQUENCE because it works on every server
               this codebase still connects to, and matches ScriptAsDrop. }
-            SQL := 'drop generator ' + DropIdent(Item) + ';';
+            SQL := DropStatementForItem(Item);
                 end
                 else
                 begin
@@ -707,7 +754,7 @@ begin
                 finally
                   Q.Free;
                 end;
-                SQL := 'drop domain ' + DropIdent(Item) + ';';
+                SQL := DropStatementForItem(Item);
               end;
 
             ctConnection,   //AC:
