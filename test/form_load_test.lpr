@@ -1863,6 +1863,39 @@ begin
   end;
 end;
 
+{ A table whose rows live in a file. Dropped and recreated so the check does
+  not depend on what an earlier run left behind. }
+procedure EnsureExternalTable(Conn: TMarathonCacheConnection);
+
+  procedure Run(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      S.SQL.Text := SQLText;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+begin
+  Run('drop table EXT_BULK');
+  Run('create table EXT_BULK external file ''/tmp/marathon_ext_bulk.dat'' ' +
+    '(ID char(8), NOTE char(16))');
+end;
+
 { The bulk metadata extract, end to end.
 
   This is the engine behind Tools > Metadata Extract - the one that writes a
@@ -1890,6 +1923,11 @@ var
   Tmp, Tables: Integer;
 begin
   WriteLn('Bulk metadata extract:');
+  { An external table, made here so the bulk path is known to meet one. Its
+    rows live in a file rather than in the database, and it extracted as an
+    ordinary table until ExternalFileClause was added - which is the kind of
+    thing only an extract that meets one can catch. }
+  EnsureExternalTable(Conn);
   FileName := GetTempDir + 'marathon_extract_test.sql';
   if FileExists(FileName) then
     DeleteFile(FileName);
@@ -1973,6 +2011,13 @@ begin
       'naming one that is actually there');
     Check(Pos('EDIT_DOM', AnsiUpperCase(Script.Text)) > 0,
       'and the domain a column is declared with');
+    { The external table has to come out as one. Without the clause it is
+      extracted as an ordinary table, and everything written to the rebuilt
+      one would go into the database instead of the file. }
+    Check(Pos('EXTERNAL FILE', AnsiUpperCase(Script.Text)) > 0,
+      'an external table keeps its file in the bulk script');
+    Check(Pos('MARATHON_EXT_BULK.DAT', AnsiUpperCase(Script.Text)) > 0,
+      'naming the file it is a view of');
 
     { And now the part that matters: run it into a database of its own.
 

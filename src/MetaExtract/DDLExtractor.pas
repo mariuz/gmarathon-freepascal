@@ -97,6 +97,7 @@ type
     function ExtractSchema(ObjectName : String;
       ObjectSubType : TDDLSubType = ddlstNone) : String;
     function TriggerEventClause(TriggerType: Integer): String;
+    function ExternalFileClause(const ObjectName : String) : String;
     function SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
     function SchemaClause(const Alias: String; const Column: String = 'rdb$schema_name'): String;
     { Ties a column to the domain behind it *in the schema that domain lives
@@ -1474,6 +1475,54 @@ begin
   Result := SchemaNames.QualifiedIdent(FSchema, ObjectName, FIsIB6, FSQLDialect);
 end;
 
+{ EXTERNAL FILE, for a table whose rows live in a file rather than in the
+  database.
+
+  Without this an external table extracts as an ordinary one - the DDL
+  compiles, the table appears, and everything written to it goes into the
+  database instead of the file it was supposed to be a view of. The same class
+  of silent wrongness as reading the byte length of a UTF8 column: what comes
+  back looks like a table and is the wrong table.
+
+  RDB$EXTERNAL_FILE is null for every ordinary table, which is what makes this
+  safe to ask about unconditionally - it has been in the catalogue since
+  InterBase. }
+function TDDLExtractor.ExternalFileClause(const ObjectName: String): String;
+var
+  Q: TIBDataSet;
+begin
+  Result := '';
+  Q := TIBDataSet.Create(Self);
+  try
+    Q.Database := FDatabase;
+    Q.Transaction := FTransaction;
+    Q.SelectSQL.Add('select rdb$external_file from rdb$relations where ' +
+      'rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') +
+      SchemaClause(''));
+    try
+      Q.Open;
+      if (not Q.EOF) and not Q.FieldByName('rdb$external_file').IsNull and
+         (Trim(Q.FieldByName('rdb$external_file').AsString) <> '') then
+        { The path is the server's, and is written as the server recorded it. }
+        Result := ' external file ' +
+          AnsiQuotedStr(Trim(Q.FieldByName('rdb$external_file').AsString), '''');
+      Q.Close;
+    except
+      on E: Exception do
+      begin
+        { An optional clause: if the catalogue cannot answer, the table is
+          extracted without it rather than the whole run failing. The bulk
+          engine swallows an exception here and writes no file at all, which
+          is how a missing guard showed up as "the extract produced nothing"
+          rather than as an error. }
+        Result := '';
+      end;
+    end;
+  finally
+    Q.Free;
+  end;
+end;
+
 function TDDLExtractor.SQLSecurityClause(const SysTable, NameColumn, ObjectName: String): String;
 var
   Q : TIBDataSet;
@@ -1838,7 +1887,11 @@ begin
       end;
       Q1.Open;
       First := True;
-      Line := 'create table ' + QualifiedIdent(ObjectName) + '(' + #13#10;
+      { EXTERNAL FILE goes between the name and the column list - Firebird
+        rejects it after the closing bracket, which is where it was first put
+        and where the test caught it. }
+      Line := 'create table ' + QualifiedIdent(ObjectName) +
+        ExternalFileClause(ObjectName) + '(' + #13#10;
       While Not Q1.EOF do
       begin
         if First then
@@ -1965,7 +2018,8 @@ begin
       Q2.Free;
     end;
 
-    Line := Line + ')' + SQLSecurityClause('rdb$relations', 'rdb$relation_name', ObjectName) + ';';
+    Line := Line + ')' +
+      SQLSecurityClause('rdb$relations', 'rdb$relation_name', ObjectName) + ';';
     OutPut.Text := Line;
 
     //check constraints

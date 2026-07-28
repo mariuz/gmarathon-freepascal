@@ -937,8 +937,47 @@ server rather than against the release notes.
   mean deciding what to do with the reformatting. Not done, and worth saying:
   this is a formatter and a validator rather than the *tree* view FlameRobin
   describes.
-- [ ] **CSV external tables** — Firebird's `EXTERNAL FILE` tables, exposed in
-  the table editor.
+- [x] **External tables** — taken up as the FlameRobin "CSV external tables"
+  item and turned into something verifiable, which changed what it was.
+
+  Reading an external table's rows needs `ExternalFileAccess` in
+  `firebird.conf`, which is `None` by default and is the *server's* setting -
+  the test server refuses with "Error accessing external table's file". So a UI
+  for browsing them could not be checked here at all. What can be, and what
+  turned out to be broken, is the metadata: `RDB$EXTERNAL_FILE` appeared
+  nowhere in the extractor, so **an external table extracted as an ordinary
+  one**. The DDL compiled, a table appeared, and everything written to it would
+  go into the database instead of the file it was supposed to be a view of -
+  the same class of silent wrongness as reading the byte length of a UTF8
+  column: what comes back looks like a table and is the wrong table.
+
+  `ExternalFileClause` fixes that, and the test found the position: Firebird
+  takes `EXTERNAL FILE` between the table name and the column list and rejects
+  it after the closing bracket, which is where it was first put. Verified by
+  recreating the extracted table and asking the *catalogue* whether the new one
+  is external - a `CREATE TABLE` that merely compiled would have made an
+  ordinary table, and that is what tells them apart.
+
+  The bulk export meets one deliberately now - the GUI harness creates an
+  external table before extracting - rather than by whatever an earlier probe
+  left behind, and requires the clause and the file name to survive into the
+  script. `ExternalFileClause` also swallows its own failure and emits nothing,
+  the way the `SQL SECURITY` clause beside it does: an optional clause must not
+  take a whole run down, and this engine reports an exception by writing no
+  file at all, which reads as "the extract produced nothing" rather than as an
+  error.
+
+  One thing recorded because it was not established rather than because it was:
+  a single earlier run of the GUI suite failed on the bulk extract writing no
+  file, and adding that guard was followed by it passing - but no exception was
+  ever observed, so the guard is not known to be what fixed it. The likelier
+  cause is a partially built binary from a `lazbuild | head` pipeline, which
+  bit this session once already. The guard stays because it is right, not
+  because it is proven.
+
+  Still not done, and now recorded with a reason rather than as a plan: a
+  browser or designer for external tables, which needs a server configured to
+  allow the access.
 - **Vector / AI embeddings** — depends on `fbvector`, a third-party UDF package
   that is not part of Firebird. Out of scope here, as it already was.
 - **Temporal tables** — still nothing to target: `PERIOD FOR SYSTEM_TIME` is

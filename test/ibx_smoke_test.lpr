@@ -2002,6 +2002,140 @@ begin
   end;
 end;
 
+{ An external table - one whose rows live in a file rather than in the
+  database - surviving extraction.
+
+  Without the clause such a table extracts as an ordinary one: the DDL
+  compiles, a table appears, and everything written to it goes into the
+  database instead of the file it was supposed to be a view of. The same class
+  of silent wrongness as reading the byte length of a UTF8 column - what comes
+  back looks like a table and is the wrong table.
+
+  Only the metadata is exercised. Reading an external table's rows needs
+  ExternalFileAccess in firebird.conf, which is None by default and is on the
+  server rather than here; the DDL and the catalogue do not need it, and they
+  are what this program gets wrong or right. }
+procedure TestExternalTableDDL;
+var
+  Ex: TDDLExtractor;
+  DDL: String;
+  Probe: TIBQuery;
+  Found: Boolean;
+
+  procedure Run(const SQLText, What: String);
+  var
+    S: TIBSQL;
+  begin
+    EnsureTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := StripTrailingSemicolon(SQLText);
+      try
+        S.ExecQuery;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        on E: Exception do
+        begin
+          if Tr.Active then
+            Tr.Rollback;
+          WriteLn('FAIL: ', What, ': ', E.Message);
+          WriteLn(SQLText);
+          Halt(1);
+        end;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+  procedure Discard(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    EnsureTransaction;
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := DB;
+      S.Transaction := Tr;
+      S.SQL.Text := SQLText;
+      try
+        S.ExecQuery;
+        if Tr.Active then
+          Tr.Commit;
+      except
+        if Tr.Active then
+          Tr.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+begin
+  Discard('drop table EXT_SMOKE');
+  Discard('drop table EXT_SMOKE2');
+  Run('create table EXT_SMOKE external file ''/tmp/marathon_ext_smoke.dat'' ' +
+      '(ID char(10), NAME char(20))', 'creating an external table');
+
+  Ex := TDDLExtractor.Create(nil);
+  try
+    Ex.Database := DB;
+    Ex.Transaction := Tr;
+    Ex.SQLDialect := 3;
+    Ex.IsInterbase6 := True;
+    EnsureTransaction;
+    DDL := Ex.Extract(ddlTable, ddlstNone, 'EXT_SMOKE');
+    if Tr.Active then
+      Tr.Commit;
+  finally
+    Ex.Free;
+  end;
+
+  RequireInDDL(DDL, 'external file', 'the EXTERNAL FILE clause');
+  RequireInDDL(DDL, 'marathon_ext_smoke.dat', 'the file the table is a view of');
+
+  { And it runs: the clause has to be in the place Firebird takes it, which is
+    after the column list. }
+  DDL := StringReplace(DDL, 'EXT_SMOKE', 'EXT_SMOKE2', [rfReplaceAll]);
+  DDL := StringReplace(DDL, 'marathon_ext_smoke.dat', 'marathon_ext_smoke2.dat',
+    [rfReplaceAll]);
+  Run(DDL, 'the extracted external-table DDL');
+
+  EnsureTransaction;
+  Probe := TIBQuery.Create(nil);
+  try
+    Probe.Database := DB;
+    Probe.Transaction := Tr;
+    Probe.SQL.Text := 'select rdb$external_file from rdb$relations ' +
+      'where rdb$relation_name = ''EXT_SMOKE2''';
+    Probe.Open;
+    { The catalogue rather than the script: a CREATE TABLE that merely
+      compiled would have made an ordinary table, and this is what tells them
+      apart. }
+    Found := (not Probe.EOF) and
+      (Pos('marathon_ext_smoke2.dat', Probe.Fields[0].AsString) > 0);
+    Probe.Close;
+  finally
+    Probe.Free;
+  end;
+  if Tr.Active then
+    Tr.Commit;
+
+  if not Found then
+  begin
+    WriteLn('FAIL: the recreated table is not external - the rows would go ' +
+            'into the database rather than the file');
+    Halt(1);
+  end;
+
+  Discard('drop table EXT_SMOKE2');
+  Discard('drop table EXT_SMOKE');
+  WriteLn('External table DDL OK (the file survives extraction and recreation)');
+end;
+
 procedure TestResultFilter;
 var
   FQ: TIBQuery;
@@ -4930,6 +5064,7 @@ begin
     TestCreateDatabase(HostPrefixOf(DatabaseName));
     TestObjectCatalogue;
     TestCsvImportLive;
+    TestExternalTableDDL;
     TestResultFilter;
     TestBackupAndRestore;
     TestPerformanceMonitor;
