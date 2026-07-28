@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3979,6 +3979,194 @@ begin
   end;
 end;
 
+type
+  { OnReportError is "of object", so a nested procedure will not do. }
+  TScriptErrorSink = class
+  public
+    Errors: TStringList;
+    constructor Create;
+    destructor Destroy; override;
+    procedure Report(Sender: TObject; LineNumber: Integer; ErrorText: String);
+  end;
+
+constructor TScriptErrorSink.Create;
+begin
+  inherited Create;
+  Errors := TStringList.Create;
+end;
+
+destructor TScriptErrorSink.Destroy;
+begin
+  Errors.Free;
+  inherited Destroy;
+end;
+
+procedure TScriptErrorSink.Report(Sender: TObject; LineNumber: Integer;
+  ErrorText: String);
+begin
+  Errors.Add(ErrorText);
+end;
+
+{ The ISQL-compatible script engine, which had no test of any kind.
+
+  Twelve hundred lines behind the SQL editor's Script mode and every .sql file
+  this program runs, and nothing had ever driven it. It is not in the console
+  harness because the unit pulls in the LCL, so it is exercised here.
+
+  What is checked is what a script engine is *for*: that a multi-statement
+  script runs in order and its effects are in the database afterwards, that
+  SET TERM lets a PSQL body carry semicolons without being cut in half - the
+  thing every naive splitter gets wrong - and that a script which fails part
+  way says so rather than reporting success. }
+procedure CheckScriptExecutive(Conn: TMarathonCacheConnection);
+var
+  Obj: TIBSQLObj;
+  Script: TStringList;
+  Probe: TIBQuery;
+  Sink: TScriptErrorSink;
+  Idx: Integer;
+  Q: TIBQuery;
+
+  procedure Discard(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      S.SQL.Text := SQLText;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+  function RunScript(ALines: TStringList): Boolean;
+  begin
+    Result := False;
+    Sink.Errors.Clear;
+    { The engine runs DDL on a transaction of its own and commits it, so a
+      caller holding an older snapshot would not see what the script just
+      created - the insert after a create table would fail with "Table
+      unknown". The editor's own transaction is idle when Script mode runs;
+      this does the same deliberately. }
+    if Conn.Transaction.Active then
+      Conn.Transaction.Commit;
+    Obj := TIBSQLObj.Create(nil);
+    Q := TIBQuery.Create(nil);
+    try
+      Q.Database := Conn.Connection;
+      Q.Transaction := Conn.Transaction;
+      Obj.SkipCreateConnect := True;
+      Obj.AutoDDL := True;
+      Obj.Query := ALines;
+      Obj.Database := Conn.Connection;
+      Obj.Transaction := Conn.Transaction;
+      Obj.SQLQuery := Q;
+      Obj.OnReportError := Sink.Report;
+      try
+        Obj.DoISQL;
+        Result := True;
+      except
+        on E: Exception do
+          Sink.Errors.Add(E.Message);
+      end;
+    finally
+      Q.Free;
+      Obj.Free;
+    end;
+  end;
+
+begin
+  WriteLn('Script engine:');
+  Discard('drop table SCRIPT_T');
+  Discard('drop procedure SCRIPT_P');
+
+  Script := TStringList.Create;
+  Sink := TScriptErrorSink.Create;
+  Probe := TIBQuery.Create(nil);
+  try
+    { Several statements, in order: the table has to exist before the inserts
+      and the inserts before the count. }
+    Script.Add('create table SCRIPT_T (ID integer, NOTE varchar(20));');
+    Script.Add('insert into SCRIPT_T values (1, ''one'');');
+    Script.Add('insert into SCRIPT_T values (2, ''two'');');
+    Script.Add('commit;');
+    Check(RunScript(Script), 'a multi-statement script runs');
+    Check(Sink.Errors.Count = 0, 'without reporting an error');
+    if Sink.Errors.Count > 0 then
+      for Idx := 0 to Sink.Errors.Count - 1 do
+        WriteLn('       [', Idx, '] ', Sink.Errors[Idx]);
+
+    Probe.Database := Conn.Connection;
+    Probe.Transaction := Conn.Transaction;
+    Probe.AllowAutoActivateTransaction := True;
+    Probe.SQL.Text := 'select count(*) from SCRIPT_T';
+    Probe.Open;
+    Check(Probe.Fields[0].AsInteger = 2,
+      'and its statements all took effect (' +
+      IntToStr(Probe.Fields[0].AsInteger) + ' rows)');
+    Probe.Close;
+
+    { SET TERM, which is the whole reason a script engine is more than a split
+      on semicolons: the body of a procedure is full of them. }
+    Script.Clear;
+    Script.Add('set term ^ ;');
+    Script.Add('create procedure SCRIPT_P returns (N integer)');
+    Script.Add('as');
+    Script.Add('begin');
+    Script.Add('  N = 1;');
+    Script.Add('  suspend;');
+    Script.Add('end^');
+    Script.Add('set term ; ^');
+    Script.Add('commit;');
+    Check(RunScript(Script), 'a script with SET TERM runs');
+    Check(Sink.Errors.Count = 0, 'without reporting an error (' +
+      Copy(Sink.Errors.Text, 1, 80) + ')');
+
+    Probe.SQL.Text := 'select count(*) from rdb$procedures ' +
+      'where rdb$procedure_name = ''SCRIPT_P''';
+    Probe.Open;
+    Check(Probe.Fields[0].AsInteger = 1,
+      'and the procedure it declared is there');
+    Probe.Close;
+
+    { The body has to have survived whole - a splitter that cut on the first
+      semicolon would leave a procedure that compiles to nothing useful. }
+    Probe.SQL.Text := 'select N from SCRIPT_P';
+    Probe.Open;
+    Check((not Probe.EOF) and (Probe.Fields[0].AsInteger = 1),
+      'and it runs, so its body was not cut at a semicolon');
+    Probe.Close;
+
+    { A script that goes wrong must say so. Reporting success on a failed
+      script is the worst thing this engine could do. }
+    Script.Clear;
+    Script.Add('insert into NO_SUCH_TABLE values (1);');
+    RunScript(Script);
+    Check(Sink.Errors.Count > 0, 'a statement that fails is reported (' +
+      IntToStr(Sink.Errors.Count) + ')');
+    if Sink.Errors.Count > 0 then
+      Check(Pos('NO_SUCH_TABLE', UpperCase(Sink.Errors.Text)) > 0,
+        'naming what went wrong');
+  finally
+    Probe.Free;
+    Sink.Free;
+    Script.Free;
+    Discard('drop procedure SCRIPT_P');
+    Discard('drop table SCRIPT_T');
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -4234,6 +4422,7 @@ begin
   CheckResultExport(Conn);
   CheckResultFilter(Conn);
   CheckResultColumns(Conn);
+  CheckScriptExecutive(Conn);
   CheckSessionMonitorLive(Conn);
   CheckMetadataSearch(Conn);
   CheckDropStatements(Conn);

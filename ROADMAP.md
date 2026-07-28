@@ -861,6 +861,36 @@ inside it.
   binary blob comes back byte for byte after OK. With the guard removed it
   comes back a byte short.
 
+- [x] **The script engine could not run DDL at all** — `ScriptExecutive.pas`,
+  twelve hundred lines behind the SQL editor's Script mode, had no test of any
+  kind. Writing the first one found that a script which creates a table and
+  then inserts into it - the commonest script there is - failed on every insert
+  while reporting itself finished.
+
+  Three defects, each hidden behind the next. **The statement type was always
+  wrong**: the engine asked `TIBQuery.StatementType`, which comes back
+  `SQLUnknown` for DDL on this IBX, so every DDL statement fell through the
+  dispatch and was silently *not run* - no error, no table. `TIBSQL` exposes
+  the statement's own metadata, which is the same lesson the SQL editor learned
+  about parameter types. **The internal queries were never bound**: the DDL
+  query and its transaction were wired to the database only inside the
+  `CREATE DATABASE` and `CONNECT` branches, so a script holding neither ran its
+  DDL through a query with no database - which is why replaying this program's
+  own extract output worked, since that begins with `CONNECT`, and a hand-typed
+  script did not. **`SET AUTODDL` committed only half of it**: DDL runs on its
+  own transaction here, so committing that one left everything after it looking
+  at a snapshot from before the object existed.
+
+  Two smaller things fixed on the way: `if X.Active or X.Active` appeared six
+  times - the same test written twice - and a statement the server will not
+  even prepare is now reported rather than skipped in silence, which is what
+  the type probe would otherwise have swallowed.
+
+  Checked against a live server: a multi-statement script runs and its rows are
+  there afterwards; a `SET TERM` script declares a procedure whose body carries
+  semicolons and the procedure then *runs*, so the body was not cut in half;
+  and a statement naming a table that does not exist is reported by name.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

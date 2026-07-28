@@ -19,7 +19,7 @@ unit ScriptExecutive;
 
 interface
 
-uses Classes, {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}LCLIntf, LCLType, ibase60dyn, {$ELSE}Windows, Messages, {$ENDIF}SysUtils, Registry, Dialogs, Forms, Controls, StdCtrls, IBDatabase, IBQuery, IB, DOM, XMLRead, XMLWrite;
+uses Classes, {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}LCLIntf, LCLType, ibase60dyn, {$ELSE}Windows, Messages, {$ENDIF}SysUtils, Registry, Dialogs, Forms, Controls, StdCtrls, IBDatabase, IBQuery, IBSQL, IB, DOM, XMLRead, XMLWrite;
 
 type
   TISQLExceptionCode = (eeInitialization, eeInvDialect, eeFOpen, eeParse,
@@ -65,6 +65,9 @@ type
     FDatabase: TIBDatabase;
     FSQLQuery: TIBQuery;
     FTmpQuery: TIBQuery;
+    { Asked what kind of statement this is: TIBQuery does not know, TIBSQL
+      does. }
+    FTypeSQL: TIBSQL;
     FTmpTransaction : TIBTransaction;
     FDDLQuery: TIBQuery;
     FDDLTransaction : TIBTransaction;
@@ -92,6 +95,17 @@ type
     function ParseClientDialect (const InputSQL: String): Integer;
     function IsISQLCommand (const InputSQL: String; out Data: Variant): TISQLAction;
     function ParseOnOff (const InputSQL, Item: String): Boolean;
+    { Binds the engine's own queries and transactions to the database.
+
+      They used to be wired only inside the CREATE DATABASE and CONNECT
+      branches, so a script holding neither - which is what anyone typing
+      "create table ..." into the editor has - ran its DDL through a query with
+      no database and a transaction with no database to start, and every DDL
+      statement in it failed with "Transaction is not active" while the run
+      reported itself finished. A script that begins with CONNECT worked, which
+      is why the extract output this program writes itself round-tripped and
+      the plain case did not. }
+    procedure BindInternalQueries;
     procedure InitTokeniser(S : String);
     function GetNextToken : String;
     procedure SetAutoDDL(const Value: boolean);
@@ -551,6 +565,23 @@ begin
   result := actUnk;
 end;
 
+procedure TIBSQLObj.BindInternalQueries;
+begin
+  FTmpQuery.Database := FDatabase;
+  FTmpQuery.ParamCheck := False;
+  FTmpQuery.Transaction := FTmpTransaction;
+  FTmpTransaction.DefaultDatabase := FDatabase;
+
+  FDDLQuery.Database := FDatabase;
+  FDDLQuery.ParamCheck := False;
+  { The DDL query runs on the DDL transaction - the one the DDL branch starts
+    and, with AutoDDL, commits. The CONNECT branch used to hand it the *Tmp*
+    transaction instead, so the statement went to one transaction and the
+    commit to another. }
+  FDDLQuery.Transaction := FDDLTransaction;
+  FDDLTransaction.DefaultDatabase := FDatabase;
+end;
+
 procedure TIBSQLObj.DoISQL;
 var
   ISQLObj: TIBSQLObj;
@@ -569,6 +600,7 @@ var
 
   ClientDialect: Integer;
   CharSet: String;
+  StmtType: TIBSQLStatementTypes;
 
   InputFile: TextFile;
   LineNumber : Integer;
@@ -588,6 +620,9 @@ var
   SaveCW: word;
 
 begin
+  { Before anything is read: what the queries are bound to must not depend on
+    which statements the script happens to contain. }
+  BindInternalQueries;
   Data := TStringList.Create;
   try
     try
@@ -832,16 +867,7 @@ begin
             if Assigned(FOnReportError) then
               FOnReportError(Self, LineNumber, 'CREATE DATABASE statement skipped');
 
-						FTmpQuery.Database := FDatabase;
-            FTmpQuery.ParamCheck := False;
-            FTmpQuery.Transaction := FTmpTransaction;
-            FTmpTransaction.DefaultDatabase := FDatabase;
-
-            FDDLQuery.Database := FDatabase;
-            FDDLQuery.ParamCheck := False;
-            FDDLQuery.Transaction := FDDLTransaction;
-            FDDLTransaction.DefaultDatabase := FDatabase;
-
+            BindInternalQueries;
           end
           else
           begin
@@ -932,15 +958,7 @@ begin
             if Assigned(FOnReportError) then
               FOnReportError(Self, LineNumber, 'CONNECT statement skipped');
 
-            FTmpQuery.Database := FDatabase;
-            FTmpQuery.ParamCheck := False;
-            FTmpQuery.Transaction := FTmpTransaction;
-            FTmpTransaction.DefaultDatabase := FDatabase;
-
-            FDDLQuery.Database := FDatabase;
-            FDDLQuery.ParamCheck := False;
-            FDDLQuery.Transaction := FTmpTransaction;
-            FDDLTransaction.DefaultDatabase := FDatabase;
+            BindInternalQueries;
           end
           else
           begin
@@ -991,24 +1009,54 @@ begin
         FSQLQuery.SQL.Add(Data.Strings[lCnt]);
         // See if the statement is valid
 				try
-          if FTmpTransaction.Active or FTmpTransaction.Active then
+          if FTmpTransaction.Active then
             FTmpTransaction.Commit;
 
           FTmpTransaction.StartTransaction;
 
-          FTmpQuery.SQL := FSQLQuery.SQL;
-          FTmpQuery.Prepare;
+          { What kind of statement this is, asked of TIBSQL rather than of
+            TIBQuery.
 
-          if FTmpTransaction.Active or FTmpTransaction.Active then
+            TIBQuery.StatementType comes back SQLUnknown for DDL on this IBX -
+            "create table ..." reports 0 - so every DDL statement fell through
+            the case below and was silently *not run*, while the script
+            reported itself finished. A script that created a table and then
+            used it therefore failed on everything after the create, with the
+            create itself never complained about. TIBSQL exposes the
+            statement's own metadata, which is the same lesson the SQL editor
+            learned about parameter types. }
+          StmtType := SQLUnknown;
+          FTypeSQL.Database := FDatabase;
+          FTypeSQL.Transaction := FTmpTransaction;
+          FTypeSQL.SQL.Assign(FSQLQuery.SQL);
+          try
+            FTypeSQL.Prepare;
+            StmtType := FTypeSQL.SQLStatementType;
+          except
+            on E: Exception do
+            begin
+              { A statement the server will not even prepare is an error the
+                user has to see - a script that says nothing about a statement
+                it could not run is worse than one that stops. Reported here
+                and skipped, rather than run blind. }
+              if Assigned(FOnReportError) then
+                FOnReportError(Self, LineNumber, E.Message);
+              if FTmpTransaction.Active then
+                FTmpTransaction.Commit;
+              Continue;
+            end;
+          end;
+
+          if FTmpTransaction.Active then
             FTmpTransaction.Commit;
 
-          case FTmpQuery.StatementType of
+          case StmtType of
             SQLCommit:
               begin
                 try
-                  if FTransaction.Active or FTransaction.Active then
+                  if FTransaction.Active then
                     FTransaction.Commit;
-                  if FDDLTransaction.Active or FDDLTransaction.Active then
+                  if FDDLTransaction.Active then
                     FDDLTransaction.Commit;
                 except
                   on E : Exception do
@@ -1022,9 +1070,9 @@ begin
             SQLRollback:
               begin
                 try
-                  if FTransaction.Active or FTransaction.Active then
+                  if FTransaction.Active then
                     FTransaction.Rollback;
-                  if FDDLTransaction.Active or FDDLTransaction.Active then
+                  if FDDLTransaction.Active then
                     FDDLTransaction.Rollback;
                 except
                   on E : Exception do
@@ -1041,12 +1089,25 @@ begin
                 FDDLQuery.SQL.Clear;
                 FDDLQuery.SQL := FSQLQuery.SQL;
                 try
-                  if not (FDDLTransaction.Active or FDDLTransaction.Active) then
+                  if not FDDLTransaction.Active then
                     FDDLTransaction.StartTransaction;
                   FDDLQuery.Prepare;
                   FDDLQuery.ExecSQL;
                   if FAutoDDL then
+                  begin
                     FDDLTransaction.Commit;
+                    { And the DML transaction with it. DDL runs on a
+                      transaction of its own here, so committing only that one
+                      leaves everything after it looking at a snapshot taken
+                      before the object existed: a script that creates a table
+                      and then inserts into it - the commonest script there is
+                      - failed with "Table unknown" on every insert while the
+                      run reported itself finished. Committing both is also
+                      what SET AUTODDL means in isql, which commits the work
+                      transaction as it goes. }
+                    if FTransaction.Active then
+                      FTransaction.Commit;
+                  end;
 
                 except
                   on E: Exception do
@@ -1062,7 +1123,7 @@ begin
             SQLDelete, SQLInsert, SQLUpdate:
               begin
                 try
-                  if not (FTransaction.Active or FTransaction.Active) then
+                  if not FTransaction.Active then
                     FTransaction.StartTransaction;
 
                   FSQLQuery.Prepare;
@@ -1117,6 +1178,7 @@ begin
   inherited;
   FAutoDDL := true;
   FTmpQuery := TIBQuery.Create(nil);
+  FTypeSQL := TIBSQL.Create(nil);
   FTmpTransaction := TIBTransaction.Create(nil);
   FDDLQuery := TIBQuery.Create(nil);
   FDDLTransaction := TIBTransaction.Create(nil);
@@ -1135,6 +1197,7 @@ end;
 
 destructor TIBSQLObj.Destroy;
 begin
+  FTypeSQL.Free;
   FTmpQuery.Free;
   FTmpTransaction.Free;
   FDDLQuery.Free;
