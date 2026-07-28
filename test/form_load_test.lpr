@@ -3401,6 +3401,94 @@ begin
     'and a connection that is not there answers no rather than crashing');
 end;
 
+{ The blob viewer, on the two kinds of blob it is opened on.
+
+  The window is not shown - it is modal - so what is checked is what it does
+  with the data it is handed and what it would write back. That is the part
+  that went wrong: pressing OK used to write whichever memo was in front back
+  into the blob, so a binary blob came back as a memo's transcription of
+  itself, and the hex tab wrote the dump into the data. }
+procedure CheckBlobViewer;
+var
+  F: TfrmBlobViewer;
+  M: TMemoryStream;
+  Header: array[0..7] of Byte;
+  Allowed: Boolean;
+  Before, After_: String;
+
+  procedure LoadText(const S: String);
+  begin
+    M.Clear;
+    if S <> '' then
+      M.WriteBuffer(S[1], Length(S));
+    M.Position := 0;
+  end;
+
+  function StreamText: String;
+  begin
+    SetLength(Result, M.Size);
+    M.Position := 0;
+    if M.Size > 0 then
+      M.ReadBuffer(Result[1], M.Size);
+    M.Position := 0;
+  end;
+
+begin
+  WriteLn('Blob viewer:');
+  M := TMemoryStream.Create;
+  F := TfrmBlobViewer.Create(nil);
+  try
+    { A text blob: editable, and the hex tab shows hex rather than the same
+      text again. }
+    LoadText('select 1 from rdb$database');
+    F.Data := M;
+    Check(not F.IsBinary, 'a text blob is not reported binary');
+    Check(Pos('select 1', F.edBlobText.Lines.Text) > 0,
+      'and its text is in the text tab');
+    Check(Pos('73 65 6C 65 63 74', F.edBlobHex.Lines.Text) > 0,
+      'while the hex tab holds hex');
+    Check(F.edBlobHex.ReadOnly, 'which is a view rather than an editor');
+    F.ReadOnly := False;
+    Check(not F.edBlobText.ReadOnly, 'a text blob can be edited');
+
+    { Switching to the hex tab used to write the blob back through a memo.
+      Merely looking must change nothing. }
+    Before := StreamText;
+    F.pgBlobViewer.ActivePageIndex := 1;
+    Allowed := True;
+    F.pgBlobViewerChanging(F.pgBlobViewer, Allowed);
+    Check(StreamText = Before, 'looking at the hex tab does not change the blob');
+
+    { An edit does reach it, which is the point of an editable blob. }
+    F.edBlobText.Lines.Text := 'changed';
+    F.btnOKClick(F.btnOK);
+    Check(Pos('changed', StreamText) > 0, 'an edit is written back on OK');
+
+    { Now the one that lost data: bytes that are not text. }
+    M.Clear;
+    { A PNG's first eight bytes: no NUL among them, and plainly not text. }
+    Header[0] := $89; Header[1] := $50; Header[2] := $4E; Header[3] := $47;
+    Header[4] := $0D; Header[5] := $0A; Header[6] := $1A; Header[7] := $0A;
+    M.WriteBuffer(Header[0], Length(Header));
+    M.Position := 0;
+    Before := StreamText;
+    F.Data := M;
+    Check(F.IsBinary, 'a binary blob is reported binary');
+    Check(F.edBlobText.ReadOnly, 'and is shown read-only');
+    F.ReadOnly := False;
+    Check(F.edBlobText.ReadOnly,
+      'which the caller cannot override, since a memo cannot hold it');
+    F.btnOKClick(F.btnOK);
+    After_ := StreamText;
+    Check(After_ = Before,
+      'and pressing OK leaves it exactly as it was (' +
+      IntToStr(Length(Before)) + ' -> ' + IntToStr(Length(After_)) + ' bytes)');
+  finally
+    F.Free;
+    M.Free;
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -3659,6 +3747,7 @@ begin
   CheckMetadataSearch(Conn);
   CheckDropStatements(Conn);
   CheckObjectExistence(Conn);
+  CheckBlobViewer;
   CheckSQLTrace(Conn);
 end;
 

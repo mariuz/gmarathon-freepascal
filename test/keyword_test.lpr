@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -338,6 +338,90 @@ begin
     Check(not ReplaceVerbAt(nil, 1, 7, 6, 'alter'), 'and no text at all');
     Check(L[0] = 'create procedure P',
       'none of which changed the text (' + L[0] + ')');
+  finally
+    L.Free;
+  end;
+end;
+
+{ Showing a blob.
+
+  The viewer had a tab labelled Hex that held no hex - it loaded the blob into
+  a second memo as text - and it wrote whichever memo was in front back into
+  the blob when the tab was switched or OK was pressed. For a binary blob that
+  is not a viewer but a shredder: a memo normalises line endings and loses what
+  it cannot render, so opening an image and pressing OK replaced it with a
+  transcription of itself. Both halves of the fix are decisions about bytes. }
+procedure TestBlobText;
+var
+  Data: TBytes;
+  Dump: String;
+  Byte_: Integer;
+  L: TStringList;
+
+  procedure SetBytes(const S: String);
+  var
+    Idx: Integer;
+  begin
+    SetLength(Data, Length(S));
+    for Idx := 1 to Length(S) do
+      Data[Idx - 1] := Ord(S[Idx]);
+  end;
+
+begin
+  { Text is text. }
+  SetBytes('select * from CUSTOMERS' + #13#10 + 'where ID = 1');
+  Check(not IsBinaryData(Data), 'a SQL script is not binary');
+  SetBytes('');
+  Check(not IsBinaryData(Data), 'and nothing at all is not binary either');
+  SetBytes('tabs' + #9 + 'and' + #10 + 'newlines' + #13);
+  Check(not IsBinaryData(Data), 'tabs and line endings are text');
+
+  { A NUL settles it on its own - no text blob has one and every binary format
+    does. }
+  SetLength(Data, 4);
+  Data[0] := Ord('a'); Data[1] := 0; Data[2] := Ord('b'); Data[3] := Ord('c');
+  Check(IsBinaryData(Data), 'a NUL makes it binary whatever else is there');
+
+  { A PNG header: no NUL in the first bytes, but plainly not text. }
+  SetLength(Data, 8);
+  Data[0] := $89; Data[1] := $50; Data[2] := $4E; Data[3] := $47;
+  Data[4] := $0D; Data[5] := $0A; Data[6] := $1A; Data[7] := $0A;
+  Check(IsBinaryData(Data), 'and so does a run of control bytes');
+
+  { One stray control byte in a page of text is not a reason to refuse to
+    edit it. }
+  SetBytes(StringOfChar('x', 100) + #1);
+  Check(not IsBinaryData(Data), 'but one odd byte among a hundred is not');
+
+  { The dump: offset, hex, and the printable bytes again. }
+  SetBytes('Hello');
+  Dump := HexDump(Data);
+  L := TStringList.Create;
+  try
+    L.Text := Dump;
+    Check(L.Count = 1, 'five bytes make one dump line (' + IntToStr(L.Count) + ')');
+    Check(Pos('00000000', L[0]) = 1, 'which starts with its offset: ' + L[0]);
+    Check(Pos('48 65 6C 6C 6F', L[0]) > 0, 'holds the bytes in hex');
+    Check(Pos('Hello', L[0]) > 0, 'and the printable ones in the gutter');
+
+    { Sixteen to a line, and the gutter shows a dot for what it cannot draw. }
+    SetLength(Data, 17);
+    for Byte_ := 0 to 16 do
+      Data[Byte_] := Byte_;
+    L.Text := HexDump(Data);
+    Check(L.Count = 2, 'seventeen bytes make two lines (' + IntToStr(L.Count) + ')');
+    Check(Pos('00000010', L[1]) = 1, 'the second starting at offset 16: ' + L[1]);
+    Check(Pos('.', L[0]) > 0, 'and an unprintable byte is a dot in the gutter');
+
+    { A blob can be megabytes; the dump says when it stopped rather than
+      looking like a blob that ends there. }
+    SetLength(Data, 100);
+    FillChar(Data[0], 100, Ord('z'));
+    L.Text := HexDump(Data, 32);
+    Check(Pos('68 more byte', L[L.Count - 1]) > 0,
+      'a limited dump says how much it left out: ' + L[L.Count - 1]);
+    Check(Pos('more byte', HexDump(Data)) = 0,
+      'and an unlimited one has nothing to say about it');
   finally
     L.Free;
   end;
@@ -2131,6 +2215,9 @@ begin
 
   WriteLn('Compile script rewriting:');
   TestCompileScript;
+
+  WriteLn('Blob viewing:');
+  TestBlobText;
 
   if Failures > 0 then
   begin

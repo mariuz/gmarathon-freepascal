@@ -836,6 +836,31 @@ inside it.
   prompts, the execution - which needs the form, a database and a way past
   three modal confirmations. The pieces it is built from are covered instead.
 
+- [x] **The blob viewer destroyed the blobs it was opened on** — three defects
+  in one small window, all found by writing the first test it has ever had.
+  Its second tab is labelled Hex and held no hex: it loaded the same bytes into
+  a second memo as text, so a text blob was shown twice and a binary one was
+  mojibake twice. Switching tabs wrote whichever memo was in front back into
+  the blob, so *looking* at the other tab rewrote it - through a memo, which
+  normalises line endings and loses what it cannot render. And OK wrote back
+  whichever memo was in front, so pressing it with the hex tab up put the dump
+  into the blob.
+
+  The hex tab is a hex dump now - offset, bytes, printable gutter, capped so a
+  megabyte blob does not turn a window into a wait - and it is a view rather
+  than an editor, since writing hex back would need it parsed and nothing here
+  does that. Switching tabs changes nothing. OK writes only from the text side.
+  And a blob that is not text is shown read-only whatever the caller asked for,
+  because a memo cannot hold one without changing it.
+
+  `src/Common/BlobText.pas` decides both halves - is this text, and what does
+  it look like in hex - so they are checked without a window: a NUL settles it,
+  a run of control bytes settles it, one stray byte in a hundred does not, and
+  the dump lines up in rows of sixteen and says how much it left out. The
+  window's own behaviour is checked too, and the check that matters is that a
+  binary blob comes back byte for byte after OK. With the guard removed it
+  comes back a byte short.
+
 One harness lesson worth recording: a check that borrows the caller's open
 query and then commits leaves the next export sitting on a dataset whose
 transaction has gone, and that hangs rather than failing. The runnable-INSERT

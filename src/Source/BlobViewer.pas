@@ -55,83 +55,101 @@ type
   private
     FData: TMemoryStream;
     FReadOnly: Boolean;
+    FBinary: Boolean;
     procedure SetData(const Value: TMemoryStream);
     procedure SetReadOnly(const Value: Boolean);
     { Private declarations }
   public
 		{ Public declarations }
 		property Data : TMemoryStream read FData write SetData;
+		{ Asked for by the caller - but a binary blob is read-only whatever the
+		  caller wants, since a memo cannot hold one without changing it. }
 		property ReadOnly : Boolean read FReadOnly write SetReadOnly;
+		{ True when the blob is not text. Public so a caller can say why the
+		  editing it asked for is not on offer. }
+		property IsBinary : Boolean read FBinary;
 	end;
 
 implementation
 
 {$R *.lfm}
 
-uses Globals;
+uses Globals, BlobText;
+
+const
+	{ A blob can be megabytes, and a memo asked to hold the dump of all of it
+	  stops being a window and becomes a wait. Sixty-four kilobytes is four
+	  thousand lines, which is more than anyone reads. }
+	HexViewLimit = 64 * 1024;
 
 procedure TfrmBlobViewer.SetData(const Value: TMemoryStream);
 begin
 	FData := Value;
+	if not Assigned(FData) then
+	begin
+		edBlobText.Lines.Clear;
+		edBlobHex.Lines.Clear;
+		FBinary := False;
+		Exit;
+	end;
+
 	FData.Position := 0;
 	edBlobText.Lines.LoadFromStream(FData);
+
+	{ The tab says Hex, so it is hex. It used to load the same text into the
+	  second memo, which showed the same thing twice for a text blob and
+	  mojibake twice for a binary one. }
 	FData.Position := 0;
-	edBlobHex.Lines.LoadFromStream(FData);
+	edBlobHex.Lines.Text := HexDump(FData, HexViewLimit);
+	{ A view, not an editor: writing hex back would need it parsed, and nothing
+	  here does that. }
+	edBlobHex.ReadOnly := True;
+
+	{ A binary blob cannot survive a memo - line endings are normalised and
+	  anything unprintable is lost - so it is shown and not edited, whatever
+	  the caller asked for. Before this, opening one and pressing OK wrote the
+	  memo's transcription back over it. }
+	FData.Position := 0;
+	FBinary := IsBinaryData(FData);
+	FData.Position := 0;
+	if FBinary then
+	begin
+		edBlobText.ReadOnly := True;
+		Caption := Caption + ' - binary, shown read-only';
+	end;
 end;
 
 procedure TfrmBlobViewer.pgBlobViewerChanging(Sender: TObject; var AllowChange: Boolean);
 begin
-  case pgBlobViewer.ActivePage.PageIndex of
-    0 :
-      begin
-        //save current...
-        fData.Clear;
-        edBlobText.Lines.SaveToStream(FData);
-
-        //load others...
-        FData.Position := 0;
-        edBlobHex.Lines.LoadFromStream(FData);
-      end;
-
-		1 :
-			begin
-				//save current...
-        fdata.clear;
-				edBlobHex.Lines.SaveToStream(FData);
-
-				//load others...
-				FData.Position := 0;
-				edBlobText.Lines.LoadFromStream(FData);
-			end;
-	end;
+	{ Nothing. This used to write whichever memo was being left back into the
+	  blob and re-load the other from it, so merely *looking* at the hex tab
+	  rewrote the blob - through a memo, which is what made it lossy. The hex
+	  side is rendered once, when the data arrives, and the blob is only
+	  written when OK is pressed. }
+	AllowChange := True;
 end;
 
 procedure TfrmBlobViewer.btnOKClick(Sender: TObject);
 begin
-	case pgBlobViewer.ActivePage.PageIndex of
-		0 :
-			begin
-				//save current...
-        fData.Clear;
-				edBlobText.Lines.SaveToStream(FData);
-			end;
-
-		1 :
-			begin
-				//save current...
-        fData.Clear;
-				edBlobHex.Lines.SaveToStream(FData);
-			end;
+	{ Only ever from the text side, and only when this blob can be edited at
+	  all: the hex tab is a rendering, and writing it back would put the dump
+	  itself into the blob - which is what happened when OK was pressed while
+	  that tab was in front. }
+	if Assigned(FData) and not FReadOnly and not FBinary then
+	begin
+		FData.Clear;
+		edBlobText.Lines.SaveToStream(FData);
+		FData.Position := 0;
 	end;
-  fData.Position := 0;
 	ModalResult := mrOK;
 end;
 
 procedure TfrmBlobViewer.SetReadOnly(const Value: Boolean);
 begin
 	FReadOnly := Value;
-	edBlobText.ReadOnly := FReadOnly;
-	edBlobHex.ReadOnly := FReadOnly;
+	edBlobText.ReadOnly := FReadOnly or FBinary;
+	{ The hex side is always a view. }
+	edBlobHex.ReadOnly := True;
 end;
 
 procedure TfrmBlobViewer.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
