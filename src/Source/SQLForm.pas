@@ -207,7 +207,9 @@ type
 		{$IFDEF WINDOWS}procedure WMMove(var message: TMessage); message WM_MOVE;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCLButtonDown(var message: TMessage); message WM_NCLBUTTONDOWN;{$ENDIF}
 		{$IFDEF WINDOWS}procedure WMNCRButtonDown(var message: TMessage); message WM_NCRBUTTONDOWN;{$ENDIF}
-		procedure UpdateEnvironmentBand;
+		{ The editor's own strip, which carries the connection switcher as well -
+		  overrides the base form's plain band rather than adding a second one. }
+		procedure UpdateEnvironmentBand; override;
 		procedure FillConnectionList;
 		function BindStatementParameters: Boolean;
 		function ExecuteSingletonOutput(const SQLText: String): Boolean;

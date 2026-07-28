@@ -368,7 +368,11 @@ procedure CheckEnvironmentPersistence;
       L.Add('      <connection name="EnvRoundTrip" databasefilename="/tmp/nowhere.fdb"' +
             ' servername="" username="SYSDBA" rememberpassword="0" charset=""' +
             ' sqlrole="" sqldialect="3"' + EnvAttr + '/>');
-      L.Add('    </connections>');
+      { A third connection with no environment attribute at all, which is what
+      every project written before the tagging went in looks like. }
+    L.Add('      <connection name="PlainBox" databasefilename="/tmp/plain.fdb" servername=""' +
+          ' username="SYSDBA" rememberpassword="0" charset="" sqlrole="" sqldialect="3"/>');
+    L.Add('    </connections>');
       L.Add('    <servers/><windows/><recentitems/><sqlhistory/><custom-properties/>');
       L.Add('  </project>');
       L.Add('</marathon-project>');
@@ -429,6 +433,145 @@ end;
 { The connection switcher, driven the way the user drives it. Needs a project
   with more than one connection, so it builds one and loads it - no server is
   contacted, since pointing an editor at a connection does not open it. }
+{ The environment strip on the windows that are not the SQL editor.
+
+  The colouring went in on the SQL editor alone, which is where a script is
+  run - but the object editors drop columns and the table designer runs ALTER
+  TABLE, and those are the changes that cannot be undone. The strip is built by
+  the shared document base now, so this checks one editor of each shape rather
+  than all eighteen: an object editor, which learns its connection through the
+  property setter, and the table designer, which is told when it is loaded.
+
+  Called from inside the connection-switcher check because it needs that
+  check's two-connection project - DevBox tagged Development, LiveBox tagged
+  Production. }
+procedure CheckEnvironmentBandOnEditors;
+var
+  E: TfrmTables;
+  D: TfrmTableDesigner;
+begin
+  WriteLn('Environment strip on the object editors:');
+  E := TfrmTables.Create(nil);
+  try
+    { No database is touched: naming the connection is what decides the strip,
+      and loading an object is a separate step. }
+    E.ConnectionName := 'LiveBox';
+    Check(Assigned(E.EnvironmentBand), 'a tagged connection gives the editor a strip');
+    if not Assigned(E.EnvironmentBand) then
+      Exit;
+    Check(E.EnvironmentBand.Visible, 'which is shown');
+    Check(E.EnvironmentBand.Align = alTop, 'across the top of the window');
+    Check(E.EnvironmentBand.Color = EnvironmentColor(envProduction),
+      'in the production colour');
+    Check(Pos('PRODUCTION', E.EnvironmentLabel.Caption) > 0,
+      'naming the environment (' + E.EnvironmentLabel.Caption + ')');
+    { Two production databases are still two databases. }
+    Check(Pos('LiveBox', E.EnvironmentLabel.Caption) > 0,
+      'and the connection it is pointed at');
+
+    { Repointing the editor has to repoint the strip with it. }
+    E.ConnectionName := 'DevBox';
+    Check(E.EnvironmentBand.Color = EnvironmentColor(envDevelopment),
+      'switching connection changes the colour');
+  finally
+    E.Free;
+  end;
+
+  { An untagged connection must leave every window exactly as it was - the
+    feature is opt-in, and a strip saying nothing would be a strip too many. }
+  E := TfrmTables.Create(nil);
+  try
+    E.ConnectionName := 'PlainBox';
+    Check(not Assigned(E.EnvironmentBand) or not E.EnvironmentBand.Visible,
+      'an untagged connection gets no strip at all');
+  finally
+    E.Free;
+  end;
+
+  D := TfrmTableDesigner.Create(nil);
+  try
+    { NewTable takes the database it would read from; nil is enough to reach
+      the naming, which is all this asks about. }
+    try
+      D.NewTable(nil, 'LiveBox');
+    except
+      on Ex: Exception do
+      begin
+        WriteLn('  .... skipped the designer: ', Ex.Message);
+        Exit;
+      end;
+    end;
+    Check(Assigned(D.EnvironmentBand) and D.EnvironmentBand.Visible,
+      'the table designer gets one too');
+    if Assigned(D.EnvironmentBand) then
+      Check(D.EnvironmentBand.Color = EnvironmentColor(envProduction),
+        'in the same colour');
+  finally
+    D.Free;
+  end;
+end;
+
+{ The same tagging in the object tree.
+
+  What is checked is the decision, not the pixels: which environment a node
+  belongs to. Custom drawing turns that into a colour, and a test that asserted
+  on the canvas would be asserting about gtk2 rather than about Marathon. }
+procedure CheckEnvironmentInTree;
+var
+  Explorer: TfrmDatabaseExplorer;
+  Conn: TMarathonCacheConnection;
+  ConnNode, Child, Loose: TTreeNode;
+begin
+  WriteLn('Environment colouring in the object tree:');
+  Explorer := nil;
+  try
+    try
+      Explorer := TfrmDatabaseExplorer.Create(nil);
+    except
+      on E: Exception do
+      begin
+        WriteLn('  .... skipped: the explorer could not be built here (',
+          E.ClassName, ': ', E.Message, ')');
+        Exit;
+      end;
+    end;
+
+    Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName['LiveBox'];
+    if not Assigned(Conn) or not Assigned(Conn.ContainerNode) then
+    begin
+      WriteLn('  .... skipped: the project holds no connection to check');
+      Exit;
+    end;
+
+    { Wired by hand the way the explorer wires it - a tree node whose Data is
+      the cache node, whose own Data is the connection. Building it here rather
+      than expanding the real tree keeps the check about the lookup: the
+      expansion only happens on a tree with a window behind it, and this has
+      never been shown. }
+    Explorer.tvDatabase.Items.Clear;
+    ConnNode := Explorer.tvDatabase.Items.Add(nil, 'LiveBox');
+    ConnNode.Data := Conn.ContainerNode;
+    Child := Explorer.tvDatabase.Items.AddChild(ConnNode, 'Tables');
+
+    Check(Explorer.EnvironmentForNode(ConnNode) = envProduction,
+      'a production connection''s node reports its environment');
+    { A node under it reports the same, which is the whole reason the lookup
+      walks up rather than reading the node it was given - by the time a table
+      is being right-clicked the connection node is scrolled off the top. }
+    Check(Explorer.EnvironmentForNode(Child) = envProduction,
+      'and so does a node underneath it');
+
+    Loose := Explorer.tvDatabase.Items.Add(nil, 'Somewhere else');
+    Check(Explorer.EnvironmentForNode(Loose) = envUnset,
+      'a node under no connection reports none');
+    Check(Explorer.EnvironmentForNode(nil) = envUnset,
+      'and neither does no node at all');
+  finally
+    if Assigned(Explorer) then
+      Explorer.Free;
+  end;
+end;
+
 procedure CheckConnectionSwitcher;
 var
   FileName: String;
@@ -484,6 +627,8 @@ begin
   finally
     F.Free;
   end;
+  CheckEnvironmentBandOnEditors;
+  CheckEnvironmentInTree;
   DeleteFile(FileName);
 end;
 

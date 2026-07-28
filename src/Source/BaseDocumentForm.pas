@@ -19,7 +19,7 @@ unit BaseDocumentForm;
 
 interface
 
-uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, MarathonInternalInterfaces, Graphics, Controls, Forms, Dialogs, ComCtrls, MarathonProjectCacheTypes, Globals, GimbalToolsAPI;
+uses {$IFDEF FPC} LCLIntf, LCLType, LMessages, {$ELSE} Windows, Messages, {$ENDIF} SysUtils, Classes, MarathonInternalInterfaces, Graphics, Controls, Forms, Dialogs, ComCtrls, ExtCtrls, StdCtrls, MarathonProjectCacheTypes, Globals, GimbalToolsAPI;
 
 type
   TfrmBaseDocumentForm = class(TForm, IMarathonForm, IGimbalIDEWindow)
@@ -31,6 +31,12 @@ type
     { Private declarations }
   protected
 		FByPassClose: Boolean;
+    { The environment strip. Built in code rather than dropped on each form's
+      .lfm: these forms do not inherit each other's streamed controls, so a
+      panel added to this unit's .lfm would reach none of the eighteen
+      descendants. Nil until the first UpdateEnvironmentBand. }
+    FEnvironmentBand: TPanel;
+    FEnvironmentLabel: TLabel;
     function GetObjectName: String; virtual;
     { Overridden by the data-aware descendant the editors are built on. Forms
       that are not about one object - the preview, the trace window - have no
@@ -41,6 +47,26 @@ type
     { Public declarations }
 
     procedure ByPassClose;
+
+    { Colours the top of the window by what the connection is tagged as -
+      Development, Test, Staging, Production - so a window about to run DDL
+      against production does not look like one pointed at a scratch database.
+
+      The SQL editor has had this since the environment tagging went in, and it
+      is the wrong place for it to stop: the object editors drop columns and
+      the table designer runs ALTER TABLE, which are the changes that cannot be
+      taken back. It reads GetActiveConnectionName, so a descendant that knows
+      which connection it is on gets the strip by calling this after it finds
+      out; a form that answers '' shows nothing.
+
+      Hidden entirely on an untagged connection, so nothing changes for anyone
+      who does not use the feature. Virtual because the SQL editor builds its
+      own strip, with the connection switcher on it. }
+    procedure UpdateEnvironmentBand; virtual;
+
+    { Nil until a tagged connection has asked for one. }
+    property EnvironmentBand: TPanel read FEnvironmentBand;
+    property EnvironmentLabel: TLabel read FEnvironmentLabel;
 
     //file category
     function GetActiveConnectionName: String; virtual;
@@ -366,7 +392,7 @@ implementation
 
 {$R *.lfm}
 
-uses MarathonIDE, DocumentHost, Types;
+uses MarathonIDE, MarathonProjectCache, DocumentHost, Types;
 
 function TfrmBaseDocumentForm.CanAddToProject: Boolean;
 begin
@@ -1168,6 +1194,65 @@ end;
 function TfrmBaseDocumentForm.GetActiveConnectionName: String;
 begin
   Result := '';
+end;
+
+procedure TfrmBaseDocumentForm.UpdateEnvironmentBand;
+var
+  Conn: TMarathonCacheConnection;
+  Env: TConnectionEnvironment;
+  ConnName: String;
+begin
+  Env := envUnset;
+  ConnName := GetActiveConnectionName;
+  if (ConnName <> '') and Assigned(MarathonIDEInstance) and
+     Assigned(MarathonIDEInstance.CurrentProject) then
+  begin
+    Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[ConnName];
+    if Assigned(Conn) then
+      Env := Conn.Environment;
+  end;
+
+  { Nothing to show and nothing built yet is the common case - most
+    connections are untagged - so it costs no controls at all. }
+  if (Env = envUnset) and not Assigned(FEnvironmentBand) then
+    Exit;
+
+  if not Assigned(FEnvironmentBand) then
+  begin
+    FEnvironmentBand := TPanel.Create(Self);
+    FEnvironmentBand.Name := 'pnlDocumentEnvironment';
+    FEnvironmentBand.Parent := Self;
+    FEnvironmentBand.BevelOuter := bvNone;
+    FEnvironmentBand.Height := 21;
+    { Aligned controls are ordered by where they sit, and every one of these
+      forms already has something at the top. Below zero puts the strip above
+      all of them rather than under the first one. }
+    FEnvironmentBand.Top := -1;
+    FEnvironmentBand.Align := alTop;
+    FEnvironmentBand.ParentColor := False;
+    FEnvironmentBand.ParentFont := False;
+    FEnvironmentBand.Font.Style := [fsBold];
+
+    FEnvironmentLabel := TLabel.Create(Self);
+    FEnvironmentLabel.Name := 'lblDocumentEnvironment';
+    FEnvironmentLabel.Parent := FEnvironmentBand;
+    FEnvironmentLabel.Left := 6;
+    FEnvironmentLabel.Top := 3;
+    FEnvironmentLabel.ParentColor := False;
+    FEnvironmentLabel.Transparent := True;
+  end;
+
+  FEnvironmentBand.Color := EnvironmentColor(Env);
+  FEnvironmentBand.Font.Color := EnvironmentTextColor(Env);
+  FEnvironmentLabel.Font.Color := EnvironmentTextColor(Env);
+  if Env = envUnset then
+    FEnvironmentLabel.Caption := ''
+  else
+    { The connection as well as the environment: two windows tagged Production
+      may well be two different production databases. }
+    FEnvironmentLabel.Caption :=
+      UpperCase(EnvironmentDisplayName(Env)) + ' - ' + ConnName;
+  FEnvironmentBand.Visible := Env <> envUnset;
 end;
 
 function TfrmBaseDocumentForm.GetActiveObjectType: TGSSCacheType;

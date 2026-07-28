@@ -223,6 +223,8 @@ procedure TfrmTableDesigner.LoadTable(ADatabase: TIBDatabase;
 begin
   FDatabase := ADatabase;
   FConnectionName := AConnectionName;
+  { ALTER TABLE against production is the change this warns about. }
+  UpdateEnvironmentBand;
   FTableName := ATableName;
   FSchema := ASchema;
   FIsNew := False;
@@ -251,6 +253,8 @@ procedure TfrmTableDesigner.NewTable(ADatabase: TIBDatabase;
 begin
   FDatabase := ADatabase;
   FConnectionName := AConnectionName;
+  { ALTER TABLE against production is the change this warns about. }
+  UpdateEnvironmentBand;
   FTableName := '';
   FIsNew := True;
   Caption := 'Design: new table';

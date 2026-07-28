@@ -195,6 +195,9 @@ end;
 procedure TfrmBaseDocumentDataAwareForm.SetDatabaseName(const Value: String);
 begin
 	FDatabaseName := Value;
+	{ This is where an editor finds out which database it is about, including
+	  when it is repointed at another one, so it is where the strip is decided. }
+	UpdateEnvironmentBand;
 end;
 
 procedure TfrmBaseDocumentDataAwareForm.MinMaxInfo(var Message: TLMessage);

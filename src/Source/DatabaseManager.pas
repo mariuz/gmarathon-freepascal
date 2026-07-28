@@ -117,6 +117,8 @@ type
     actWindowBroswer: TAction;
 		procedure FormCreate(Sender: TObject);
 		procedure tvDatabaseGetImageIndex(Sender: TObject; Node: TTreeNode);
+		procedure tvDatabaseCustomDrawItem(Sender: TCustomTreeView;
+			Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure WindowListClick(Sender: TObject);
 		procedure tvDatabaseMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -163,6 +165,13 @@ type
     function FindTreeNodeByPath(Path: String): TTreeNode;
 	public
 		{ Public declarations }
+		{ Which environment a node belongs to - the environment of the connection
+		  it hangs under, walking up until one is found.
+
+		  Walking up rather than looking at the node itself is the point: the
+		  connection node is the one that carries the tag, but the node a user is
+		  about to right-click and drop is several levels below it. }
+		function EnvironmentForNode(Node: TTreeNode): TConnectionEnvironment;
 		procedure LoadTree;
 		procedure UnloadTree; //AC:
 		procedure RefreshNode(Item : TObject; PreserveFocus : Boolean);
@@ -287,6 +296,9 @@ var
 
 begin
 	FClipboard := TStringList.Create;
+	{ Wired here rather than in the .lfm: the tree is streamed with its other
+	  handlers and this one is about how it is drawn, not what it does. }
+	tvDatabase.OnCustomDrawItem := tvDatabaseCustomDrawItem;
 	FSO := TMDSearchObject.Create;
 	FSO.OnSearchEvent := SearchEventHandler;
 
@@ -421,6 +433,47 @@ begin
 	finally
 		NodeStates.Free;
 	end;
+end;
+
+function TfrmDatabaseExplorer.EnvironmentForNode(
+	Node: TTreeNode): TConnectionEnvironment;
+var
+	N: TTreeNode;
+	TNV: TMarathonTreeNode;
+begin
+	Result := envUnset;
+	N := Node;
+	while Assigned(N) do
+	begin
+		if Assigned(N.Data) then
+		begin
+			TNV := TMarathonTreeNode(N.Data);
+			if Assigned(TNV.Data) and
+			   (TObject(TNV.Data) is TMarathonCacheConnection) then
+				Exit(TMarathonCacheConnection(TNV.Data).Environment);
+		end;
+		N := N.Parent;
+	end;
+end;
+
+{ Everything under a tagged connection is drawn in that environment's colour.
+
+  The whole branch rather than the connection node alone: by the time a table
+  is being right-clicked, the connection node is scrolled off the top, and the
+  point of the tagging is to be visible where the damage would be done. The
+  selected row is left as the widgetset draws it - the selection colour is
+  what says which row is selected, and overriding it makes that unreadable. }
+procedure TfrmDatabaseExplorer.tvDatabaseCustomDrawItem(Sender: TCustomTreeView;
+	Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
+var
+	Env: TConnectionEnvironment;
+begin
+	DefaultDraw := True;
+	if cdsSelected in State then
+		Exit;
+	Env := EnvironmentForNode(Node);
+	if Env <> envUnset then
+		Sender.Canvas.Font.Color := EnvironmentColor(Env);
 end;
 
 procedure TfrmDatabaseExplorer.tvDatabaseGetImageIndex(Sender: TObject; Node: TTreeNode);
