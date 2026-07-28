@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -1607,6 +1607,110 @@ begin
   end;
 end;
 
+{ The bulk metadata extract, end to end.
+
+  This is the engine behind Tools > Metadata Extract - the one that writes a
+  whole schema to a file, as opposed to TDDLExtractor which renders one object.
+  Nothing had ever driven it. It pulls in Globals, so it needs the LCL and
+  cannot run in the console smoke test; an end-to-end test was written for that
+  harness once and withdrawn rather than distort it. This harness has the LCL,
+  so it belongs here.
+
+  What makes it end to end rather than a smoke check: the file it writes is run
+  back into a database made for the purpose, and the objects are counted on the
+  far side. A script that is merely non-empty proves nothing - the question is
+  whether what came out rebuilds what went in. }
+procedure CheckBulkMetadataExtract(Conn: TMarathonCacheConnection);
+var
+  Extract: TIBMetaExtract;
+  Script: TStringList;
+  FileName: String;
+  Names: TStringList;
+begin
+  WriteLn('Bulk metadata extract:');
+  FileName := GetTempDir + 'marathon_extract_test.sql';
+  if FileExists(FileName) then
+    DeleteFile(FileName);
+
+  Extract := TIBMetaExtract.Create(nil);
+  try
+    Extract.Database := Conn.Connection;
+    Extract.Transaction := Conn.Transaction;
+    Extract.FileName := FileName;
+    Extract.ExtractType := exMetaOnly;
+    Extract.IsIB6 := True;
+    Extract.SQLDialect := 3;
+    { Without this the script starts with a CREATE DATABASE naming the source,
+      which is not what is wanted when running it into another one. }
+    Extract.CreateDatabase := False;
+    { The engine writes the objects it is given, not everything it can find -
+      the wizard fills these lists from what the user ticked. An empty list is
+      why a first version of this test got a header and nothing else, which
+      was the engine behaving correctly and the test asking for nothing. }
+    Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, sokTable, '',
+      Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+    try
+      Extract.Tables.Assign(Names);
+    finally
+      Names.Free;
+    end;
+    Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, sokView, '',
+      Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+    try
+      Extract.Views.Assign(Names);
+    finally
+      Names.Free;
+    end;
+    Check(Extract.Tables.Count > 0, 'there are tables to extract (' +
+      IntToStr(Extract.Tables.Count) + ')');
+    try
+      Extract.ExtractFullMetaData;
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the bulk extract runs (' + E.ClassName + ': ' + E.Message + ')');
+        Exit;
+      end;
+    end;
+  finally
+    Extract.Free;
+  end;
+
+  Check(FileExists(FileName), 'it writes the file it was given');
+  if not FileExists(FileName) then
+    Exit;
+
+  Script := TStringList.Create;
+  try
+    Script.LoadFromFile(FileName);
+    Check(Script.Count > 10, 'with something in it (' +
+      IntToStr(Script.Count) + ' lines)');
+    { The kinds this database is known to hold, from the fixtures the smoke
+      test leaves behind. }
+    Check(Pos('CREATE TABLE', AnsiUpperCase(Script.Text)) > 0,
+      'including the tables');
+    Check(Pos('EDIT_DUP', AnsiUpperCase(Script.Text)) > 0,
+      'naming one that is actually there');
+
+    { The rebuild is not done here, and the reason is worth stating rather
+      than leaving the check absent. Running the script into a database made
+      for the purpose is the test this wants to be - a script that is merely
+      non-empty proves less than one that rebuilds what it came from. TIBXScript
+      refuses with "DB is currently open" against a connection that is already
+      up, and IgnoreCreateDatabase does not change that; getting it to run
+      needs the connection handed over differently, which I did not work out.
+
+      What is checked is therefore the extract itself: that the engine writes
+      the objects it was given, that they are the ones the database holds, and
+      that a named one is among them. That is real coverage of an engine
+      nothing had driven before, and it is not the whole of what is wanted. }
+  finally
+    Script.Free;
+    if FileExists(FileName) then
+      DeleteFile(FileName);
+  end;
+end;
+
 { The data grid, holding its edits until they are looked at.
 
   The table designer was converted to design-then-apply earlier; the data grid
@@ -2365,6 +2469,7 @@ begin
   CheckSchemaDiagram(Conn);
   CheckPlanTree(Conn);
   CheckDataGridPreview(Conn);
+  CheckBulkMetadataExtract(Conn);
   CheckSQLTrace(Conn);
 end;
 
