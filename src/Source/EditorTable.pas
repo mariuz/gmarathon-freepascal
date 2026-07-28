@@ -620,7 +620,8 @@ begin
 			'b.rdb$dimensions, ' +
 			'b.rdb$field_scale, b.rdb$field_type, b.rdb$field_sub_type from ' +
 			'rdb$relation_fields a, rdb$fields b where ' +
-			'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
+			'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') +
+			' and a.rdb$relation_name = ' +
 			AnsiQuotedStr(fObjectName, '''') + SchemaClause('a.') + ' ' +
 			' order by a.rdb$field_position asc;')
 	else
@@ -630,7 +631,8 @@ begin
 			'b.rdb$dimensions, ' +
 			'b.rdb$field_scale, b.rdb$field_type, b.rdb$field_sub_type from ' +
 			'rdb$relation_fields a, rdb$fields b where ' +
-			'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
+			'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') +
+			' and a.rdb$relation_name = ' +
 			AnsiQuotedStr(fObjectName, '''') + SchemaClause('a.') + ' ' +
 			' order by a.rdb$field_position asc;');
 	qryTable.Open;

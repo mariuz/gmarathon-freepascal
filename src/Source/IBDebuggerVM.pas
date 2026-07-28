@@ -150,6 +150,10 @@ type
     function GetBreakPointByIndex(Index: Integer): TBreakPoint;
     function GetBreakPointCount: Integer;
     function GetState: TInterpreterState;
+    { RDB$PROCEDURE_PARAMETERS to RDB$FIELDS, joined on the domain behind the
+      parameter. On Firebird 6 the domain name alone matches one per schema -
+      see SchemaNames.FieldSourceJoin. }
+    function FieldSourceJoin(const ARelAlias, AFieldAlias: String): String;
   public
     procedure Clear;
     constructor Create;
@@ -205,7 +209,7 @@ type
 
 implementation
 
-uses Globals, MarathonIDE, MarathonInternalInterfaces, DebugAddBreakPoint, DebugEvalModify, DebugCallStack, DebugLocalVariables, DebugBreakPoints, DebugWatches, AddWatch, SQLYacc;
+uses Globals, MarathonIDE, MarathonProjectCache, SchemaNames, MarathonInternalInterfaces, DebugAddBreakPoint, DebugEvalModify, DebugCallStack, DebugLocalVariables, DebugBreakPoints, DebugWatches, AddWatch, SQLYacc;
 
 constructor TProcModule.Create;
 begin
@@ -1604,6 +1608,15 @@ begin
   Result := M.Compile(ProcName, ProcSource);
 end;
 
+function TIBDebuggerVM.FieldSourceJoin(const ARelAlias, AFieldAlias: String): String;
+var
+  Conn: TMarathonCacheConnection;
+begin
+  Conn := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FDatabaseName];
+  Result := SchemaNames.FieldSourceJoin(ARelAlias, AFieldAlias,
+    Assigned(Conn) and Conn.Connected and Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+end;
+
 function TIBDebuggerVM.CompileSubProc(ProcName: String): Boolean;
 var
 	Q : TIBQuery;
@@ -1632,15 +1645,15 @@ begin
     begin
       if ShouldBeQuoted(ProcName) then
         Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                  'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(ProcName, '''') + ' order by rdb$parameter_number asc;')
+                  'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(ProcName, '''') + ' order by rdb$parameter_number asc;')
       else
         Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                  'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
+                  'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
     end
     else
 		begin
       Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
+                'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
     end;
     Q.Open;
     If Not (Q.EOF and Q.BOF) Then
@@ -1712,15 +1725,15 @@ begin
     begin
       if ShouldBeQuoted(ProcName) then
         Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                  'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(ProcName, '''') + ' order by rdb$parameter_number asc;')
+                  'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(ProcName, '''') + ' order by rdb$parameter_number asc;')
       else
         Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                  'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
+                  'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
 		end
     else
     begin
       Q.SQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                            'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
+                            'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(AnsiUpperCase(ProcName), '''') + ' order by rdb$parameter_number asc;');
     end;
     Q.Open;
     If Not (Q.EOF and Q.BOF) Then

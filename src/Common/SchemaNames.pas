@@ -83,6 +83,21 @@ function SchemaPredicate(const Alias, Column, Schema: String;
 function SchemaPredicate(const Alias, Schema: String;
   SupportsSchemas: Boolean): String; overload;
 
+{ The extra condition for a join from a table's columns to the domains behind
+  them - RDB$RELATION_FIELDS or RDB$PROCEDURE_PARAMETERS to RDB$FIELDS.
+
+  RDB$FIELD_SOURCE names the domain, and on Firebird 6 that name is only unique
+  within a schema, so joining on it alone matches the domain in every schema
+  that has one by that name. The column then shows whichever row the server
+  handed back first: a column declared varchar(7) reads as varchar(19) because
+  another schema has a domain of the same name.
+
+  Which schema the domain is in is a column of its own,
+  RDB$FIELD_SOURCE_SCHEMA_NAME - not the row's RDB$SCHEMA_NAME, which is the
+  table's. Empty on servers without schemas, where the name is unique anyway. }
+function FieldSourceJoin(const RelAlias, FieldAlias: String;
+  SupportsSchemas: Boolean): String;
+
 { The object's name as DDL should spell it: qualified when a schema is named,
   bare when one is not, and quoted by the same rules the rest of the extractor
   uses. }
@@ -123,6 +138,16 @@ function SchemaPredicate(const Alias, Schema: String;
   SupportsSchemas: Boolean): String;
 begin
   Result := SchemaPredicate(Alias, 'rdb$schema_name', Schema, SupportsSchemas);
+end;
+
+function FieldSourceJoin(const RelAlias, FieldAlias: String;
+  SupportsSchemas: Boolean): String;
+begin
+  if not SupportsSchemas then
+    Result := ''
+  else
+    Result := ' and (' + FieldAlias + 'rdb$schema_name = ' +
+      RelAlias + 'rdb$field_source_schema_name)';
 end;
 
 function QualifiedIdent(const Schema, ObjectName: String; IsIB6: Boolean;

@@ -4155,6 +4155,22 @@ begin
           'if (not exists(select 1 from rdb$fields where rdb$field_name = ''EDIT_DOM'' ' +
           '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
           '  execute statement ''create domain EDIT_SCH.EDIT_DOM as varchar(19)''; ' +
+          { The same trap on a procedure's parameters. They reach their type
+            through RDB$PROCEDURE_PARAMETERS.RDB$FIELD_SOURCE exactly as a
+            column does, so a domain matched by name alone types the parameter
+            from whichever schema answered first - and the procedure name
+            itself is only unique per schema, so an unqualified parameter query
+            returns both procedures' parameters as if they were one list.
+            DOM_PROC exists in both schemas with different parameters. }
+          'if (not exists(select 1 from rdb$procedures where rdb$procedure_name = ''DOM_PROC'' ' +
+          '   and rdb$schema_name = current_schema)) then ' +
+          '  execute statement ''create procedure DOM_PROC (P EDIT_DOM) ' +
+          'returns (R integer) as begin R = 1; suspend; end''; ' +
+          'if (not exists(select 1 from rdb$procedures where rdb$procedure_name = ''DOM_PROC'' ' +
+          '   and rdb$schema_name = ''EDIT_SCH'')) then ' +
+          '  execute statement ''create procedure EDIT_SCH.DOM_PROC ' +
+          '(Q integer, Q2 integer, Q3 integer) returns (R integer) ' +
+          'as begin R = 2; suspend; end''; ' +
           'end';
         Q.ExecSQL;
         if Tr.Active then

@@ -992,12 +992,12 @@ begin
         if FIsIB6 and (FSQLDIalect = 3) then
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                    'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                    'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                    'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                    'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
         If Not (Q1.EOF and Q1.BOF) Then
@@ -1047,12 +1047,12 @@ begin
         if FIsIB6 and (FSQLDialect = 3) then
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                           'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                           'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                           'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                           'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
         If Not (Q1.EOF and Q1.BOF) Then
@@ -1150,12 +1150,12 @@ begin
         if FIsIB6 and (FSQLDialect = 3) then
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                    'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                    'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                    'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                    'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 0 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
         If Not (Q1.EOF and Q1.BOF) Then
@@ -1205,12 +1205,12 @@ begin
         if FIsIB6 and (FSQLDialect = 3) then
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$field_sub_type, b.rdb$field_precision, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                           'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                           'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end
         else
         begin
           Q1.SelectSQL.Add('select a.rdb$parameter_name, b.rdb$field_type, b.rdb$field_length, b.rdb$character_length, b.rdb$field_scale, b.rdb$character_set_id from rdb$procedure_parameters a, rdb$fields b where ' +
-                           'a.rdb$field_source = b.rdb$field_name and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + ' order by rdb$parameter_number asc;');
+                           'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$parameter_type = 1 and a.rdb$procedure_name = ' + AnsiQuotedStr(Trim(Q.FieldByName('rdb$procedure_name').AsString), '''') + SchemaClause('a.') + ' order by rdb$parameter_number asc;');
         end;
         Q1.Open;
         If Not (Q1.EOF and Q1.BOF) Then
@@ -1465,11 +1465,7 @@ end;
 
 function TDDLExtractor.FieldSourceJoin(const RelAlias, FieldAlias: String): String;
 begin
-  if not ODSAtLeast(14, 0) then
-    Result := ''
-  else
-    Result := ' and (' + FieldAlias + 'rdb$schema_name = ' +
-      RelAlias + 'rdb$field_source_schema_name)';
+  Result := SchemaNames.FieldSourceJoin(RelAlias, FieldAlias, ODSAtLeast(14, 0));
 end;
 
 function TDDLExtractor.QualifiedIdent(const ObjectName: String): String;
@@ -2074,7 +2070,7 @@ begin
 
     Q1.SQL.Text := 'select a.rdb$field_name from rdb$relation_fields a, rdb$fields b ' +
                    'where a.rdb$relation_name = ' + AnsiQuotedStr(ObjectName, '''') + SchemaClause('a.') +
-                   ' and a.rdb$field_source = b.rdb$field_name and ' +
+                   ' and a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and ' +
                    'b.rdb$computed_source is not null';
     Q1.ExecQuery;
     while not Q1.EOF do

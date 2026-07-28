@@ -1674,6 +1674,15 @@ begin
     finally
       Names.Free;
     end;
+    { The procedures too - their parameters reach their types through a domain
+      the same way a column does, and that join is the one this checks. }
+    Names := ListSchemaObjects(Conn.Connection, Conn.Transaction, sokProcedure,
+      '', Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0));
+    try
+      Extract.SPs.Assign(Names);
+    finally
+      Names.Free;
+    end;
     Check(Extract.Tables.Count > 0, 'there are tables to extract (' +
       IntToStr(Extract.Tables.Count) + ')');
     Check(Extract.Domains.Count > 0, 'and domains (' +
@@ -1837,6 +1846,47 @@ begin
           'next door (width ' + IntToStr(Tables) + ', not 19)');
       end;
       FreshQ.Close;
+
+      { The same question about a procedure's parameters. DOM_PROC takes one
+        parameter typed with EDIT_DOM here; EDIT_SCH.DOM_PROC takes three
+        plain integers. Reading the parameters by procedure name alone would
+        bring back all four, and matching the domain by name alone would type
+        the one that is left as varchar(19). Both show up here: the count and
+        the width. }
+      FreshQ.SQL.Text :=
+        'select count(*) from rdb$procedure_parameters ' +
+        'where rdb$procedure_name = ''DOM_PROC'' and rdb$parameter_type = 0';
+      FreshQ.Open;
+      Tmp := FreshQ.Fields[0].AsInteger;
+      FreshQ.Close;
+      if Tmp = 0 then
+        Check(False, 'the procedure with a domain-typed parameter is rebuilt')
+      else
+      begin
+        Check(Tmp = 1,
+          'the rebuilt procedure has its own parameter list, not the ' +
+          'same-named procedure''s as well (' + IntToStr(Tmp) + ', not 4)');
+        FreshQ.SQL.Text :=
+          'select f.rdb$character_length, f.rdb$field_length ' +
+          'from rdb$procedure_parameters pp ' +
+          '  join rdb$fields f on f.rdb$field_name = pp.rdb$field_source ' +
+          'where pp.rdb$procedure_name = ''DOM_PROC'' ' +
+          '  and pp.rdb$parameter_name = ''P''';
+        FreshQ.Open;
+        if FreshQ.EOF then
+          Check(False, 'and the parameter declared with a domain survives')
+        else
+        begin
+          Tmp := FreshQ.Fields[0].AsInteger;
+          if Tmp = 0 then
+            Tmp := FreshQ.Fields[1].AsInteger;
+          Check(Tmp = 7,
+            'and it is typed from this schema''s domain (width ' +
+            IntToStr(Tmp) + ', not 19)');
+        end;
+        FreshQ.Close;
+      end;
+
       Fresh.Connected := False;
     finally
       Runner.Free;
@@ -2511,6 +2561,94 @@ begin
   end;
 end;
 
+{ The table editor, on a column whose domain shares its name with one in
+  another schema.
+
+  RDB$RELATION_FIELDS names the domain and says separately which schema it is
+  in. Joining RDB$FIELDS on the name alone finds it in every schema, and the
+  editor then shows whichever row came back first - which is how the table
+  designer came to offer widening a column to a domain belonging elsewhere.
+  The editors carry the same joins, so they get the same check.
+
+  DOM_USER.TAG is declared with EDIT_DOM: varchar(7) here, varchar(19) in
+  EDIT_SCH. The width shown is which one was found. }
+procedure CheckEditorReadsTheRightDomain;
+var
+  E: TfrmTables;
+  Idx: Integer;
+  Item: TListItem;
+  TypeText: String;
+begin
+  E := TfrmTables.Create(nil);
+  try
+    E.ConnectionName := 'EditorHarness';
+    try
+      E.LoadTable('DOM_USER');
+    except
+      on Ex: Exception do
+      begin
+        WriteLn('  .... skipped the domain check: ', Ex.Message);
+        Exit;
+      end;
+    end;
+    TypeText := '';
+    for Idx := 0 to E.lvFieldList.Items.Count - 1 do
+    begin
+      Item := E.lvFieldList.Items[Idx];
+      if SameText(Trim(Item.Caption), 'TAG') and (Item.SubItems.Count > 0) then
+        TypeText := Item.SubItems[0];
+    end;
+    Check(TypeText <> '', 'the editor lists a column declared with a domain');
+    if TypeText = '' then
+      Exit;
+    Check(Pos('7', TypeText) > 0,
+      'and shows the domain from its own schema (' + TypeText + ')');
+    Check(Pos('19', TypeText) = 0,
+      'not the same-named one from another schema');
+  finally
+    E.Free;
+  end;
+end;
+
+{ The same question of the procedure editor.
+
+  It builds the procedure's header from RDB$PROCEDURE_PARAMETERS joined to
+  RDB$FIELDS, which is the same join and the same trap: DOM_PROC takes one
+  parameter typed EDIT_DOM, and EDIT_SCH.DOM_PROC takes three integers. The
+  header it shows says which rows came back. }
+procedure CheckProcedureEditorReadsTheRightDomain;
+var
+  E: TfrmStoredProcedure;
+  Header: String;
+begin
+  E := TfrmStoredProcedure.Create(nil);
+  try
+    E.ConnectionName := 'EditorHarness';
+    try
+      E.LoadProcedure('DOM_PROC');
+    except
+      on Ex: Exception do
+      begin
+        WriteLn('  .... skipped the procedure domain check: ', Ex.Message);
+        Exit;
+      end;
+    end;
+    Header := AnsiUpperCase(E.edEditor.Text);
+    Check(Pos('DOM_PROC', Header) > 0, 'the procedure editor shows a header');
+    if Pos('DOM_PROC', Header) = 0 then
+      Exit;
+    Check(Pos('VARCHAR(7)', Header) > 0,
+      'with its parameter typed from this schema''s domain');
+    Check(Pos('VARCHAR(19)', Header) = 0,
+      'not the same-named domain next door');
+    { Q2 belongs to EDIT_SCH.DOM_PROC and to nothing here. }
+    Check(Pos('Q2', Header) = 0,
+      'and only its own parameters, not the other procedure''s');
+  finally
+    E.Free;
+  end;
+end;
+
 procedure CheckTableEditorAgainstDatabase(const DatabaseName, User, Password: String);
 var
   Conn: TMarathonCacheConnection;
@@ -2586,6 +2724,8 @@ begin
       end;
     end;
     Check(True, 'the table editor loads ' + TableName);
+    CheckEditorReadsTheRightDomain;
+    CheckProcedureEditorReadsTheRightDomain;
     { Loading is not enough: it has to have read the columns. An editor that
       opens on an empty structure looks fine and is useless. }
     Fields := F.lvFieldList.Items.Count;

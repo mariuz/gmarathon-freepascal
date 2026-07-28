@@ -109,6 +109,20 @@ type
 		  in a named schema so the statement acts on the object the queries found
 		  rather than on whatever the search path reaches. }
 		function QualifiedObjectName : String;
+
+		{ Ties a column or parameter to the domain behind it, in the schema that
+		  domain actually lives in.
+
+		  RDB$RELATION_FIELDS, RDB$PROCEDURE_PARAMETERS and RDB$FUNCTION_ARGUMENTS
+		  each record the domain's name in RDB$FIELD_SOURCE and, separately, where
+		  it is in RDB$FIELD_SOURCE_SCHEMA_NAME. Joining RDB$FIELDS on the name
+		  alone finds that name in every schema: with the same name in two, the
+		  join returns a row per schema and the editor shows whichever came first,
+		  which is how the table designer came to offer an ALTER widening a column
+		  to a domain belonging somewhere else.
+
+		  Empty before Firebird 6, which has no such column. }
+		function FieldSourceJoin(const ARelAlias, AFieldAlias : String) : String;
 	end;
 
 implementation
@@ -163,6 +177,13 @@ function TfrmBaseDocumentDataAwareForm.SchemaClause(const Alias: String;
 	const Column: String): String;
 begin
 	Result := SchemaPredicate(Alias, Column, FSchema, SupportsSchemas);
+end;
+
+function TfrmBaseDocumentDataAwareForm.FieldSourceJoin(
+	const ARelAlias, AFieldAlias : String) : String;
+begin
+	Result := SchemaNames.FieldSourceJoin(ARelAlias, AFieldAlias,
+		SupportsSchemas);
 end;
 
 function TfrmBaseDocumentDataAwareForm.QualifiedObjectName: String;

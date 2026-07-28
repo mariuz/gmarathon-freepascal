@@ -533,7 +533,8 @@ begin
 			'b.rdb$dimensions, ' +
 			'b.rdb$field_scale, b.rdb$field_type, b.rdb$field_sub_type from ' +
 			'rdb$relation_fields a, rdb$fields b where ' +
-			'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
+			'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') +
+			' and a.rdb$relation_name = ' +
 			AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' + ' order by a.rdb$field_position asc;')
 	else
 		qryTable.SQL.Add('select a.rdb$field_name, a.rdb$null_flag as tnull_flag, ' +
@@ -542,7 +543,8 @@ begin
 			'b.rdb$dimensions, ' +
 			'b.rdb$field_scale, b.rdb$field_type, b.rdb$field_sub_type from ' +
 			'rdb$relation_fields a, rdb$fields b where ' +
-			'a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' +
+			'a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') +
+			' and a.rdb$relation_name = ' +
 			AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' + ' order by a.rdb$field_position asc;');
 	qryTable.Open;
 	while not qryTable.EOF do
@@ -1835,7 +1837,7 @@ begin
 	qryUtil.Close;
 	qryUtil.SQL.Clear;
 	qryUtil.SQL.Add('select a.rdb$field_name ' +
-									 'from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name and a.rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' +
+									 'from rdb$relation_fields a, rdb$fields b where a.rdb$field_source = b.rdb$field_name' + FieldSourceJoin('a.', 'b.') + ' and a.rdb$relation_name = ' + AnsiQuotedStr(FObjectName, '''') + SchemaClause('a.') + ' ' +
 									 ' order by a.rdb$field_position asc;');
 	qryUtil.Open;
 	while not qryUtil.EOF do

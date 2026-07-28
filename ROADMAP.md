@@ -275,6 +275,32 @@ confirmed to exist rather than taken from release notes.
   both candidates render identically. Catching that needs a check against the
   rebuilt database rather than the script.
 
+  Since extended twice. The check against the rebuilt database now exists —
+  `DOM_USER.TAG` is declared with a domain that is `varchar(7)` here and
+  `varchar(19)` next door, and the rebuilt column's width says which one was
+  matched. And the join was only ever fixed where the bug had been *seen*: the
+  same `RDB$FIELD_SOURCE` → `RDB$FIELDS` join appears in the object editors and
+  in the procedure-parameter paths, where it was still matching by name alone.
+  The rule now lives in `SchemaNames.FieldSourceJoin` with one caller apiece —
+  `TDDLExtractor`, `TfrmBaseDocumentDataAwareForm` (so all eight editors have
+  it), and `TIBDebuggerVM` — rather than three copies to keep in step.
+
+  Procedure parameters had the second half of the same bug: they were fetched
+  by procedure name with no schema predicate, so a procedure that shares its
+  name with one in another schema extracted with both parameter lists run
+  together. `create procedure DOM_PROC (P varchar(7), Q integer, Q2 integer,
+  Q3 integer)` is what that produces, and with the domain join missing as well,
+  `(P varchar(7), P varchar(19))` — which Firebird refuses outright. Both are
+  now checked against the rebuilt database, and both fail when the fix is
+  removed.
+
+  Three places that look like the same bug are not: the copies in
+  `Globals.pas`, `DescribeForm.pas` and `MarathonIDE.GetTableColumnsEvent` are
+  inside comment blocks or wired to no event, and `GlobalQueriesText.pas` has
+  no callers at all. Left alone rather than fixed blind — the plugin sources
+  under `src/Plugins` are separate projects and are not built with the
+  application.
+
 - [x] **Backup history** — the Maintenance dialog has a Backup History tab
   reading `RDB$BACKUP_HISTORY`, beside the backup and restore it already
   performs. That table is written by the server, so it shows nbackup runs made
