@@ -1,0 +1,148 @@
+object frmSystemPrivileges: TfrmSystemPrivileges
+  Left = 260
+  Height = 460
+  Top = 160
+  Width = 760
+  Caption = 'System Privileges'
+  ClientHeight = 460
+  ClientWidth = 760
+  OnClose = FormClose
+  LCLVersion = '2.2.6.0'
+  object pnlTop: TPanel
+    Left = 0
+    Height = 32
+    Top = 0
+    Width = 760
+    Align = alTop
+    BevelOuter = bvNone
+    ClientHeight = 32
+    ClientWidth = 760
+    TabOrder = 0
+    object lblConnection: TLabel
+      Left = 8
+      Height = 15
+      Top = 8
+      Width = 76
+      Caption = 'Connection:'
+      ParentColor = False
+    end
+    object btnRefresh: TButton
+      Left = 664
+      Height = 25
+      Top = 3
+      Width = 88
+      Anchors = [akTop, akRight]
+      Caption = 'Refresh'
+      OnClick = btnRefreshClick
+      TabOrder = 0
+    end
+  end
+  object pnlRoles: TPanel
+    Left = 0
+    Height = 405
+    Top = 32
+    Width = 300
+    Align = alLeft
+    BevelOuter = bvNone
+    ClientHeight = 405
+    ClientWidth = 300
+    TabOrder = 1
+    object lblRoles: TLabel
+      Left = 0
+      Height = 15
+      Top = 0
+      Width = 300
+      Align = alTop
+      Caption = 'Roles'
+      ParentColor = False
+    end
+    object grdRoles: TDBGrid
+      Left = 0
+      Height = 390
+      Top = 15
+      Width = 300
+      Align = alClient
+      Color = clWindow
+      Columns = <>
+      DataSource = dsRoles
+      Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgDisableDelete, dgDisableInsert]
+      ReadOnly = True
+      TabOrder = 0
+      TitleFont.Charset = DEFAULT_CHARSET
+      TitleFont.Color = clWindowText
+      TitleFont.Height = -11
+      TitleFont.Name = 'MS Sans Serif'
+      TitleFont.Style = []
+    end
+  end
+  object splPrivileges: TSplitter
+    Left = 300
+    Height = 405
+    Top = 32
+    Width = 5
+  end
+  object pnlPrivileges: TPanel
+    Left = 305
+    Height = 405
+    Top = 32
+    Width = 455
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 405
+    ClientWidth = 455
+    TabOrder = 2
+    object lblPrivileges: TLabel
+      Left = 0
+      Height = 15
+      Top = 0
+      Width = 455
+      Align = alTop
+      Caption = 'System privileges of the selected role'
+      ParentColor = False
+    end
+    object lstPrivileges: TListView
+      Left = 0
+      Height = 390
+      Top = 15
+      Width = 455
+      Align = alClient
+      Columns = <
+        item
+          Caption = 'Privilege'
+          Width = 320
+        end
+        item
+          Caption = 'Granted'
+          Width = 100
+        end>
+      ReadOnly = True
+      RowSelect = True
+      TabOrder = 0
+      ViewStyle = vsReport
+    end
+  end
+  object stsPrivileges: TStatusBar
+    Left = 0
+    Height = 23
+    Top = 437
+    Width = 760
+    Panels = <>
+    SimplePanel = True
+  end
+  object dsRoles: TDataSource
+    DataSet = qryRoles
+    OnDataChange = dsRolesDataChange
+    Left = 40
+    Top = 80
+  end
+  object qryRoles: TIBQuery
+    Params = <>
+    Left = 80
+    Top = 80
+  end
+  object tranPrivileges: TIBTransaction
+    Active = False
+    Left = 120
+    Top = 80
+  end
+end

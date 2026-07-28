@@ -891,11 +891,33 @@ server rather than against the release notes.
   rather than of the version number, in the same shape as the Firebird 5
   compiled-statements tab beside it. Checked live: the tab appears, the query
   opens, and it comes back with pools.
-- [ ] **System privileges** — FlameRobin's "granular system privilege matrix"
-  names an `RDB$SYSTEM_PRIVILEGES` *table*, which does not exist. What does
-  exist is `RDB$ROLES.RDB$SYSTEM_PRIVILEGES`, a bitmask column, so the item is
-  really "decode that bitmask into a readable list", which is smaller than it
-  sounds.
+- [x] **System privileges** — done. FlameRobin's "granular system privilege
+  matrix" names an `RDB$SYSTEM_PRIVILEGES` *table*, which does not exist; what
+  does is `RDB$ROLES.RDB$SYSTEM_PRIVILEGES`, a `CHAR(8) CHARACTER SET OCTETS`
+  bitmask, and nothing in it says what any bit means. Tools > System Privileges
+  shows the roles and, for the selected one, every privilege the server defines
+  with a mark against the ones it has.
+
+  Two things the implementation rests on, both established against the server
+  rather than assumed. **The names come from the catalogue**: `RDB$TYPES` under
+  `RDB$FIELD_NAME = 'RDB$SYSTEM_PRIVILEGES'` publishes all 27, so a privilege a
+  later Firebird adds appears by itself and one this build has never heard of
+  is not silently dropped - the same principle as the monitor's `MON$STATE`
+  decode. **The bit layout was measured**: a role granted `USER_MANAGEMENT`
+  (type 1) reads `0200000000000000`, `READ_RAW_PAGES` (2) reads `0400…`,
+  `CREATE_DATABASE` (9) reads `0002…`, and all of 1, 9 and 27 together read
+  `0202000800000000` - so bit *n* is privilege *n*, low byte first. The mask
+  arrives through `HEX_ENCODE` rather than as raw bytes, because a binary
+  column carrying NULs through a dataset into a grid is a series of small
+  surprises.
+
+  Read-only on purpose: granting one of these is an `ALTER ROLE`, and
+  `CREATE_PRIVILEGED_ROLES` lets its holder grant the rest, so this is for
+  finding out who can already do what. Checked live against a role created for
+  the test with two named privileges - it shows exactly those two, the ones it
+  lacks are listed unmarked, and `RDB$ADMIN` has all 27. A role fixture rather
+  than `RDB$ADMIN` alone, since an all-ones mask would pass a decoder that
+  answered yes to everything.
 - [ ] **JSON / document field editor** — a tree view and validator for
   `BLOB SUB_TYPE TEXT` holding JSON. Marathon has a blob viewer to extend.
   Firebird 6.0.0 has no JSON functions (already recorded above), but a viewer

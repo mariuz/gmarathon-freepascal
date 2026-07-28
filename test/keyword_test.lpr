@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, DB, BufDataset;
 
 var
   Highlighter: TSynSQLSyn;
@@ -455,6 +455,78 @@ begin
     'the query keeps pools that belong to no attachment');
   Check(Pos('order by m.mon$memory_allocated desc', MemoryUsageSQL) > 0,
     'and puts the largest first, which is the question being asked');
+end;
+
+{ Decoding RDB$ROLES.RDB$SYSTEM_PRIVILEGES.
+
+  Firebird 4 grants the right to run gbak, trace another attachment or create a
+  database to roles, as a bitmask that nothing in the catalogue explains. The
+  layout below was measured against the 6.0.0 server rather than assumed: a
+  role granted USER_MANAGEMENT (type 1) reads 0200000000000000, READ_RAW_PAGES
+  (2) reads 0400..., CREATE_DATABASE (9) reads 0002..., and all of 1, 9 and 27
+  together read 0202000800000000. So bit n is privilege n, low byte first. }
+procedure TestSystemPrivileges;
+const
+  UserManagement = 1;
+  ReadRawPages   = 2;
+  CreateDatabase = 9;
+  ProfileAnyAtt  = 27;
+  { What the server actually returned for a role granted only that one. }
+  OnlyUserMgmt = '0200000000000000';
+  OnlyRawPages = '0400000000000000';
+  OnlyCreateDB = '0002000000000000';
+  ThreeOfThem  = '0202000800000000';
+  Everything   = 'FFFFFFFFFFFFFFFF';
+  Nothing      = '0000000000000000';
+begin
+  Check(HasSystemPrivilege(OnlyUserMgmt, UserManagement),
+    'the first bit of the first byte is USER_MANAGEMENT');
+  Check(not HasSystemPrivilege(OnlyUserMgmt, ReadRawPages),
+    'and its neighbour is not granted by it');
+  Check(HasSystemPrivilege(OnlyRawPages, ReadRawPages), 'READ_RAW_PAGES is bit 2');
+  Check(HasSystemPrivilege(OnlyCreateDB, CreateDatabase),
+    'CREATE_DATABASE is bit 9, which is the second byte');
+  Check(not HasSystemPrivilege(OnlyCreateDB, UserManagement),
+    'and the second byte does not grant the first byte''s privileges');
+
+  { The three-privilege mask: exactly those three and nothing else. }
+  Check(HasSystemPrivilege(ThreeOfThem, UserManagement) and
+        HasSystemPrivilege(ThreeOfThem, CreateDatabase) and
+        HasSystemPrivilege(ThreeOfThem, ProfileAnyAtt),
+    'a mask with three privileges grants all three');
+  Check(not HasSystemPrivilege(ThreeOfThem, ReadRawPages),
+    'and grants nothing it was not given');
+  Check(SystemPrivilegeCount(ThreeOfThem, 27) = 3,
+    'which counts as three (' + IntToStr(SystemPrivilegeCount(ThreeOfThem, 27)) + ')');
+
+  { RDB$ADMIN, which every database has. }
+  Check(HasSystemPrivilege(Everything, ProfileAnyAtt),
+    'an all-ones mask grants the highest privilege');
+  Check(SystemPrivilegeCount(Everything, 27) = 28,
+    'and counts every one of them including type 0');
+  Check(SystemPrivilegeCount(Nothing, 27) = 0, 'an empty mask grants none');
+
+  { What a server sends is not always what a decoder expects, and a window
+    that will not open is worse than one showing a role with no privileges. }
+  Check(not HasSystemPrivilege('', UserManagement), 'no mask grants nothing');
+  Check(not HasSystemPrivilege('020', UserManagement),
+    'and neither does half a byte');
+  Check(not HasSystemPrivilege('ZZ00000000000000', UserManagement),
+    'nor one that is not hex');
+  Check(not HasSystemPrivilege(OnlyUserMgmt, 999),
+    'a privilege past the end of the mask is not granted');
+  Check(not HasSystemPrivilege(OnlyUserMgmt, -1), 'and neither is a negative one');
+
+  { Lower case hex is as valid as upper. }
+  Check(HasSystemPrivilege('ffffffffffffffff', CreateDatabase),
+    'lower-case hex decodes the same');
+
+  { The queries read the names from the catalogue rather than a list here, so
+    a privilege a later Firebird adds appears by itself. }
+  Check(Pos('rdb$types', SystemPrivilegeNamesSQL) > 0,
+    'the names come from RDB$TYPES rather than from a hard-coded list');
+  Check(Pos('hex_encode', RoleSystemPrivilegesSQL) > 0,
+    'and the mask arrives as hex rather than as raw bytes');
 end;
 
 procedure TestSessionAdmin;
@@ -2251,6 +2323,9 @@ begin
 
   WriteLn('Memory usage:');
   TestMemoryUsage;
+
+  WriteLn('System privileges:');
+  TestSystemPrivileges;
 
   if Failures > 0 then
   begin

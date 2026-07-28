@@ -895,6 +895,9 @@ object frmMarathonMain: TfrmMarathonMain
         object ToolsProfiler1: TMenuItem
           Action = ToolsProfiler
         end
+        object ToolsSystemPrivileges1: TMenuItem
+          Action = ToolsSystemPrivileges
+        end
         object ToolsMaintenance1: TMenuItem
           Action = ToolsMaintenance
         end
@@ -1853,6 +1856,12 @@ object frmMarathonMain: TfrmMarathonMain
       Caption = 'SQL &Profiler...'
       Hint = 'SQL Profiler'
       OnExecute = ToolsProfilerExecute
+    end
+    object ToolsSystemPrivileges: TAction
+      Category = 'Tools'
+      Caption = 'System Pri&vileges...'
+      Hint = 'Which roles may do what to the server'
+      OnExecute = ToolsSystemPrivilegesExecute
     end
     object ToolsMaintenance: TAction
       Category = 'Tools'

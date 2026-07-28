@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, CreateDatabase;
 
 var
   Failures: Integer = 0;
@@ -3514,6 +3514,128 @@ begin
   end;
 end;
 
+{ The System Privileges window, against the live server.
+
+  What it decodes was measured and is checked without a database in
+  keyword_test; what this adds is that the window asks the right server
+  questions and lands the answers in the right place - and that a role granted
+  two named privileges shows exactly those two.
+
+  A role is made for the purpose rather than leaning on RDB$ADMIN alone: an
+  all-ones mask would pass a decoder that answered True to everything. }
+procedure CheckSystemPrivilegesWindow(Conn: TMarathonCacheConnection);
+var
+  F: TfrmSystemPrivileges;
+  Idx, Granted, Marked: Integer;
+  Names: String;
+
+  procedure Run(const SQLText: String);
+  var
+    S: TIBSQL;
+  begin
+    S := TIBSQL.Create(nil);
+    try
+      S.Database := Conn.Connection;
+      S.Transaction := Conn.Transaction;
+      S.SQL.Text := SQLText;
+      try
+        if not Conn.Transaction.Active then
+          Conn.Transaction.StartTransaction;
+        S.ExecQuery;
+        Conn.Transaction.Commit;
+      except
+        if Conn.Transaction.Active then
+          Conn.Transaction.Rollback;
+      end;
+    finally
+      S.Free;
+    end;
+  end;
+
+  function FindRole(const AName: String): Boolean;
+  begin
+    Result := False;
+    F.qryRoles.First;
+    while not F.qryRoles.EOF do
+    begin
+      if SameText(Trim(F.qryRoles.FieldByName('ROLE_NAME').AsString), AName) then
+        Exit(True);
+      F.qryRoles.Next;
+    end;
+  end;
+
+begin
+  WriteLn('System privileges window:');
+  Run('drop role PRIV_PROBE');
+  Run('create role PRIV_PROBE');
+  Run('alter role PRIV_PROBE set system privileges to ' +
+      'USER_MANAGEMENT, CREATE_DATABASE');
+
+  F := TfrmSystemPrivileges.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    Check(F.Supported, 'the server reports system privileges');
+    if not F.Supported then
+      Exit;
+    Check(F.qryRoles.Active, 'the roles query opens');
+
+    { The names come from the catalogue, so there should be a couple of dozen
+      rather than none. }
+    Check(F.lstPrivileges.Items.Count > 10,
+      'the server publishes its privilege names (' +
+      IntToStr(F.lstPrivileges.Items.Count) + ')');
+
+    Check(FindRole('PRIV_PROBE'), 'the probe role is listed');
+    if not FindRole('PRIV_PROBE') then
+      Exit;
+
+    { Landing on the role fills the right-hand list. }
+    F.dsRolesDataChange(F.dsRoles, nil);
+    Granted := 0;
+    Marked := 0;
+    Names := '';
+    for Idx := 0 to F.lstPrivileges.Items.Count - 1 do
+      if (F.lstPrivileges.Items[Idx].SubItems.Count > 0) and
+         (F.lstPrivileges.Items[Idx].SubItems[0] <> '') then
+      begin
+        Inc(Granted);
+        Names := Names + F.lstPrivileges.Items[Idx].Caption + ' ';
+      end;
+    Check(Granted = 2,
+      'a role granted two privileges shows two (' + IntToStr(Granted) + ': ' +
+      Trim(Names) + ')');
+    Check((Pos('USER_MANAGEMENT', Names) > 0) and
+          (Pos('CREATE_DATABASE', Names) > 0),
+      'and they are the two it was granted');
+
+    { Every privilege is listed whether granted or not - "what could this role
+      do" is only answerable against the whole list. }
+    for Idx := 0 to F.lstPrivileges.Items.Count - 1 do
+      if F.lstPrivileges.Items[Idx].SubItems.Count > 0 then
+        Inc(Marked);
+    Check(Marked = F.lstPrivileges.Items.Count,
+      'and the ones it lacks are listed too, unmarked');
+
+    { RDB$ADMIN is in every database and has all of them, which is the other
+      end of the range. }
+    if FindRole('RDB$ADMIN') then
+    begin
+      F.dsRolesDataChange(F.dsRoles, nil);
+      Granted := 0;
+      for Idx := 0 to F.lstPrivileges.Items.Count - 1 do
+        if (F.lstPrivileges.Items[Idx].SubItems.Count > 0) and
+           (F.lstPrivileges.Items[Idx].SubItems[0] <> '') then
+          Inc(Granted);
+      Check(Granted = F.lstPrivileges.Items.Count,
+        'RDB$ADMIN has every privilege the server defines (' +
+        IntToStr(Granted) + ')');
+    end;
+  finally
+    F.Free;
+    Run('drop role PRIV_PROBE');
+  end;
+end;
+
 { Exporting a result set, in every format the grid offers.
 
   Five of the six had no test at all: only XLSX did, and that one goes through
@@ -3773,6 +3895,7 @@ begin
   CheckDropStatements(Conn);
   CheckObjectExistence(Conn);
   CheckBlobViewer;
+  CheckSystemPrivilegesWindow(Conn);
   CheckSQLTrace(Conn);
 end;
 
