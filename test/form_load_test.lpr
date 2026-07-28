@@ -1551,6 +1551,62 @@ begin
   Found.Free;
 end;
 
+{ A table with no primary key.
+
+  There is nothing safe to put in the WHERE clause of an UPDATE or a DELETE
+  against one, so the grid is left unable to write rather than given statements
+  that would match every row that looks alike. This is the check that the
+  refusal actually happens, rather than being described in a comment. }
+procedure CheckKeylessTableIsReadOnly(Conn: TMarathonCacheConnection);
+var
+  F: TfrmTables;
+  Q: TIBQuery;
+begin
+  WriteLn('A table with no primary key:');
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Conn.Connection;
+    Q.Transaction := Conn.Transaction;
+    Q.AllowAutoActivateTransaction := True;
+    Q.SQL.Text := 'execute block as begin ' +
+      'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''NOKEY_TAB'')) then ' +
+      '  execute statement ''create table NOKEY_TAB (A integer, B varchar(10))''; end';
+    Q.ExecSQL;
+    if Assigned(Q.Transaction) then
+      TIBTransaction(Q.Transaction).CommitRetaining;
+  finally
+    Q.Free;
+  end;
+
+  F := TfrmTables.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    try
+      F.LoadTable('NOKEY_TAB');
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the editor opens a keyless table (' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    F.pgObjectEditor.ActivePage := F.tsData;
+    F.pgObjectEditorChange(F.pgObjectEditor);
+    if not F.tblTableData.Active then
+    begin
+      WriteLn('  .... skipped: the data tab did not open');
+      Exit;
+    end;
+    { No update object means the dataset refuses writes, which is the refusal:
+      a user cannot type a change that could not be written back safely. }
+    Check(F.tblTableData.UpdateObject = nil,
+      'the grid is given no way to write to a table with no primary key');
+    Check(not F.HasPendingDataChanges, 'and has nothing pending');
+  finally
+    F.Free;
+  end;
+end;
+
 { The data grid, holding its edits until they are looked at.
 
   The table designer was converted to design-then-apply earlier; the data grid
@@ -1694,12 +1750,29 @@ begin
     F.ApplyDataChanges;
     Check(CountWhere('') = Before - 1, 'applying the delete removes it');
 
+    { Inserting through the grid, which the preview handles separately from an
+      edit and which nothing had covered. }
+    F.tblTableData.Append;
+    F.tblTableData.FieldByName('ID').AsInteger := 99;
+    F.tblTableData.FieldByName('NAME').AsString := 'brand new';
+    F.tblTableData.Post;
+    Script := F.PendingDataChanges;
+    Check(Pos('insert into', AnsiLowerCase(Script)) > 0,
+      'a new row shows an INSERT');
+    Check(Pos('brand new', Script) > 0, 'with the values that were typed');
+    Check(CountWhere('where ID = 99') = 0,
+      'and the row is not in the table until it is applied');
+    F.ApplyDataChanges;
+    Check(CountWhere('where ID = 99') = 1, 'applying the insert adds it');
+
     { Nothing left pending, or freeing the form asks a question no one can
       answer here - see CheckCommit. }
     F.CancelDataChanges;
   finally
     F.Free;
   end;
+
+  CheckKeylessTableIsReadOnly(Conn);
 end;
 
 { The query plan drawn as a tree.

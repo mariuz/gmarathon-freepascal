@@ -464,6 +464,8 @@ begin
   if not Tr.InTransaction then
     Tr.StartTransaction;
   Q.SQL.Text := 'execute block as begin ' +
+    'if (exists(select 1 from rdb$relations where rdb$relation_name = ''E2E_LINE'')) then ' +
+    '  execute statement ''drop table E2E_LINE''; ' +
     'if (exists(select 1 from rdb$relations where rdb$relation_name = ''E2E_ITEM'')) then ' +
     '  execute statement ''drop table E2E_ITEM''; end';
   Q.ExecSQL;
@@ -669,9 +671,113 @@ begin
   end;
   WriteLn('  ok   the designer alters it without losing the rows in it');
 
+  { 8. A second table referencing the first, so the relationship path is
+    walked too: the diagram has to see the key, and the query builder has to
+    join across it in an order the server accepts. }
+  Run('create table E2E_LINE (ID integer not null primary key, ' +
+      'ITEM_ID integer references E2E_ITEM(ID), QTY integer)',
+      'creating the referencing table');
+  Run('insert into E2E_LINE (ID, ITEM_ID, QTY) values (1, 1, 5)',
+      'putting a row in it');
+
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Diagram := ReadSchemaDiagram(DB, Tr);
+  try
+    Found := False;
+    for Idx := 0 to Diagram.LinkCount - 1 do
+      if SameText(Diagram.Links[Idx].FromTable, 'E2E_LINE') and
+         SameText(Diagram.Links[Idx].ToTable, 'E2E_ITEM') then
+      begin
+        Found := True;
+        if not SameText(Trim(Diagram.Links[Idx].FromColumn), 'ITEM_ID') then
+        begin
+          WriteLn('FAIL: end-to-end, the diagram read the key as ',
+            Diagram.Links[Idx].FromColumn);
+          Halt(1);
+        end;
+      end;
+    if not Found then
+    begin
+      WriteLn('FAIL: end-to-end, the diagram did not see the foreign key');
+      Halt(1);
+    end;
+  finally
+    Diagram.Free;
+  end;
+  WriteLn('  ok   the diagram sees the key between the two tables');
+
+  { The builder is given the tables in the order that does *not* work as a
+    FROM clause - the detail table first - so this exercises the ordering
+    rather than happening to agree with it. }
+  Model := TQueryModel.Create;
+  try
+    Model.AddTable('', 'E2E_LINE');
+    Model.AddTable('', 'E2E_ITEM');
+    Model.AddJoin(jkInner, 'EL', 'ITEM_ID', 'EI', 'ID');
+    Model.AddColumn('EI', 'NAME');
+    Model.AddColumn('EL', 'QTY');
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Q.Close;
+    Q.SQL.Text := StripTrailingSemicolon(BuildSelectSQL(Model));
+    try
+      Q.Open;
+      Rows := 0;
+      while not Q.EOF do
+      begin
+        Inc(Rows);
+        Q.Next;
+      end;
+      Q.Close;
+    except
+      on Ex: Exception do
+      begin
+        WriteLn('FAIL: end-to-end, the joined query was rejected: ', Ex.Message);
+        WriteLn(BuildSelectSQL(Model));
+        Halt(1);
+      end;
+    end;
+    if Rows <> 1 then
+    begin
+      WriteLn('FAIL: end-to-end, the joined query returned ', Rows,
+        ' row(s), expected 1');
+      Halt(1);
+    end;
+    if Tr.InTransaction then
+      Tr.Commit;
+  finally
+    Model.Free;
+  end;
+  WriteLn('  ok   and a query joining across it runs and returns the row');
+
+  { 9. The key is what stops the parent going while a child points at it -
+    the server's job, and worth knowing this walk has not disabled it. }
+  if not Tr.InTransaction then
+    Tr.StartTransaction;
+  Q.Close;
+  Q.SQL.Text := 'delete from E2E_ITEM';
+  Found := False;
+  try
+    Q.ExecSQL;
+  except
+    on Ex: Exception do
+      Found := True;
+  end;
+  if Tr.InTransaction then
+    Tr.Rollback;
+  if not Found then
+  begin
+    WriteLn('FAIL: end-to-end, the parent was deleted with a child still ' +
+      'referencing it');
+    Halt(1);
+  end;
+  WriteLn('  ok   and the key still refuses to orphan the child');
+
   Design.Free;
+  Run('drop table E2E_LINE', 'dropping the referencing table');
   Run('drop table E2E_ITEM', 'dropping the table');
-  WriteLn('  ok   and it drops cleanly at the end');
+  WriteLn('  ok   and both drop cleanly at the end');
 end;
 
 { The schema diagram's reader, against a real server.
