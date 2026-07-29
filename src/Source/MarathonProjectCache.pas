@@ -4358,6 +4358,14 @@ begin
 	try
 		Q.DataBase := FRootItem.ConnectionByName[FConnectionName].Connection;
 		Q.Transaction := FRootItem.ConnectionByName[FConnectionName].Transaction;
+		{ A fresh transaction, the same as every other Expand in this unit. This
+		  was the one that did not: the tree's queries commit the shared
+		  transaction constantly, IBX will not start one on demand, and opening
+		  the Domains branch raised "Transaction is not active" - which escaped
+		  through the tree's OnExpanding and took the application down. }
+		if TIBTransaction(Q.Transaction).Active then
+			TIBTransaction(Q.Transaction).Commit;
+		TIBTransaction(Q.Transaction).StartTransaction;
 
 		Q.SQL.Add('select RDB$FIELD_NAME from RDB$FIELDS where ((RDB$SYSTEM_FLAG = 0) or (RDB$SYSTEM_FLAG is null)) and (RDB$FIELD_NAME not starting with ''RDB$'')' + FRootItem.ConnectionByName[FConnectionName].SchemaFilterClause + ' order by RDB$FIELD_NAME asc;');
 		Q.Open;

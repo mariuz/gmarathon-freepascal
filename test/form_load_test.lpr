@@ -1917,6 +1917,66 @@ end;
   name the column after the reference it qualifies. Loading a table is not
   enough to catch that: the query only runs when the tab is switched to, which
   is why this walks the pages rather than just opening the editor. }
+{ Every branch of the object tree, expanded with the shared transaction
+  deliberately committed first.
+
+  That is the state the tree is normally in - its own queries commit constantly
+  and IBX will not start one on demand - and one branch out of a dozen did not
+  start its own. Expanding Domains raised "Transaction is not active", the
+  exception escaped through the tree's OnExpanding, and the application went
+  down with it. Nothing caught it because nothing had ever expanded the
+  branches; loading the tree only builds the headers. }
+procedure CheckEveryBranchExpands(Conn: TMarathonCacheConnection);
+var
+  Root, Node: TMarathonTreeNode;
+  Obj: TMarathonCacheBaseNode;
+  Failures, Expanded: Integer;
+  Name: String;
+begin
+  WriteLn('Expanding every branch:');
+  Root := Conn.ContainerNode;
+  if not Assigned(Root) then
+  begin
+    WriteLn('  .... skipped: the connection has no tree node');
+    Exit;
+  end;
+  { The headers are made by expanding the connection, so without this there is
+    nothing underneath to walk - which is how the first version of this check
+    passed while testing nothing. }
+  if not Conn.Expanded then
+    Conn.Expand(False);
+
+  Failures := 0;
+  Expanded := 0;
+  Node := Root.GetFirstChild;
+  while Assigned(Node) do
+  begin
+    if Assigned(Node.Data) and (TObject(Node.Data) is TMarathonCacheBaseNode) then
+    begin
+      Obj := TMarathonCacheBaseNode(Node.Data);
+      Name := Obj.Caption;
+      { The state the tree is usually in when a branch is opened. }
+      if Assigned(Conn.Transaction) and Conn.Transaction.InTransaction then
+        Conn.Transaction.Commit;
+      try
+        Obj.Expand(False);
+        Inc(Expanded);
+      except
+        on E: Exception do
+        begin
+          Inc(Failures);
+          Check(False, 'expanding ' + Name + ' (' + E.ClassName + ': ' +
+            E.Message + ')');
+        end;
+      end;
+    end;
+    Node := Node.GetNextSibling;
+  end;
+
+  Check(Expanded > 0, 'there are branches to expand (' + IntToStr(Expanded) + ')');
+  Check(Failures = 0, 'every branch expands on a committed transaction');
+end;
+
 procedure CheckEditorTabsQueryTheRightSchemaColumn(Conn: TMarathonCacheConnection;
   const ATableName: String);
 var
@@ -5031,6 +5091,7 @@ begin
   { Last: opening these tabs commits the connection's shared transaction, and
     checks that follow expect one to be running - putting this earlier made
     four unrelated schema checks read empty column lists. }
+  CheckEveryBranchExpands(Conn);
   CheckEditorTabsQueryTheRightSchemaColumn(Conn, TableName);
 end;
 
