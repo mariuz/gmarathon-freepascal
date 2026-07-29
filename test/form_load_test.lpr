@@ -2078,6 +2078,35 @@ begin
   end;
 end;
 
+{ The data grid's right-click menu.
+
+  It had none, so the click fell through to the form's popup - which held a
+  single leftover debug item, "sizerect", that showed a message box with the
+  window's coordinates. Shipped, and on Ctrl+R. }
+procedure CheckDataGridMenu;
+var
+  F: TfrmTables;
+begin
+  WriteLn('Data grid menu:');
+  F := TfrmTables.Create(nil);
+  try
+    Check(F.PopupMenu = nil, 'the form itself no longer carries a popup');
+
+    { The shared data menu is on the grid now. Assigned when the Data tab is
+      configured, so it is not there before that - what matters is that the
+      form has no debug popup to fall through to. }
+    if Assigned(dmMenus) then
+    begin
+      Check(Assigned(dmMenus.mnuDataMenu), 'the shared data menu exists');
+      { And that menu is not a stub: it has to be worth showing. }
+      Check(dmMenus.mnuDataMenu.Items.Count >= 4,
+        'with something on it (' + IntToStr(dmMenus.mnuDataMenu.Items.Count) + ')');
+    end;
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckKeylessTableIsReadOnly(Conn: TMarathonCacheConnection);
 var
   F: TfrmTables;
@@ -6764,6 +6793,7 @@ begin
   CheckIconResolutions;
   CheckResultsLayout;
   CheckThemeApply;
+  CheckDataGridMenu;
   CheckCommandBar;
   CheckCompletionWiring;
   CheckEditorSearch;

@@ -110,8 +110,6 @@ type
 		Panel1: TPanel;
 		Label1: TLabel;
 		cmbTriggerDisplay: TComboBox;
-    PopupMenu1: TPopupMenu;
-    sizerect1: TMenuItem;
 		procedure FormClose(Sender: TObject; var Action: TCloseAction);
 		procedure tvTriggersDblClick(Sender: TObject);
 		procedure FormCreate(Sender: TObject);
@@ -132,7 +130,6 @@ type
 		procedure FormKeyDown(Sender: TObject; var Key: Word;	Shift: TShiftState);
 		procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 		procedure cmbTriggerDisplayChange(Sender: TObject);
-    procedure sizerect1Click(Sender: TObject);
 	private
 		{ Private declarations }
 		It: TMenuItem;
@@ -2846,11 +2843,6 @@ begin
 	inherited;
 end;
 
-procedure TfrmTables.sizerect1Click(Sender: TObject);
-begin
-  showmessage('L:'+inttostr(left) +' T:'+inttostr(top) +' W:'+inttostr(width) +' H:'+inttostr(height));
-end;
-
 { The key columns of the table being edited, which is what makes an UPDATE or a
   DELETE pick out one row. A table without one cannot be edited safely, and
   RowEdits says so rather than writing a statement that would match every row
@@ -3220,6 +3212,12 @@ begin
     { And changes to an existing row are refused outright when there is no key,
       rather than accepted by the grid and rejected on apply. }
     tblTableData.BeforeEdit := DataBeforeEdit;
+    { The grid had no context menu of its own, so a right click fell through to
+      the form's - which held one leftover debug item reporting the window
+      size. This is the menu the SQL editor's grid already uses: export,
+      refresh, the column chooser, commit and rollback. }
+    if Assigned(dmMenus) then
+      grdDataView.PopupMenu := dmMenus.mnuDataMenu;
   finally
     Keys.Free;
     Cols.Free;

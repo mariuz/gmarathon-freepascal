@@ -13,7 +13,6 @@ object frmTables: TfrmTables
   Font.Style = []
   KeyPreview = True
   OldCreateOrder = False
-  PopupMenu = PopupMenu1
   Position = poScreenCenter
   Scaled = True
   OnClose = FormClose
@@ -472,14 +471,5 @@ object frmTables: TfrmTables
   object tranTableData: TIBTransaction
     Left = 80
     Top = 152
-  end
-  object PopupMenu1: TPopupMenu
-    Left = 39
-    Top = 28
-    object sizerect1: TMenuItem
-      Caption = 'sizerect'
-      ShortCut = 16466
-      OnClick = sizerect1Click
-    end
   end
 end
