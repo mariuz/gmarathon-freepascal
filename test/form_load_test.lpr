@@ -1276,6 +1276,7 @@ type
 procedure CheckDocumentsFreedBeforeShutdown;
 var
   F: TfrmSQLForm;
+  Dock: TfrmDatabaseExplorer;
   Before, After: Integer;
 begin
   WriteLn('Documents at shutdown:');
@@ -1298,6 +1299,30 @@ begin
   except
     on E: Exception do
       Check(False, 'and doing it again is harmless (' + E.ClassName + ')');
+  end;
+
+  { The explorer is docked into a panel rather than hosted in a tab, so
+    CloseAll never sees it - and it is a document form holding IBX queries,
+    which is exactly what the shutdown fault was reading after IBDatabase had
+    finalized. Freeing the hosted ones alone left it behind. }
+  Dock := TfrmDatabaseExplorer.Create(nil);
+  Check(DockInto(Dock, frmMarathonMain.pnlExplorerDock, frmMarathonMain.splExplorer),
+    'a form docks into the shell panel');
+  Check(not Documents.IsHosted(Dock), 'and is not a hosted document');
+  try
+    CloseDockedForms;
+    Check(True, 'closing the shell frees the docked forms too');
+  except
+    on E: Exception do
+      Check(False, 'closing the shell frees the docked forms too (' +
+        E.ClassName + ': ' + E.Message + ')');
+  end;
+  try
+    CloseDockedForms;
+    Check(True, 'and that is repeatable as well');
+  except
+    on E: Exception do
+      Check(False, 'and that is repeatable as well (' + E.ClassName + ')');
   end;
 end;
 

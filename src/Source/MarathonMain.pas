@@ -1103,6 +1103,13 @@ begin
 	MarathonIDEInstance.MainForm := nil;
 	MarathonIDEInstance.UnloadPlugins;
   Refresh;  //AC:
+
+	{ Last of all: the explorer is docked into a panel rather than hosted in a
+	  tab, so CloseAll above does not reach it - and it holds IBX queries, which
+	  is what the shutdown fault was reading after IBDatabase had finalized.
+	  After UnloadPlugins, because nothing beyond this point asks the browser
+	  anything. }
+	CloseDockedForms;
 end;
 
 procedure TfrmMarathonMain.LoadOptions;

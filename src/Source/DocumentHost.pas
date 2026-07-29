@@ -59,7 +59,8 @@ type
     { Brings an already-hosted form's tab to the front. }
     function Activate(AForm: TForm): Boolean;
     { Frees every hosted document now, instead of leaving it on Application's
-      release queue to be freed during finalization. Called as the shell
+      release queue to be freed during finalization
+  FreeAndNil(FDocked);. Called as the shell
       closes - see the body for why it has to be. }
     procedure CloseAll;
     { The form in the active tab, or nil. }
@@ -67,6 +68,12 @@ type
     function DocumentCount: Integer;
     property Pages: TPageControl read FPages;
   end;
+
+{ Frees the forms that DockInto placed, for the same reason CloseAll frees the
+  hosted ones - they are document forms too, and the explorer holds IBX
+  queries. Called last as the shell closes, after anything that might still
+  ask the browser a question. }
+procedure CloseDockedForms;
 
 { Puts a form into a fixed panel of the shell - the object explorer into its
   dock, rather than a document into a tab. Same reparenting, but the panel is
@@ -85,11 +92,40 @@ var
 
 implementation
 
+var
+  { What DockInto has placed. A list here rather than a field on the host
+    because DockInto is a plain function - the explorer is docked into a panel
+    of the shell, not hosted in a tab, so the host never sees it. }
+  FDocked: TList = nil;
+
+procedure CloseDockedForms;
+var
+  Idx: Integer;
+  Frm: TForm;
+begin
+  if not Assigned(FDocked) then
+    Exit;
+  for Idx := FDocked.Count - 1 downto 0 do
+  begin
+    Frm := TForm(FDocked[Idx]);
+    FDocked.Delete(Idx);
+    if Assigned(Frm) then
+    begin
+      Frm.Parent := nil;
+      Frm.Free;
+    end;
+  end;
+end;
+
 function DockInto(AForm: TForm; APanel: TWinControl; ASplitter: TControl): Boolean;
 begin
   Result := Assigned(AForm) and Assigned(APanel);
   if not Result then
     Exit;
+  if not Assigned(FDocked) then
+    FDocked := TList.Create;
+  if FDocked.IndexOf(AForm) < 0 then
+    FDocked.Add(AForm);
   AForm.BorderStyle := bsNone;
   AForm.Parent := APanel;
   AForm.Align := alClient;
