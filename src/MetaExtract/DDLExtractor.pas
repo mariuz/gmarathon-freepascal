@@ -2041,7 +2041,10 @@ begin
             Q2.Transaction := FTransaction;
             Q2.SelectSQL.Add('select a.rdb$trigger_source from rdb$triggers a, rdb$check_constraints b where a.rdb$trigger_name = b.rdb$trigger_name and b.rdb$constraint_name = ' + AnsiQuotedStr(Trim(Q1.FieldByName('rdb$constraint_name').AsString), '''') + ';');
             Q2.Open;
-            Line := 'alter table ' + QualifiedIdent(ObjectName) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' ' + AdjustLineBreaks(Trim(Q2.FieldByName('rdb$trigger_source').AsString)) + ';';
+            { A name the server invented is left off: writing it down makes the
+              script fail on any database that has already given INTEG_<n> to
+              something else, which it will have. }
+            Line := 'alter table ' + QualifiedIdent(ObjectName) + ' add ' + IfThen(IsGeneratedConstraintName(Trim(Q1.FieldByName('rdb$constraint_name').AsString)), '', 'constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' ') + AdjustLineBreaks(Trim(Q2.FieldByName('rdb$trigger_source').AsString)) + ';';
             Q2.Close;
             OutPut.Add(Line);
           finally
@@ -2480,7 +2483,7 @@ begin
           Q2.Next;
         end;
 
-        Line := Line + 'alter table ' + QualifiedIdent(ObjectName) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' foreign key (' + Line1 + ') references ';
+        Line := Line + 'alter table ' + QualifiedIdent(ObjectName) + ' add ' + IfThen(IsGeneratedConstraintName(Trim(Q1.FieldByName('rdb$constraint_name').AsString)), '', 'constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' ') + 'foreign key (' + Line1 + ') references ';
 
         //get the fk relation and field...
         Q2.Close;
@@ -2670,7 +2673,7 @@ begin
           Line := Line + MakeQuotedIdent(Trim(Q2.FieldByName('rdb$field_name').AsString), FIsIB6, FSQLDialect);
           Q2.Next;
         end;
-        Line := 'alter table ' + QualifiedIdent(ObjectName) + ' add constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) +  ' primary key (' + Line + ');';
+        Line := 'alter table ' + QualifiedIdent(ObjectName) + ' add ' + IfThen(IsGeneratedConstraintName(Trim(Q1.FieldByName('rdb$constraint_name').AsString)), '', 'constraint ' + MakeQuotedIdent(Trim(Q1.FieldByName('rdb$constraint_name').AsString), FIsIB6, FSQLDialect) + ' ') + 'primary key (' + Line + ');';
         Result := Line;
       finally
         Q2.Free;

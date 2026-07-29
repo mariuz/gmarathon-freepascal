@@ -454,15 +454,6 @@ begin
   Result := '(' + Result + ')';
 end;
 
-{ True for a name Firebird made up because the user did not supply one. Those
-  differ between databases holding identical schemas - a primary key is
-  INTEG_249 in one and INTEG_512 in another - which is precisely why
-  constraints cannot be compared by name. }
-function IsGeneratedConstraintName(const Name: String): Boolean;
-begin
-  Result := Copy(UpperCase(Trim(Name)), 1, 6) = 'INTEG_';
-end;
-
 { The key constraints of one table, rendered without their names so that two
   databases describing the same constraint produce the same text. Statements
   and Names are filled in step: Statements[i] is what would add it, Names[i] is

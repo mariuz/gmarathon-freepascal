@@ -2276,6 +2276,15 @@ begin
       if (Pos('CONNECT', AnsiUpperCase(Trim(Script[Tmp]))) = 1) or
          (Pos('SET SQL DIALECT', AnsiUpperCase(Trim(Script[Tmp]))) = 1) then
         Script.Delete(Tmp);
+    { The names Firebird invents for unnamed constraints must not be written
+      down. They are INTEG_<n>, numbered per database, so a script that names
+      one fails on any other database as soon as the server has given that
+      number to something else - which it does while running this very script.
+      That failure showed up three steps later as a missing procedure, so
+      assert it here where it happens. }
+    Check(Pos('CONSTRAINT INTEG_', AnsiUpperCase(Script.Text)) = 0,
+      'the extract names no server-generated constraints');
+
     Runnable := GetTempDir + 'marathon_extract_run.sql';
     Script.SaveToFile(Runnable);
 

@@ -59,10 +59,11 @@ HOME=/tmp/marathon-test-home DISPLAY=:99 \
   MARATHON_TEST_PASSWORD=masterkey ./test/form_load_test
 ```
 
-Two failures are known and **pre-existing**, so a run that shows only these has not regressed — both confirmed by stashing all local work, rebuilding at `HEAD` and reproducing them there:
+`form_load_test` and `ibx_smoke_test` both pass clean against Firebird 6. One failure is known and **pre-existing**, and is not a `Check` failure so it does not change the exit code:
 
-- `form_load_test`: *"the procedure with a domain-typed parameter is rebuilt"* fails with `violation of PRIMARY or UNIQUE KEY constraint "RDB$INDEX_69" on RDB$RELATION_CONSTRAINTS`, key `("RDB$SCHEMA_NAME" = 'PUBLIC', "RDB$CONSTRAINT_NAME" = 'INTEG_4')`. Somewhere in the extract/rebuild path a generated constraint name collides on a schema-aware server.
-- An `EAccessViolation` on shutdown, from `Application.Destroy` → `ProcessAsyncCallQueue` → `FreeComponent` → the form's `Destroy` → IBX teardown (`IBDatabase.pas`). Documents still on the async free queue are released after unit finalization has run. It fires on the way out, after the window has closed and the work is saved, so the only symptom is an exit code of 217.
+- An `EAccessViolation` on shutdown, from `Application.Destroy` → `ProcessAsyncCallQueue` → `FreeComponent` → the form's `Destroy` → IBX teardown (`IBDatabase.pas`). Documents still on the async free queue are released after unit finalization has run. It fires on the way out, after the window has closed and the work is saved, so the only symptom is an exit code of 217. Confirmed pre-existing by stashing all local work, rebuilding at `HEAD` and reproducing it there.
+
+The extract/rebuild failure that used to sit here — `violation of PRIMARY or UNIQUE KEY constraint … ("RDB$CONSTRAINT_NAME" = 'INTEG_4')` — is fixed: see `IsGeneratedConstraintName` in `SchemaNames.pas` and the three sites in `DDLExtractor.pas` that no longer write a server-invented constraint name into the script.
 
 Note the exception sink records an unhandled exception and carries on, but `Failures` only counts `Check` failures — so an `!! unhandled` line in the output is a real fault even when the run ends in `PASS`.
 

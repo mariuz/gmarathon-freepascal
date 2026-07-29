@@ -108,6 +108,16 @@ function QualifiedIdent(const Schema, ObjectName: String; IsIB6: Boolean;
   Quoted parts are unquoted, so "My Schema"."My Table" splits on the dot
   between them rather than on one inside a name. Returns False when the text
   names no schema, in which case Name is the whole of it. }
+{ True for a constraint name Firebird invented because none was supplied.
+
+  They are INTEG_<n>, numbered per database, so the same schema built twice
+  gives the same constraint two different names. Two things follow. A
+  comparison cannot match constraints by name, and an extract must not write
+  the name down: a script that says "add constraint INTEG_4" fails on a fresh
+  database as soon as the server has handed INTEG_4 to something else, which
+  it does while running that very script. }
+function IsGeneratedConstraintName(const Name: String): Boolean;
+
 function SplitSchemaName(const Text: String; out Schema, Name: String): Boolean;
 
 { How an object is named on screen and in a window caption: qualified only when
@@ -156,6 +166,11 @@ begin
   Result := MakeQuotedIdent(Trim(ObjectName), IsIB6, Dialect);
   if Trim(Schema) <> '' then
     Result := MakeQuotedIdent(Trim(Schema), IsIB6, Dialect) + '.' + Result;
+end;
+
+function IsGeneratedConstraintName(const Name: String): Boolean;
+begin
+  Result := Copy(UpperCase(Trim(Name)), 1, 6) = 'INTEG_';
 end;
 
 function SplitSchemaName(const Text: String; out Schema, Name: String): Boolean;
