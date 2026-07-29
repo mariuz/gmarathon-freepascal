@@ -159,6 +159,11 @@ type
 		procedure grdSQLStatementDblClick(Sender: TObject);
 		function FormHelp(Command: Word; Data: Integer;	var CallHelp: Boolean): Boolean;
 		procedure tabResultsChange(Sender: TObject; NewTab: Integer; var AllowChange: Boolean);
+		{ Results and Messages are peers at the bottom of the editor, the way every
+		  modern SQL tool arranges them - see SetResultsLayout. }
+		procedure SetResultsLayout;
+		procedure ShowResultsTab(AMessages: Boolean);
+		procedure ResultViewClick(Sender: TObject);
 		procedure edSQLStatementGetHintText(Sender: TObject; Token: String;
 			var HintText: String; HintType: THintType);
 		procedure edSQLStatementNavigateHyperLinkClick(Sender: TObject; Token: String);
@@ -372,7 +377,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm, GridColumnsDialog;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm, GridColumnsDialog, MenuModule;
 
 {$R *.lfm}
 
@@ -635,9 +640,81 @@ begin
 		CallHelp := True;
 end;
 
+{ The bottom of the editor: one strip reading Results and Messages.
+
+  It used to read Datasheet and Form - two ways of looking at the same rows -
+  while the messages the server sent back lived in a panel of their own that
+  View > Messages showed and hid. So the two things a statement produces were
+  arranged as though they were unrelated, and the one people look at after a
+  failed statement was the one behind a menu.
+
+  Results and Messages are what the statement produced, so they are the tabs.
+  Datasheet against Form is a preference about the grid, so it moved to the
+  grid's own context menu, where the column and freeze choices already are. }
+procedure TfrmSQLForm.SetResultsLayout;
+var
+  Item: TMenuItem;
+begin
+  tabResults.Tabs.BeginUpdate;
+  try
+    tabResults.Tabs.Clear;
+    tabResults.Tabs.Add('Results');
+    tabResults.Tabs.Add('Messages');
+  finally
+    tabResults.Tabs.EndUpdate;
+  end;
+  tabResults.TabIndex := 0;
+
+  { Messages fills the same space Results does rather than taking its own slice
+    of the window, which is what makes them peers rather than a panel and a
+    panel. }
+  pnlMessages.Align := alClient;
+  ShowResultsTab(False);
+
+  if Assigned(dmMenus) and Assigned(dmMenus.mnuDataMenu) then
+  begin
+    Item := TMenuItem.Create(Self);
+    Item.Caption := '-';
+    dmMenus.mnuDataMenu.Items.Add(Item);
+
+    Item := TMenuItem.Create(Self);
+    Item.Caption := 'View as &Datasheet';
+    Item.Tag := 0;
+    Item.OnClick := ResultViewClick;
+    dmMenus.mnuDataMenu.Items.Add(Item);
+
+    Item := TMenuItem.Create(Self);
+    Item.Caption := 'View as &Form';
+    Item.Tag := 1;
+    Item.OnClick := ResultViewClick;
+    dmMenus.mnuDataMenu.Items.Add(Item);
+  end;
+end;
+
+procedure TfrmSQLForm.ResultViewClick(Sender: TObject);
+begin
+  if not (Sender is TMenuItem) then
+    Exit;
+  if TMenuItem(Sender).Tag = 1 then
+    nbResults.ActivePage := nbpForm
+  else
+    nbResults.ActivePage := nbpDatasheet;
+  { Choosing a view is also asking to look at the rows. }
+  ShowResultsTab(False);
+end;
+
+procedure TfrmSQLForm.ShowResultsTab(AMessages: Boolean);
+begin
+  pnlMessages.Visible := AMessages;
+  nbResults.Visible := not AMessages;
+  splResults.Visible := True;
+  if tabResults.TabIndex <> Ord(AMessages) then
+    tabResults.TabIndex := Ord(AMessages);
+end;
+
 procedure TfrmSQLForm.tabResultsChange(Sender: TObject; NewTab: Integer; var AllowChange: Boolean);
 begin
-	nbResults.ActivePageIndex := NewTab;
+  ShowResultsTab(NewTab = 1);
 end;
 
 procedure TfrmSQLForm.AddError(Info: String);
@@ -692,19 +769,14 @@ begin
     end
     else
       stsSQLStatement.Panels[2].Text := '';
-    case gDefaultView of
-			0:
-				begin
-				 nbResults.ActivePage := nbpDatasheet;
-				 tabResults.TabIndex := gDefaultView;
-				end;
-
-			1:
-				begin
-					nbResults.ActivePage := nbpForm;
-					tabResults.TabIndex := gDefaultView;
-				end;
+    { The setting still chooses how rows are shown; it no longer chooses which
+		  tab is in front, because the tabs are now Results and Messages and rows
+		  are what someone who just ran a statement wants to see. }
+		case gDefaultView of
+			0: nbResults.ActivePage := nbpDatasheet;
+			1: nbResults.ActivePage := nbpForm;
 		end;
+		ShowResultsTab(False);
 	end;
 
 	if pgSQLStatement.ActivePage = tsPerformance then
@@ -1713,6 +1785,7 @@ end;
 procedure TfrmSQLForm.SetUpCompletion;
 begin
 	FCompletion := TSQLCompletionHost.Create(Self, edSQLStatement);
+	SetResultsLayout;
 end;
 
 procedure TfrmSQLForm.DoFind;
@@ -2049,12 +2122,10 @@ end;
 
 procedure TfrmSQLForm.DoViewMessages;
 begin
-	pnlMessages.Visible := not pnlMessages.Visible;
-	if pnlMessages.Visible then
-	begin
-		pnlMessages.Height := MarathonIDEInstance.CurrentProject.ResultsPanelHeight;
-		stsSQLStatement.Top := Height;
-	end;
+	{ Selects the tab rather than showing and hiding a panel: Messages is one of
+	  the two things the bottom of the editor shows, so asking for it is asking
+	  to look at it, not asking for more chrome. }
+	ShowResultsTab(not pnlMessages.Visible);
 end;
 
 procedure TfrmSQLForm.DoViewNextPage;

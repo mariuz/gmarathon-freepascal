@@ -5034,6 +5034,54 @@ begin
   CheckEditorTabsQueryTheRightSchemaColumn(Conn, TableName);
 end;
 
+{ The bottom of the SQL editor, rearranged to the shape every modern SQL tool
+  uses: Results and Messages as peers, rather than two views of the rows as
+  tabs and the server's messages behind a menu item. }
+procedure CheckResultsLayout;
+var
+  F: TfrmSQLForm;
+begin
+  WriteLn('Query editor results:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    Check(F.tabResults.Tabs.Count = 2, 'the results strip has two tabs (' +
+      IntToStr(F.tabResults.Tabs.Count) + ')');
+    Check(F.tabResults.Tabs.IndexOf('Results') = 0, 'Results first');
+    Check(F.tabResults.Tabs.IndexOf('Messages') = 1, 'then Messages');
+
+    { Peers, not a panel beside a panel: Messages takes the whole results area
+      rather than a slice of the window under it. }
+    Check(F.pnlMessages.Align = alClient, 'Messages fills the results area');
+
+    Check(F.tabResults.TabIndex = 0, 'it opens on the rows');
+    Check(not F.pnlMessages.Visible, 'with messages out of the way');
+    Check(F.nbResults.Visible, 'and the grid showing');
+
+    { Selecting Messages swaps them, and back again. }
+    F.ShowResultsTab(True);
+    Check(F.pnlMessages.Visible, 'choosing Messages shows them');
+    Check(not F.nbResults.Visible, 'and puts the grid away');
+    Check(F.tabResults.TabIndex = 1, 'with the tab following');
+
+    F.ShowResultsTab(False);
+    Check(F.nbResults.Visible and not F.pnlMessages.Visible,
+      'and choosing Results brings the rows back');
+
+    { View > Messages now selects the tab rather than toggling a panel. }
+    F.DoViewMessages;
+    Check(F.pnlMessages.Visible, 'View > Messages selects the Messages tab');
+    F.DoViewMessages;
+    Check(not F.pnlMessages.Visible, 'and selects back');
+
+    { Datasheet against Form did not disappear - it moved to where the other
+      grid preferences already live. }
+    Check(Assigned(F.nbpDatasheet) and Assigned(F.nbpForm),
+      'both ways of showing the rows still exist');
+  finally
+    F.Free;
+  end;
+end;
+
 { Painting a real form, which is the half UITheme cannot check.
 
   The LCL has no theming, so this is a walk over every control assigning
@@ -5182,6 +5230,7 @@ var
   F: TfrmSQLForm;
   Comp: TSynCompletion;
   Idx: Integer;
+  K: Word;
 begin
   WriteLn('SQL completion:');
   { All four editors, not just the SQL one. The PSQL editors are where routine
@@ -5212,6 +5261,27 @@ begin
     Comp.OnExecute(Comp);
     Check(Comp.ItemList.Count > 0, 'keywords are offered without a connection');
     Check(Comp.ItemList.IndexOf('SELECT') >= 0, 'SELECT is among them');
+
+    { And the part a user actually performs. Everything above calls OnExecute
+      by hand, which proves the list can be filled but not that Ctrl+Space
+      reaches it - and a keystroke that never arrives is exactly how this
+      editor's Backspace was broken for the life of the port. }
+    { Shown first, because that is the state a user presses the key in and
+      because dismissing the popup focuses the editor's owning form -
+      TSynCompletion.Cancel does it - which raises on a form that was never
+      shown. }
+    F.ShowDocument;
+    F.edSQLStatement.Text := 'select ';
+    F.edSQLStatement.CaretXY := Point(8, 1);
+    Comp.ItemList.Clear;
+    K := VK_SPACE;
+    TEditorKeys(F.edSQLStatement).KeyDown(K, [ssCtrl]);
+    Check(Comp.ItemList.Count > 0, 'Ctrl+Space fills the list');
+    Check(Comp.ItemList.IndexOf('SELECT') >= 0, 'with the keywords in it');
+    { SynEdit zeroes a key it turned into a command. }
+    Check(K = 0, 'and the keystroke is consumed');
+    if Comp.IsActive then
+      Comp.Deactivate;
   finally
     F.Free;
   end;
@@ -6595,6 +6665,7 @@ begin
   CheckConnectionGrouping;
   CheckHighDPIScaling;
   CheckIconResolutions;
+  CheckResultsLayout;
   CheckThemeApply;
   CheckCommandBar;
   CheckCompletionWiring;
