@@ -114,6 +114,15 @@ type
 function ShowTableDesigner(ADatabase: TIBDatabase; const AConnectionName,
   ATableName: String; const ASchema: String = ''): TfrmTableDesigner;
 
+{ Opens a designer on a table that does not exist yet, so Apply creates it.
+
+  Unlike ShowTableDesigner this never reuses an open form. The one-per-table
+  rule exists because two designers on the same table would each hold a design
+  read before the other applied; a new table has nothing read and no name to
+  match on, so two of them are two independent tables being drafted. }
+function ShowNewTableDesigner(ADatabase: TIBDatabase;
+  const AConnectionName: String): TfrmTableDesigner;
+
 implementation
 
 {$R *.lfm}
@@ -158,6 +167,14 @@ begin
 
   Result := TfrmTableDesigner.Create(nil);
   Result.LoadTable(ADatabase, AConnectionName, ATableName, ASchema);
+  Result.ShowDocument;
+end;
+
+function ShowNewTableDesigner(ADatabase: TIBDatabase;
+  const AConnectionName: String): TfrmTableDesigner;
+begin
+  Result := TfrmTableDesigner.Create(nil);
+  Result.NewTable(ADatabase, AConnectionName);
   Result.ShowDocument;
 end;
 

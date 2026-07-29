@@ -221,6 +221,12 @@ type
 		  editor stays because it is what you want for one column at a time. }
 		function DesignTable(TableName: String; Connection: String;
 			Schema: String = ''): TForm;
+		{ The designer on a table that does not exist yet: Apply runs a CREATE
+		  TABLE rather than a set of ALTERs. This is what the object tree's New
+		  reaches for a table, because laying a whole table out at once is the
+		  thing the designer is for - EditorTable's NewTable, still behind
+		  File > New Object, adds columns one at a time to a table being built. }
+		function DesignNewTable(Connection: String): TForm;
 		{ The schema diagram: every table on a connection and the keys between
 		  them. One per connection - a second would show the same thing. }
 		function ShowSchemaDiagram(Connection: String): TForm;
@@ -720,7 +726,7 @@ begin
 
 					ctTable,
 					ctTableHeader:
-						NewTable(TMarathonCacheObject(Item).ConnectionName);
+						DesignNewTable(TMarathonCacheObject(Item).ConnectionName);
 
 					ctView,
 					ctViewHeader:
@@ -2550,6 +2556,22 @@ begin
 		Exit;
 	Result := ShowTableDesigner(C.Connection, Connection, TableName, Schema);
 	FCurrentProject.Cache.AddRecentObjectOpen(TableName, ctTable, Connection);
+end;
+
+function TMarathonIDE.DesignNewTable(Connection: String): TForm;
+var
+	C: TMarathonCacheConnection;
+begin
+	Result := nil;
+	if not CheckConnected(Connection) then
+		Exit;
+	C := FCurrentProject.Cache.ConnectionByName[Connection];
+	if not Assigned(C) or not Assigned(C.Connection) then
+		Exit;
+	{ No DoesObjectExist check, unlike DesignTable: the whole point is that the
+	  table is not there yet. Nothing is recorded as recently opened either -
+	  there is no object to reopen until Apply has created one. }
+	Result := ShowNewTableDesigner(C.Connection, Connection);
 end;
 
 procedure TMarathonIDE.NewView(Connection: String);
