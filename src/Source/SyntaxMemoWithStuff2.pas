@@ -123,6 +123,9 @@ type
 		  binding Delphi's editor used, and the one the Options tab's help text
 		  has always described. }
 		procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+		{ Installs SynEdit's default key bindings when nothing else has - see the
+		  body, this is not the no-op it looks like. }
+		procedure EnsureKeystrokes;
 		{ The mark on that line, if any. Bookmarks are SynEdit's own and are left
 		  alone; only the debugger's are ours to add and remove. }
 		function FindQuestMark(ALine: Integer): TSynEditMark;
@@ -284,9 +287,37 @@ begin
 end;
 
 { TSyntaxMemoWithStuff2 }
+procedure TSyntaxMemoWithStuff2.EnsureKeystrokes;
+begin
+	{ Give the editor a keyboard, because nothing else does.
+
+	  TCustomSynEdit.Create installs the default key bindings only when
+
+	    assigned(Owner) and not (csLoading in Owner.ComponentState)
+
+	  and an editor sitting on a form is constructed *during* that form's
+	  streaming, when its owner is precisely csLoading. Lazarus's own designer
+	  hides this by writing a Keystrokes collection into every .lfm it saves;
+	  these forms were converted from Delphi .dfm files, which carry no such
+	  collection, so nothing ever installed one and Keystrokes.Count stayed 0
+	  for the life of the editor.
+
+	  An empty table makes FindKeycodeEx answer ecNone for everything, so
+	  KeyDown neither runs a command nor consumes the key: Backspace, Delete,
+	  the arrow keys, Home/End, Ctrl+C/V and the rest all did nothing at all.
+	  Typing still worked, because printable characters arrive through KeyPress
+	  and never consult this table - which is why it looked like "backspace is
+	  broken" rather than "this editor has no key bindings".
+
+	  Guarded on Count so an .lfm that does define its own bindings keeps them. }
+	if Keystrokes.Count = 0 then
+		Keystrokes.ResetDefaults;
+end;
+
 constructor TSyntaxMemoWithStuff2.Create(AOwner: TComponent);
 begin
 	inherited Create(AOwner);
+	EnsureKeystrokes;
   FExecutelineBegin := -1;
   FExecuteLineEnd := -1;
   FWordList := TWordList.Create;

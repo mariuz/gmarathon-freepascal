@@ -1259,6 +1259,50 @@ end;
   themselves were ported and working, and only the three methods that raise
   them were missing. Checked through the forms' own Can/Do pair rather than the
   editor control, since that is the path the menu actually takes. }
+type
+  { KeyDown is protected on the editor, and a keystroke is the whole point of
+    this check - driving ecDeleteLastChar straight into SynEdit would skip the
+    wrapper, which is exactly the layer that can swallow the key. }
+  TEditorKeys = class(TSyntaxMemoWithStuff2);
+
+procedure CheckEditorBackspace;
+var
+  F: TfrmSQLForm;
+  K: Word;
+begin
+  WriteLn('Editor backspace:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    F.edSQLStatement.Text := 'abc';
+    F.edSQLStatement.CaretXY := Point(4, 1);
+    Check(F.edSQLStatement.Lines[0] = 'abc', 'the editor starts holding abc');
+    Check(not F.edSQLStatement.ReadOnly, 'and is writable');
+    { Backspace at the start of the first line is a no-op by definition, so a
+      caret that did not move would fake the very bug being looked for. }
+    Check(F.edSQLStatement.CaretXY.X = 4, 'the caret is past the last character');
+
+    { The cause rather than the symptom. TCustomSynEdit.Create only installs
+      the default bindings when the owner is not csLoading, which it always is
+      while a form streams - and these .lfm files, converted from Delphi, carry
+      no Keystrokes collection of their own to make up for it. An empty table
+      means every key that is a command rather than a character does nothing. }
+    Check(F.edSQLStatement.Keystrokes.Count > 0,
+      'the editor has key bindings at all');
+    Check(F.edSQLStatement.Keystrokes.FindKeycode(VK_BACK, []) <> -1,
+      'including one for backspace');
+
+    K := VK_BACK;
+    TEditorKeys(F.edSQLStatement).KeyDown(K, []);
+    Check(F.edSQLStatement.Lines[0] = 'ab',
+      'backspace deletes the character before the caret');
+    { SynEdit zeroes a key it turned into a command, so this is what says the
+      keystroke was recognised rather than merely ignored quietly. }
+    Check(K = 0, 'and the key is consumed as a command');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckEditorSearch;
 var
   F: TfrmSQLForm;
@@ -6161,6 +6205,7 @@ begin
   CheckIconResolutions;
   CheckCompletionWiring;
   CheckEditorSearch;
+  CheckEditorBackspace;
   CheckEditorsAllowAutoTransactions;
   CheckProjectSaveWithRememberedPassword;
   CheckTableEditorAgainstDatabase(
