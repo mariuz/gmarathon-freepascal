@@ -9,7 +9,7 @@ interface
 uses {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}
   LCLIntf, LCLType, LMessages, Messages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList, FileCtrl, CheckLst, ImgList, IBDatabase, IBQuery, SynEditHighlighter, SynHighlighterSQL, MarathonInternalInterfaces, Printers, PrintersDlgs, LazFileUtils;
+  SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Menus, ExtCtrls, Registry, DB, ComCtrls, ToolWin, Buttons, StdCtrls, ActnList, FileCtrl, CheckLst, ImgList, IBDatabase, IBQuery, SynEditHighlighter, SynHighlighterSQL, MarathonInternalInterfaces, Printers, PrintersDlgs, LazFileUtils, CommandBar;
 
 type
 	TfrmMarathonMain = class(TForm, IMarathonMainForm)
@@ -759,6 +759,8 @@ type
 		FDroppedDown: Boolean;
 		FInternalHeight: Integer;
 		FForceClose: Boolean;
+		{ The single context toolbar that replaced the four fixed ones. }
+		FCommandBar: TMarathonCommandBar;
 		procedure MinMaxInfo(var Message: TLMessage); message WM_GETMINMAXINFO;
 		procedure QueryEndSession(var Message: TLMessage); message WM_QUERYENDSESSION;
 		procedure EndSession(var Message: TLMessage); message WM_ENDSESSION;
@@ -838,6 +840,17 @@ begin
 	  shell nothing else reports it - see ScreenActiveControlChanged. }
 	Screen.AddHandlerActiveControlChanged(ScreenActiveControlChanged);
 	pgDocuments.OnChange := DocumentTabChanged;
+
+	{ One bar of what the active document can do, in place of four bars of
+	  everything. The old ones are hidden rather than removed, and the View
+	  menu still toggles each of them for anyone who wants them back. }
+	FCommandBar := TMarathonCommandBar.Create(Self, dckTop, actMain,
+		ilMarathonImages);
+	tlbrStandard.Visible := False;
+	tlbrTools.Visible := False;
+	tlbrScript.Visible := False;
+	tlbrSQLEditor.Visible := False;
+	FCommandBar.ShowFor(nil);
 	{ The dock is hidden until the object explorer moves into it, which is the
 	  next item of this phase. An empty panel beside the documents would look
 	  like something had failed to load. }
@@ -951,7 +964,14 @@ begin
 		Exit;
 	Doc := Documents.ActiveDocument;
 	if Assigned(Doc) and Supports(Doc, IMarathonForm, MF) then
+	begin
 		MarathonIDEInstance.ScreenActiveForm := MF;
+		if Assigned(FCommandBar) then
+			FCommandBar.ShowFor(MF);
+	end
+	else
+		if Assigned(FCommandBar) then
+			FCommandBar.ShowFor(nil);
 end;
 
 procedure TfrmMarathonMain.ScreenActiveControlChanged(Sender: TObject;
@@ -999,6 +1019,10 @@ begin
 	if not Assigned(Doc) or not Supports(Doc, IMarathonForm, MF) then
 		Exit;
 	MarathonIDEInstance.ScreenActiveForm := MF;
+	{ The bar follows whatever is in front, and only rebuilds when the kind of
+	  document changes. }
+	if Assigned(FCommandBar) then
+		FCommandBar.ShowFor(MF);
 end;
 
 procedure TfrmMarathonMain.FormClose(Sender: TObject;	var Action: TCloseAction);

@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces, DBCtrls, IBUpdateSQL;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces, DBCtrls, IBUpdateSQL, CommandBar;
 
 var
   Failures: Integer = 0;
@@ -5034,6 +5034,99 @@ begin
   CheckEditorTabsQueryTheRightSchemaColumn(Conn, TableName);
 end;
 
+{ The one context toolbar that replaced four fixed ones.
+
+  The point of the change is that the bar shows what the active document can
+  do, so the checks are about it *changing* - a bar that always showed the same
+  buttons would pass an "is it there" test and miss the whole feature. }
+procedure CheckCommandBar;
+var
+  Bar: TMarathonCommandBar;
+  Host: TPanel;
+  SQLDoc: TfrmSQLForm;
+  TableDoc: TfrmTables;
+  ShellCount, SQLCount, ObjCount: Integer;
+begin
+  WriteLn('Command bar:');
+  Host := TPanel.Create(nil);
+  try
+    Host.Parent := frmMarathonMain;
+    Bar := TMarathonCommandBar.Create(nil, Host, frmMarathonMain.actMain,
+      frmMarathonMain.ilMarathonImages);
+    SQLDoc := TfrmSQLForm.Create(nil);
+    TableDoc := TfrmTables.Create(nil);
+    try
+      Bar.ShowFor(nil);
+      ShellCount := Bar.Bar.ButtonCount;
+      Check(Bar.Context = ccShell, 'nothing open gives the shell bar');
+      Check(ShellCount > 0, 'which still offers something to do');
+
+      Bar.ShowFor(SQLDoc);
+      SQLCount := Bar.Bar.ButtonCount;
+      Check(Bar.Context = ccSQLEditor, 'the SQL editor gets the editor bar');
+
+      Bar.ShowFor(TableDoc);
+      ObjCount := Bar.Bar.ButtonCount;
+      Check(Bar.Context = ccObjectEditor, 'a table editor gets the object bar');
+
+      { The bars must actually differ, or the context is decorative. }
+      Check((SQLCount <> ShellCount) or (ObjCount <> ShellCount),
+        'the bars are not all the same');
+
+      { And the whole point of the exercise: far fewer than the 27 buttons the
+        four fixed toolbars showed at once, whatever was in front. }
+      Check(SQLCount < 27, 'the SQL bar is shorter than the four it replaced (' +
+        IntToStr(SQLCount) + ')');
+      Check(ObjCount < 27, 'and so is the object bar (' + IntToStr(ObjCount) + ')');
+
+      { Rebuilding on every focus change would flicker, so the same context
+        twice must be a no-op rather than a rebuild. }
+      Bar.ShowFor(TableDoc);
+      Check(Bar.Bar.ButtonCount = ObjCount, 'asking twice does not rebuild');
+
+      { Every button carries an action, or it does nothing when pressed. }
+      Bar.ShowFor(SQLDoc);
+      ShellCount := 0;
+      for ObjCount := 0 to Bar.Bar.ButtonCount - 1 do
+        if (Bar.Bar.Buttons[ObjCount].Style <> tbsDivider) and
+           not Assigned(Bar.Bar.Buttons[ObjCount].Action) then
+          Inc(ShellCount);
+      Check(ShellCount = 0, 'every button on it is bound to an action');
+    finally
+      TableDoc.Free;
+      SQLDoc.Free;
+      Bar.Free;
+    end;
+  finally
+    Host.Free;
+  end;
+
+  { The shell's own bar, not just the class. Everything above builds a bar on
+    a panel of its own, which says the class works and nothing about whether
+    the running window actually has one. }
+  Bar := nil;
+  for ShellCount := 0 to frmMarathonMain.ComponentCount - 1 do
+    if frmMarathonMain.Components[ShellCount] is TMarathonCommandBar then
+      Bar := TMarathonCommandBar(frmMarathonMain.Components[ShellCount]);
+  Check(Assigned(Bar), 'the shell builds a command bar of its own');
+  if Assigned(Bar) then
+  begin
+    Check(Bar.Bar.Parent = frmMarathonMain.dckTop,
+      'and puts it on the toolbar panel');
+    Check(Bar.Bar.Visible, 'where it is visible');
+    Check(Bar.Bar.ButtonCount > 0, 'with buttons on it');
+    Check(frmMarathonMain.dckTop.Visible, 'and that panel is itself visible');
+    Check(frmMarathonMain.dckTop.Height > 0, 'and has height to show it');
+  end;
+
+  { The four it replaced are hidden, not gone - the View menu still toggles
+    them, so nobody is stuck without the buttons they were used to. }
+  Check(not frmMarathonMain.tlbrStandard.Visible, 'the Standard toolbar is hidden');
+  Check(not frmMarathonMain.tlbrSQLEditor.Visible, 'and the SQL Editor one');
+  Check(Assigned(frmMarathonMain.ViewToolbarStandard),
+    'and the action that brings them back still exists');
+end;
+
 procedure CheckCompletionWiring;
 var
   F: TfrmSQLForm;
@@ -6452,6 +6545,7 @@ begin
   CheckConnectionGrouping;
   CheckHighDPIScaling;
   CheckIconResolutions;
+  CheckCommandBar;
   CheckCompletionWiring;
   CheckEditorSearch;
   CheckActiveDocumentFollowsFocus;
