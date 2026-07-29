@@ -577,6 +577,15 @@ end;
   Show so the choice is made in one place. }
 procedure TfrmBaseDocumentForm.ShowDocument;
 begin
+  { Opening a document makes it the one the menu acts on.
+
+    FormActivate does this too and cannot be relied on: it runs from OnActivate,
+    which fires when a form becomes the active *top-level* window, and a hosted
+    document is a child control of the shell rather than a window of its own.
+    Without this line ScreenActiveForm stayed nil however many documents were
+    open, and every action that reads it - Execute/F9, Print, Close - was
+    greyed out permanently. }
+  MarathonIDEInstance.ScreenActiveForm := Self;
   if Assigned(Documents) and Assigned(Documents.Host(Self)) then
     Exit;
   Show;
@@ -610,6 +619,17 @@ var
 	Idx: Integer;
 
 begin
+  { Stop being the active document before ceasing to exist. FormClose clears
+    this too, but only for a form that is closed - one that is simply freed,
+    which is what a host tearing down its tabs does, would leave
+    ScreenActiveForm pointing at released memory for the next action update
+    handler to call into. Note IMarathonForm rides on TComponent's IUnknown,
+    which does not reference count, so the reference here keeps nothing alive
+    and cannot be relied on to. }
+  if Assigned(MarathonIDEInstance) and
+     (MarathonIDEInstance.ScreenActiveForm = (Self as IMarathonForm)) then
+    MarathonIDEInstance.ScreenActiveForm := nil;
+
   if Assigned(MarathonIDEInstance.MainForm) then
   begin
 		Idx := MarathonIDEInstance.WindowList.IndexOf(Self);

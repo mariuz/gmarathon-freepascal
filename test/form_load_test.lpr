@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces;
 
 var
   Failures: Integer = 0;
@@ -1264,6 +1264,46 @@ type
     this check - driving ecDeleteLastChar straight into SynEdit would skip the
     wrapper, which is exactly the layer that can swallow the key. }
   TEditorKeys = class(TSyntaxMemoWithStuff2);
+
+procedure CheckActiveDocumentFollowsFocus;
+var
+  F: TfrmSQLForm;
+begin
+  WriteLn('Active document:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    MarathonIDEInstance.ScreenActiveForm := nil;
+    F.ShowDocument;
+    Check(Documents.IsHosted(F), 'the editor opens into a document tab');
+
+    { OnActivate is wired, and is no use here: it fires when a form becomes the
+      active top-level window, and a hosted document is a child control of the
+      shell rather than a window of its own. So it never runs, and whatever
+      writes ScreenActiveForm has to come from somewhere else. }
+    Check(Assigned(F.OnActivate), 'the document has an OnActivate at all');
+
+    { Every document action on the menu - Execute/F9, Print, Close - reads
+      ScreenActiveForm and disables itself when it is nil, so opening a
+      document has to be enough to make it the active one. Focus is followed
+      too, by the shell's Screen handler, but that cannot be exercised here:
+      TScreen only notifies when its own ActiveControl changes, and under a
+      bare X server with no window manager no top-level window ever becomes
+      active, so Screen.ActiveControl stays nil however the focus is set. }
+    Check(MarathonIDEInstance.ScreenActiveForm = (F as IMarathonForm),
+      'opening it makes it the active document');
+
+    { And with that, F9 comes down to the editor''s own answer rather than to a
+      nil active form. No connection here, so it is still False - but for the
+      reason the code gives, not because nothing is active. }
+    Check(not F.CanExecute, 'an editor with no connection still cannot execute');
+    F.ConnectionName := 'nowhere';
+    F.edSQLStatement.Text := 'select 1 from rdb$database';
+    Check(F.CanExecute,
+      'one with a connection and a statement can - which is what F9 asks');
+  finally
+    F.Free;
+  end;
+end;
 
 procedure CheckEditorBackspace;
 var
@@ -6228,6 +6268,7 @@ begin
   CheckIconResolutions;
   CheckCompletionWiring;
   CheckEditorSearch;
+  CheckActiveDocumentFollowsFocus;
   CheckEditorBackspace;
   CheckEditorsAllowAutoTransactions;
   CheckProjectSaveWithRememberedPassword;

@@ -480,6 +480,11 @@ type
     tabWindows: TTabControl;
     Bevel1: TBevel;
 		procedure FormCreate(Sender: TObject);
+    { Keeps MarathonIDEInstance.ScreenActiveForm pointing at the document the
+      user is actually working in - see the body. }
+    procedure ScreenActiveControlChanged(Sender: TObject; LastControl: TControl);
+    { Switching tabs changes which document the menu acts on. }
+    procedure DocumentTabChanged(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Window1Click(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -829,6 +834,10 @@ begin
 	  main window is up - so callers fall back to a floating window rather than
 	  losing the document. }
 	Documents := TDocumentHost.Create(Self, pgDocuments);
+	{ Which document the menus act on has to follow the focus, because in this
+	  shell nothing else reports it - see ScreenActiveControlChanged. }
+	Screen.AddHandlerActiveControlChanged(ScreenActiveControlChanged);
+	pgDocuments.OnChange := DocumentTabChanged;
 	{ The dock is hidden until the object explorer moves into it, which is the
 	  next item of this phase. An empty panel beside the documents would look
 	  like something had failed to load. }
@@ -932,12 +941,76 @@ begin
 	end;
 end;
 
+procedure TfrmMarathonMain.DocumentTabChanged(Sender: TObject);
+var
+	Doc: TForm;
+	MF: IMarathonForm;
+
+begin
+	if (csDestroying in ComponentState) or not Assigned(Documents) then
+		Exit;
+	Doc := Documents.ActiveDocument;
+	if Assigned(Doc) and Supports(Doc, IMarathonForm, MF) then
+		MarathonIDEInstance.ScreenActiveForm := MF;
+end;
+
+procedure TfrmMarathonMain.ScreenActiveControlChanged(Sender: TObject;
+	LastControl: TControl);
+var
+	C: TControl;
+	Doc: TCustomForm;
+	MF: IMarathonForm;
+
+begin
+	{ ScreenActiveForm decides what every document action on the menu does -
+	  Execute/F9, Print, Close, Open, Design and the rest all read it, and every
+	  one of their update handlers disables itself when it is nil.
+
+	  It used to be written only by TfrmBaseDocumentForm.FormActivate, from
+	  OnActivate. That fires when a form becomes the active *top-level* window,
+	  and in this shell no document ever is one: DocumentHost reparents each
+	  into a tab sheet and DockInto puts the explorer in a panel, so they are
+	  child controls of the main window. OnActivate therefore never ran for
+	  them, ScreenActiveForm stayed nil for the life of the program, and the
+	  whole document half of the menu was permanently greyed - F9 included.
+
+	  Focus is the thing that does move, so follow that instead. GetParentForm
+	  with TopForm=False stops at the innermost TCustomForm rather than walking
+	  on to the shell, which is exactly the embedded document. }
+	if csDestroying in ComponentState then
+		Exit;
+	{ Three places record the focused control and they do not always agree.
+	  Screen's is the usual one, but it is only written once a top-level window
+	  is genuinely active - which under a bare X server with no window manager
+	  never happens, leaving it nil while the form's own is set correctly. Ask
+	  each in turn rather than assume the first. }
+	C := Screen.ActiveControl;
+	if not Assigned(C) and Assigned(Screen.ActiveCustomForm) then
+		C := Screen.ActiveCustomForm.ActiveControl;
+	if not Assigned(C) then
+		C := ActiveControl;
+	if not Assigned(C) then
+		Exit;
+	Doc := GetParentForm(C, False);
+	{ Not every focused control is inside a document - the toolbar and the
+	  connection strip are not. Leave the last document in place when focus
+	  lands on one of those, so using a toolbar button does not first disable
+	  the thing it acts on. }
+	if not Assigned(Doc) or not Supports(Doc, IMarathonForm, MF) then
+		Exit;
+	MarathonIDEInstance.ScreenActiveForm := MF;
+end;
+
 procedure TfrmMarathonMain.FormClose(Sender: TObject;	var Action: TCloseAction);
 var
 	Idx: Integer;
 	Browser: IMarathonBrowser;
 
 begin
+	{ Before anything else: Screen outlives this form, and a focus change after
+	  it is freed would call a method on a dead object. }
+	Screen.RemoveHandlerActiveControlChanged(ScreenActiveControlChanged);
+
 	Browser := MarathonIDEInstance.GetBrowser;
 	if Assigned(Browser) then
 		Browser.SavePositions;
