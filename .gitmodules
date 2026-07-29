@@ -6,3 +6,6 @@
 	path = lib/fbintf
 	url = https://github.com/mariuz/fbintf.git
 	branch = marathon-integration
+[submodule "lib/ibcontrols"]
+	path = lib/ibcontrols
+	url = https://github.com/MWASoftware/ibcontrols
