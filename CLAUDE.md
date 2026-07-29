@@ -50,6 +50,22 @@ Four things that cost time to work out:
 
 No unit test suite exists. Manual testing only via Lazarus IDE. `test/form_load_test.lpr` additionally opens the table editor against a live database when `MARATHON_TEST_DB`/`MARATHON_TEST_USER`/`MARATHON_TEST_PASSWORD` are set (it skips loudly otherwise) — the object editors need a database and a widgetset at once, so nothing else covers them. Note the variables are read from the environment, not argv: the application treats its first argument as a project file to open. `test/ibx_smoke_test.lpr` is a standalone smoke test that connects to a real Firebird server via IBX (create table / insert / select round trip, then extracts and sanity-checks its DDL via `DDLExtractor`) — build with `lazbuild test/ibx_smoke_test.lpi` and run as `./test/ibx_smoke_test <database> <user> <password>`. CI runs the full app build plus this smoke test against a live Firebird server via `.github/workflows/build.yml` on push/PR to master.
 
+**Run the smoke test against the database first, then `form_load_test` against that same database.** The live half of `form_load_test` depends on fixtures the smoke test leaves behind deliberately — `EDIT_DUP` and its schema-qualified twin among them. Point it at a database that has not been seeded and it does not fail: `LoadTable` raises, the LCL puts up `The object "EDIT_DUP" does not exist in the database`, and a modal dialog under `Xvfb` is never answered, so the run **hangs** rather than reporting anything. That is two ten-minute timeouts before the cause is obvious. The sequence that works:
+
+```bash
+./test/ibx_smoke_test "localhost:/tmp/scratch.fdb" SYSDBA masterkey
+HOME=/tmp/marathon-test-home DISPLAY=:99 \
+  MARATHON_TEST_DB="localhost:/tmp/scratch.fdb" MARATHON_TEST_USER=SYSDBA \
+  MARATHON_TEST_PASSWORD=masterkey ./test/form_load_test
+```
+
+Two failures are known and **pre-existing**, so a run that shows only these has not regressed — both confirmed by stashing all local work, rebuilding at `HEAD` and reproducing them there:
+
+- `form_load_test`: *"the procedure with a domain-typed parameter is rebuilt"* fails with `violation of PRIMARY or UNIQUE KEY constraint "RDB$INDEX_69" on RDB$RELATION_CONSTRAINTS`, key `("RDB$SCHEMA_NAME" = 'PUBLIC', "RDB$CONSTRAINT_NAME" = 'INTEG_4')`. Somewhere in the extract/rebuild path a generated constraint name collides on a schema-aware server.
+- An `EAccessViolation` on shutdown, from `Application.Destroy` → `ProcessAsyncCallQueue` → `FreeComponent` → the form's `Destroy` → IBX teardown (`IBDatabase.pas`). Documents still on the async free queue are released after unit finalization has run. It fires on the way out, after the window has closed and the work is saved, so the only symptom is an exit code of 217.
+
+Note the exception sink records an unhandled exception and carries on, but `Failures` only counts `Check` failures — so an `!! unhandled` line in the output is a real fault even when the run ends in `PASS`.
+
 ## Roadmap
 
 See `ROADMAP.md` for planned features (adapted from FlameRobin's roadmap where realistic for this codebase) and their status.
