@@ -100,6 +100,8 @@ The application is structured in layers:
 - `NewColorGrd.pas` — color picker
 - `DiagramTree.pas` / `CloseUpCombo.pas`
 
+**`lib/SyntaxMemoWithStuff2/SyntaxMemoWithStuff2.pas` is shadowed and dead — the live editor is `src/Source/SyntaxMemoWithStuff2.pas`.** Same search-path rule as `lib/Other` below, but this one is a trap worth calling out separately, because both files exist, both look plausible, and the dead one is four times the size (72 KB of the original Delphi component against 17 KB of the port's rewrite). `src/Source/SyntaxMemoWithStuff2.ppu` is the one that gets built. The dead copy still contains long, detailed `KeyPress`/`KeyDown` implementations that are easy to read for an hour and edit with no effect whatsoever — which is exactly what happened while the backspace bug below was being chased. Check which file the `.ppu` came from before believing anything you read in `lib/SyntaxMemoWithStuff2`.
+
 Note: the shadowed `lib/Other` copies of `adbpedit.pas`, `IBPerformanceMonitor.pas` and `NewColorGrd.pas` have been deleted — `src/Source` is earlier in the unit search path (see `marathon.lpi`), so those were never compiled and editing one had no effect. `lib/Other/CloseUpCombo.pas` has no duplicate, but note it is not reachable from `marathon.lpr` either — it, and `src/Common/ChooseFolder.pas`, are live only for `src/ScriptExec/screxec.dpr`, one of the Delphi-only side projects (`ScriptExec`, `Plugins/AutoIncFieldWizard`, `Plugins/FreeIBCompsSQL`, `ShellExtension`) that were never given an `.lpi` and so are not part of this port. Check those before calling anything outside `src/Source` dead. `DBValCb.pas` did have a `src/Source` twin, and nothing referenced either copy; both are gone, along with `SQLParser.pas`, `BaseWizard.pas`, `GlobalMigrateWizard.pas` and `GSSDDLExtractorServer.pas` — the last two were dead together, the extractor server being the only thing that still named the wizard.
 
 The COM half of the old metadata-extract feature is gone with them: `src/MetaExtract/gssscript_TLB.pas` (the Delphi-generated `IGSSDDLExtractor` typelib import, which under FPC had already been reduced to an empty `interface implementation end.` stub because it needs Delphi's `StdVCL`), the `gssscript.dll` project that published it (`gssscript.dpr`/`.tlb`/`.res`, `GssscriptVersion.*`, the orphaned `GlobalMigrateWizard.dfm`, and the `want.xml`/`MarathonProduction.bpg` rules that built it — the `.dpr` had been unbuildable since `GSSDDLExtractorServer.pas` and `GlobalMigrateWizard.pas` were deleted out from under it), and the four `{$IFNDEF FPC}` `CreateComObject`/`Extractor.*` sites in `MarathonIDE.pas` that were the only callers. Each of those sites already had a `{$ELSE}` branch driving `TfrmMetaExtractWizard`, so removing the guard is what the FPC build was compiling all along. `ComObj` left `MarathonIDE.pas`'s `uses` with them. Note the name is misleading — despite "script", the typelib's one coclass was a DDL extractor, not a scripting engine; nothing was lost that a script host would replace.
@@ -163,6 +165,38 @@ Delphi UI code as unverified until it has been run:
 - **Event handlers fire with nil arguments** — `TTreeView.OnChange` fires with no
   node when the selection is cleared, which any tree rebuild does. Check before
   dereferencing.
+
+- **A docked form is not a form any more — three separate mechanisms assume it
+  is.** `DocumentHost` reparents every document into a tab sheet and `DockInto`
+  puts the explorer in a panel (`AForm.Parent := APanel`), so no document is
+  ever a top-level window. Everything that LCL keys off "top-level" then goes
+  quietly wrong, and each failure looks like a dead menu item rather than a
+  crash. Found and fixed one at a time, all in this family:
+  - `TCustomForm.ActiveControl` of the embedded form is **never written**.
+    `GetParentForm` walks up while `Parent <> nil` without stopping at an
+    embedded `TCustomForm`, so `TWinControl.SetFocus` records the control on
+    the *shell*. Ask `GetParentForm(SomeControl)` — see
+    `TfrmDatabaseExplorer.OperatingView`, which every tree/list operation now
+    goes through.
+  - `OnActivate` **never fires**, so anything written from it never happens.
+    `ScreenActiveForm` — which every document action reads, and every one of
+    their update handlers disables itself over — used to be set only there.
+    It is now set from `ShowDocument`, from the document tab's `OnChange`, and
+    from a `Screen.AddHandlerActiveControlChanged` handler in `MarathonMain`.
+  - `TCustomSynEdit.Create` installs its default key bindings only when
+    `assigned(Owner) and not (csLoading in Owner.ComponentState)`, and an
+    editor on a form is built while that form is streaming. Lazarus's designer
+    hides this by writing a `Keystrokes` collection into the `.lfm`; these
+    converted-from-Delphi `.lfm` files have none, so `Keystrokes.Count` was 0
+    and every command key — Backspace, Delete, arrows, Home/End, Ctrl+C/V —
+    did nothing while typing still worked. See
+    `TSyntaxMemoWithStuff2.EnsureKeystrokes`.
+
+  The general lesson: a symptom of "this control/menu does nothing, silently"
+  in a docked part of the shell is worth suspecting here first. `Screen`-based
+  checks cannot be tested under `Xvfb` — with no window manager no top-level
+  window ever becomes active, so `Screen.ActiveControl` stays nil however focus
+  is set. Test the form's own `ActiveControl` instead, as `form_load_test` does.
 
 - **Threads need `cthreads` on Unix** — a program with no thread driver dies
   with `no thread support compiled in` (runtime error 232) the moment one is
