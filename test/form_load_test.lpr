@@ -1914,6 +1914,14 @@ procedure CheckEditorTabsQueryTheRightSchemaColumn(Conn: TMarathonCacheConnectio
 var
   F: TfrmTables;
 
+  { Puts the connection's shared transaction back in the state the app leaves
+    it in constantly - committed, with nothing running. }
+  procedure CommitShared;
+  begin
+    if Assigned(Conn.Transaction) and Conn.Transaction.InTransaction then
+      Conn.Transaction.Commit;
+  end;
+
   procedure OpenTab(APage: TTabSheet; const AWhat: String);
   begin
     try
@@ -1942,6 +1950,25 @@ begin
     end;
     OpenTab(F.tsGrants, 'the Grants tab');
     OpenTab(F.tsDependenciesView, 'the Dependencies tab');
+
+    { The same tabs again with the shared transaction deliberately committed
+      first, since that is the state the app is usually in - OpenGrants commits
+      before it queries, and IBX will not start one on demand.
+
+      Be clear about what this does and does not prove. These pass with or
+      without the AllowAutoActivateTransaction guard in DoObjectProperties,
+      checked both ways: the queries behind these tabs take the database's
+      default transaction, which is still running, so they were never the ones
+      at risk. The crash that prompted the guard is in DoObjectProperties,
+      which assigns the shared transaction explicitly - and that path opens a
+      modal dialog, so nothing here can reach it. This is smoke coverage of
+      the tabs, not a regression test for the guard. }
+    CommitShared;
+    OpenTab(F.tsConstraints, 'the Constraints tab on a committed transaction');
+    CommitShared;
+    OpenTab(F.tsIndexes, 'the Indexes tab on a committed transaction');
+    CommitShared;
+    OpenTab(F.tsTableView, 'and the column list on a committed transaction');
   finally
     F.Free;
   end;

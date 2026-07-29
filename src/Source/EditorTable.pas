@@ -2415,6 +2415,13 @@ begin
 							try
 								qryFields.Database := qryTable.Database;
 								qryFields.Transaction := qryTable.Transaction;
+								{ Opening a column's properties raised "Transaction is not active"
+								  whenever something had already committed the shared transaction -
+								  which the Grants tab does before it queries, and which the finally
+								  below does after. IBX does not start one on demand, and a query
+								  built at runtime never got the flag Globals.AllowAutoTransactions
+								  grants the streamed components. }
+								qryFields.AllowAutoActivateTransaction := True;
 								qryFields.Close;
 								qryFields.SQL.Clear;
 								qryFields.SQL.Add('select RDB$FIELD_SOURCE, RDB$DESCRIPTION, RDB$DEFAULT_SOURCE, RDB$NULL_FLAG ' +
