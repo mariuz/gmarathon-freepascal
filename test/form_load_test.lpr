@@ -1382,10 +1382,11 @@ end;
   becomes a modal dialog with nobody under Xvfb to dismiss it, which is exactly
   what happened the first time. A form that cannot be built is reported as not
   checked rather than quietly passed. }
-procedure CheckHasCompletion(FormClass: TFormClass; const What: String);
+procedure CheckHasCompletion(FormClass: TFormClass; const What: String;
+  AExpected: Integer = 1);
 var
   AForm: TForm;
-  Idx: Integer;
+  Idx, Found, Attached: Integer;
   Comp: TSynCompletion;
 begin
   AForm := nil;
@@ -1401,12 +1402,19 @@ begin
       end;
     end;
     Comp := nil;
+    Found := 0;
+    Attached := 0;
     for Idx := 0 to AForm.ComponentCount - 1 do
       if AForm.Components[Idx] is TSQLCompletionHost then
+      begin
+        Inc(Found);
         Comp := TSQLCompletionHost(AForm.Components[Idx]).Completion;
-    Check(Assigned(Comp), What + ' has a completion popup');
-    if Assigned(Comp) then
-      Check(Assigned(Comp.Editor), What + '''s popup is attached to an editor');
+        if Assigned(Comp) and Assigned(Comp.Editor) then
+          Inc(Attached);
+      end;
+    Check(Found >= AExpected, What + ' has ' + IntToStr(AExpected) +
+      ' completion popup(s) (' + IntToStr(Found) + ')');
+    Check(Attached = Found, What + '''s popups are all attached to an editor');
   finally
     try
       AForm.Free;
@@ -5039,6 +5047,9 @@ begin
   CheckHasCompletion(TfrmViewEditor, 'the view editor');
   CheckHasCompletion(TfrmTriggerEditor, 'the trigger editor');
   CheckHasCompletion(TfrmStoredProcedure, 'the procedure editor');
+  { Two, because a package has a header and a body and both are PSQL. This
+    editor had none at all until the pane count made the omission obvious. }
+  CheckHasCompletion(TfrmPackageEditor, 'the package editor', 2);
 
   F := TfrmSQLForm.Create(nil);
   try

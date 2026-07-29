@@ -32,7 +32,7 @@ uses
   SysUtils, Classes, Graphics, Controls, Forms, Dialogs, ComCtrls, StdCtrls,
   Menus, IBDatabase, IBQuery, BaseDocumentDataAwareForm,
   MarathonInternalInterfaces, MarathonProjectCacheTypes, FrameMetadata,
-  SyntaxMemoWithStuff2;
+  SyntaxMemoWithStuff2, SQLCompletionHost;
 
 type
   TfrmPackageEditor = class(TfrmBaseDocumentDataAwareForm)
@@ -49,6 +49,14 @@ type
     procedure pgObjectEditorChange(Sender: TObject);
   private
     FBodyPresent: Boolean;
+    { Ctrl+Space completion - see SQLCompletionHost. One per pane: a package
+      has a header and a body, and both are PSQL. }
+    FCompletionHeader: TSQLCompletionHost;
+    FCompletionBody: TSQLCompletionHost;
+  protected
+    { Where the editors learn which connection to offer names from. Assigning
+      ConnectionName comes through here. }
+    procedure SetDatabaseName(const Value: String); override;
   public
     procedure LoadPackage(PackageName: String);
     { True when the package has a body as well as a header. }
@@ -69,6 +77,20 @@ begin
   LoadFormPosition(Self);
   TmpIntf := Self;
   framDDL.Init(TmpIntf);
+  { The other PSQL editors - procedure, trigger, view - have had completion
+    since it went in; the package editor was simply missed, and a package body
+    is as much a place to write SQL as any of them. }
+  FCompletionHeader := TSQLCompletionHost.Create(Self, edHeader);
+  FCompletionBody := TSQLCompletionHost.Create(Self, edBody);
+end;
+
+procedure TfrmPackageEditor.SetDatabaseName(const Value: String);
+begin
+  inherited SetDatabaseName(Value);
+  if Assigned(FCompletionHeader) then
+    FCompletionHeader.ConnectionName := Value;
+  if Assigned(FCompletionBody) then
+    FCompletionBody.ConnectionName := Value;
 end;
 
 procedure TfrmPackageEditor.pgObjectEditorChange(Sender: TObject);
