@@ -1,1206 +1,767 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectSession>
-    <Version Value="9"/>
-    <BuildModes Active="Default"/>
-    <Units Count="107">
-      <Unit0>
+    <Version Value="12"/>
+    <BuildModes Active="Debug"/>
+    <Units>
+      <Unit>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="28"/>
-        <CursorPos X="20" Y="1"/>
+        <CursorPos X="20"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit0>
-      <Unit1>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonMain.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonMain"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="3616"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit1>
-      <Unit2>
+      </Unit>
+      <Unit>
+        <Filename Value="../../lib/SyntaxMemoWithStuff2/SynEditDecorator.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UsageCount Value="20"/>
+      </Unit>
+      <Unit>
         <Filename Value="Globals.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="Globals"/>
-        <EditorIndex Value="7"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="76"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="2878"/>
         <CursorPos X="2" Y="2949"/>
         <UsageCount Value="23"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit2>
-      <Unit3>
+      </Unit>
+      <Unit>
         <Filename Value="SecureDBLogin.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SecureDBLogin"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="31"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit3>
-      <Unit4>
+      </Unit>
+      <Unit>
         <Filename Value="EditorStoredProcedure.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorStoredProcedure"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="106"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit4>
-      <Unit5>
+      </Unit>
+      <Unit>
         <Filename Value="EditorView.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorView"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit5>
-      <Unit6>
+      </Unit>
+      <Unit>
         <Filename Value="NewObjectDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="NewObjectDialog"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit6>
-      <Unit7>
+      </Unit>
+      <Unit>
         <Filename Value="DropObject.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DropObject"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit7>
-      <Unit8>
+      </Unit>
+      <Unit>
         <Filename Value="StoredProcedureParams.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="StoredProcedureParams"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit8>
-      <Unit9>
+      </Unit>
+      <Unit>
         <Filename Value="SQLForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLForm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit9>
-      <Unit10>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonOptions.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonOptions"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit10>
-      <Unit11>
+      </Unit>
+      <Unit>
         <Filename Value="PrintPreviewForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="PrintPreviewForm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit11>
-      <Unit12>
-        <Filename Value="SplashForm.pas"/>
-        <HasResources Value="True"/>
-        <UnitName Value="SplashForm"/>
-        <EditorIndex Value="6"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="23"/>
-        <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit12>
-      <Unit13>
-        <Filename Value="../Common/AboutBox.pas"/>
+      </Unit>
+      <Unit>
+        <Filename Value="AboutBox.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="AboutBox"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="31"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="23"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit13>
-      <Unit14>
+        <UsageCount Value="20"/>
+      </Unit>
+      <Unit>
         <Filename Value="EditorUDF.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorUDF"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit14>
-      <Unit15>
+      </Unit>
+      <Unit>
         <Filename Value="InputDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="InputDialog"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit15>
-      <Unit16>
+      </Unit>
+      <Unit>
         <Filename Value="NewTrigger.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="NewTrigger"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit16>
-      <Unit17>
+      </Unit>
+      <Unit>
         <Filename Value="StatementHistory.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="StatementHistory"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit17>
-      <Unit18>
+      </Unit>
+      <Unit>
         <Filename Value="SaveFileFormat.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SaveFileFormat"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit18>
-      <Unit19>
+      </Unit>
+      <Unit>
         <Filename Value="WindowList.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="WindowList"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit19>
-      <Unit20>
+      </Unit>
+      <Unit>
         <Filename Value="UDFInputParam.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="UDFInputParam"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit20>
-      <Unit21>
+      </Unit>
+      <Unit>
         <Filename Value="UserEditor.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="UserEditor"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit21>
-      <Unit22>
+      </Unit>
+      <Unit>
         <Filename Value="ScriptEditorHost.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ScriptEditorHost"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit22>
-      <Unit23>
+      </Unit>
+      <Unit>
         <Filename Value="EditorColumn.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorColumn"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit23>
-      <Unit24>
+      </Unit>
+      <Unit>
         <Filename Value="EditorConstraint.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorConstraint"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit24>
-      <Unit25>
+      </Unit>
+      <Unit>
         <Filename Value="EditorIndex.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorIndex"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit25>
-      <Unit26>
+      </Unit>
+      <Unit>
         <Filename Value="BlobViewer.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="BlobViewer"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit26>
-      <Unit27>
-        <Filename Value="TipOfTheDay.pas"/>
-        <HasResources Value="True"/>
-        <UnitName Value="TipOfTheDay"/>
-        <EditorIndex Value="4"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="85"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="23"/>
-        <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit27>
-      <Unit28>
+      </Unit>
+      <Unit>
         <Filename Value="SyntaxHelp.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SyntaxHelp"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit28>
-      <Unit29>
+      </Unit>
+      <Unit>
         <Filename Value="CodeSnippets.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="CodeSnippets"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="88"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit29>
-      <Unit30>
+      </Unit>
+      <Unit>
         <Filename Value="SQLTrace.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLTrace"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit30>
-      <Unit31>
+      </Unit>
+      <Unit>
         <Filename Value="SQLInsightItem.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLInsightItem"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit31>
-      <Unit32>
-        <Filename Value="QBuilder.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="QBuilder"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="23"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit32>
-      <Unit33>
+      </Unit>
+      <Unit>
+        <Filename Value=""/>
+        <UsageCount Value="10"/>
+      </Unit>
+      <Unit>
         <Filename Value="ReorderColumns.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ReorderColumns"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="94"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit33>
-      <Unit34>
+      </Unit>
+      <Unit>
         <Filename Value="WindowLists.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="WindowLists"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit34>
-      <Unit35>
+      </Unit>
+      <Unit>
         <Filename Value="EditorGenerator.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorGenerator"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit35>
-      <Unit36>
+      </Unit>
+      <Unit>
         <Filename Value="Login.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="Login"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit36>
-      <Unit37>
+      </Unit>
+      <Unit>
         <Filename Value="MetaDataSearchObject.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MetaDataSearchObject"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit37>
-      <Unit38>
+      </Unit>
+      <Unit>
         <Filename Value="DebugWatches.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugWatches"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit38>
-      <Unit39>
+      </Unit>
+      <Unit>
         <Filename Value="AddWatch.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="AddWatch"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit39>
-      <Unit40>
+      </Unit>
+      <Unit>
         <Filename Value="ParseCollection.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ParseCollection"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit40>
-      <Unit41>
+      </Unit>
+      <Unit>
         <Filename Value="DebugEvalModify.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugEvalModify"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit41>
-      <Unit42>
+      </Unit>
+      <Unit>
         <Filename Value="SQLYacc.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="SQLYacc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
         <CursorPos X="17" Y="12"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit42>
-      <Unit43>
+      </Unit>
+      <Unit>
         <Filename Value="LexLib.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="LexLib"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="187"/>
         <CursorPos X="145" Y="226"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit43>
-      <Unit44>
+      </Unit>
+      <Unit>
         <Filename Value="YaccLib.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="YaccLib"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit44>
-      <Unit45>
+      </Unit>
+      <Unit>
         <Filename Value="EditorGrant.pas"/>
         <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmEditorGrant"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorGrant"/>
+        <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="115"/>
-        <CursorPos X="1" Y="1"/>
+        <TopLine Value="478"/>
         <UsageCount Value="23"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit45>
-      <Unit46>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
         <Filename Value="AddGrantee.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="AddGrantee"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit46>
-      <Unit47>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/ChooseFolder.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ChooseFolder"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit47>
-      <Unit48>
+      </Unit>
+      <Unit>
         <Filename Value="StoredProcParamWarn.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="StoredProcParamWarn"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit48>
-      <Unit49>
+      </Unit>
+      <Unit>
         <Filename Value="ArrayDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ArrayDialog"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit49>
-      <Unit50>
+      </Unit>
+      <Unit>
         <Filename Value="SQLAssistantDragAndDrop.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLAssistantDragAndDrop"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit50>
-      <Unit51>
+      </Unit>
+      <Unit>
         <Filename Value="DatabaseManager.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DatabaseManager"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit51>
-      <Unit52>
+      </Unit>
+      <Unit>
         <Filename Value="EditorSnippet.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorSnippet"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit52>
-      <Unit53>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/HelpMap.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="HelpMap"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit53>
-      <Unit54>
+      </Unit>
+      <Unit>
         <Filename Value="DescribeForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DescribeForm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit54>
-      <Unit55>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonProjectCache.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonProjectCache"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit55>
-      <Unit56>
+      </Unit>
+      <Unit>
         <Filename Value="BaseDocumentForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="BaseDocumentForm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit56>
-      <Unit57>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonMasterProperties.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonMasterProperties"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit57>
-      <Unit58>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonProjectCacheTypes.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonProjectCacheTypes"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit58>
-      <Unit59>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonIDE.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonIDE"/>
-        <EditorIndex Value="5"/>
-        <WindowIndex Value="0"/>
+        <EditorIndex Value="2"/>
         <TopLine Value="148"/>
         <CursorPos X="37" Y="48"/>
         <UsageCount Value="23"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit59>
-      <Unit60>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonInternalInterfaces.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonInternalInterfaces"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit60>
-      <Unit61>
+      </Unit>
+      <Unit>
         <Filename Value="GimbalToolsAPI.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GimbalToolsAPI"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit61>
-      <Unit62>
+      </Unit>
+      <Unit>
         <Filename Value="GimbalToolsAPIImpl.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GimbalToolsAPIImpl"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit62>
-      <Unit63>
+      </Unit>
+      <Unit>
         <Filename Value="BaseDocumentDataAwareForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="BaseDocumentDataAwareForm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit63>
-      <Unit64>
+      </Unit>
+      <Unit>
         <Filename Value="FrameMetadata.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameMetadata"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit64>
-      <Unit65>
+      </Unit>
+      <Unit>
         <Filename Value="MenuModule.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MenuModule"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit65>
-      <Unit66>
+      </Unit>
+      <Unit>
         <Filename Value="GlobalPrintingRoutines.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="GlobalPrintingRoutines"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit66>
-      <Unit67>
+      </Unit>
+      <Unit>
         <Filename Value="GlobalPrintDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="GlobalPrintDialog"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit67>
-      <Unit68>
+      </Unit>
+      <Unit>
         <Filename Value="SelectConnectionDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SelectConnectionDialog"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit68>
-      <Unit69>
+      </Unit>
+      <Unit>
         <Filename Value="../CreateDBWizard/GSSCreateDatabaseConsts.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GSSCreateDatabaseConsts"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit69>
-      <Unit70>
+      </Unit>
+      <Unit>
         <Filename Value="FrameDependencies.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameDependencies"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit70>
-      <Unit71>
+      </Unit>
+      <Unit>
         <Filename Value="FrameDRUIMatrix.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameDRUIMatrix"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit71>
-      <Unit72>
+      </Unit>
+      <Unit>
         <Filename Value="FramePermissions.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FramePermissions"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit72>
-      <Unit73>
+      </Unit>
+      <Unit>
         <Filename Value="CompileDBObject.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="CompileDBObject"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit73>
-      <Unit74>
+      </Unit>
+      <Unit>
         <Filename Value="PluginsDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="PluginsDialog"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit74>
-      <Unit75>
+      </Unit>
+      <Unit>
         <Filename Value="EditorTrigger.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorTrigger"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit75>
-      <Unit76>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/GSSRegistry.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GSSRegistry"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit76>
-      <Unit77>
+      </Unit>
+      <Unit>
         <Filename Value="IBDebuggerVM.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="IBDebuggerVM"/>
-        <EditorIndex Value="2"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="2227"/>
-        <CursorPos X="1" Y="2371"/>
+        <EditorIndex Value="1"/>
+        <CursorPos Y="2371"/>
         <UsageCount Value="23"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit77>
-      <Unit78>
+      </Unit>
+      <Unit>
         <Filename Value="DebugAddBreakPoint.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugAddBreakPoint"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="43"/>
+        <CursorPos Y="43"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit78>
-      <Unit79>
+      </Unit>
+      <Unit>
         <Filename Value="FrameDescription.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameDescription"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="303"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit79>
-      <Unit80>
+      </Unit>
+      <Unit>
         <Filename Value="EditorDomain.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorDomain"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit80>
-      <Unit81>
+      </Unit>
+      <Unit>
         <Filename Value="EditorTable.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorTable"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit81>
-      <Unit82>
+      </Unit>
+      <Unit>
         <Filename Value="EditorException.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorException"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit82>
-      <Unit83>
-        <Filename Value="../MetaExtract/gssscript_TLB.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="gssscript_TLB"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="23"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit83>
-      <Unit84>
+      </Unit>
+      <Unit>
         <Filename Value="ScriptRecorder.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ScriptRecorder"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit84>
-      <Unit85>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonDragQueens.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonDragQueens"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit85>
-      <Unit86>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/ScriptExecutive.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ScriptExecutive"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit86>
-      <Unit87>
+      </Unit>
+      <Unit>
         <Filename Value="ManageBrowserItems.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ManageBrowserItems"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit87>
-      <Unit88>
+      </Unit>
+      <Unit>
         <Filename Value="PlanUnit.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="PlanUnit"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit88>
-      <Unit89>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonToolsAPIDocForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonToolsAPIDocForm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit89>
-      <Unit90>
+      </Unit>
+      <Unit>
         <Filename Value="DebugBreakPoints.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugBreakPoints"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit90>
-      <Unit91>
+      </Unit>
+      <Unit>
         <Filename Value="DebugCallStack.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugCallStack"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit91>
-      <Unit92>
+      </Unit>
+      <Unit>
         <Filename Value="DebugLocalVariables.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugLocalVariables"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="82"/>
         <CursorPos X="75" Y="95"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit92>
-      <Unit93>
+      </Unit>
+      <Unit>
         <Filename Value="Crypt32.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="Crypt32"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit93>
-      <Unit94>
+      </Unit>
+      <Unit>
         <Filename Value="QBAppendTo.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="QBAppendTo"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit94>
-      <Unit95>
+      </Unit>
+      <Unit>
         <Filename Value="QBCriteria.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="QBCriteria"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit95>
-      <Unit96>
-        <Filename Value="QBLnkFrm.pas"/>
-        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="SplashForm.pas"/>
         <HasResources Value="True"/>
-        <UnitName Value="QBLnkFrm"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="../Common/AboutBox.pas"/>
+        <HasResources Value="True"/>
+        <TopLine Value="31"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit96>
-      <Unit97>
+      </Unit>
+      <Unit>
+        <Filename Value="TipOfTheDay.pas"/>
+        <HasResources Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="85"/>
+        <UsageCount Value="23"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit>
+      <Unit>
+        <Filename Value="QBuilder.pas"/>
+        <HasResources Value="True"/>
+        <UsageCount Value="23"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit>
+      <Unit>
+        <Filename Value="QBLnkFrm.pas"/>
+        <HasResources Value="True"/>
+        <UsageCount Value="23"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/Tools.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="Tools"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="73"/>
         <CursorPos X="76" Y="17"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit97>
-      <Unit98>
+      </Unit>
+      <Unit>
         <Filename Value="GlobalQueriesText.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="GlobalQueriesText"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="23"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit98>
-      <Unit99>
+      </Unit>
+      <Unit>
         <Filename Value="../fastobj/FastSys.pas"/>
-        <UnitName Value="FastSys"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="20"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit99>
-      <Unit100>
+      </Unit>
+      <Unit>
         <Filename Value="../fastobj/FastObj.pas"/>
-        <UnitName Value="FastObj"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="20"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit100>
-      <Unit101>
+      </Unit>
+      <Unit>
         <Filename Value="../fastobj/PatchLib.pas"/>
-        <UnitName Value="PatchLib"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="163"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="20"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit101>
-      <Unit102>
+      </Unit>
+      <Unit>
         <Filename Value="../fastcode/061/FastCode.pas"/>
         <UsageCount Value="20"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit102>
-      <Unit103>
+      </Unit>
+      <Unit>
         <Filename Value="../fastcode/fastmove/FastMove.pas"/>
-        <UnitName Value="FastMove"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit103>
-      <Unit104>
+      </Unit>
+      <Unit>
         <Filename Value="/usr/share/lazarus/1.0/lcl/grids.pas"/>
         <UnitName Value="Grids"/>
-        <WindowIndex Value="0"/>
         <TopLine Value="22"/>
         <CursorPos X="14" Y="43"/>
         <UsageCount Value="11"/>
-      </Unit104>
-      <Unit105>
+      </Unit>
+      <Unit>
         <Filename Value="dom.pas"/>
         <UnitName Value="DOM"/>
-        <EditorIndex Value="3"/>
-        <WindowIndex Value="0"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="401"/>
         <CursorPos X="24" Y="420"/>
         <UsageCount Value="12"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit105>
-      <Unit106>
+      </Unit>
+      <Unit>
         <Filename Value="/usr/share/lazarus/1.0.2/lcl/grids.pas"/>
         <UnitName Value="Grids"/>
-        <EditorIndex Value="0"/>
-        <WindowIndex Value="0"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="22"/>
         <CursorPos X="14" Y="43"/>
         <UsageCount Value="11"/>
-        <Loaded Value="True"/>
-      </Unit106>
+      </Unit>
     </Units>
-    <General>
-      <ActiveWindowIndexAtStart Value="0"/>
-    </General>
-    <JumpHistory Count="12" HistoryIndex="11">
-      <Position1>
-        <Filename Value="dom.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position1>
-      <Position2>
-        <Filename Value="dom.pas"/>
-        <Caret Line="131" Column="3" TopLine="109"/>
-      </Position2>
-      <Position3>
-        <Filename Value="dom.pas"/>
-        <Caret Line="714" Column="19" TopLine="711"/>
-      </Position3>
-      <Position4>
-        <Filename Value="dom.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position4>
-      <Position5>
-        <Filename Value="dom.pas"/>
-        <Caret Line="463" Column="24" TopLine="442"/>
-      </Position5>
-      <Position6>
-        <Filename Value="dom.pas"/>
-        <Caret Line="463" Column="24" TopLine="442"/>
-      </Position6>
-      <Position7>
-        <Filename Value="dom.pas"/>
-        <Caret Line="420" Column="24" TopLine="401"/>
-      </Position7>
-      <Position8>
-        <Filename Value="dom.pas"/>
-        <Caret Line="446" Column="24" TopLine="427"/>
-      </Position8>
-      <Position9>
-        <Filename Value="dom.pas"/>
-        <Caret Line="446" Column="24" TopLine="427"/>
-      </Position9>
-      <Position10>
-        <Filename Value="/usr/share/lazarus/1.0.2/lcl/grids.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
-      </Position10>
-      <Position11>
-        <Filename Value="/usr/share/lazarus/1.0.2/lcl/grids.pas"/>
-        <Caret Line="57" Column="63" TopLine="21"/>
-      </Position11>
-      <Position12>
-        <Filename Value="/usr/share/lazarus/1.0.2/lcl/grids.pas"/>
-        <Caret Line="43" Column="14" TopLine="22"/>
-      </Position12>
-    </JumpHistory>
+    <JumpHistory HistoryIndex="-1"/>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
   </ProjectSession>
 </CONFIG>

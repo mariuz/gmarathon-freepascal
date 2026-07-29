@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
     <Version Value="12"/>
@@ -9,7 +9,6 @@
         <MainUnitHasTitleStatement Value="False"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="marathon"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
@@ -17,46 +16,11 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <VersionInfo>
-      <StringTable ProductVersion=""/>
-    </VersionInfo>
-    <BuildModes Count="2">
-      <Item1 Name="Debug" Default="True">
+    <BuildModes>
+      <Item Name="Debug" Default="True"/>
+      <Item Name="Release">
         <CompilerOptions>
-          <Version Value="12"/>
-          <SearchPaths>
-            <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
-            <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
-          </SearchPaths>
-          <Parsing>
-            <SyntaxOptions>
-              <SyntaxMode Value="Delphi"/>
-            </SyntaxOptions>
-          </Parsing>
-          <CodeGeneration>
-            <Checks>
-              <IOChecks Value="True"/>
-            </Checks>
-            <TargetCPU Value="x86_64"/>
-            <TargetOS Value="linux"/>
-          </CodeGeneration>
-          <Linking>
-            <Debugging>
-              <GenerateDebugInfo Value="True"/>
-              <DebugInfoType Value="dsDwarf2Set"/>
-            </Debugging>
-          </Linking>
-          <Other>
-            <CompilerMessages>
-              <MsgFileName Value=""/>
-            </CompilerMessages>
-            <CompilerPath Value="$(CompPath)"/>
-          </Other>
-        </CompilerOptions>
-      </Item1>
-      <Item2 Name="Release">
-        <CompilerOptions>
-          <Version Value="12"/>
+          <Version Value="11"/>
           <SearchPaths>
             <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
             <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
@@ -68,11 +32,11 @@
           </Parsing>
           <CodeGeneration>
             <SmartLinkUnit Value="True"/>
+            <TargetCPU Value="x86_64"/>
+            <TargetOS Value="linux"/>
             <Optimizations>
               <OptimizationLevel Value="2"/>
             </Optimizations>
-            <TargetCPU Value="x86_64"/>
-            <TargetOS Value="linux"/>
           </CodeGeneration>
           <Linking>
             <Debugging>
@@ -81,726 +45,484 @@
             </Debugging>
             <LinkSmart Value="True"/>
           </Linking>
-          <Other>
-            <CompilerMessages>
-              <MsgFileName Value=""/>
-            </CompilerMessages>
-            <CompilerPath Value="$(CompPath)"/>
-          </Other>
         </CompilerOptions>
-      </Item2>
+      </Item>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
-      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
-      <ExcludeFileFilter Value="*.(bak|ppu|o|so);*~;backup"/>
     </PublishOptions>
     <RunParams>
-      <local>
-        <FormatVersion Value="1"/>
-        <LaunchingApplication PathPlusParams="/usr/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
-      </local>
+      <FormatVersion Value="2"/>
     </RunParams>
-    <RequiredPackages Count="6">
-      <Item1>
+    <RequiredPackages>
+      <Item>
         <PackageName Value="SynEdit"/>
-      </Item1>
-      <Item2>
+      </Item>
+      <Item>
         <PackageName Value="LCL"/>
-      </Item2>
-      <Item3>
+      </Item>
+      <Item>
         <PackageName Value="Printer4Lazarus"/>
-      </Item3>
-      <Item4>
+      </Item>
+      <Item>
         <PackageName Value="TAChartLazarusPkg"/>
-      </Item4>
-      <Item5>
+      </Item>
+      <Item>
         <PackageName Value="ibexpress"/>
-      </Item5>
-      <Item6>
+      </Item>
+      <Item>
         <PackageName Value="fbintf"/>
-      </Item6>
+      </Item>
     </RequiredPackages>
-    <Units Count="103">
-      <Unit0>
+    <Units>
+      <Unit>
         <Filename Value="marathon.lpr"/>
         <IsPartOfProject Value="True"/>
-      </Unit0>
-      <Unit1>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonMain.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonMain"/>
-      </Unit1>
-      <Unit2>
+      </Unit>
+      <Unit>
         <Filename Value="../../lib/SyntaxMemoWithStuff2/SynEditDecorator.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="SynEditDecorator"/>
-      </Unit2>
-      <Unit3>
+      </Unit>
+      <Unit>
         <Filename Value="Globals.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="Globals"/>
-      </Unit3>
-      <Unit4>
+      </Unit>
+      <Unit>
         <Filename Value="SecureDBLogin.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SecureDBLogin"/>
-      </Unit4>
-      <Unit5>
+      </Unit>
+      <Unit>
         <Filename Value="EditorStoredProcedure.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorStoredProcedure"/>
-      </Unit5>
-      <Unit6>
+      </Unit>
+      <Unit>
         <Filename Value="EditorView.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorView"/>
-      </Unit6>
-      <Unit7>
+      </Unit>
+      <Unit>
         <Filename Value="NewObjectDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="NewObjectDialog"/>
-      </Unit7>
-      <Unit8>
+      </Unit>
+      <Unit>
         <Filename Value="DropObject.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DropObject"/>
-      </Unit8>
-      <Unit9>
+      </Unit>
+      <Unit>
         <Filename Value="StoredProcedureParams.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="StoredProcedureParams"/>
-      </Unit9>
-      <Unit10>
+      </Unit>
+      <Unit>
         <Filename Value="SQLForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLForm"/>
-      </Unit10>
-      <Unit11>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonOptions.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonOptions"/>
-      </Unit11>
-      <Unit12>
+      </Unit>
+      <Unit>
         <Filename Value="PrintPreviewForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="PrintPreviewForm"/>
-      </Unit12>
-      <Unit13>
-        <Filename Value="../Common/AboutBox.pas"/>
+      </Unit>
+      <Unit>
+        <Filename Value="AboutBox.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="AboutBox"/>
-      </Unit13>
-      <Unit14>
+      </Unit>
+      <Unit>
         <Filename Value="EditorUDF.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorUDF"/>
-      </Unit14>
-      <Unit15>
+      </Unit>
+      <Unit>
         <Filename Value="InputDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="InputDialog"/>
-      </Unit15>
-      <Unit16>
+      </Unit>
+      <Unit>
         <Filename Value="NewTrigger.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="NewTrigger"/>
-      </Unit16>
-      <Unit17>
+      </Unit>
+      <Unit>
         <Filename Value="StatementHistory.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="StatementHistory"/>
-      </Unit17>
-      <Unit18>
+      </Unit>
+      <Unit>
         <Filename Value="SaveFileFormat.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SaveFileFormat"/>
-      </Unit18>
-      <Unit19>
+      </Unit>
+      <Unit>
         <Filename Value="WindowList.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="WindowList"/>
-      </Unit19>
-      <Unit20>
+      </Unit>
+      <Unit>
         <Filename Value="UDFInputParam.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="UDFInputParam"/>
-      </Unit20>
-      <Unit21>
+      </Unit>
+      <Unit>
         <Filename Value="UserEditor.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="UserEditor"/>
-      </Unit21>
-      <Unit22>
+      </Unit>
+      <Unit>
         <Filename Value="ScriptEditorHost.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ScriptEditorHost"/>
-      </Unit22>
-      <Unit23>
+      </Unit>
+      <Unit>
         <Filename Value="EditorColumn.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorColumn"/>
-      </Unit23>
-      <Unit24>
+      </Unit>
+      <Unit>
         <Filename Value="EditorConstraint.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorConstraint"/>
-      </Unit24>
-      <Unit25>
+      </Unit>
+      <Unit>
         <Filename Value="EditorIndex.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorIndex"/>
-      </Unit25>
-      <Unit26>
+      </Unit>
+      <Unit>
         <Filename Value="BlobViewer.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="BlobViewer"/>
-      </Unit26>
-      <Unit27>
+      </Unit>
+      <Unit>
         <Filename Value="SyntaxHelp.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SyntaxHelp"/>
-      </Unit27>
-      <Unit28>
+      </Unit>
+      <Unit>
         <Filename Value="CodeSnippets.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="CodeSnippets"/>
-      </Unit28>
-      <Unit29>
+      </Unit>
+      <Unit>
         <Filename Value="SQLTrace.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLTrace"/>
-      </Unit29>
-      <Unit30>
+      </Unit>
+      <Unit>
         <Filename Value="SQLInsightItem.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLInsightItem"/>
-      </Unit30>
-      <Unit32>
+      </Unit>
+      <Unit>
         <Filename Value="ReorderColumns.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ReorderColumns"/>
-      </Unit32>
-      <Unit33>
+      </Unit>
+      <Unit>
         <Filename Value="WindowLists.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="WindowLists"/>
-      </Unit33>
-      <Unit34>
+      </Unit>
+      <Unit>
         <Filename Value="EditorGenerator.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorGenerator"/>
-      </Unit34>
-      <Unit35>
+      </Unit>
+      <Unit>
         <Filename Value="Login.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="Login"/>
-      </Unit35>
-      <Unit36>
+      </Unit>
+      <Unit>
         <Filename Value="MetaDataSearchObject.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MetaDataSearchObject"/>
-      </Unit36>
-      <Unit37>
+      </Unit>
+      <Unit>
         <Filename Value="DebugWatches.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugWatches"/>
-      </Unit37>
-      <Unit38>
+      </Unit>
+      <Unit>
         <Filename Value="AddWatch.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="AddWatch"/>
-      </Unit38>
-      <Unit39>
+      </Unit>
+      <Unit>
         <Filename Value="ParseCollection.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ParseCollection"/>
-      </Unit39>
-      <Unit40>
+      </Unit>
+      <Unit>
         <Filename Value="DebugEvalModify.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugEvalModify"/>
-      </Unit40>
-      <Unit41>
+      </Unit>
+      <Unit>
         <Filename Value="SQLYacc.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="SQLYacc"/>
-      </Unit41>
-      <Unit42>
+      </Unit>
+      <Unit>
         <Filename Value="LexLib.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="LexLib"/>
-      </Unit42>
-      <Unit43>
+      </Unit>
+      <Unit>
         <Filename Value="YaccLib.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="YaccLib"/>
-      </Unit43>
-      <Unit44>
+      </Unit>
+      <Unit>
         <Filename Value="EditorGrant.pas"/>
         <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmEditorGrant"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorGrant"/>
-      </Unit44>
-      <Unit45>
+        <ResourceBaseClass Value="Form"/>
+      </Unit>
+      <Unit>
         <Filename Value="AddGrantee.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="AddGrantee"/>
-      </Unit45>
-      <Unit46>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/ChooseFolder.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ChooseFolder"/>
-      </Unit46>
-      <Unit47>
+      </Unit>
+      <Unit>
         <Filename Value="StoredProcParamWarn.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="StoredProcParamWarn"/>
-      </Unit47>
-      <Unit48>
+      </Unit>
+      <Unit>
         <Filename Value="ArrayDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ArrayDialog"/>
-      </Unit48>
-      <Unit49>
+      </Unit>
+      <Unit>
         <Filename Value="SQLAssistantDragAndDrop.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SQLAssistantDragAndDrop"/>
-      </Unit49>
-      <Unit50>
+      </Unit>
+      <Unit>
         <Filename Value="DatabaseManager.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DatabaseManager"/>
-      </Unit50>
-      <Unit51>
+      </Unit>
+      <Unit>
         <Filename Value="EditorSnippet.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorSnippet"/>
-      </Unit51>
-      <Unit52>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/HelpMap.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="HelpMap"/>
-      </Unit52>
-      <Unit53>
+      </Unit>
+      <Unit>
         <Filename Value="DescribeForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DescribeForm"/>
-      </Unit53>
-      <Unit54>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonProjectCache.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonProjectCache"/>
-      </Unit54>
-      <Unit55>
+      </Unit>
+      <Unit>
         <Filename Value="BaseDocumentForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="BaseDocumentForm"/>
-      </Unit55>
-      <Unit56>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonMasterProperties.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonMasterProperties"/>
-      </Unit56>
-      <Unit57>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonProjectCacheTypes.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonProjectCacheTypes"/>
-      </Unit57>
-      <Unit58>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonIDE.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonIDE"/>
-      </Unit58>
-      <Unit59>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonInternalInterfaces.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonInternalInterfaces"/>
-      </Unit59>
-      <Unit60>
+      </Unit>
+      <Unit>
         <Filename Value="GimbalToolsAPI.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GimbalToolsAPI"/>
-      </Unit60>
-      <Unit61>
+      </Unit>
+      <Unit>
         <Filename Value="GimbalToolsAPIImpl.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GimbalToolsAPIImpl"/>
-      </Unit61>
-      <Unit62>
+      </Unit>
+      <Unit>
         <Filename Value="BaseDocumentDataAwareForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="BaseDocumentDataAwareForm"/>
-      </Unit62>
-      <Unit63>
+      </Unit>
+      <Unit>
         <Filename Value="FrameMetadata.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameMetadata"/>
-      </Unit63>
-      <Unit64>
+      </Unit>
+      <Unit>
         <Filename Value="MenuModule.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MenuModule"/>
-      </Unit64>
-      <Unit65>
+      </Unit>
+      <Unit>
         <Filename Value="GlobalPrintingRoutines.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="GlobalPrintingRoutines"/>
-      </Unit65>
-      <Unit66>
+      </Unit>
+      <Unit>
         <Filename Value="GlobalPrintDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="GlobalPrintDialog"/>
-      </Unit66>
-      <Unit67>
+      </Unit>
+      <Unit>
         <Filename Value="SelectConnectionDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="SelectConnectionDialog"/>
-      </Unit67>
-      <Unit68>
+      </Unit>
+      <Unit>
         <Filename Value="../CreateDBWizard/GSSCreateDatabaseConsts.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GSSCreateDatabaseConsts"/>
-      </Unit68>
-      <Unit69>
+      </Unit>
+      <Unit>
         <Filename Value="FrameDependencies.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameDependencies"/>
-      </Unit69>
-      <Unit70>
+      </Unit>
+      <Unit>
         <Filename Value="FrameDRUIMatrix.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameDRUIMatrix"/>
-      </Unit70>
-      <Unit71>
+      </Unit>
+      <Unit>
         <Filename Value="FramePermissions.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FramePermissions"/>
-      </Unit71>
-      <Unit72>
+      </Unit>
+      <Unit>
         <Filename Value="CompileDBObject.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="CompileDBObject"/>
-      </Unit72>
-      <Unit73>
+      </Unit>
+      <Unit>
         <Filename Value="PluginsDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="PluginsDialog"/>
-      </Unit73>
-      <Unit74>
+      </Unit>
+      <Unit>
         <Filename Value="EditorTrigger.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorTrigger"/>
-      </Unit74>
-      <Unit75>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/GSSRegistry.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="GSSRegistry"/>
-      </Unit75>
-      <Unit76>
+      </Unit>
+      <Unit>
         <Filename Value="IBDebuggerVM.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="IBDebuggerVM"/>
-      </Unit76>
-      <Unit77>
+      </Unit>
+      <Unit>
         <Filename Value="DebugAddBreakPoint.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugAddBreakPoint"/>
-      </Unit77>
-      <Unit78>
+      </Unit>
+      <Unit>
         <Filename Value="FrameDescription.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="FrameDescription"/>
-      </Unit78>
-      <Unit79>
+      </Unit>
+      <Unit>
         <Filename Value="EditorDomain.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorDomain"/>
-      </Unit79>
-      <Unit80>
+      </Unit>
+      <Unit>
         <Filename Value="EditorTable.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorTable"/>
-      </Unit80>
-      <Unit81>
+      </Unit>
+      <Unit>
         <Filename Value="EditorException.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="EditorException"/>
-      </Unit81>
-      <Unit82>
-        <Filename Value="../MetaExtract/gssscript_TLB.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="gssscript_TLB"/>
-      </Unit82>
-      <Unit83>
+      </Unit>
+      <Unit>
         <Filename Value="ScriptRecorder.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ScriptRecorder"/>
-      </Unit83>
-      <Unit84>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonDragQueens.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonDragQueens"/>
-      </Unit84>
-      <Unit85>
+      </Unit>
+      <Unit>
         <Filename Value="../Common/ScriptExecutive.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ScriptExecutive"/>
-      </Unit85>
-      <Unit86>
+      </Unit>
+      <Unit>
         <Filename Value="ManageBrowserItems.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="ManageBrowserItems"/>
-      </Unit86>
-      <Unit87>
+      </Unit>
+      <Unit>
         <Filename Value="PlanUnit.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="PlanUnit"/>
-      </Unit87>
-      <Unit88>
+      </Unit>
+      <Unit>
         <Filename Value="MarathonToolsAPIDocForm.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="MarathonToolsAPIDocForm"/>
-      </Unit88>
-      <Unit89>
+      </Unit>
+      <Unit>
         <Filename Value="DebugBreakPoints.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugBreakPoints"/>
-      </Unit89>
-      <Unit90>
+      </Unit>
+      <Unit>
         <Filename Value="DebugCallStack.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugCallStack"/>
-      </Unit90>
-      <Unit91>
+      </Unit>
+      <Unit>
         <Filename Value="DebugLocalVariables.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="DebugLocalVariables"/>
-      </Unit91>
-      <Unit92>
+      </Unit>
+      <Unit>
         <Filename Value="Crypt32.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="Crypt32"/>
-      </Unit92>
-      <Unit93>
+      </Unit>
+      <Unit>
         <Filename Value="QBAppendTo.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="QBAppendTo"/>
-      </Unit93>
-      <Unit94>
+      </Unit>
+      <Unit>
         <Filename Value="QBCriteria.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-        <UnitName Value="QBCriteria"/>
-      </Unit94>
-      <Unit95>
-        <Filename Value="QBLnkFrm.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="QBLnkFrm"/>
-      </Unit95>
-      <Unit96>
-        <Filename Value="../Common/Tools.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="Tools"/>
-      </Unit96>
-      <Unit97>
-        <Filename Value="GlobalQueriesText.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="GlobalQueriesText"/>
-      </Unit97>
-      <Unit98>
-        <Filename Value="rmCollectionListBox.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="rmCollectionListBox"/>
-      </Unit98>
-      <Unit99>
-        <Filename Value="rmCompatControls.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="rmCompatControls"/>
-      </Unit99>
-      <Unit100>
-        <Filename Value="PagePrnt.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="PagePrnt"/>
-      </Unit100>
-      <Unit101>
-        <Filename Value="DSprint.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="DSprint"/>
-      </Unit101>
-      <Unit102>
-        <Filename Value="Chart.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="Chart"/>
-      </Unit102>
-      <Unit103>
-        <Filename Value="rmSpin.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="rmSpin"/>
-      </Unit103>
-      <Unit104>
-        <Filename Value="Series.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="Series"/>
-      </Unit104>
-      <Unit105>
-        <Filename Value="TeeProcs.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="TeeProcs"/>
-      </Unit105>
-      <Unit106>
-        <Filename Value="TeEngine.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="TeEngine"/>
-      </Unit106>
-      <Unit107>
-        <Filename Value="AboutBox.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="AboutBox"/>
-      </Unit107>
-      <Unit108>
-        <Filename Value="MarathonSQLMonitor.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="MarathonSQLMonitor"/>
-      </Unit108>
-      <Unit109>
-        <Filename Value="SessionMonitor.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="SessionMonitor"/>
-      </Unit109>
-      <Unit110>
-        <Filename Value="MaintenanceDialog.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="MaintenanceDialog"/>
-      </Unit110>
-      <Unit111>
-        <Filename Value="MetaExtractWizard.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="MetaExtractWizard"/>
-      </Unit111>
-      <Unit112>
-        <Filename Value="SchemaCompareDialog.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="SchemaCompareDialog"/>
-      </Unit112>
-      <Unit113>
-        <Filename Value="CreateDatabaseDialog.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="CreateDatabaseDialog"/>
-      </Unit113>
-      <Unit114>
-        <Filename Value="CommandPaletteDialog.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="CommandPaletteDialog"/>
-      </Unit114>
-      <Unit115>
-        <Filename Value="TableDesignerForm.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="TableDesignerForm"/>
-      </Unit115>
-      <Unit116>
-        <Filename Value="PrintRenderer.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="PrintRenderer"/>
-      </Unit116>
-      <Unit117>
-        <Filename Value="QueryBuilderForm.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="QueryBuilderForm"/>
-      </Unit117>
-      <Unit118>
-        <Filename Value="KeyBindingEditor.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="KeyBindingEditor"/>
-      </Unit118>
-      <Unit119>
-        <Filename Value="SchemaDiagramForm.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="SchemaDiagramForm"/>
-      </Unit119>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
-    <Version Value="12"/>
+    <Version Value="11"/>
     <SearchPaths>
       <IncludeFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2;$(ProjOutDir)"/>
       <OtherUnitFiles Value="../Common;../CreateDBWizard;../MetaExtract;../../lib/Other;../../lib/SyntaxMemoWithStuff2"/>
@@ -815,30 +537,27 @@
       <TargetOS Value="linux"/>
     </CodeGeneration>
     <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf3"/>
+      </Debugging>
       <Options>
         <Win32>
           <GraphicApplication Value="True"/>
         </Win32>
       </Options>
     </Linking>
-    <Other>
-      <CompilerMessages>
-        <MsgFileName Value=""/>
-      </CompilerMessages>
-      <CompilerPath Value="$(CompPath)"/>
-    </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="3">
-      <Item1>
+    <Exceptions>
+      <Item>
         <Name Value="EAbort"/>
-      </Item1>
-      <Item2>
+      </Item>
+      <Item>
         <Name Value="ECodetoolError"/>
-      </Item2>
-      <Item3>
+      </Item>
+      <Item>
         <Name Value="EFOpenError"/>
-      </Item3>
+      </Item>
     </Exceptions>
   </Debugging>
 </CONFIG>

@@ -24,8 +24,7 @@ interface
 uses Classes, {$IFDEF FPC} {$IFDEF WINDOWS}Windows,{$ENDIF}
   LCLIntf, LCLType, LMessages, {$ELSE}
   Windows, Messages, {$ENDIF}
-  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs, {$IFNDEF FPC}
-  ComObj, {$ENDIF}
+  SysUtils, Forms, Controls, Dialogs, Registry, Menus, CheckLst, StdCtrls, ActnList, Graphics, TAGraph, DB, PrintersDlgs,
   {$IFDEF D6_or_higher}
 	Variants, {$ENDIF}
 	IBDatabase, IBQuery, SyntaxMemoWithStuff2, MarathonInternalInterfaces, MarathonProjectCache, MarathonProjectCacheTypes, ScriptAs, GimbalToolsAPI, GimbalToolsAPIImpl, GSSRegistry, IBDebuggerVM, PluginsDialog;
@@ -279,7 +278,7 @@ function ItemScriptContext(Conn: TMarathonCacheConnection;
 
 implementation
 
-uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm{$IFNDEF FPC}, gssscript_TLB{$ENDIF};
+uses MarathonMain, Login, DatabaseManager, SyntaxHelp, CodeSnippets, EditorStoredProcedure, EditorTable, EditorView, EditorTrigger, NewObjectDialog, SQLForm, MarathonOptions, EditorException, AboutBox, WindowList, EditorGenerator, EditorUDF, ScriptEditorHost, PrintPreviewForm, EditorDomain, SQLTrace, {$IFDEF WINDOWS}ShellAPI, UserEditor,{$ENDIF} DropObject, MarathonMasterProperties, Globals, BaseDocumentForm, BaseDocumentDataAwareForm, GlobalPrintingRoutines, SelectConnectionDialog, GSSCreateDatabaseConsts, InputDialog, MenuModule, MarathonToolsAPIDocForm, DebugBreakPoints, DebugWatches, DebugCallStack, DebugLocalVariables, DDLExtractor, SessionMonitor, MaintenanceDialog, MetaExtractWizard, EditorPackage, ProfilerWindow, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, SchemaCompare, SchemaCompareDialog, CreateDatabase, CreateDatabaseDialog, DocumentHost, TableDesignerForm, SchemaDiagramForm;
 
 type
 	TPluginInit = procedure (const ToolServices: IGimbalIDEServices; var ThisPlugin: TPlugin); stdcall;
@@ -608,9 +607,6 @@ var
 	SubItem: TMarathonCacheBaseNode;
 	DropObject: TfrmDropObject;
 	L: TStringList;
-	{$IFNDEF FPC}
-	Extractor: IGSSDDLExtractor;
-	{$ENDIF}
 	ConnectName: String;
 	N: TMarathonTreeNode;
 	WizardForm: TfrmMetaExtractWizard;
@@ -931,43 +927,6 @@ begin
 					end;
 					if L.Count > 0 then
 					begin
-						{$IFNDEF FPC}
-						Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-						Extractor.AppHandle := Application.Handle;
-						ConnectName := TMarathonCacheObject(Item).ConnectionName;
-						Extractor.SQLDialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect;
-						Extractor.DatabaseHandle := Integer(FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.DBHandle);
-						Extractor.IB6 := FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6;
-						Extractor.MetaDBDatabaseName := FCurrentProject.Cache.ConnectionByName[ConnectName].DBFileName;
-						Extractor.MetaDBUserName := FCurrentProject.Cache.ConnectionByName[ConnectName].UserName;
-						Extractor.MetaDBPassword := FCurrentProject.Cache.ConnectionByName[ConnectName].Password;
-						Extractor.MetaDefaultDirectory := gExtractDDLDir;
-						// Load the properties
-						Extractor.MetaExtractType := Ord(CurrentProject.MetaExtractType);
-						Extractor.MetaCreateDatabase := CurrentProject.MetaCreateDatabase;
-						Extractor.MetaIncludePassword := CurrentProject.MetaIncludePassword;
-						Extractor.MetaIncludeDependents := CurrentProject.MetaIncludeDependents;
-						Extractor.MetaIncludeDoc := CurrentProject.MetaIncludeDoc;
-						Extractor.MetaWrapOutput := CurrentProject.MetaWrap;
-						Extractor.MetaDecimalPlaces := CurrentProject.MetaDecimalPlaces;
-						Extractor.MetaDecimalSeperator := CurrentProject.MetaDecimalSeparator;
-						Extractor.MetaWrapOutputAt := CurrentProject.MetaWrapAt;
-
-						for Idx := 0 to L.Count - 1 do
-							Extractor.AddObjectInfo(L[Idx], Ord(TMarathonCacheBaseNode(L.Objects[Idx]).CacheType));
-
-						Extractor.DoWizardList;
-						// Save the properties
-						CurrentProject.MetaExtractType := TExtractType(Extractor.MetaExtractType);
-						CurrentProject.MetaCreateDatabase := Extractor.MetaCreateDatabase;
-						CurrentProject.MetaIncludePassword := Extractor.MetaIncludePassword;
-						CurrentProject.MetaIncludeDependents := Extractor.MetaIncludeDependents;
-						CurrentProject.MetaIncludeDoc := Extractor.MetaIncludeDoc;
-            CurrentProject.MetaWrap := Extractor.MetaWrapOutput;
-            CurrentProject.MetaDecimalPlaces := Extractor.MetaDecimalPlaces;
-            CurrentProject.MetaDecimalSeparator := Extractor.MetaDecimalSeperator;
-            CurrentProject.MetaWrapAt := Extractor.MetaWrapOutputAt;
-						{$ELSE}
 						ConnectName := TMarathonCacheObject(Item).ConnectionName;
 						if not CheckConnected(ConnectName) then
 							Exit;
@@ -1012,7 +971,6 @@ begin
 						finally
 							WizardForm.Free;
 						end;
-						{$ENDIF}
 					end;
 				finally
 					L.Free;
@@ -2007,9 +1965,6 @@ end;
 procedure TMarathonIDE.ToolsMetadataExtract;
 var
 	ConnectName: String;
-	{$IFNDEF FPC}
-	Extractor: IGSSDDLExtractor;
-	{$ENDIF}
 	SC: TfrmSelectConnection;
 	WizardForm: TfrmMetaExtractWizard;
 
@@ -2032,42 +1987,6 @@ begin
 				end;
 			end;
 
-			{$IFNDEF FPC}
-			Extractor := CreateComObject(CLASS_GSSDDLExtractor) as IGSSDDLExtractor;
-			Extractor.AppHandle := Application.Handle;
-			Extractor.SQLDialect := FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.SQLDialect;
-			Extractor.DatabaseHandle := Integer(FCurrentProject.Cache.ConnectionByName[ConnectName].Connection.DBHandle);
-			Extractor.IB6 := FCurrentProject.Cache.ConnectionByName[ConnectName].IsIB6;
-			Extractor.MetaDBDatabaseName := FCurrentProject.Cache.ConnectionByName[ConnectName].DBFileName;
-			Extractor.MetaDBUserName := FCurrentProject.Cache.ConnectionByName[ConnectName].UserName;
-			Extractor.MetaDBPassword := FCurrentProject.Cache.ConnectionByName[ConnectName].Password;
-			Extractor.MetaDefaultDirectory := gExtractDDLDir;
-			// Load the properties
-			Extractor.MetaExtractType := Ord(CurrentProject.MetaExtractType);
-			Extractor.MetaCreateDatabase := CurrentProject.MetaCreateDatabase;
-			Extractor.MetaIncludePassword := CurrentProject.MetaIncludePassword;
-			Extractor.MetaIncludeDependents := CurrentProject.MetaIncludeDependents;
-			Extractor.MetaIncludeDoc := CurrentProject.MetaIncludeDoc;
-			Extractor.MetaWrapOutput := CurrentProject.MetaWrap;
-			Extractor.MetaDecimalPlaces := CurrentProject.MetaDecimalPlaces;
-			Extractor.MetaDecimalSeperator := CurrentProject.MetaDecimalSeparator;
-			Extractor.MetaWrapOutputAt := CurrentProject.MetaWrapAt;
-
-			if Extractor.DoWizard(FCurrentProject.Cache.ConnectionByName[ConnectName].UserName,
-				FCurrentProject.Cache.ConnectionByName[ConnectName].Password) then
-			begin
-				// Save the properties
-				CurrentProject.MetaExtractType := TExtractType(Extractor.MetaExtractType);
-				CurrentProject.MetaCreateDatabase := Extractor.MetaCreateDatabase;
-				CurrentProject.MetaIncludePassword := Extractor.MetaIncludePassword;
-				CurrentProject.MetaIncludeDependents := Extractor.MetaIncludeDependents;
-				CurrentProject.MetaIncludeDoc := Extractor.MetaIncludeDoc;
-				CurrentProject.MetaWrap := Extractor.MetaWrapOutput;
-				CurrentProject.MetaDecimalPlaces := Extractor.MetaDecimalPlaces;
-				CurrentProject.MetaDecimalSeparator := Extractor.MetaDecimalSeperator;
-				CurrentProject.MetaWrapAt := Extractor.MetaWrapOutputAt;
-			end;
-			{$ELSE}
 			WizardForm := TfrmMetaExtractWizard.Create(nil);
 			try
 				WizardForm.SetConnection(ConnectName,
@@ -2102,7 +2021,6 @@ begin
 			finally
 				WizardForm.Free;
 			end;
-			{$ENDIF}
 		end;
 	finally
 		SC.Free;

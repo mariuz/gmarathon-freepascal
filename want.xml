@@ -160,33 +160,6 @@ $Id: want.xml,v 1.42 2004/01/30 15:53:19 carlosmacao Exp $
 			<unitpath refid="library"/>
 		</dcc>
 
-		<!-- compile CreateDBWizard -->
-		<echo input="${CreateDBWizardSource}/CDatabseVersion.template.rc" file="${CreateDBWizardSource}/CDatabseVersion.rc" />
-		<brcc file="${CreateDBWizardSource}/CDatabseVersion.rc" output="${CreateDBWizardSource}/CDatabseVersion.res"/>
-		<dcc basedir="${CreateDBWizardSource}" source="CDatabse.dpr">
-			<exeoutput path="${CreateDBWizardSource}"/>
-			<dcuoutput path="${build.dir}"/>
-			<iochecks value="false"/>
-			<debug value="false"/>
-			<optimize value="true"/>
-			<warnings value="false"/>
-			<unitpath refid="library"/>
-		</dcc>
-
-		<!-- compile MetaExtract -->
-		<echo input="${MetaExtractSource}/GSSScriptVersion.template.rc" file="${MetaExtractSource}/GSSScriptVersion.rc"/>
-		<brcc file="${MetaExtractSource}/GSSScriptVersion.rc" output="${MetaExtractSource}/GSSScriptVersion.res"/>
-		<dcc basedir="${MetaExtractSource}" source="GSSScript.dpr">
-			<exeoutput path="${MetaExtractSource}"/>
-			<dcuoutput path="${build.dir}"/>
-			<iochecks value="false"/>
-			<debug value="false"/>
-			<iochecks value="false"/>
-			<optimize value="true"/>
-			<warnings value="false"/>
-			<unitpath refid="library"/>
-		</dcc>
-
 		<!-- compile Plugin AutoIncFieldWizard -->
 		<echo input="${AutoIncFieldWizardSource}/AutoincVersion.template.rc" file="${AutoIncFieldWizardSource}/AutoincVersion.rc"/>
 		<brcc file="${AutoIncFieldWizardSource}/AutoincVersion.rc" output="${AutoIncFieldWizardSource}/AutoincVersion.res"/>
