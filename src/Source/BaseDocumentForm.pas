@@ -626,19 +626,28 @@ begin
     handler to call into. Note IMarathonForm rides on TComponent's IUnknown,
     which does not reference count, so the reference here keeps nothing alive
     and cannot be relied on to. }
-  if Assigned(MarathonIDEInstance) and
-     (MarathonIDEInstance.ScreenActiveForm = (Self as IMarathonForm)) then
-    MarathonIDEInstance.ScreenActiveForm := nil;
-
-  if Assigned(MarathonIDEInstance.MainForm) then
+  { One guard for the whole destructor, because by now the IDE may be gone.
+    MarathonIDE's finalization does MarathonIDEInstance := nil, and a document
+    still on Application's async free queue is released after that, from
+    Application.Destroy - so this runs with the global already nil and the
+    MainForm test below used to read through it. That was an access violation
+    on the way out, after the window had closed and the work was saved, which
+    is why it went unnoticed: the only sign was an exit code nobody reads. }
+  if Assigned(MarathonIDEInstance) then
   begin
-		Idx := MarathonIDEInstance.WindowList.IndexOf(Self);
-    if Idx > -1 then
+    if MarathonIDEInstance.ScreenActiveForm = (Self as IMarathonForm) then
+      MarathonIDEInstance.ScreenActiveForm := nil;
+
+    if Assigned(MarathonIDEInstance.MainForm) then
     begin
-      MarathonIDEInstance.WindowList.Delete(Idx);
-      MarathonIDEInstance.WindowListChanged := True;
+      Idx := MarathonIDEInstance.WindowList.IndexOf(Self);
+      if Idx > -1 then
+      begin
+        MarathonIDEInstance.WindowList.Delete(Idx);
+        MarathonIDEInstance.WindowListChanged := True;
+      end;
     end;
-  end;  
+  end;
   inherited;
 end;
 
