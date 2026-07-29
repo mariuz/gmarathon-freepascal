@@ -106,6 +106,14 @@ function TableDesignChanges(Original, Target: TTableDesign): TTableDesignChangeA
 { The changes as one script, in order, with the destructive ones marked. }
 function TableDesignScript(Original, Target: TTableDesign): String;
 
+{ The name the server will store for an identifier the user typed.
+
+  Firebird folds an unquoted identifier to upper case and keeps a quoted one
+  verbatim, so a table created from what someone typed cannot be read back by
+  that same text. Anything that creates an object and then looks it up again
+  has to ask for the stored form, not the typed one. }
+function StoredIdentifier(const ATyped: String): String;
+
 implementation
 
 constructor TTableDesign.Create(const ATableName: String);
@@ -252,6 +260,18 @@ begin
       Exit(False);
 end;
 
+function StoredIdentifier(const ATyped: String): String;
+begin
+  Result := Trim(ATyped);
+  if (Length(Result) >= 2) and (Result[1] = '"') and
+     (Result[Length(Result)] = '"') then
+    { Quoted: the server stores exactly what is between the quotes, case and
+      all. }
+    Result := Copy(Result, 2, Length(Result) - 2)
+  else
+    Result := AnsiUpperCase(Result);
+end;
+
 function TableDesignChanges(Original, Target: TTableDesign): TTableDesignChangeArray;
 var
   Idx, Other: Integer;
@@ -260,6 +280,14 @@ var
   TableName: String;
 begin
   Result := nil;
+  { No original means there is nothing to compare against, and the difference
+    between "this table has no columns" and "this table could not be read" is
+    the difference between a correct script and a destructive one - the first
+    loop below would read every existing column as dropped. Answer no changes
+    and let the caller say so; a designer that cannot read the table has
+    nothing to apply. }
+  if not Assigned(Original) or not Assigned(Target) then
+    Exit;
   TableName := Trim(Target.TableName);
 
   { Renames first: everything after this names columns by their new name, so

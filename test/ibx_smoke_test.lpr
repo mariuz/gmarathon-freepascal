@@ -1197,6 +1197,49 @@ begin
       Reread.Free;
     end;
 
+    { A table named the way someone types it, rather than the way the tests
+      have always spelled it. This is what the designer does when it creates a
+      table: CREATE TABLE goes out unquoted, so the server folds the name, and
+      asking for it back as typed finds nothing. That left the designer with
+      no original and FIsNew already cleared, and the next Apply compared
+      against nothing and crashed in ColumnCount. }
+    RunDDL('create table design_lc (id integer)');
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Reread := ReadTableDesign(DB, Tr, 'design_lc');
+    try
+      if Assigned(Reread) then
+        Fail('a lower-case name read a table back, so this test proves nothing');
+    finally
+      Reread.Free;
+    end;
+    WriteLn('  ok   a table cannot be read back by the name as typed');
+
+    Reread := ReadTableDesign(DB, Tr, StoredIdentifier('design_lc'));
+    try
+      if not Assigned(Reread) then
+        Fail('StoredIdentifier did not give the name the server stored');
+      if Reread.ColumnCount <> 1 then
+        Fail('read back ' + IntToStr(Reread.ColumnCount) + ' columns, expected 1');
+    finally
+      Reread.Free;
+    end;
+    WriteLn('  ok   and can be by the name the server stored');
+
+    { Quoted names are kept verbatim, so folding them would break the other
+      half of the same rule. }
+    RunDDL('create table "design_MixedCase" (id integer)');
+    if not Tr.InTransaction then
+      Tr.StartTransaction;
+    Reread := ReadTableDesign(DB, Tr, StoredIdentifier('"design_MixedCase"'));
+    try
+      if not Assigned(Reread) then
+        Fail('a quoted name was folded when it should have been kept verbatim');
+    finally
+      Reread.Free;
+    end;
+    WriteLn('  ok   a quoted name is kept as it was written');
+
     { Now every kind of change at once, which is also the case most likely to
       come out in an order the server rejects. }
     Target := Original.Clone;

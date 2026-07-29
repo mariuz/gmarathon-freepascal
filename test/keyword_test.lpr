@@ -2243,6 +2243,38 @@ begin
     'and a schema one is shown qualified');
 end;
 
+procedure TestStoredIdentifier;
+var
+  Now_: TTableDesign;
+  Changes: TTableDesignChangeArray;
+begin
+  { What the server does to an identifier, which is not what the user typed.
+    The designer creates a table from typed text and then reads it back to
+    compare against; asking for it back as typed found nothing. }
+  Check(StoredIdentifier('mytable') = 'MYTABLE', 'an unquoted name is folded up');
+  Check(StoredIdentifier('  mytable  ') = 'MYTABLE', 'and trimmed first');
+  Check(StoredIdentifier('MyTable') = 'MYTABLE', 'whatever case it was typed in');
+  Check(StoredIdentifier('"MyTable"') = 'MyTable',
+    'a quoted name keeps its case, and loses the quotes');
+  Check(StoredIdentifier('"lower"') = 'lower', 'including a quoted lower-case one');
+  Check(StoredIdentifier('') = '', 'and nothing stays nothing');
+
+  { The crash this all came from: an Apply with no original to compare
+    against reached Original.ColumnCount and read through nil. No original
+    now means no changes, so the caller can say so instead of dying - and it
+    must not read every existing column as dropped either. }
+  Now_ := TTableDesign.Create('T');
+  try
+    Now_.AddColumn(Col('', 'ID', 'integer'));
+    Changes := TableDesignChanges(nil, Now_);
+    Check(Length(Changes) = 0, 'no original design yields no changes, not a crash');
+    Changes := TableDesignChanges(Now_, nil);
+    Check(Length(Changes) = 0, 'and neither does no target');
+  finally
+    Now_.Free;
+  end;
+end;
+
 procedure TestTableDesign;
 var
   Was, Now_: TTableDesign;
@@ -2622,6 +2654,7 @@ begin
     'no match ranks zero');
 
   WriteLn('Table design:');
+  TestStoredIdentifier;
   TestTableDesign;
 
   WriteLn('Schema-qualified names:');

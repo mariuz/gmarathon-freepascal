@@ -505,7 +505,23 @@ begin
       Statements.Add(CreateTableScript(Target));
     end
     else
+    begin
+      { Altering needs something to compare against. FOriginal is nil whenever
+        the table could not be read - LoadTable says so and leaves the form
+        open, and an apply that created the table but could not read it back
+        lands here too. Applying anyway compared against nothing, which read
+        every existing column as dropped. }
+      if not Assigned(FOriginal) then
+      begin
+        MessageDlg('Nothing to compare against',
+          'The current state of ' + FTableName + ' could not be read from the '
+          + 'database, so there is no way to tell what would have to change.'
+          + #13#10#13#10 + 'Close the designer and open the table again.',
+          mtError, [mbOK], 0);
+        Exit;
+      end;
       Statements := TableDesignStatements(FOriginal, Target);
+    end;
 
     Tr := CurrentTransaction;
     try
@@ -527,7 +543,11 @@ begin
 
     if FIsNew then
     begin
-      FTableName := Trim(edTableName.Text);
+      { The name the server stored, not the one that was typed. CREATE TABLE
+        went out unquoted, so Firebird folded it to upper case - asking for it
+        back as typed found nothing, left FOriginal nil with FIsNew now False,
+        and the next Apply compared against nothing at all. }
+      FTableName := StoredIdentifier(edTableName.Text);
       FIsNew := False;
       edTableName.ReadOnly := True;
       Caption := 'Design: ' + FTableName;
@@ -540,7 +560,13 @@ begin
     FOriginal := ReadTableDesign(FDatabase, CurrentTransaction, FTableName, FSchema,
       ServerHasSchemas);
     if Assigned(FOriginal) then
-      LoadGridFrom(FOriginal);
+      LoadGridFrom(FOriginal)
+    else
+      { Applied, but the result cannot be read back. Saying so beats leaving a
+        grid that no longer stands for anything, and Apply now refuses rather
+        than generating ALTERs against a design it does not have. }
+      stbStatus.SimpleText := 'Applied, but ' + FTableName +
+        ' could not be read back - close and reopen the designer.';
     RefreshScript;
   finally
     Target.Free;
