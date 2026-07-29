@@ -585,7 +585,11 @@ begin
 		Result.Schema := TMarathonCacheSchemaMember(Item).Schema;
 end;
 
-procedure ScriptAsOpenEditor(ConnName, SQLText: String);
+{ Run defaults to False because "Script as > Select" means put the statement
+  where I can edit it, and running one the user only asked to see would be a
+  surprise. Opening a system table is the other case: there the statement is
+  the means and the rows are the point, so that caller passes True. }
+procedure ScriptAsOpenEditor(ConnName, SQLText: String; Run: Boolean = False);
 var
 	F: TfrmSQLForm;
 begin
@@ -594,6 +598,12 @@ begin
 	F.NewFile;
 	F.edSQLStatement.Text := SQLText;
 	F.ShowDocument;
+	{ After ShowDocument: executing into a form that is not on screen yet leaves
+	  the grid built against nothing. CanExecute is asked rather than assumed
+	  because the connection can have gone down between the tree listing the
+	  table and the user double-clicking it. }
+	if Run and F.CanExecute then
+		F.DoExecute;
 end;
 
 { The schema a tree node was listed from, or '' for one under the connection's
@@ -645,12 +655,30 @@ begin
 
 					ctDomain, ctSP, ctTrigger, ctException, ctGenerator, ctTable,
 					ctView, ctUDF, ctPackage:
-						{ One call for every kind of object, since OpenObject takes the
-						  kind. A node under a schema branch carries the schema it was
-						  listed from; one under the connection's own headers does not,
-						  and an empty schema means whatever the search path reaches. }
-						OpenObject(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
-							Item.CacheType, SchemaOfNode(Item));
+						{ A system table is the one thing under here with no editor worth
+						  opening: RDB$ tables cannot be altered, so the table editor
+						  offers a tab of things the server will refuse. Reading one is
+						  what it is there for, so opening it runs a SELECT instead.
+
+						  These arrive under the tree's own "System Tables" branch as
+						  ordinary ctTable nodes, told apart only by System - which until
+						  now was set in eight places and read in none. }
+						if (Item.CacheType = ctTable) and TMarathonCacheObject(Item).System then
+						begin
+							ConnectName := TMarathonCacheObject(Item).ConnectionName;
+							if CheckConnected(ConnectName) then
+								ScriptAsOpenEditor(ConnectName,
+									ScriptAsSelect(ItemScriptContext(
+										FCurrentProject.Cache.ConnectionByName[ConnectName], Item),
+										TMarathonCacheObject(Item).ObjectName), True);
+						end
+						else
+							{ One call for every kind of object, since OpenObject takes the
+							  kind. A node under a schema branch carries the schema it was
+							  listed from; one under the connection's own headers does not,
+							  and an empty schema means whatever the search path reaches. }
+							OpenObject(Item.Caption, TMarathonCacheObject(Item).ConnectionName,
+								Item.CacheType, SchemaOfNode(Item));
 
 					ctRecentItem:
 						{ A recent entry remembers what kind of object it was, and its

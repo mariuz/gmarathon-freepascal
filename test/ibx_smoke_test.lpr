@@ -3805,6 +3805,25 @@ begin
         Q.Open;
         Q.Close;
 
+        { The same template against a system table, because that is what
+          double-clicking one in the tree's "System Tables" branch now runs -
+          it has no editor worth opening, so opening it reads it instead. The
+          name is the point: RDB$RELATIONS carries a dollar, so this fails if
+          the identifier is ever quoted or cased wrongly on the way through. }
+        Script := ScriptAsSelect(Ctx, 'RDB$RELATIONS');
+        RequireInDDL(Script, 'select first 100', 'system table SELECT template');
+        RequireInDDL(Script, 'RDB$RELATIONS', 'system table name');
+        EnsureTransaction;
+        Q.SQL.Text := StripTrailingSemicolon(Script);
+        Q.Open;
+        if Q.EOF then
+        begin
+          WriteLn('FAIL: select from RDB$RELATIONS returned nothing');
+          Halt(1);
+        end;
+        Q.Close;
+        WriteLn('  ok   a system table can be selected from by name');
+
         Script := ScriptAsInsert(Ctx, 'IBX_SMOKE_TEST');
         RequireInDDL(Script, 'insert into', 'INSERT template');
         RequireInDDL(Script, ':ID', 'INSERT parameter');
