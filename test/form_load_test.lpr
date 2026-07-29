@@ -5014,6 +5014,29 @@ begin
     { And it must not have become a document tab by accident. }
     Check(not Documents.IsHosted(Explorer),
       'and is not also opened as a document tab');
+
+    { Where focus lands once it is docked, which is the whole reason
+      TfrmDatabaseExplorer.OperatingView exists. GetParentForm walks up while
+      Parent <> nil without stopping at an embedded TCustomForm, so it reaches
+      the shell rather than the explorer - which means TWinControl.SetFocus
+      records the focused control in the shell's ActiveControl and never in the
+      explorer's. Asking the explorer's own, as CanDoBrowserOperation and
+      DoBrowserOperation used to, answered nil for the life of the program and
+      greyed out every item in the tree's context menu. }
+    Check(GetParentForm(Explorer.tvDatabase) = frmMarathonMain,
+      'the tree''s parent form is the shell, not the docked explorer');
+    Check(GetParentForm(Explorer.tvDatabase) <> TCustomForm(Explorer),
+      'so the explorer is not the form that tracks its own focus');
+    if Explorer.tvDatabase.CanFocus then
+    begin
+      Explorer.tvDatabase.SetFocus;
+      Check(frmMarathonMain.ActiveControl = Explorer.tvDatabase,
+        'focusing the tree sets the shell''s ActiveControl');
+      Check(Explorer.ActiveControl <> Explorer.tvDatabase,
+        'and never the docked explorer''s own - the old test for it');
+    end
+    else
+      WriteLn('  .... skipped: the tree cannot take focus in this environment');
   finally
     if Assigned(Explorer) then
     begin

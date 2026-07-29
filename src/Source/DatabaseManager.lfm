@@ -858,6 +858,7 @@ object frmDatabaseExplorer: TfrmDatabaseExplorer
           OnDeletion = lvDatabaseDeletion
           OnKeyDown = lvDatabaseKeyDown
           OnKeyPress = lvDatabaseKeyPress
+          OnMouseDown = lvDatabaseMouseDown
         end
       end
     end

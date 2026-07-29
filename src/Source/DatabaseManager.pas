@@ -130,6 +130,7 @@ type
 		procedure tvDatabaseExpanding(Sender: TObject; Node: TTreeNode;	var AllowExpansion: Boolean);
 		procedure tvDatabaseDblClick(Sender: TObject);
 		procedure lvDatabaseDblClick(Sender: TObject);
+		procedure lvDatabaseMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 		procedure FormResize(Sender: TObject);
 		procedure lnkOpenProjectClick(Sender: TObject);
 		procedure lnkCreateNewProjectClick(Sender: TObject);
@@ -158,6 +159,8 @@ type
 		FOldListisVisible : Boolean;
 		procedure SavePositions;
 		function GetUpdateActiveConnection : String;
+		{ Whichever of the two views the user is working in, or nil. }
+		function OperatingView : TWinControl;
 		function CanDoBrowserOperation(BrowserOp : TGSSCacheOp) : Boolean;
 		procedure DoBrowserOperation(Op: TGSSCacheOp);
 		procedure SearchEventHandler(Sender : TObject; Event : TSearchEventType; Status : String; Item : TResultItem);
@@ -521,6 +524,15 @@ begin
 	begin
 		T := tvDatabase.GetNodeAt(X, Y);
 		tvDatabase.Selected := T;
+		{ Delphi focused a tree on any click; LCL/gtk2 focuses it on a left click
+		  only. OperatingView answers nil - and so every operation answers False -
+		  until one of the two views is focused, so without this a right click
+		  into a tree that was never left-clicked raises a context menu with every
+		  item greyed - New, Open, Design, all of them - and nothing to say why.
+		  This is the half that puts focus somewhere; OperatingView is the half
+		  that looks for it in the form LCL actually recorded it on. }
+		if tvDatabase.CanFocus then
+			tvDatabase.SetFocus;
 	end;
 end;
 
@@ -1002,6 +1014,42 @@ begin
 	DoBrowserOperation(opPrintPreview);
 end;
 
+function TfrmDatabaseExplorer.OperatingView : TWinControl;
+var
+	F: TCustomForm;
+
+begin
+	Result := nil;
+	{ Not Self.ActiveControl, which is what every caller below used to ask and
+	  which is nil here for the whole life of the program.
+
+	  DocumentHost reparents every document form into a panel of the main
+	  window, so this form has a Parent. LCL's GetParentForm walks up while
+	  Parent <> nil and does not stop at an embedded TCustomForm, so
+	  TWinControl.SetFocus focuses through frmMarathonMain and records the
+	  control in *its* ActiveControl. Nothing ever writes this form's own.
+
+	  The effect was that every operation on a tree or list item answered
+	  False: the context menu came up with Open, Design, Drop and the rest all
+	  greyed, and double-clicking an item did nothing, because that is gated on
+	  the same question. }
+	F := GetParentForm(tvDatabase);
+	if Assigned(F) then
+	begin
+		if F.ActiveControl = tvDatabase then
+			Exit(tvDatabase);
+		if F.ActiveControl = lvDatabase then
+			Exit(lvDatabase);
+	end;
+	{ Undocked - a floating explorer is its own top-level form and does keep
+	  ActiveControl, so this is still the right question to ask then. }
+	if ActiveControl = tvDatabase then
+		Result := tvDatabase
+	else
+		if ActiveControl = lvDatabase then
+			Result := lvDatabase;
+end;
+
 function TfrmDatabaseExplorer.CanDoBrowserOperation(BrowserOp : TGSSCacheOp): Boolean;
 var
 	tnvNode: TMarathonTreeNode;
@@ -1010,7 +1058,7 @@ var
 	loop: integer;
 
 begin
-	if ActiveControl = tvDatabase then
+	if OperatingView = tvDatabase then
 	begin
 		if assigned(tvDatabase.Selected) then
 		begin
@@ -1030,7 +1078,7 @@ begin
 			result := false;
 	end
 	else
-		if ActiveControl = lvDatabase then
+		if OperatingView = lvDatabase then
 		begin
 			if lvDatabase.SelCount = 0 then
 				result := false
@@ -1122,7 +1170,7 @@ var
 
 begin
 	try
-		if ActiveControl = tvDatabase then
+		if OperatingView = tvDatabase then
 		begin
 			tnvNode := TMarathonTreeNode(tvDatabase.Selected.Data);
 			if assigned(tnvNode) then
@@ -1133,7 +1181,7 @@ begin
 			end
 		end
 		else
-			if ActiveControl = lvDatabase then
+			if OperatingView = lvDatabase then
 			begin
 				if lvDatabase.SelCount = 1 then
 				begin
@@ -1385,6 +1433,27 @@ begin
 	end;
 end;
 
+procedure TfrmDatabaseExplorer.lvDatabaseMouseDown(Sender: TObject;
+	Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+	Itm: TListItem;
+
+begin
+	if Button = mbRight then
+	begin
+		{ The same two things tvDatabaseMouseDown does, for the same reasons: act
+		  on what was right-clicked rather than on whatever happened to be
+		  selected, and focus the view so CanDoBrowserOperation will answer at
+		  all. Selection is left alone when the click missed every item, because
+		  clearing it would disable the menu that is about to be shown. }
+		Itm := lvDatabase.GetItemAt(X, Y);
+		if Assigned(Itm) then
+			lvDatabase.Selected := Itm;
+		if lvDatabase.CanFocus then
+			lvDatabase.SetFocus;
+	end;
+end;
+
 procedure TfrmDatabaseExplorer.lvDatabaseDblClick(Sender: TObject);
 begin
 	if lvDatabase.Selected <> nil then
@@ -1561,7 +1630,7 @@ var
 	loop: integer;
 
 begin
-	if ActiveControl = tvDatabase then
+	if OperatingView = tvDatabase then
 	begin
 		if assigned(tvDatabase.Selected) then
 		begin
@@ -1584,7 +1653,7 @@ begin
 			result := false;
 	end
 	else
-		if ActiveControl = lvDatabase then
+		if OperatingView = lvDatabase then
 		begin
 			if lvDatabase.SelCount = 0 then
 				result := false
@@ -2176,7 +2245,7 @@ var
 begin
 	Items := TGimbalIDESelectedItems.Create;
 	Result := Items;
-	if ActiveControl = tvDatabase then
+	if OperatingView = tvDatabase then
 	begin
 		tnvNode := TMarathonTreeNode(tvDatabase.Selected.Data);
 		if assigned(tnvNode) then
@@ -2200,7 +2269,7 @@ begin
 	end
 	else
 	begin
-		if ActiveControl = lvDatabase then
+		if OperatingView = lvDatabase then
 		begin
 			if lvDatabase.SelCount = 1 then
 			begin
