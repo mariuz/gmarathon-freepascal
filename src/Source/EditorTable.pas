@@ -139,6 +139,11 @@ type
 		{ The update statements the data grid writes through, built from the
 		  table's columns and key when the Data tab opens. }
 		FDataUpdates: TIBUpdateSQL;
+		{ The "what this tab will accept" line above the grid. Created on demand. }
+		FDataNotice: TLabel;
+		{ True when rows may be added but not changed or deleted - a table with
+		  no primary key. }
+		FDataInsertOnly: Boolean;
 		{ Rows deleted in the grid and not yet written.
 
 		  Recorded as the user deletes them rather than read back afterwards,
@@ -199,6 +204,10 @@ type
 		  done was to read it back afterwards. }
 		function PendingDataChanges: String;
 		function HasPendingDataChanges: Boolean;
+		{ What the Data tab is saying about why it cannot be written to, or ''
+		  when it can. Public so the harness can check the refusal is explained
+		  and not merely performed. }
+		function DataReadOnlyNotice: String;
 		{ How many rows are waiting, so the question can say so. }
 		function PendingChangeCount: Integer;
 		{ Runs them, or throws them away. Both leave the grid showing what the
@@ -207,6 +216,11 @@ type
 		procedure CancelDataChanges;
 		procedure CollectKeyColumns(AList: TStrings);
 		procedure ConfigureDataUpdates;
+		{ Says what the Data tab will and will not accept, or clears the notice
+		  when it accepts everything. The label is created on demand, so no .lfm
+		  has to change for it. }
+		procedure ShowDataNotice(const AReason: String; AInsertAllowed: Boolean);
+		procedure DataBeforeEdit(DataSet: TDataSet);
 		procedure CollectDataChanges(AList: TRowEditList);
 		function CanSaveDoco: Boolean; override;
 		procedure DoSaveDoco; override;
@@ -3067,6 +3081,52 @@ end;
   the grid is left read-only rather than given statements that would match
   every row that looks alike - the same rule RowEdits applies to the preview,
   for the same reason. }
+{ The read-only notice, and the navigator buttons that go with it.
+
+  Leaving Insert and Delete on a grid that cannot write them is what made this
+  worth doing: pressing + appeared to add a row and then silently refused it,
+  with nothing on screen to say the table was read-only or why. An empty reason
+  means it is writable, and everything goes back. }
+function TfrmTables.DataReadOnlyNotice: String;
+begin
+  if Assigned(FDataNotice) and FDataNotice.Visible then
+    Result := FDataNotice.Caption
+  else
+    Result := '';
+end;
+
+procedure TfrmTables.ShowDataNotice(const AReason: String;
+  AInsertAllowed: Boolean);
+begin
+  if AReason = '' then
+  begin
+    navDataView.VisibleButtons := [nbFirst, nbPrior, nbNext, nbLast, nbInsert,
+      nbDelete, nbEdit, nbPost, nbCancel];
+    if Assigned(FDataNotice) then
+      FDataNotice.Visible := False;
+    Exit;
+  end;
+
+  { Only the buttons that cannot work go. Adding a row needs no key - it makes
+    the row rather than finding one - so Insert stays even when Edit and Delete
+    cannot, along with the Post and Cancel that finish it. }
+  if AInsertAllowed then
+    navDataView.VisibleButtons := [nbFirst, nbPrior, nbNext, nbLast, nbInsert,
+      nbPost, nbCancel]
+  else
+    navDataView.VisibleButtons := [nbFirst, nbPrior, nbNext, nbLast];
+  if not Assigned(FDataNotice) then
+  begin
+    FDataNotice := TLabel.Create(Self);
+    FDataNotice.Parent := pnlDataView;
+    FDataNotice.Left := btnRefresh.Left + btnRefresh.Width + 12;
+    FDataNotice.Top := btnRefresh.Top + 4;
+    FDataNotice.Font.Color := clMaroon;
+  end;
+  FDataNotice.Caption := AReason;
+  FDataNotice.Visible := True;
+end;
+
 procedure TfrmTables.ConfigureDataUpdates;
 var
   Keys, Cols: TStringList;
@@ -3078,14 +3138,16 @@ begin
   Cols := TStringList.Create;
   try
     CollectKeyColumns(Keys);
-    { A table with no primary key stays read-only. }
-    if Keys.Count = 0 then
-      Exit;
+    FDataInsertOnly := Keys.Count = 0;
 
     for Idx := 0 to tblTableData.FieldCount - 1 do
       Cols.Add(tblTableData.Fields[Idx].FieldName);
     if Cols.Count = 0 then
+    begin
+      ShowDataNotice('Read-only: no columns were read for ' + FObjectName + '.',
+        False);
       Exit;
+    end;
 
     SetList := '';
     ColList := '';
@@ -3115,15 +3177,42 @@ begin
 
     if not Assigned(FDataUpdates) then
       FDataUpdates := TIBUpdateSQL.Create(Self);
-    FDataUpdates.ModifySQL.Text := 'update ' + QualifiedObjectName +
-      ' set ' + SetList + ' where ' + KeyList;
+
+    { An INSERT names the columns and supplies the values; nothing in it has to
+      find an existing row, so it is written whether or not there is a key.
+      This is the whole difference between the three statements, and blocking
+      all of them because one cannot be written was wrong - every other tool
+      lets you add rows to a keyless table, because SQL does. }
     FDataUpdates.InsertSQL.Text := 'insert into ' + QualifiedObjectName +
       ' (' + ColList + ') values (' + ValueList + ')';
-    FDataUpdates.DeleteSQL.Text := 'delete from ' + QualifiedObjectName +
-      ' where ' + KeyList;
+
+    if FDataInsertOnly then
+    begin
+      { No key, so there is no WHERE that picks out one row. Leaving these
+        empty is what stops an UPDATE or DELETE being generated that would
+        match every row that looks alike - the same rule RowEdits applies to
+        the preview. }
+      FDataUpdates.ModifySQL.Clear;
+      FDataUpdates.DeleteSQL.Clear;
+      ShowDataNotice('Rows can be added. Existing rows cannot be changed or '
+        + 'deleted: ' + FObjectName + ' has no primary key, so there is no way '
+        + 'to say which row is meant.', True);
+    end
+    else
+    begin
+      FDataUpdates.ModifySQL.Text := 'update ' + QualifiedObjectName +
+        ' set ' + SetList + ' where ' + KeyList;
+      FDataUpdates.DeleteSQL.Text := 'delete from ' + QualifiedObjectName +
+        ' where ' + KeyList;
+      ShowDataNotice('', True);
+    end;
+
     tblTableData.UpdateObject := FDataUpdates;
     { Deletions are noted as they are made; see FPendingDeletes. }
     tblTableData.BeforeDelete := DataBeforeDelete;
+    { And changes to an existing row are refused outright when there is no key,
+      rather than accepted by the grid and rejected on apply. }
+    tblTableData.BeforeEdit := DataBeforeEdit;
   finally
     Keys.Free;
     Cols.Free;
@@ -3134,6 +3223,20 @@ end;
 
   Called before the delete, which is the only moment its key values are still
   reachable - afterwards the row is gone from every view of the dataset. }
+procedure TfrmTables.DataBeforeEdit(DataSet: TDataSet);
+begin
+  { Inserting is not editing: a row being added is in dsInsert and never
+    reaches here, so this only ever refuses a change to a row that already
+    exists - which is the one that would need a key to write back. }
+  if FDataInsertOnly and (DataSet.State <> dsInsert) then
+  begin
+    ShowDataNotice('Rows can be added. Existing rows cannot be changed or '
+      + 'deleted: ' + FObjectName + ' has no primary key, so there is no way '
+      + 'to say which row is meant.', True);
+    Abort;
+  end;
+end;
+
 procedure TfrmTables.DataBeforeDelete(DataSet: TDataSet);
 var
   Keys: TStringList;
@@ -3141,6 +3244,12 @@ var
   F: TField;
   E: TRowEdit;
 begin
+  { Nothing safe to write, so do not let the row go from the grid either -
+    recording a pending delete that RowEdits would refuse only moves the
+    refusal to Apply, long after the row appeared to vanish. }
+  if FDataInsertOnly then
+    Abort;
+
   if not Assigned(FPendingDeletes) then
     FPendingDeletes := TRowEditList.Create;
   Keys := TStringList.Create;

@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces, DBCtrls, IBUpdateSQL;
 
 var
   Failures: Integer = 0;
@@ -1939,9 +1939,94 @@ begin
     end;
     { No update object means the dataset refuses writes, which is the refusal:
       a user cannot type a change that could not be written back safely. }
-    Check(F.tblTableData.UpdateObject = nil,
-      'the grid is given no way to write to a table with no primary key');
-    Check(not F.HasPendingDataChanges, 'and has nothing pending');
+    { An INSERT names its columns and supplies values; nothing in it has to
+      find an existing row, so it is written whether or not there is a key.
+      Only UPDATE and DELETE need one. Refusing all three was wrong - every
+      other tool lets you add rows to a keyless table, because SQL does. }
+    Check(F.tblTableData.UpdateObject <> nil,
+      'a keyless table still gets an update object, for inserting');
+    Check(Trim(TIBUpdateSQL(F.tblTableData.UpdateObject).InsertSQL.Text) <> '',
+      'with an INSERT, which needs no key');
+    Check(Trim(TIBUpdateSQL(F.tblTableData.UpdateObject).ModifySQL.Text) = '',
+      'but no UPDATE, which would match every row that looks alike');
+    Check(Trim(TIBUpdateSQL(F.tblTableData.UpdateObject).DeleteSQL.Text) = '',
+      'and no DELETE, for the same reason');
+    Check(not F.HasPendingDataChanges, 'and nothing is pending yet');
+
+    Check(nbInsert in F.navDataView.VisibleButtons,
+      'the navigator still offers Insert');
+    Check(not (nbDelete in F.navDataView.VisibleButtons),
+      'but not Delete');
+    Check(not (nbEdit in F.navDataView.VisibleButtons), 'nor Edit');
+    Check(F.DataReadOnlyNotice <> '', 'and a notice says what is allowed');
+    Check(Pos('NOKEY_TAB', F.DataReadOnlyNotice) > 0, 'naming the table');
+    Check(Pos('added', F.DataReadOnlyNotice) > 0,
+      'and saying rows can still be added');
+
+    { The point of all of it: a row actually lands in the table. }
+    try
+      F.tblTableData.Append;
+      F.tblTableData.FieldByName('A').AsInteger := 42;
+      F.tblTableData.FieldByName('B').AsString := 'added';
+      F.tblTableData.Post;
+      Check(F.HasPendingDataChanges, 'a new row is held as a pending change');
+      F.ApplyDataChanges;
+      Check(True, 'and applying it does not raise');
+    except
+      on E: Exception do
+        Check(False, 'inserting into a keyless table (' + E.ClassName + ': ' +
+          E.Message + ')');
+    end;
+  finally
+    F.Free;
+  end;
+
+  { Read it back through a fresh query rather than trusting the grid. }
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Conn.Connection;
+    Q.Transaction := Conn.Transaction;
+    Q.AllowAutoActivateTransaction := True;
+    Q.SQL.Text := 'select count(*) from NOKEY_TAB where A = 42 and B = ''added''';
+    Q.Open;
+    Check(Q.Fields[0].AsInteger = 1,
+      'and the row is really in the keyless table afterwards');
+    Q.Close;
+  finally
+    Q.Free;
+  end;
+
+  { And the other way round, or the notice would be a one-way door: a table
+    that does have a key gets its buttons back and says nothing. }
+  Q := TIBQuery.Create(nil);
+  try
+    Q.Database := Conn.Connection;
+    Q.Transaction := Conn.Transaction;
+    Q.AllowAutoActivateTransaction := True;
+    Q.SQL.Text := 'execute block as begin ' +
+      'if (not exists(select 1 from rdb$relations where rdb$relation_name = ''WITHKEY_TAB'')) then ' +
+      '  execute statement ''create table WITHKEY_TAB (A integer not null primary key, B varchar(10))''; end';
+    Q.ExecSQL;
+    if Assigned(Q.Transaction) then
+      TIBTransaction(Q.Transaction).CommitRetaining;
+  finally
+    Q.Free;
+  end;
+
+  F := TfrmTables.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    F.LoadTable('WITHKEY_TAB');
+    F.pgObjectEditor.ActivePage := F.tsData;
+    F.pgObjectEditorChange(F.pgObjectEditor);
+    if F.tblTableData.Active then
+    begin
+      Check(F.tblTableData.UpdateObject <> nil,
+        'a table with a key can still be written to');
+      Check(nbInsert in F.navDataView.VisibleButtons,
+        'the navigator offers Insert again');
+      Check(F.DataReadOnlyNotice = '', 'and no read-only notice is shown');
+    end;
   finally
     F.Free;
   end;
