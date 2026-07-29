@@ -9,7 +9,7 @@ Marathon is a SQL IDE and database administration tool for Firebird databases, p
 ## Build Commands
 
 ```bash
-# One-time: fetch the vendored IBX packages (git submodules)
+# One-time: fetch the vendored IBX packages (three git submodules)
 git submodule update --init --recursive
 
 # Register the IBX packages with lazbuild (one-time per machine)
@@ -24,6 +24,27 @@ lazbuild --build-mode=Release src/Source/marathon.lpi
 ```
 
 Required Lazarus packages: `SynEdit`, `LCL`, `Printer4Lazarus`, `TAChartLazarusPkg`, `ibexpress`, `fbintf` (the latter two are vendored as git submodules under `lib/ibx4lazarus` and `lib/fbintf` — see [MWASoftware/ibx4lazarus](https://github.com/MWASoftware/ibx4lazarus)).
+
+### Opening the project in the Lazarus IDE
+
+Those two package links are all `lazbuild` and CI need, and they are **not** enough to open the project in the IDE. A package *link* makes a package available to build against; the form designer can only place a component whose **design-time** package is compiled into the IDE binary. Without that, loading any form carrying IBX components dies with `Unable to find the component class "TIBQuery"` / `It is needed by unit: .../EditorGrant.pas`, offering only "Cancel loading this component", and it recurs form by form — most of the 75 `.lfm` files hold a `TIBQuery` or `TIBDatabase`.
+
+```bash
+# One-time per machine, on top of the two links above
+lazbuild --add-package-link lib/ibcontrols/ibcontrols.lpk
+lazbuild --add-package-link lib/ibx4lazarus/ibLegacyServices.lpk
+lazbuild --add-package-link lib/ibx4lazarus/iblocaldb.lpk
+lazbuild --add-package lib/ibx4lazarus/dclibx.lpk --build-ide=   # a few minutes
+
+startlazarus src/Source/marathon.lpi    # NOT lazarus-ide
+```
+
+Four things that cost time to work out:
+
+- `ibexpress.lpk` is `RunTimeOnly` and **cannot** be installed — `lazbuild` answers `Package "..." is only for runtime`. `dclibx.lpk` is the design-time half, and it is what registers `TIBQuery` and friends (`design/IBDBReg.pas`).
+- `dclibx` requires `ibcontrols`, which upstream moved out of `ibx4lazarus` into its own repository (commit `8ca0143`, "Move ibcontrols to new repository"), so the `ibx4lazarus` checkout alone gives `Broken dependency: dclibx->ibcontrols`. Hence the **third submodule**, `lib/ibcontrols` → [MWASoftware/ibcontrols](https://github.com/MWASoftware/ibcontrols). Marathon uses none of its components; only six of `dclibx`'s own property editors (`ibselectsqleditor`, `ibinsertsqleditor`, `ibdataseteditor`, …) reference `IBDynamicGrid`/`IBLookupComboEditBox`. It versions independently (R1-0-1 against ibx4lazarus's R2-7-12) and depends only on `IDEIntf`/`LCL`/`FCL`, so there is nothing to pin and nothing to skew.
+- `--build-ide=` writes a private IDE to `~/.lazarus/bin/lazarus` and leaves the system install untouched. `startlazarus` is the launcher that prefers the private build — `lazarus-ide` runs the system one, without the packages. Undo by deleting `~/.lazarus/bin`.
+- **Never pipe `lazbuild`.** It exits non-zero on these failures, so `lazbuild ... | tail` reports `tail`'s status and a broken dependency reads as success. Redirect to a file and check `$?` instead. Note a failed `--add-package` still leaves the package in `StaticAutoInstallPackages` in `~/.lazarus/miscellaneousoptions.xml`, which breaks the *next* IDE self-rebuild; remove the entry by hand if the build failed.
 
 ## Tests
 

@@ -34,7 +34,7 @@ See [ROADMAP.md](ROADMAP.md) for the full feature history and status.
 ## Building
 
 ```bash
-# One-time: fetch the vendored IBX packages (git submodules)
+# One-time: fetch the vendored IBX packages (three git submodules)
 git submodule update --init --recursive
 
 # Register the IBX packages with lazbuild (one-time per machine)
@@ -47,6 +47,53 @@ lazbuild --build-mode=Debug src/Source/marathon.lpi
 # Release build
 lazbuild --build-mode=Release src/Source/marathon.lpi
 ```
+
+### Working in the Lazarus IDE
+
+The two package links above are all `lazbuild` needs, and all CI needs. They are
+*not* enough to open the project in the IDE: registering a link makes a package
+available to build against, while the form designer can only place a component
+whose design-time package is compiled into the IDE binary. Without that, opening
+any form carrying IBX components fails with
+
+```
+Unable to find the component class "TIBQuery".
+It is not registered via RegisterClass and no lfm was found.
+It is needed by unit: .../src/Source/EditorGrant.pas
+```
+
+and the only button is "Cancel loading this component". It recurs form by form —
+most of the 75 `.lfm` files carry a `TIBQuery` or `TIBDatabase`.
+
+The design-time package is `dclibx.lpk`, and it depends on `ibcontrols`, which
+upstream moved out of `ibx4lazarus` into its own repository. That is why there is
+a third submodule: `dclibx` will not build without it, even though Marathon uses
+none of the `ibcontrols` components itself — only six of `dclibx`'s own property
+editors do.
+
+```bash
+# One-time per machine, on top of the two links above
+lazbuild --add-package-link lib/ibcontrols/ibcontrols.lpk
+lazbuild --add-package-link lib/ibx4lazarus/ibLegacyServices.lpk
+lazbuild --add-package-link lib/ibx4lazarus/iblocaldb.lpk
+
+# Install the design-time package and rebuild the IDE (a few minutes)
+lazbuild --add-package lib/ibx4lazarus/dclibx.lpk --build-ide=
+
+# Then open the project with startlazarus, NOT lazarus-ide
+startlazarus src/Source/marathon.lpi
+```
+
+The rebuild writes a private IDE to `~/.lazarus/bin/lazarus` and leaves the
+system install (`/usr/share/lazarus/...`) untouched; `startlazarus` is the
+launcher that prefers the private build, which is why `lazarus-ide` would still
+give you the old one. To undo the whole thing, delete `~/.lazarus/bin`.
+
+Two traps worth knowing. `ibexpress.lpk` is the runtime package and cannot be
+installed — `lazbuild` answers `Package "..." is only for runtime`; `dclibx` is
+the design-time half. And `lazbuild` exits non-zero on these failures, so run it
+without a pipe: `lazbuild ... | tail` reports `tail`'s exit code and a broken
+dependency looks like success.
 
 ### Running
 
@@ -75,6 +122,9 @@ nothing when unset.
 - Lazarus packages: `SynEdit`, `LCL`, `Printer4Lazarus`, `TAChartLazarusPkg`,
   `ibexpress`, `fbintf` (the latter two are vendored as git submodules under
   `lib/ibx4lazarus` and `lib/fbintf`)
+- `lib/ibcontrols` is a third submodule, needed only to open the project in the
+  Lazarus IDE — see [Working in the Lazarus IDE](#working-in-the-lazarus-ide).
+  Building from the command line and CI do not use it.
 
 ## Testing
 
