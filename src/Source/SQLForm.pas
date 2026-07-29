@@ -377,7 +377,7 @@ type
 
 implementation
 
-uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm, GridColumnsDialog, MenuModule;
+uses Globals, HelpMap, GSSRegistry, MarathonIDE, StatementHistory, ScriptExecutive, SaveFileFormat, BlobViewer, MarathonProjectCache, MarathonProjectCacheTypes, SQLParamsDialog, SQLParamTypes, IBSQL, ScriptAs, QueryBuilderForm, GridColumnsDialog, MenuModule, DocumentHost;
 
 {$R *.lfm}
 
@@ -671,19 +671,25 @@ begin
   pnlMessages.Align := alClient;
   ShowResultsTab(False);
 
-  if Assigned(dmMenus) and Assigned(dmMenus.mnuDataMenu) then
+  { mnuDataMenu belongs to the data module and is shared by every editor that
+    shows rows, so the items go on once and are owned by the module - not by
+    whichever form happened to be built first. Adding them per form appended
+    another three each time an editor opened, and left them behind pointing at
+    a freed form when it closed. }
+  if Assigned(dmMenus) and Assigned(dmMenus.mnuDataMenu) and
+     (dmMenus.mnuDataMenu.Items.Find('View as &Datasheet') = nil) then
   begin
-    Item := TMenuItem.Create(Self);
+    Item := TMenuItem.Create(dmMenus);
     Item.Caption := '-';
     dmMenus.mnuDataMenu.Items.Add(Item);
 
-    Item := TMenuItem.Create(Self);
+    Item := TMenuItem.Create(dmMenus);
     Item.Caption := 'View as &Datasheet';
     Item.Tag := 0;
     Item.OnClick := ResultViewClick;
     dmMenus.mnuDataMenu.Items.Add(Item);
 
-    Item := TMenuItem.Create(Self);
+    Item := TMenuItem.Create(dmMenus);
     Item.Caption := 'View as &Form';
     Item.Tag := 1;
     Item.OnClick := ResultViewClick;
@@ -692,15 +698,28 @@ begin
 end;
 
 procedure TfrmSQLForm.ResultViewClick(Sender: TObject);
+var
+  Doc: TForm;
 begin
   if not (Sender is TMenuItem) then
     Exit;
-  if TMenuItem(Sender).Tag = 1 then
-    nbResults.ActivePage := nbpForm
-  else
-    nbResults.ActivePage := nbpDatasheet;
-  { Choosing a view is also asking to look at the rows. }
-  ShowResultsTab(False);
+  { The editor in front, not the one that built the menu - the items are on a
+    menu the data module owns and every editor shares, so Self is whichever
+    form happened to be created first and may be long gone. }
+  Doc := nil;
+  if Assigned(Documents) then
+    Doc := Documents.ActiveDocument;
+  if not (Doc is TfrmSQLForm) then
+    Exit;
+  with TfrmSQLForm(Doc) do
+  begin
+    if TMenuItem(Sender).Tag = 1 then
+      nbResults.ActivePage := nbpForm
+    else
+      nbResults.ActivePage := nbpDatasheet;
+    { Choosing a view is also asking to look at the rows. }
+    ShowResultsTab(False);
+  end;
 end;
 
 procedure TfrmSQLForm.ShowResultsTab(AMessages: Boolean);

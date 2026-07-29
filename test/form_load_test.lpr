@@ -2086,6 +2086,8 @@ end;
 procedure CheckDataGridMenu;
 var
   F: TfrmTables;
+  S: TfrmSQLForm;
+  Idx, Named: Integer;
 begin
   WriteLn('Data grid menu:');
   F := TfrmTables.Create(nil);
@@ -2101,9 +2103,36 @@ begin
       { And that menu is not a stub: it has to be worth showing. }
       Check(dmMenus.mnuDataMenu.Items.Count >= 4,
         'with something on it (' + IntToStr(dmMenus.mnuDataMenu.Items.Count) + ')');
+
+      { The View as items go on once and belong to the module, not to a form.
+        Added per form they multiplied with every editor opened and were left
+        behind pointing at a freed one. }
+      Named := 0;
+      for Idx := 0 to dmMenus.mnuDataMenu.Items.Count - 1 do
+        if dmMenus.mnuDataMenu.Items[Idx].Caption = 'View as &Datasheet' then
+          Inc(Named);
+      Check(Named <= 1, 'the view items appear at most once (' +
+        IntToStr(Named) + ')');
+      for Idx := 0 to dmMenus.mnuDataMenu.Items.Count - 1 do
+        if dmMenus.mnuDataMenu.Items[Idx].Caption = 'View as &Datasheet' then
+          Check(dmMenus.mnuDataMenu.Items[Idx].Owner = dmMenus,
+            'and are owned by the data module, so no form can take them away');
     end;
   finally
     F.Free;
+  end;
+
+  { Opening several editors must not keep appending to the shared menu. }
+  if Assigned(dmMenus) then
+  begin
+    Idx := dmMenus.mnuDataMenu.Items.Count;
+    S := TfrmSQLForm.Create(nil);
+    S.Free;
+    S := TfrmSQLForm.Create(nil);
+    S.Free;
+    Check(dmMenus.mnuDataMenu.Items.Count = Idx,
+      'and two more editors add nothing further (' +
+      IntToStr(dmMenus.mnuDataMenu.Items.Count) + ' vs ' + IntToStr(Idx) + ')');
   end;
 end;
 
