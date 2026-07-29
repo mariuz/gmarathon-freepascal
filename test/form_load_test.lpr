@@ -42,7 +42,7 @@ uses
   SaveFileFormat, ScriptEditorHost, ScriptRecorder, SecureDBLogin,
   SelectConnectionDialog, SessionMonitor, SplashForm, StatementHistory,
   StoredProcParamWarn, StoredProcedureParams, SyntaxHelp,
-  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces, DBCtrls, IBUpdateSQL, CommandBar;
+  UDFInputParam, UserEditor, WindowList, TableDesignerForm, TableDesign, TableDesignIO, CommandPalette, SynEdit, BaseDocumentDataAwareForm, PrintDocument, PrintRenderer, QueryBuilderForm, QueryModel, IBQuery, KeyBindingEditor, KeyBindings, LCLType, CodeTemplates, IconScaling, SchemaDiagramForm, SchemaDiagram, PlanUnit, DiagramTree, IBDatabase, MetaExtractUnit, ibxscript, IBSQL, SessionAdmin, SafeDisconnect, MetaDataSearchObject, ScriptAs, SystemPrivilegesWindow, ImportFlatFileDialog, ServerDashboard, ServerMetrics, GridColumnsDialog, ScriptExecutive, IBDebuggerVM, CreateDatabase, MarathonInternalInterfaces, DBCtrls, IBUpdateSQL, CommandBar, UITheme, ThemeApply;
 
 var
   Failures: Integer = 0;
@@ -5034,6 +5034,56 @@ begin
   CheckEditorTabsQueryTheRightSchemaColumn(Conn, TableName);
 end;
 
+{ Painting a real form, which is the half UITheme cannot check.
+
+  The LCL has no theming, so this is a walk over every control assigning
+  colours - and the things worth asserting are that it reaches nested controls,
+  that it is reversible, and that it leaves alone the colours that mean
+  something. }
+procedure CheckThemeApply;
+var
+  F: TfrmSQLForm;
+  LightBack, DarkBack, KeptColour: TColor;
+begin
+  WriteLn('Theme:');
+  F := TfrmSQLForm.Create(nil);
+  try
+    ApplyTheme(F, tkLight);
+    LightBack := F.edSQLStatement.Color;
+    ApplyTheme(F, tkDark);
+    DarkBack := F.edSQLStatement.Color;
+
+    Check(LightBack <> DarkBack, 'the editor changes colour with the theme');
+    Check(DarkBack = TColor(ThemeColor(tkDark, trSurface)),
+      'and takes the reading surface, not the window');
+    { The editor is several panels down from the form, so this is also the
+      check that the walk recurses rather than painting the top level. }
+    Check(F.edSQLStatement.Parent <> F, 'the editor is nested, so that was a walk');
+
+    { Reversible: switching back gives what was there before, or a theme is a
+      one-way door. }
+    ApplyTheme(F, tkLight);
+    Check(F.edSQLStatement.Color = LightBack, 'switching back restores it');
+
+    { And idempotent - applying twice is applying once. }
+    ApplyTheme(F, tkLight);
+    Check(F.edSQLStatement.Color = LightBack, 'applying twice changes nothing');
+
+    { A colour that carries meaning is left alone. The environment band that
+      marks a production connection is the case this exists for: repainting it
+      to match the theme would throw away the warning. }
+    F.pnlEnvironment.Color := clRed;
+    KeepColour(F.pnlEnvironment);
+    Check(ColourIsKept(F.pnlEnvironment), 'a control can opt out');
+    ApplyTheme(F, tkDark);
+    Check(F.pnlEnvironment.Color = clRed, 'and keeps its own colour');
+    Check(F.edSQLStatement.Color = DarkBack,
+      'while everything around it is still themed');
+  finally
+    F.Free;
+  end;
+end;
+
 { The one context toolbar that replaced four fixed ones.
 
   The point of the change is that the bar shows what the active document can
@@ -6545,6 +6595,7 @@ begin
   CheckConnectionGrouping;
   CheckHighDPIScaling;
   CheckIconResolutions;
+  CheckThemeApply;
   CheckCommandBar;
   CheckCompletionWiring;
   CheckEditorSearch;

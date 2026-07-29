@@ -485,6 +485,8 @@ type
     procedure ScreenActiveControlChanged(Sender: TObject; LastControl: TControl);
     { Switching tabs changes which document the menu acts on. }
     procedure DocumentTabChanged(Sender: TObject);
+    { View > Dark Theme. Repaints everything already open and remembers it. }
+    procedure ThemeItemClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Window1Click(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -761,6 +763,8 @@ type
 		FForceClose: Boolean;
 		{ The single context toolbar that replaced the four fixed ones. }
 		FCommandBar: TMarathonCommandBar;
+		{ View > Dark Theme, built in code - see FormCreate. }
+		FThemeItem: TMenuItem;
 		procedure MinMaxInfo(var Message: TLMessage); message WM_GETMINMAXINFO;
 		procedure QueryEndSession(var Message: TLMessage); message WM_QUERYENDSESSION;
 		procedure EndSession(var Message: TLMessage); message WM_ENDSESSION;
@@ -792,7 +796,7 @@ var
 
 implementation
 
-uses Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor, MarathonOptions, SQLForm;
+uses UITheme, ThemeApply, Globals, Tools, SyntaxHelp, CodeSnippets, MenuModule, HelpMap, WindowLists, BaseDocumentForm, DocumentHost, CommandPaletteDialog, MarathonProjectCache, MarathonProjectCacheTypes, MarathonIDE, GSSRegistry, FirebirdKeywords, KeyBindingEditor, MarathonOptions, SQLForm;
 
 {$R *.lfm}
 {$R marathonavi.RES}
@@ -851,6 +855,15 @@ begin
 	tlbrScript.Visible := False;
 	tlbrSQLEditor.Visible := False;
 	FCommandBar.ShowFor(nil);
+
+	{ The theme, and the switch for it. The menu item is built here rather than
+	  added to the .lfm for the same reason the command bar is: this window's
+	  .lfm is 4000 lines the IDE rewrites wholesale, and a line of code is
+	  easier to review than a diff of that. }
+	FThemeItem := TMenuItem.Create(Self);
+	FThemeItem.Caption := '&Dark Theme';
+	FThemeItem.OnClick := ThemeItemClick;
+	View1.Add(FThemeItem);
 	{ The dock is hidden until the object explorer moves into it, which is the
 	  next item of this phase. An empty panel beside the documents would look
 	  like something had failed to load. }
@@ -910,6 +923,16 @@ begin
 
 	LoadOptions;
 
+	{ After LoadOptions, not before: that is where gTheme is read, and painting
+	  first meant every window came up in the default whatever the setting
+	  said. }
+	FThemeItem.Checked := gTheme = tkDark;
+	ApplyThemeToOpenForms(gTheme);
+	{ One highlighter serves every editor, so it is set with the theme rather
+	  than per window. Left alone, dark mode keeps navy keywords on #1E1E1E. }
+	if Assigned(dmMenus) then
+		ApplySyntaxTheme(dmMenus.synHighlighter, gTheme);
+
 	Show;
 	Refresh;
 
@@ -951,6 +974,30 @@ begin
 		else
 			if gOpenProjectOnStartup then
 				MarathonIDEInstance.FileOpenProject;
+	end;
+end;
+
+procedure TfrmMarathonMain.ThemeItemClick(Sender: TObject);
+var
+	I: TRegistry;
+begin
+	if gTheme = tkDark then
+		gTheme := tkLight
+	else
+		gTheme := tkDark;
+	FThemeItem.Checked := gTheme = tkDark;
+	{ Everything open, not just this window: the point of a theme is that the
+	  application stops being two colours at once. }
+	ApplyThemeToOpenForms(gTheme);
+	if Assigned(dmMenus) then
+		ApplySyntaxTheme(dmMenus.synHighlighter, gTheme);
+
+	I := TRegistry.Create;
+	try
+		if I.OpenKey(REG_SETTINGS_BASE, True) then
+			I.WriteString('Theme', ThemeKindToText(gTheme));
+	finally
+		I.Free;
 	end;
 end;
 
@@ -1265,6 +1312,12 @@ begin
 			gShowQueryPlan := I.ReadBool('ShowQueryPlan');
 			gDebuggerEnabled := I.ReadBool('DebuggerEnabled');
 			gViewListInDatabaseManager := I.ReadBool('ViewListInDatabaseManager');
+			{ Absent, or naming a theme this build does not have, means light -
+			  which is what every existing installation gets. }
+			if I.ValueExists('Theme') then
+				gTheme := TextToThemeKind(I.ReadString('Theme'), tkLight)
+			else
+				gTheme := tkLight;
 
 			// Data
 			gDefaultView := I.ReadInteger('DefaultView');

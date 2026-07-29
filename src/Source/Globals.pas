@@ -19,7 +19,7 @@ unit Globals;
 
 interface
 
-uses {$IFDEF WINDOWS}Windows,{$ENDIF} Classes, SysUtils, Graphics, ImgList, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, IBCustomDataSet, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages;
+uses {$IFDEF WINDOWS}Windows,{$ENDIF} Classes, SysUtils, Graphics, ImgList, Registry, ActnList, Dialogs, ExtCtrls, DB, Forms, Controls, Comctrls, DBGrids, StdCtrls, SynEdit, SynEditTypes, SynGutter, StrUtils, IBDatabase, IBQuery, IBCustomDataSet, SyntaxMemoWithStuff2, DOM, XMLRead, XMLWrite, adbpedit, GSSRegistry, MarathonProjectCacheTypes, MenuModule, LMessages, UITheme;
 
 const
   WM_USER = 1024;
@@ -41,6 +41,9 @@ var
 	gLastProject: String;
 	gDebuggerEnabled: Boolean;
 	gViewListInDatabaseManager: Boolean;
+	{ Light or dark. Held as the enum rather than a boolean so a third palette
+	  does not have to break the setting - see UITheme. }
+	gTheme: TThemeKind;
 
 	gPromptTrans: Boolean;
 	gAlwaysSPParams: Boolean;

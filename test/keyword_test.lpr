@@ -19,7 +19,7 @@ program keyword_test;
 {$MODE Delphi}
 
 uses
-  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, ServerMetrics, GridLayout, DB, BufDataset;
+  Interfaces, SysUtils, Classes, SynHighlighterSQL, FirebirdKeywords, SQLCompletion, TreeFilter, CommandPalette, TableDesign, SchemaNames, PrintDocument, QueryModel, SQLTraceFormat, KeyBindings, Menus, CodeTemplates, IconScaling, SchemaDiagram, PlanParser, RowEdits, SessionAdmin, CompileScript, BlobText, MemoryUsage, SystemPrivileges, CsvImport, ServerMetrics, GridLayout, DB, BufDataset, UITheme;
 
 var
   Highlighter: TSynSQLSyn;
@@ -2243,6 +2243,65 @@ begin
     'and a schema one is shown qualified');
 end;
 
+procedure TestUITheme;
+var
+  K: TThemeKind;
+  R: TThemeRole;
+  Seen: Integer;
+begin
+  { The palette, without a widgetset. What matters is not the exact values -
+    those are a matter of taste and will be argued about - but that the two
+    themes are genuinely different everywhere it counts, and that text never
+    lands on its own background. }
+  Check(ThemeColor(tkDark, trSurface) <> ThemeColor(tkLight, trSurface),
+    'the two themes differ on the reading surface');
+  Check(ThemeColor(tkDark, trWindow) <> ThemeColor(tkLight, trWindow),
+    'and on the window');
+
+  Seen := 0;
+  for R := Low(TThemeRole) to High(TThemeRole) do
+    if ThemeColor(tkDark, R) = ThemeColor(tkLight, R) then
+      Inc(Seen);
+  { The accent is deliberately the same in both - it is the one colour VS Code
+    keeps. Anything more than that means a role was left unfilled. }
+  Check(Seen <= 1, 'at most one role is shared between the themes (' +
+    IntToStr(Seen) + ')');
+
+  for K := Low(TThemeKind) to High(TThemeKind) do
+  begin
+    Check(ThemeColor(K, trSurfaceText) <> ThemeColor(K, trSurface),
+      'text is not the colour of what it sits on (' + ThemeKindToText(K) + ')');
+    Check(ThemeColor(K, trWindowText) <> ThemeColor(K, trWindow),
+      'nor on the window (' + ThemeKindToText(K) + ')');
+    Check(ThemeColor(K, trSelectionText) <> ThemeColor(K, trSelection),
+      'nor when selected (' + ThemeKindToText(K) + ')');
+  end;
+
+  { Syntax colours are the same question and the reason the stock highlighter
+    cannot simply be left alone: navy on near-black is not readable. }
+  Check(SyntaxColor(tkDark, srKeyword) <> SyntaxColor(tkLight, srKeyword),
+    'keywords are coloured differently in the two themes');
+  Check(SyntaxColor(tkDark, srKeyword) <> ThemeColor(tkDark, trSurface),
+    'and a keyword is not the colour of the page it is on');
+  Check(SyntaxColor(tkDark, srComment) <> ThemeColor(tkDark, trSurface),
+    'nor is a comment');
+
+  Check(IsDarkTheme(tkDark) and not IsDarkTheme(tkLight),
+    'dark is dark and light is not');
+
+  { The setting round-trips, and an unknown one falls back rather than failing
+    - a file written by a build that knew a third theme still has to load. }
+  Check(TextToThemeKind(ThemeKindToText(tkDark), tkLight) = tkDark,
+    'the stored form round-trips for dark');
+  Check(TextToThemeKind(ThemeKindToText(tkLight), tkDark) = tkLight,
+    'and for light');
+  Check(TextToThemeKind('Solarized', tkLight) = tkLight,
+    'a theme this build does not have falls back to the default');
+  Check(TextToThemeKind('', tkDark) = tkDark, 'and so does an empty setting');
+  Check(TextToThemeKind('  dark  ', tkLight) = tkDark,
+    'the stored form is read case- and space-insensitively');
+end;
+
 procedure TestStoredIdentifier;
 var
   Now_: TTableDesign;
@@ -2654,6 +2713,7 @@ begin
     'no match ranks zero');
 
   WriteLn('Table design:');
+  TestUITheme;
   TestStoredIdentifier;
   TestTableDesign;
 

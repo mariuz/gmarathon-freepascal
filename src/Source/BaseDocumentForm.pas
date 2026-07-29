@@ -392,7 +392,7 @@ implementation
 
 {$R *.lfm}
 
-uses MarathonIDE, MarathonProjectCache, DocumentHost, Types;
+uses MarathonIDE, MarathonProjectCache, DocumentHost, Types, ThemeApply;
 
 function TfrmBaseDocumentForm.CanAddToProject: Boolean;
 begin
@@ -577,6 +577,9 @@ end;
   Show so the choice is made in one place. }
 procedure TfrmBaseDocumentForm.ShowDocument;
 begin
+  { Documents are built long after the shell painted itself, so each one paints
+    itself as it opens - otherwise a dark window fills up with light tabs. }
+  ApplyTheme(Self, CurrentTheme);
   { Opening a document makes it the one the menu acts on.
 
     FormActivate does this too and cannot be relied on: it runs from OnActivate,

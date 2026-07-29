@@ -32,7 +32,7 @@ unit DocumentHost;
 
 interface
 
-uses SysUtils, Classes, Controls, Forms, ComCtrls;
+uses SysUtils, Classes, Controls, Forms, ComCtrls, ThemeApply;
 
 type
   TDocumentHost = class(TComponent)
@@ -89,6 +89,11 @@ begin
   AForm.BorderStyle := bsNone;
   AForm.Parent := APanel;
   AForm.Align := alClient;
+  { Painted here as well as in ShowDocument: the explorer arrives through this
+    door rather than that one, and a dark shell with a light explorer down its
+    left side is worse than no theme at all. }
+  if AForm is TCustomForm then
+    ApplyTheme(TCustomForm(AForm), CurrentTheme);
   APanel.Visible := True;
   if Assigned(ASplitter) then
   begin
@@ -158,6 +163,8 @@ begin
   AForm.BorderStyle := bsNone;
   AForm.Parent := Result;
   AForm.Align := alClient;
+  if AForm is TCustomForm then
+    ApplyTheme(TCustomForm(AForm), CurrentTheme);
   { The form's own close handling still runs; this only removes the tab
     afterwards, so a document that refuses to close keeps its tab. }
   AForm.AddHandlerClose(FormClosed);
