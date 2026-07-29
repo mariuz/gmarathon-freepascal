@@ -58,6 +58,10 @@ type
     function IsHosted(AForm: TForm): Boolean;
     { Brings an already-hosted form's tab to the front. }
     function Activate(AForm: TForm): Boolean;
+    { Frees every hosted document now, instead of leaving it on Application's
+      release queue to be freed during finalization. Called as the shell
+      closes - see the body for why it has to be. }
+    procedure CloseAll;
     { The form in the active tab, or nil. }
     function ActiveDocument: TForm;
     function DocumentCount: Integer;
@@ -172,6 +176,47 @@ begin
   AForm.FreeNotification(Self);
   AForm.Show;
   FPages.ActivePage := Result;
+end;
+
+procedure TDocumentHost.CloseAll;
+var
+  Idx: Integer;
+  Sheet: TTabSheet;
+  Frm: TForm;
+begin
+  { A document left open at exit is not freed while the program is running. It
+    goes on Application's release queue, and that queue is drained inside
+    Application.Destroy - which runs from interfaces.pas finalization, after
+    the units the document's own controls belong to have finalized.
+
+    Anything holding a registry in a unit global is then reading freed memory.
+    IBX did it with its transaction list; TAChart does it with the chart
+    registry, and closing with a SQL editor open - its Performance tab holds a
+    TChart - died in DeleteByChart with an access violation, after the window
+    had gone and the work was saved.
+
+    So they are freed here, while everything they depend on is still alive.
+    Safe at this point because the shell's CloseQuery has already asked every
+    document whether it may close and been told yes. }
+  if not Assigned(FPages) then
+    Exit;
+  for Idx := FPages.PageCount - 1 downto 0 do
+  begin
+    Sheet := FPages.Pages[Idx];
+    Frm := nil;
+    if Sheet.Tag <> 0 then
+      Frm := TForm(Pointer(Sheet.Tag));
+    { Forgotten before it is freed, so the close handler cannot find a sheet
+      that is on its way out. }
+    Sheet.Tag := 0;
+    if Assigned(Frm) then
+    begin
+      Frm.RemoveHandlerClose(FormClosed);
+      Frm.Parent := nil;
+      Frm.Free;
+    end;
+    Sheet.Free;
+  end;
 end;
 
 procedure TDocumentHost.FormClosed(Sender: TObject; var Action: TCloseAction);

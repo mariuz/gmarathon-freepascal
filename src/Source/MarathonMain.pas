@@ -1086,6 +1086,13 @@ begin
 	if Assigned(Browser) then
 		Browser.SavePositions;
 
+	{ After the positions are saved and before the application tears itself
+	  down: a document still open at this point would otherwise be freed from
+	  Application's release queue during finalization, by which time the units
+	  its controls belong to have gone. See TDocumentHost.CloseAll. }
+	if Assigned(Documents) then
+		Documents.CloseAll;
+
   {$IFNDEF FPC}
 	for Idx := ReOpen1.Count - 1 downto 0 do
 		ReOpen1.Items[Idx].Free;

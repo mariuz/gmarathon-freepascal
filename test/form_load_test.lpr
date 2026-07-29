@@ -1265,6 +1265,42 @@ type
     wrapper, which is exactly the layer that can swallow the key. }
   TEditorKeys = class(TSyntaxMemoWithStuff2);
 
+{ Documents are freed before the application tears down, not after.
+
+  One left open at exit goes on Application's release queue, which is drained
+  inside Application.Destroy - from interfaces.pas finalization, after the
+  units the document's controls belong to have finalized. Anything keeping a
+  registry in a unit global is read after it was freed: IBX did it with its
+  transaction list, TAChart does it with the chart registry, and closing with a
+  SQL editor open died in DeleteByChart. }
+procedure CheckDocumentsFreedBeforeShutdown;
+var
+  F: TfrmSQLForm;
+  Before, After: Integer;
+begin
+  WriteLn('Documents at shutdown:');
+  F := TfrmSQLForm.Create(nil);
+  F.ShowDocument;
+  Check(Documents.IsHosted(F), 'a document is open');
+  Before := Documents.DocumentCount;
+  Check(Before > 0, 'and the host knows about it (' + IntToStr(Before) + ')');
+
+  { What the shell does as it closes. }
+  Documents.CloseAll;
+  After := Documents.DocumentCount;
+  Check(After = 0, 'closing the shell frees them all (' + IntToStr(After) + ')');
+
+  { And nothing is left queued for the finalizer to trip over. Freeing what is
+    already gone would raise here, which is the point of asking twice. }
+  try
+    Documents.CloseAll;
+    Check(True, 'and doing it again is harmless');
+  except
+    on E: Exception do
+      Check(False, 'and doing it again is harmless (' + E.ClassName + ')');
+  end;
+end;
+
 procedure CheckActiveDocumentFollowsFocus;
 var
   F: TfrmSQLForm;
@@ -6731,6 +6767,7 @@ begin
   CheckCommandBar;
   CheckCompletionWiring;
   CheckEditorSearch;
+  CheckDocumentsFreedBeforeShutdown;
   CheckActiveDocumentFollowsFocus;
   CheckEditorBackspace;
   CheckEditorsAllowAutoTransactions;
