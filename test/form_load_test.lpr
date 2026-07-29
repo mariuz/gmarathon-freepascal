@@ -1897,6 +1897,56 @@ end;
   against one, so the grid is left unable to write rather than given statements
   that would match every row that looks alike. This is the check that the
   refusal actually happens, rather than being described in a comment. }
+{ The Grants and Dependencies tabs, which run their own catalogue queries.
+
+  Both died on Firebird 6 with
+
+    Dynamic SQL Error -SQL error code = -206 -Column unknown
+    -"RDB$SCHEMA_NAME"
+
+  because the schema predicate assumed every catalogue table spells that
+  column the same way. rdb$user_privileges and rdb$dependencies do not - they
+  name the column after the reference it qualifies. Loading a table is not
+  enough to catch that: the query only runs when the tab is switched to, which
+  is why this walks the pages rather than just opening the editor. }
+procedure CheckEditorTabsQueryTheRightSchemaColumn(Conn: TMarathonCacheConnection;
+  const ATableName: String);
+var
+  F: TfrmTables;
+
+  procedure OpenTab(APage: TTabSheet; const AWhat: String);
+  begin
+    try
+      F.pgObjectEditor.ActivePage := APage;
+      F.pgObjectEditorChange(F.pgObjectEditor);
+      Check(True, AWhat + ' opens');
+    except
+      on E: Exception do
+        Check(False, AWhat + ' opens (' + E.ClassName + ': ' + E.Message + ')');
+    end;
+  end;
+
+begin
+  WriteLn('Editor tabs that run their own queries:');
+  F := TfrmTables.Create(nil);
+  try
+    F.ConnectionName := 'EditorHarness';
+    try
+      F.LoadTable(ATableName);
+    except
+      on E: Exception do
+      begin
+        Check(False, 'the editor opens ' + ATableName + ' (' + E.Message + ')');
+        Exit;
+      end;
+    end;
+    OpenTab(F.tsGrants, 'the Grants tab');
+    OpenTab(F.tsDependenciesView, 'the Dependencies tab');
+  finally
+    F.Free;
+  end;
+end;
+
 procedure CheckKeylessTableIsReadOnly(Conn: TMarathonCacheConnection);
 var
   F: TfrmTables;
@@ -4934,6 +4984,10 @@ begin
   CheckImportFlatFile(Conn);
   CheckServerDashboard(Conn);
   CheckSQLTrace(Conn);
+  { Last: opening these tabs commits the connection's shared transaction, and
+    checks that follow expect one to be running - putting this earlier made
+    four unrelated schema checks read empty column lists. }
+  CheckEditorTabsQueryTheRightSchemaColumn(Conn, TableName);
 end;
 
 procedure CheckCompletionWiring;

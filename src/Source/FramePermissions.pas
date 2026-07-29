@@ -68,8 +68,17 @@ uses MarathonIDE, Globals;
   same-named object the search path happened to reach. }
 function TframePerms.SchemaClause: String;
 begin
+  { Every query in this frame reads rdb$user_privileges, whose schema column is
+    named after what the privilege is on rather than after the row: it is
+    rdb$relation_schema_name, and there is no rdb$schema_name to ask for. With
+    the default the Grants tab died on Firebird 6 with
+
+      Dynamic SQL Error -SQL error code = -206 -Column unknown
+      -"RDB$SCHEMA_NAME"
+
+    which the editor showed as a dialog on switching to the tab. }
   Result := SchemaClauseFor(FForm.GetActiveConnectionName,
-    FForm.GetObjectSchema);
+    FForm.GetObjectSchema, 'rdb$relation_schema_name');
 end;
 
 function TframePerms.CanPrint: Boolean;

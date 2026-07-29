@@ -62,7 +62,9 @@ type
 	private
 		{ Private declarations }
 		FForm : IMarathonBaseForm;
-		function SchemaClause: String;
+		{ AColumn because this frame reads two catalogue tables that spell the
+		  schema column differently - see the body. }
+		function SchemaClause(const AColumn: String = ''): String;
 	public
 		{ Public declarations }
 		procedure SaveColWidths;
@@ -85,10 +87,16 @@ uses MarathonIDE, Globals;
   The frames run their own queries, so an editor whose main tabs were made
   schema-correct still showed - and in this frame's case wrote - whichever
   same-named object the search path happened to reach. }
-function TframeDepend.SchemaClause: String;
+function TframeDepend.SchemaClause(const AColumn: String = ''): String;
 begin
+  { rdb$relation_constraints has rdb$schema_name, which is the default.
+    rdb$dependencies has none: it names its two schema columns after the two
+    ends of the dependency, rdb$dependent_schema_name and
+    rdb$depended_on_schema_name, so a query there has to say which end it is
+    matching on. Asking it for rdb$schema_name was "Column unknown" on
+    Firebird 6, and both halves of this tab died on it. }
   Result := SchemaClauseFor(FForm.GetActiveConnectionName,
-    FForm.GetObjectSchema);
+    FForm.GetObjectSchema, AColumn);
 end;
 
 procedure TframeDepend.Init(Form : IMarathonBaseForm);
@@ -119,7 +127,7 @@ begin
 				qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
 				qryUtil.SQL.Clear;
 				qryUtil.SQL.Add('select RDB$DEPENDENT_NAME, RDB$DEPENDENT_TYPE, RDB$FIELD_NAME from RDB$DEPENDENCIES where RDB$DEPENDED_ON_NAME = ' +
-					AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ' order by RDB$DEPENDENT_NAME, RDB$FIELD_NAME;');
+					AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause('rdb$depended_on_schema_name') + ' order by RDB$DEPENDENT_NAME, RDB$FIELD_NAME;');
 				qryUtil.Open;
 				while not qryUtil.EOF do
 				begin
@@ -225,7 +233,7 @@ begin
 				qryUtil.Transaction := MarathonIDEInstance.CurrentProject.Cache.ConnectionByName[FForm.GetActiveConnectionName].Transaction;
 				qryUtil.SQL.Clear;
 				qryUtil.SQL.Add('select RDB$DEPENDED_ON_NAME, RDB$DEPENDED_ON_TYPE, RDB$FIELD_NAME from RDB$DEPENDENCIES where RDB$DEPENDENT_NAME = ' +
-					AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause + ';');
+					AnsiQuotedStr(FForm.GetObjectName, '''') + SchemaClause('rdb$dependent_schema_name') + ';');
 				qryUtil.Open;
 				while not qryUtil.EOF do
 				begin

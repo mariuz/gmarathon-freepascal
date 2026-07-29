@@ -246,8 +246,16 @@ procedure AllowAutoTransactions(AOwner: TComponent);
 
   The object editors get this from their base class; the frames on their tabs
   do not have one - they are frames, and reach their form through an interface
-  - so they come here instead. Both end at SchemaNames, so there is one rule. }
-function SchemaClauseFor(const ConnectionName, Schema: String): String;
+  - so they come here instead. Both end at SchemaNames, so there is one rule.
+
+  Not every catalogue table spells the column rdb$schema_name. The ones that
+  hold a reference to another object name that column after the reference -
+  rdb$user_privileges has rdb$relation_schema_name, rdb$dependencies has
+  rdb$dependent_schema_name and rdb$depended_on_schema_name - and asking those
+  for rdb$schema_name is "Column unknown" and a dead tab. Pass AColumn for
+  them; the default suits the tables whose rows are the object itself. }
+function SchemaClauseFor(const ConnectionName, Schema: String;
+  const AColumn: String = ''): String;
 
 { Teaches the shared SQL highlighter whatever this server reserves.
 
@@ -947,7 +955,8 @@ begin
 	end;
 end;
 
-function SchemaClauseFor(const ConnectionName, Schema: String): String;
+function SchemaClauseFor(const ConnectionName, Schema: String;
+	const AColumn: String = ''): String;
 var
 	Conn: TMarathonCacheConnection;
 	Supported: Boolean;
@@ -960,7 +969,10 @@ begin
 		Supported := Assigned(Conn) and Conn.Connected and
 			Conn.IsODSAtLeast(ODS_FB6_MAJOR, 0);
 	end;
-	Result := SchemaPredicate('', Schema, Supported);
+	if AColumn = '' then
+		Result := SchemaPredicate('', Schema, Supported)
+	else
+		Result := SchemaPredicate('', AColumn, Schema, Supported);
 end;
 
 procedure AllowAutoTransactions(AOwner: TComponent);
